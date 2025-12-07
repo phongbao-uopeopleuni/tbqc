@@ -4,11 +4,11 @@
 -- =====================================================
 
 -- Tạo database
-CREATE DATABASE IF NOT EXISTS gia_pha_nguyen_phuoc_toc
+CREATE DATABASE IF NOT EXISTS tbqc2025
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
-USE gia_pha_nguyen_phuoc_toc;
+USE tbqc2025;
 
 -- =====================================================
 -- BẢNG 1: GENERATIONS (Đời) - Loại bỏ phụ thuộc bắc cầu
@@ -207,6 +207,25 @@ CREATE TABLE marriages (
     INDEX idx_husband (husband_id),
     INDEX idx_wife (wife_id),
     INDEX idx_marriage_date (marriage_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- BẢNG 10: USERS (Tài khoản người dùng) - Quản lý authentication
+-- =====================================================
+CREATE TABLE users (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255),
+    email VARCHAR(255),
+    role ENUM('admin', 'user') NOT NULL DEFAULT 'user',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    last_login TIMESTAMP NULL,
+    INDEX idx_username (username),
+    INDEX idx_role (role),
+    INDEX idx_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================
