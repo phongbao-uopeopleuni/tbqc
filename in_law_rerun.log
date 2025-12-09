@@ -1,0 +1,24 @@
+2025-12-08 00:30:09,555 - INFO - Kết nối database...
+2025-12-08 00:30:09,590 - INFO - package: mysql.connector.plugins
+2025-12-08 00:30:09,590 - INFO - plugin_name: mysql_native_password
+2025-12-08 00:30:09,591 - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLNativePasswordAuthPlugin
+2025-12-08 00:30:09,592 - INFO - Kết nối database thành công
+2025-12-08 00:30:09,592 - INFO - Xóa dữ liệu in_law_relationships cũ...
+2025-12-08 00:30:09,592 - INFO - Đã xóa dữ liệu cũ
+2025-12-08 00:30:09,593 - INFO - === BƯỚC 4: Suy diễn quan hệ con dâu / con rể ===
+2025-12-08 00:30:09,892 - INFO - Hoàn thành suy diễn in-law: 200 con dâu, 166 con rể, 9 cập nhật, 8 bỏ qua (không có giới tính), 0 bỏ qua (không có cha/mẹ), 0 lỗi
+2025-12-08 00:30:09,897 - INFO - ✅ Hoàn thành!
+2025-12-08 00:30:09,897 - INFO - Tổng số quan hệ con dâu/con rể: 606
+2025-12-08 00:30:09,898 - INFO - Đóng kết nối database
+2025-12-08 00:34:50,809 - INFO - Kết nối database...
+2025-12-08 00:34:50,849 - INFO - package: mysql.connector.plugins
+2025-12-08 00:34:50,849 - INFO - plugin_name: mysql_native_password
+2025-12-08 00:34:50,850 - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLNativePasswordAuthPlugin
+2025-12-08 00:34:50,852 - INFO - Kết nối database thành công
+2025-12-08 00:34:50,852 - INFO - Xóa dữ liệu in_law_relationships cũ...
+2025-12-08 00:34:50,863 - INFO - Đã xóa dữ liệu cũ
+2025-12-08 00:34:50,863 - INFO - === BƯỚC 4: Suy diễn quan hệ con dâu / con rể ===
+2025-12-08 00:34:51,155 - INFO - Hoàn thành suy diễn in-law: 200 con dâu, 166 con rể, 9 cập nhật, 8 bỏ qua (không có giới tính), 0 bỏ qua (không có cha/mẹ), 0 lỗi
+2025-12-08 00:34:51,159 - INFO - ✅ Hoàn thành!
+2025-12-08 00:34:51,160 - INFO - Tổng số quan hệ con dâu/con rể: 606
+2025-12-08 00:34:51,160 - INFO - Đóng kết nối database
