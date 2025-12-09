@@ -41,13 +41,23 @@ let allPersons = [];
 // ============================================
 
 /**
- * Chuẩn hóa chuỗi (trim, loại bỏ khoảng trắng thừa)
+ * Chuẩn hóa chuỗi (trim, loại bỏ khoảng trắng thừa, xử lý gạch nối)
+ * QUAN TRỌNG: Xử lý tất cả các loại gạch nối (-, –, —, ‑) thành khoảng trắng
  * @param {string} str - Chuỗi cần chuẩn hóa
  * @returns {string} - Chuỗi đã chuẩn hóa
  */
 function normalizeName(str) {
   if (!str || typeof str !== 'string') return '';
-  return str.trim();
+  return str
+    .trim()
+    .normalize('NFC')
+    // Chuẩn hóa tất cả các loại gạch nối về khoảng trắng
+    // \u2010-\u2015: các loại gạch nối Unicode (‑, ‒, –, —, ―)
+    // \-: dấu gạch nối thông thường
+    .replace(/[\u2010-\u2015\-]/g, ' ')
+    // Gom nhiều khoảng trắng về 1
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -204,13 +214,15 @@ function initGenealogyLineage(persons) {
 // ============================================
 
 /**
- * Tìm người theo tên và đời, với phân giải theo Tên bố
- * @param {string} name - Tên cần tìm (ví dụ: "Bảo Phong")
- * @param {number} generation - Số đời (ví dụ: 7)
+ * Tìm người theo tên và đời, với phân giải theo Tên bố và Tên mẹ
+ * QUAN TRỌNG: Dùng cả tên Bố và tên Mẹ để tìm chính xác khi có nhiều người trùng tên
+ * @param {string} name - Tên cần tìm (ví dụ: "Vĩnh Đức")
+ * @param {number} generation - Số đời (ví dụ: 6)
  * @param {string} fatherName - Tên bố (tùy chọn, để phân biệt khi trùng tên)
+ * @param {string} motherName - Tên mẹ (tùy chọn, để phân biệt khi trùng tên)
  * @returns {Person | null} - Person tìm được hoặc null
  */
-function findPersonByNameAndGeneration(name, generation, fatherName = null) {
+function findPersonByNameAndGeneration(name, generation, fatherName = null, motherName = null) {
   const normalizedName = normalizeName(name);
   if (!normalizedName) {
     console.warn(`[Genealogy] Tên rỗng: "${name}"`);
@@ -242,18 +254,45 @@ function findPersonByNameAndGeneration(name, generation, fatherName = null) {
     return null;
   }
   
-  // Nếu có thông tin Tên bố, lọc thêm theo bố
+  // Nếu có thông tin Tên bố, lọc thêm theo bố (QUAN TRỌNG: normalize trước khi so sánh)
   if (fatherName) {
     const normalizedFatherName = normalizeName(fatherName);
+    // Loại bỏ tiền tố "Ông", "Bà" nếu có
+    const cleanFatherName = normalizedFatherName.replace(/^(ông|bà)\s+/i, '').trim();
+    
     const matchesByFather = matches.filter(p => {
-      const personFather = normalizeName(p.father_name || '');
-      return personFather === normalizedFatherName;
+      if (!p.father_name) return false;
+      const personFather = normalizeName(p.father_name);
+      const cleanPersonFather = personFather.replace(/^(ông|bà)\s+/i, '').trim();
+      return cleanPersonFather === cleanFatherName || personFather === normalizedFatherName;
     });
     
     if (matchesByFather.length > 0) {
       matches = matchesByFather;
+      console.log(`[Genealogy] Lọc được ${matches.length} candidate dựa trên tên bố "${fatherName}"`);
     } else {
       console.warn(`[Genealogy] Không tìm thấy "${name}" ở đời ${targetGeneration} với bố "${fatherName}". Tìm thấy ${matches.length} người cùng tên và đời nhưng khác bố.`);
+    }
+  }
+  
+  // Nếu có thông tin Tên mẹ và vẫn còn nhiều candidate, lọc thêm theo mẹ
+  if (motherName && matches.length > 1) {
+    const normalizedMotherName = normalizeName(motherName);
+    // Loại bỏ tiền tố "Ông", "Bà" nếu có
+    const cleanMotherName = normalizedMotherName.replace(/^(ông|bà)\s+/i, '').trim();
+    
+    const matchesByMother = matches.filter(p => {
+      if (!p.mother_name) return false;
+      const personMother = normalizeName(p.mother_name);
+      const cleanPersonMother = personMother.replace(/^(ông|bà)\s+/i, '').trim();
+      return cleanPersonMother === cleanMotherName || personMother === normalizedMotherName;
+    });
+    
+    if (matchesByMother.length > 0) {
+      matches = matchesByMother;
+      console.log(`[Genealogy] Lọc được ${matches.length} candidate dựa trên tên mẹ "${motherName}"`);
+    } else {
+      console.warn(`[Genealogy] Không tìm thấy "${name}" với mẹ "${motherName}". Giữ nguyên ${matches.length} candidates.`);
     }
   }
   
@@ -269,7 +308,7 @@ function findPersonByNameAndGeneration(name, generation, fatherName = null) {
   }
   
   // Nếu vẫn còn nhiều người, chọn người đầu tiên (đã được sắp xếp ưu tiên)
-  console.warn(`[Genealogy] Có ${resolved.length} người trùng tên "${name}" ở đời ${targetGeneration}${fatherName ? ` với bố "${fatherName}"` : ''}. Chọn người đầu tiên (ID: ${resolved[0].person_id}).`);
+  console.warn(`[Genealogy] Có ${resolved.length} người trùng tên "${name}" ở đời ${targetGeneration}${fatherName ? ` với bố "${fatherName}"` : ''}${motherName ? ` và mẹ "${motherName}"` : ''}. Chọn người đầu tiên (ID: ${resolved[0].person_id}).`);
   return resolved[0];
 }
 
@@ -280,7 +319,12 @@ function findPersonByNameAndGeneration(name, generation, fatherName = null) {
 /**
  * Tìm cha của một người dựa trên father_id (ưu tiên) hoặc father_name (fallback)
  * QUAN TRỌNG: Dùng father_id để đảm bảo chính xác 100%, không bị nhầm do trùng tên
- * CẢI THIỆN: Tìm kiếm theo father_name chính xác hơn, kết hợp với đời và fuzzy matching
+ * 
+ * Logic theo yêu cầu:
+ * 1. Ưu tiên 1: Dùng father_id nếu có → findPersonById(father_id) → 100% chính xác
+ * 2. Fallback: Nếu không có father_id hoặc không tìm thấy, dùng father_name + generation + fuzzy matching
+ * 3. Không tự suy luận, chỉ dùng dữ liệu thực tế
+ * 
  * @param {Person} person - Người cần tìm cha
  * @returns {Person | null} - Cha tìm được hoặc null
  */
@@ -289,10 +333,11 @@ function findFather(person) {
     return null;
   }
   
-  // ƯU TIÊN: Dùng father_id nếu có (chính xác 100%, không bị nhầm do trùng tên)
+  // ƯU TIÊN 1: Dùng father_id nếu có (chính xác 100%, không bị nhầm do trùng tên)
   if (person.father_id) {
     const father = findPersonById(person.father_id);
     if (father) {
+      console.log(`[Genealogy] Tìm thấy cha "${father.full_name}" (ID: ${father.person_id}) của "${person.full_name}" bằng father_id`);
       return father;
     }
     // Nếu không tìm thấy bằng ID, log warning nhưng vẫn thử fallback
@@ -366,8 +411,34 @@ function findFather(person) {
     return null;
   }
   
-  // BƯỚC 3: Lọc và sắp xếp candidates theo đời
+  // BƯỚC 3: Lọc và sắp xếp candidates theo đời và tên mẹ (nếu có)
   const expectedGeneration = person.generation_number ? person.generation_number - 1 : null;
+  
+  // Nếu có tên mẹ, dùng để lọc chính xác hơn (QUAN TRỌNG: dùng cả tên Bố và tên Mẹ)
+  let filteredCandidates = candidates;
+  if (person.mother_name && candidates.length > 1) {
+    const normalizedMotherName = normalizeForSearch(person.mother_name);
+    // Tìm các candidate có con với tên mẹ khớp
+    filteredCandidates = candidates.filter(candidate => {
+      // Tìm tất cả con của candidate này có tên mẹ khớp
+      const children = allPersons.filter(p => {
+        if (!p.father_id || p.father_id !== candidate.person_id) return false;
+        if (!p.mother_name) return false;
+        const normalizedChildMother = normalizeForSearch(p.mother_name);
+        return normalizedChildMother === normalizedMotherName;
+      });
+      return children.length > 0;
+    });
+    
+    // Nếu tìm được candidate có con với mẹ khớp, ưu tiên
+    if (filteredCandidates.length > 0) {
+      console.log(`[Genealogy] Lọc được ${filteredCandidates.length} candidate dựa trên tên mẹ "${person.mother_name}"`);
+      candidates = filteredCandidates;
+    } else {
+      // Nếu không tìm được bằng tên mẹ, vẫn giữ nguyên candidates
+      console.warn(`[Genealogy] Không tìm được candidate nào có con với mẹ "${person.mother_name}". Giữ nguyên ${candidates.length} candidates.`);
+    }
+  }
   
   // Ưu tiên 1: Tìm cha có đời = đời con - 1 (chính xác nhất)
   if (expectedGeneration !== null) {
@@ -440,15 +511,7 @@ function buildPaternalLine(startPerson) {
       }
     }
     
-    // FALLBACK 2: Nếu vẫn không tìm thấy và có generation_number, thử tìm người ở đời trước
-    // (chỉ khi thực sự không có dữ liệu, không tự suy luận)
-    if (!father && current.generation_number && current.generation_number > 1) {
-      const expectedGen = current.generation_number - 1;
-      // Không tự suy luận - chỉ log để debug
-      console.log(`[Genealogy] Không tìm thấy cha của "${current.full_name}" (Đời ${current.generation_number}). Mong đợi cha ở Đời ${expectedGen}`);
-    }
-    
-    // Dừng nếu không tìm thấy cha
+    // Dừng nếu không tìm thấy cha (TUYỆT ĐỐI KHÔNG tự suy luận hoặc bịa thêm)
     if (!father) {
       console.log(`[Genealogy] Dừng tìm tổ tiên tại "${current.full_name}" (Đời ${current.generation_number || '?'}) - Không có thông tin cha`);
       break;
@@ -901,25 +964,36 @@ function findPersonById(personId) {
 /**
  * Xây dựng chuỗi phả hệ từ person_id (đảm bảo chọn đúng người)
  * HÀM MỚI: Dùng buildAncestorChain() để tự động tìm đầy đủ tổ tiên
+ * QUAN TRỌNG: Luôn bắt đầu từ Đời 1 (Vua Minh Mạng) và điền placeholder cho đời thiếu
  * @param {number} personId - ID của Person
  * @returns {Array<Person> | null} - Chuỗi phả hệ từ Đời 1 đến đời của người hiện tại
  */
 function buildCompleteLineageById(personId) {
-  // Dùng hàm mới buildAncestorChain() để tự động tìm đầy đủ tổ tiên
+  if (!personId) {
+    console.error('[Genealogy] personId không hợp lệ trong buildCompleteLineageById');
+    return null;
+  }
+  
+  // Dùng hàm buildAncestorChain() để tự động tìm đầy đủ tổ tiên
   const chain = buildAncestorChain(personId);
   
   if (!chain || chain.length === 0) {
+    console.warn(`[Genealogy] Không tìm thấy chuỗi tổ tiên cho person_id=${personId}`);
     return null;
   }
   
   // Đảm bảo điền đầy đủ từ Đời 1 đến đời của người hiện tại
   const targetGeneration = chain[chain.length - 1].generation_number;
+  if (!targetGeneration || targetGeneration < 1) {
+    console.warn(`[Genealogy] Đời không hợp lệ: ${targetGeneration} cho person_id=${personId}`);
+    return null;
+  }
   
-  // Tạo map theo đời từ chain đã tìm được
+  // Tạo map theo đời từ chain đã tìm được (chỉ dữ liệu thực tế)
   const lineageMap = new Map();
   chain.forEach(person => {
     const gen = person.generation_number;
-    if (gen) {
+    if (gen && gen >= 1) {
       lineageMap.set(gen, person);
     }
   });
@@ -936,6 +1010,9 @@ function buildCompleteLineageById(personId) {
       }) || gen1Persons[0]; // Nếu không tìm thấy, lấy người đầu tiên ở Đời 1
       
       lineageMap.set(1, gen1Person);
+      console.log(`[Genealogy] Đã thêm Đời 1 (${gen1Person.full_name}) vào lineage cho person_id=${personId}`);
+    } else {
+      console.warn('[Genealogy] Không tìm thấy người nào ở Đời 1 trong allPersons');
     }
   }
   
@@ -943,6 +1020,7 @@ function buildCompleteLineageById(personId) {
   const result = [];
   for (let gen = 1; gen <= targetGeneration; gen++) {
     if (lineageMap.has(gen)) {
+      // Dữ liệu thực tế
       result.push(lineageMap.get(gen));
     } else {
       // Tạo placeholder cho đời thiếu (chỉ khi thực sự không có dữ liệu)
@@ -960,9 +1038,11 @@ function buildCompleteLineageById(personId) {
         status: null,
         isPlaceholder: true
       });
+      console.log(`[Genealogy] Đã tạo placeholder cho Đời ${gen} (thiếu dữ liệu)`);
     }
   }
   
+  console.log(`[Genealogy] Đã xây dựng chuỗi phả hệ từ Đời 1 đến Đời ${targetGeneration} cho person_id=${personId} (${result.length} đời, trong đó ${result.filter(p => p.isPlaceholder).length} placeholder)`);
   return result;
 }
 
