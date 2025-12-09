@@ -276,23 +276,3 @@ def health_short():
 # MAIN – CHỈ DÙNG KHI CHẠY LOCAL `python app.py`
 # (Khi deploy Railway với gunicorn app:app thì khối này không chạy)
 # =============================================================================
-
-if __name__ == "__main__":
-    print("=" * 80)
-    print("🌐 Server sẽ chạy tại:")
-    print("   - Trang chủ: http://localhost:5000")
-    print("   - Thành viên: http://localhost:5000/members")
-    print("   - Admin: http://localhost:5000/admin/login")
-    print("\n⚠️  Nhấn Ctrl+C để dừng server")
-    print("=" * 80 + "\n")
-
-    try:
-        port = int(os.environ.get("PORT", 5000))
-        print(f"🌐 Starting server on port {port}...")
-        app.run(debug=False, port=port, host="0.0.0.0")
-    except Exception as e:
-        print(f"❌ LỖI KHI KHỞI ĐỘNG SERVER: {e}")
-        import traceback
-
-        traceback.print_exc()
-        sys.exit(1)
