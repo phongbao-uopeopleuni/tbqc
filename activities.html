@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Serif TC', serif;
+      background: linear-gradient(180deg, #FFEBCD 0%, #FFF8DC 100%);
+      min-height: 100vh;
+      padding-top: 70px;
+      color: #333;
+    }
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #111827;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .navbar-logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #FFD700;
+      text-decoration: none;
+    }
+    .navbar-menu {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+    .navbar-menu a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+    .navbar-menu a:hover, .navbar-menu a.active {
+      color: #FFD700;
+      background: rgba(255, 215, 0, 0.1);
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #8B0000;
+      font-size: 32px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+      border-left: 5px solid #DAA520;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .card h3 {
+      color: #8B0000;
+      margin-bottom: 8px;
+      font-size: 20px;
+    }
+    .meta {
+      font-size: 13px;
+      color: #777;
+      margin-bottom: 12px;
+    }
+    .summary {
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 12px;
+      color: #444;
+    }
+    .link {
+      color: #8B0000;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .loading, .error, .notice {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      margin: 20px 0;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .error { color: #c62828; border-left: 4px solid #c62828; }
+    .notice { color: #333; border-left: 4px solid #DAA520; }
+    .detail-title { font-size: 26px; color: #8B0000; margin-bottom: 10px; }
+    .detail-content { margin-top: 15px; line-height: 1.7; }
+    .back-link { display: inline-block; margin-top: 16px; color: #8B0000; font-weight: 600; text-decoration: none; }
+    
+    /* Carousel Styles */
+    #activities-slider {
+      max-width: 1000px;
+      margin: 20px auto 40px;
+      position: relative;
+    }
+    .slider-container {
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      background: #fff;
+    }
+    .slider-slide {
+      display: none;
+      position: relative;
+    }
+    .slider-slide.active {
+      display: block;
+    }
+    .slider-slide img {
+      width: 100%;
+      height: 400px;
+      object-fit: cover;
+      display: block;
+    }
+    .slide-caption {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      padding: 20px 24px;
+      background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.3), transparent);
+      color: #fff;
+    }
+    .slide-caption h3 {
+      color: #fff;
+      font-size: 24px;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    .slide-caption p {
+      color: rgba(255,255,255,0.95);
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    }
+    .slider-prev,
+    .slider-next {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: #fff;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.3s;
+      z-index: 10;
+    }
+    .slider-prev:hover,
+    .slider-next:hover {
+      background: rgba(0,0,0,0.8);
+    }
+    .slider-prev { left: 15px; }
+    .slider-next { right: 15px; }
+    .slider-dots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .slider-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ddd;
+      cursor: pointer;
+      transition: background 0.3s;
+      border: 2px solid transparent;
+    }
+    .slider-dot.active {
+      background: #DAA520;
+      border-color: #8B0000;
+    }
+    .slider-dot:hover {
+      background: #bbb;
+    }
+    @media (max-width: 768px) {
+      .slider-slide img {
+        height: 280px;
+      }
+      .slide-caption {
+        padding: 16px;
+      }
+      .slide-caption h3 {
+        font-size: 20px;
+      }
+      .slider-prev,
+      .slider-next {
+        width: 36px;
+        height: 36px;
+        font-size: 20px;
+      }
+      .slider-prev { left: 10px; }
+      .slider-next { right: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Gia Phả Nguyễn Phước Tộc</a>
+    <ul class="navbar-menu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/activities" class="active">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/login">Đăng nhập</a></li>
+    </ul>
+  </nav>
+
+  <div class="container" style="padding: 40px 20px;">
+    <h1>Hoạt động</h1>
+    <div class="subtitle">Tin tức và sự kiện của dòng họ</div>
+    
+    <!-- Image Carousel Section -->
+    <section id="activities-slider" style="display:none;">
+      <div class="slider-container">
+        <div id="sliderSlides"></div>
+      </div>
+      <button class="slider-prev" id="sliderPrev">‹</button>
+      <button class="slider-next" id="sliderNext">›</button>
+      <div class="slider-dots" id="sliderDots"></div>
+    </section>
+    
+    <div id="message" class="loading">Đang tải dữ liệu...</div>
+    <div id="list" style="display:none;"></div>
+    <div id="detail" style="display:none;"></div>
+  </div>
+
+  <script>
+    // Generic JSON fetch helper
+    async function fetchJson(url, options) {
+      const res = await fetch(url, options);
+      const contentType = res.headers.get('Content-Type') || '';
+      const text = await res.text();
+
+      if (!res.ok) {
+        console.error('HTTP error for', url, res.status, text);
+        throw new Error(`HTTP ${res.status} khi gọi ${url}`);
+      }
+
+      if (!contentType.includes('application/json')) {
+        console.error('Non‑JSON response for', url, 'contentType =', contentType, 'body =', text.slice(0, 200));
+        throw new Error(`Phản hồi không phải JSON. Server trả về HTML hoặc nội dung khác.`);
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error('JSON parse error for', url, 'body =', text.slice(0, 200));
+        throw e;
+      }
+    }
+
+    const messageEl = document.getElementById('message');
+    const listEl = document.getElementById('list');
+    const detailEl = document.getElementById('detail');
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function getQueryId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    }
+
+    async function ensureLoggedIn() {
+      try {
+        const result = await fetchJson('/api/current-user');
+        if (result && result.success && result.user) {
+          return true;
+        }
+      } catch (e) {
+        console.error('Check login failed', e);
+      }
+      return false;
+    }
+
+
+    async function fetchActivityDetail(id) {
+      const data = await fetchJson(`/api/activities/${id}`);
+      if (!data) throw new Error('Không thể tải bài viết');
+      return data;
+    }
+
+    function renderList(posts) {
+      listEl.style.display = 'block';
+      detailEl.style.display = 'none';
+      if (!posts || posts.length === 0) {
+        listEl.innerHTML = '<div class="loading">Chưa có bài viết nào</div>';
+        return;
+      }
+      const html = `
+        <div class="card-grid">
+          ${posts.map(p => {
+            const date = p.created_at ? new Date(p.created_at).toLocaleDateString('vi-VN') : '';
+            const summary = p.summary || p.description || '';
+            const thumbnail = p.thumbnail ? `<img src="${escapeHtml(p.thumbnail)}" alt="${escapeHtml(p.title || '')}" style="width:100%;height:200px;object-fit:cover;border-radius:8px;margin-bottom:12px;">` : '';
+            return `
+              <div class="card">
+                ${thumbnail}
+                <h3>${escapeHtml(p.title || 'Không có tiêu đề')}</h3>
+                <div class="meta">${date ? '📅 ' + date : ''}</div>
+                <div class="summary">${escapeHtml(summary).substring(0, 220)}${summary && summary.length > 220 ? '...' : ''}</div>
+                <a class="link" href="/activities?id=${p.id || ''}">Xem chi tiết →</a>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+      listEl.innerHTML = html;
+    }
+
+    async function renderDetail(post) {
+      listEl.style.display = 'none';
+      detailEl.style.display = 'block';
+      const date = post.created_at ? new Date(post.created_at).toLocaleDateString('vi-VN') : '';
+      
+      // Load related posts
+      let relatedHtml = '';
+      try {
+        const related = await fetchJson('/api/activities?status=published&limit=5');
+        if (Array.isArray(related) && related.length > 0) {
+          const filtered = related.filter(p => p.id !== post.id).slice(0, 4);
+          if (filtered.length > 0) {
+            relatedHtml = `
+              <div style="margin-top:40px;padding-top:30px;border-top:2px solid #e0e0e0;">
+                <h3 style="color:#8B0000;margin-bottom:20px;font-size:20px;">Tin liên quan</h3>
+                <div class="card-grid">
+                  ${filtered.map(p => {
+                    const pDate = p.created_at ? new Date(p.created_at).toLocaleDateString('vi-VN') : '';
+                    const pSummary = p.summary || '';
+                    const pThumb = p.thumbnail ? `<img src="${escapeHtml(p.thumbnail)}" alt="${escapeHtml(p.title || '')}" style="width:100%;height:150px;object-fit:cover;border-radius:8px;margin-bottom:8px;">` : '';
+                    return `
+                      <div class="card">
+                        ${pThumb}
+                        <h3 style="font-size:16px;margin-bottom:6px;">${escapeHtml(p.title || '')}</h3>
+                        <div class="meta" style="font-size:11px;">${pDate ? '📅 ' + pDate : ''}</div>
+                        <div class="summary" style="font-size:13px;">${escapeHtml(pSummary).substring(0, 120)}${pSummary && pSummary.length > 120 ? '...' : ''}</div>
+                        <a class="link" href="/activities?id=${p.id || ''}" style="font-size:12px;">Đọc tiếp →</a>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }
+        }
+      } catch (e) {
+        console.error('Error loading related posts:', e);
+      }
+      
+      detailEl.innerHTML = `
+        <div class="card">
+          ${post.thumbnail ? `<img src="${escapeHtml(post.thumbnail)}" alt="${escapeHtml(post.title || '')}" style="width:100%;max-height:400px;object-fit:cover;border-radius:8px;margin-bottom:20px;">` : ''}
+          <div class="meta">${date ? '📅 ' + date : ''}</div>
+          <div class="detail-title">${escapeHtml(post.title || 'Không có tiêu đề')}</div>
+          <div class="detail-content" style="white-space:pre-wrap;">${escapeHtml(post.content || post.summary || '')}</div>
+          ${relatedHtml}
+          <a class="back-link" href="/activities">← Quay lại danh sách</a>
+        </div>
+      `;
+    }
+
+    // Carousel functionality
+    let carouselActivities = [];
+    let currentSlideIndex = 0;
+    let autoPlayInterval = null;
+    let autoPlayPaused = false;
+
+    function initCarousel(activities) {
+      // Filter activities with images
+      carouselActivities = activities.filter(a => {
+        const img = a.thumbnail || a.image_url;
+        return img && img.trim() !== '';
+      });
+
+      if (carouselActivities.length === 0) {
+        document.getElementById('activities-slider').style.display = 'none';
+        return;
+      }
+
+      const sliderEl = document.getElementById('activities-slider');
+      const slidesContainer = document.getElementById('sliderSlides');
+      const dotsContainer = document.getElementById('sliderDots');
+
+      sliderEl.style.display = 'block';
+
+      // Build slides
+      slidesContainer.innerHTML = carouselActivities.map((activity, index) => {
+        const img = activity.thumbnail || activity.image_url;
+        const date = activity.created_at ? new Date(activity.created_at).toLocaleDateString('vi-VN') : '';
+        const summary = activity.summary || '';
+        return `
+          <div class="slider-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
+            <a href="/activities?id=${activity.id || ''}" style="display:block;text-decoration:none;">
+              <img src="${escapeHtml(img)}" alt="${escapeHtml(activity.title || '')}" loading="lazy">
+              <div class="slide-caption">
+                <h3>${escapeHtml(activity.title || 'Không có tiêu đề')}</h3>
+                <p>${date ? '📅 ' + date + ' • ' : ''}${escapeHtml(summary).substring(0, 120)}${summary && summary.length > 120 ? '...' : ''}</p>
+              </div>
+            </a>
+          </div>
+        `;
+      }).join('');
+
+      // Build dots
+      dotsContainer.innerHTML = carouselActivities.map((_, index) => 
+        `<span class="slider-dot ${index === 0 ? 'active' : ''}" data-index="${index}"></span>`
+      ).join('');
+
+      // Event listeners
+      document.getElementById('sliderPrev').addEventListener('click', () => {
+        pauseAutoPlay();
+        prevSlide();
+      });
+      document.getElementById('sliderNext').addEventListener('click', () => {
+        pauseAutoPlay();
+        nextSlide();
+      });
+
+      dotsContainer.querySelectorAll('.slider-dot').forEach(dot => {
+        dot.addEventListener('click', () => {
+          pauseAutoPlay();
+          const index = parseInt(dot.getAttribute('data-index'));
+          showSlide(index);
+        });
+      });
+
+      // Start auto-play
+      startAutoPlay();
+    }
+
+    function showSlide(index) {
+      if (carouselActivities.length === 0) return;
+      
+      currentSlideIndex = index;
+      if (currentSlideIndex < 0) currentSlideIndex = carouselActivities.length - 1;
+      if (currentSlideIndex >= carouselActivities.length) currentSlideIndex = 0;
+
+      // Update slides
+      document.querySelectorAll('.slider-slide').forEach((slide, i) => {
+        slide.classList.toggle('active', i === currentSlideIndex);
+      });
+
+      // Update dots
+      document.querySelectorAll('.slider-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentSlideIndex);
+      });
+    }
+
+    function nextSlide() {
+      showSlide(currentSlideIndex + 1);
+    }
+
+    function prevSlide() {
+      showSlide(currentSlideIndex - 1);
+    }
+
+    function startAutoPlay() {
+      if (autoPlayInterval) clearInterval(autoPlayInterval);
+      autoPlayInterval = setInterval(() => {
+        if (!autoPlayPaused) {
+          nextSlide();
+        }
+      }, 6000); // 6 seconds
+    }
+
+    function pauseAutoPlay() {
+      autoPlayPaused = true;
+      setTimeout(() => {
+        autoPlayPaused = false;
+      }, 10000); // Resume after 10 seconds
+    }
+
+    async function initPage() {
+      // Public page - no login required to view published posts
+      const id = getQueryId();
+      try {
+        if (id) {
+          messageEl.style.display = 'none';
+          const post = await fetchActivityDetail(id);
+          await renderDetail(post);
+        } else {
+          messageEl.style.display = 'none';
+          // Only load published posts for public view
+          const posts = await fetchJson('/api/activities?status=published&limit=20');
+          if (!Array.isArray(posts)) throw new Error('Không thể tải hoạt động');
+          
+          // Initialize carousel with posts that have images
+          initCarousel(posts);
+          
+          // Render list
+          renderList(posts);
+        }
+      } catch (err) {
+        messageEl.className = 'error';
+        messageEl.textContent = 'Lỗi: Không thể tải dữ liệu hoạt động, vui lòng thử lại sau.';
+        messageEl.style.display = 'block';
+        console.error('Error loading activities:', err);
+      }
+    }
+
+    initPage();
+  </script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Ancestor Chain</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-case h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 3px;
+        }
+        .person {
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-left: 3px solid #4CAF50;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Ancestor Chain - JavaScript</h1>
+    <button onclick="runTests()">Chạy Test</button>
+    <div id="results"></div>
+
+    <script src="genealogy-lineage.js"></script>
+    <script>
+        let personsData = [];
+
+        async function loadData() {
+            try {
+                const response = await fetch('/api/persons');
+                const data = await response.json();
+                personsData = data;
+                window.GenealogyLineage.init(data);
+                console.log('Đã load', data.length, 'người');
+                return true;
+            } catch (error) {
+                console.error('Lỗi load data:', error);
+                return false;
+            }
+        }
+
+        function formatPerson(person) {
+            if (!person) return 'null';
+            
+            const gen = person.generation_number || '?';
+            const name = person.full_name || 'Không rõ tên';
+            const csvId = person.csv_id || 'N/A';
+            const father = person.father_name || '';
+            const mother = person.mother_name || '';
+            
+            let parentInfo = '';
+            if (father && mother) {
+                parentInfo = `Con của: Ông ${father} & Bà ${mother}`;
+            } else if (father) {
+                parentInfo = `Con của: Ông ${father}`;
+            } else if (mother) {
+                parentInfo = `Con của: Bà ${mother}`;
+            } else {
+                parentInfo = 'Chưa có thông tin cha mẹ';
+            }
+            
+            return `Đời ${gen}: ${name} (${csvId}) - ${parentInfo}`;
+        }
+
+        async function testCase(name, csvId) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-case';
+            resultDiv.innerHTML = `<h3>Test: ${name}${csvId ? ' (' + csvId + ')' : ''}</h3>`;
+            
+            try {
+                // Tìm person
+                let person = null;
+                if (csvId) {
+                    person = personsData.find(p => p.csv_id === csvId);
+                } else {
+                    const matches = personsData.filter(p => 
+                        p.full_name && p.full_name.toLowerCase().includes(name.toLowerCase())
+                    );
+                    if (matches.length > 0) {
+                        person = matches[0];
+                    }
+                }
+                
+                if (!person) {
+                    resultDiv.innerHTML += `<div class="error">❌ Không tìm thấy: ${name}</div>`;
+                    return resultDiv;
+                }
+                
+                resultDiv.innerHTML += `<div>Người tìm thấy: ${person.full_name} (ID: ${person.person_id}, CSV: ${person.csv_id || 'N/A'})</div>`;
+                
+                // Xây dựng chuỗi phả hệ
+                const chain = window.GenealogyLineage.buildAncestorChain(person.person_id);
+                
+                if (!chain || chain.length === 0) {
+                    resultDiv.innerHTML += `<div class="error">❌ Không tìm thấy chuỗi phả hệ</div>`;
+                    return resultDiv;
+                }
+                
+                resultDiv.innerHTML += `<div class="success">✅ Tìm thấy ${chain.length} đời trong chuỗi phả hệ:</div>`;
+                
+                const chainDiv = document.createElement('div');
+                chainDiv.className = 'result';
+                chain.forEach((p, index) => {
+                    const personDiv = document.createElement('div');
+                    personDiv.className = 'person';
+                    personDiv.textContent = formatPerson(p);
+                    chainDiv.appendChild(personDiv);
+                });
+                resultDiv.appendChild(chainDiv);
+                
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="error">❌ Lỗi: ${error.message}</div>`;
+                console.error('Test error:', error);
+            }
+            
+            return resultDiv;
+        }
+
+        async function runTests() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div>Đang load dữ liệu...</div>';
+            
+            const loaded = await loadData();
+            if (!loaded) {
+                resultsDiv.innerHTML = '<div class="error">❌ Không thể load dữ liệu</div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = '';
+            
+            // Test case 1: Bảo Phong (P660)
+            const test1 = await testCase('Bảo Phong', 'P660');
+            resultsDiv.appendChild(test1);
+            
+            // Test case 2: Vĩnh Long
+            const test2 = await testCase('Vĩnh Long');
+            resultsDiv.appendChild(test2);
+            
+            // Test case 3: Vĩnh Hòa
+            const test3 = await testCase('Vĩnh Hòa');
+            resultsDiv.appendChild(test3);
+        }
+    </script>
+</body>
+</html>
+

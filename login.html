@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập - Gia Phả Nguyễn Phước Tộc</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Serif TC', serif;
+      background: linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DAA520 75%, #FFD700 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      max-width: 420px;
+      width: 100%;
+      padding: 32px;
+    }
+    .login-card h1 {
+      text-align: center;
+      color: #8B0000;
+      margin-bottom: 12px;
+      font-size: 26px;
+    }
+    .login-card p {
+      text-align: center;
+      color: #555;
+      margin-bottom: 24px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .form-group { margin-bottom: 16px; }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      color: #333;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #DAA520;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: 'Noto Serif TC', serif;
+    }
+    .remember {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      color: #444;
+      font-size: 14px;
+    }
+    .submit-btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: #FFD700;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+    }
+    .error {
+      display: none;
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid #c62828;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .footer-links {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .footer-links a {
+      color: #8B0000;
+      text-decoration: none;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>Đăng nhập</h1>
+    <p>Đăng nhập để truy cập trang quản trị gia phả.</p>
+    <div id="loginError" class="error"></div>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="account">Tài khoản (username hoặc email)</label>
+        <input type="text" id="account" name="account" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Mật khẩu</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+      </div>
+      <label class="remember">
+        <input type="checkbox" id="remember" name="remember">
+        Lưu đăng nhập
+      </label>
+      <button type="submit" class="submit-btn">🔐 Đăng nhập</button>
+    </form>
+    <div class="footer-links">
+      <a href="/">← Quay lại trang chủ</a>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const account = document.getElementById('account').value.trim();
+      const password = document.getElementById('password').value;
+      const remember = document.getElementById('remember').checked;
+      const errorDiv = document.getElementById('loginError');
+
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+
+      try {
+        const formData = new FormData();
+        // Backend expects "username" and "password"
+        formData.append('username', account);
+        formData.append('password', password);
+        formData.append('remember', remember ? '1' : '0');
+
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          // Use redirect from server response, or default based on role
+          const redirectUrl = result.redirect || (result.user && result.user.role === 'admin' ? '/admin/activities' : '/activities');
+          window.location.href = redirectUrl;
+        } else {
+          errorDiv.textContent = result.error || 'Đăng nhập thất bại. Vui lòng thử lại.';
+          errorDiv.style.display = 'block';
+        }
+      } catch (error) {
+        errorDiv.textContent = 'Lỗi kết nối: ' + error.message;
+        errorDiv.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

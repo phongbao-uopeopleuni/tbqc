@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danh Sách Thành Viên - TBQC Gia Phả</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Serif TC', 'Playfair Display', serif;
+      background: linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DAA520 75%, #FFD700 100%);
+      background-attachment: fixed;
+      padding-top: 70px;
+      min-height: 100vh;
+    }
+
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #111827;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .navbar-logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #FFD700;
+      text-decoration: none;
+    }
+
+    .navbar-menu {
+      display: flex;
+      gap: 30px;
+      list-style: none;
+    }
+
+    .navbar-menu a {
+      color: white;
+      text-decoration: none;
+      font-size: 16px;
+      font-weight: 500;
+      transition: color 0.3s;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+
+    .navbar-menu a:hover,
+    .navbar-menu a.active {
+      color: #FFD700;
+      background: rgba(255, 215, 0, 0.1);
+    }
+
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 40px 20px;
+      width: 100%;
+    }
+
+    .page-header {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    .page-header h1 {
+      color: #8B0000;
+      font-size: 36px;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-header p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .controls {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 12px 18px;
+      border: 2px solid #DAA520;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: 'Noto Serif TC', serif;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: #8B0000;
+      box-shadow: 0 0 10px rgba(218, 165, 32, 0.5);
+    }
+
+    .btn {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: 'Noto Serif TC', serif;
+    }
+
+    .btn-search {
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: #FFD700;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-search:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-refresh {
+      background: #2196F3;
+      color: white;
+    }
+
+    .btn-refresh:hover {
+      background: #1976D2;
+      transform: translateY(-2px);
+    }
+
+    .btn-add {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-add:hover:not(:disabled) {
+      background: #45a049;
+      transform: translateY(-2px);
+    }
+
+    .btn-update {
+      background: #FF9800;
+      color: white;
+    }
+
+    .btn-update:hover {
+      background: #F57C00;
+      transform: translateY(-2px);
+    }
+
+    .btn-delete {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #d32f2f;
+      transform: translateY(-2px);
+    }
+
+
+    /* Password modal */
+    .password-modal {
+      display: none;
+      position: fixed;
+      z-index: 3000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .password-modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 30px;
+      border: 1px solid #888;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .password-modal-content h3 {
+      color: #8B0000;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    .password-modal-content input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #DAA520;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      font-family: 'Noto Serif TC', serif;
+    }
+
+    .password-modal-content input:focus {
+      outline: none;
+      border-color: #8B0000;
+      box-shadow: 0 0 10px rgba(218, 165, 32, 0.5);
+    }
+
+    .password-error {
+      color: #c62828;
+      font-size: 14px;
+      margin-bottom: 15px;
+      display: none;
+    }
+
+    .password-modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+
+    .table-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      max-height: 80vh;
+      overflow-y: auto;
+      width: 100%;
+    }
+
+    table {
+      width: 100%;
+      min-width: 2000px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    th {
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: #FFD700;
+      padding: 15px 12px;
+      text-align: left;
+      font-weight: 700;
+      border-bottom: 3px solid #DAA520;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #e0e0e0;
+      color: #333;
+    }
+
+    tbody tr {
+      transition: background 0.2s;
+    }
+
+    tbody tr:hover {
+      background: #FFF8DC;
+    }
+
+    /* Zebra striping - đánh màu xen kẽ */
+    tbody tr:nth-child(odd) {
+      background: #ffffff;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f5f5f5;
+    }
+
+    tbody tr:nth-child(odd):hover {
+      background: #FFF8DC;
+    }
+
+    tbody tr:nth-child(even):hover {
+      background: #FFF8DC;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 60px;
+      color: #666;
+      font-size: 18px;
+    }
+
+    .error {
+      text-align: center;
+      padding: 60px;
+      color: #c62828;
+      font-size: 18px;
+      background: #ffebee;
+      border-radius: 12px;
+    }
+
+    .stats {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+      text-align: center;
+      color: #666;
+      font-size: 16px;
+    }
+
+    .stats strong {
+      color: #8B0000;
+      font-size: 20px;
+    }
+
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 30px;
+      border: 1px solid #888;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #000;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #DAA520;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Noto Serif TC', serif;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #8B0000;
+      box-shadow: 0 0 10px rgba(218, 165, 32, 0.5);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .modal-footer {
+      margin-top: 30px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn-modal {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: 'Noto Serif TC', serif;
+    }
+
+    .btn-modal-save {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-modal-save:hover {
+      background: #45a049;
+    }
+
+    .btn-modal-cancel {
+      background: #757575;
+      color: white;
+    }
+
+    .btn-modal-cancel:hover {
+      background: #616161;
+    }
+
+    .checkbox-column {
+      width: 50px;
+      text-align: center;
+    }
+
+    /* Đảm bảo bảng có thể scroll ngang trên màn hình nhỏ */
+    @media (max-width: 1920px) {
+      .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .navbar-menu {
+        position: fixed;
+        top: 70px;
+        left: -100%;
+        width: 100%;
+        background: #111827;
+        flex-direction: column;
+        padding: 20px;
+        transition: left 0.3s;
+      }
+
+      .navbar-menu.active {
+        left: 0;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+
+      .search-box {
+        width: 100%;
+      }
+
+      .btn {
+        width: 100%;
+      }
+
+      table {
+        font-size: 12px;
+        min-width: 1500px;
+      }
+
+      th, td {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công – Gia Phả Nguyễn Phước Tộc</a>
+    <button class="navbar-toggle" onclick="toggleMenu()" style="display: none; background: none; border: none; color: white; font-size: 24px; cursor: pointer;">☰</button>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/#about">Giới thiệu</a></li>
+      <li><a href="/#activities">Hoạt động</a></li>
+      <li><a href="/#genealogy">Gia phả</a></li>
+      <li><a href="/members" class="active">Thành viên</a></li>
+      <li><a href="/#login">Đăng nhập</a></li>
+      <li><a href="/#contact">Liên hệ</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>📋 Danh Sách Thành Viên</h1>
+      <p>Danh sách đầy đủ các thành viên trong dòng họ Nguyễn Phước Tộc - Tuy Biên Phòng</p>
+    </div>
+
+    <div class="controls">
+      <div class="search-box">
+        <input type="text" id="membersSearch" placeholder="🔍 Tìm kiếm theo ID, tên, giới tính, trạng thái, đời, FM_ID, bố, mẹ, hôn phối, anh chị em, con cái..." 
+               onkeypress="if(event.key==='Enter') filterMembers()">
+      </div>
+      <button class="btn btn-search" onclick="filterMembers()">Tìm kiếm</button>
+      <button class="btn btn-refresh" onclick="loadMembers()">🔄 Làm mới</button>
+      <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">➕ Thêm</button>
+      <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">✏️ Cập nhật</button>
+      <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">🗑️ Xóa</button>
+    </div>
+
+    <div class="table-container">
+      <div class="table-wrapper">
+        <div id="membersTableContainer">
+          <div class="loading">Đang tải dữ liệu...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats" id="statsContainer">
+      <span>Tổng số: <strong id="totalCount">0</strong> thành viên</span>
+      <span style="margin-left: 20px;">Đã chọn: <strong id="selectedCount">0</strong> thành viên</span>
+    </div>
+  </div>
+
+  <!-- Password Modal -->
+  <div id="passwordModal" class="password-modal">
+    <div class="password-modal-content">
+      <h3>🔐 Xác thực mật khẩu</h3>
+      <p style="color: #666; margin-bottom: 20px;">Vui lòng nhập mật khẩu để thực hiện các thao tác chỉnh sửa</p>
+      <input type="password" id="passwordInput" placeholder="Nhập mật khẩu" autocomplete="off" onkeypress="if(event.key==='Enter') verifyPassword()">
+      <div class="password-error" id="passwordError">Mật khẩu không đúng. Vui lòng thử lại.</div>
+      <div class="password-modal-buttons">
+        <button class="btn-modal btn-modal-cancel" onclick="closePasswordModal()">Hủy</button>
+        <button class="btn-modal btn-modal-save" onclick="verifyPassword()">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm/Cập nhật thành viên -->
+  <div id="memberModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2 id="modalTitle">Thêm thành viên mới</h2>
+      <form id="memberForm" onsubmit="saveMember(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="csv_id">ID (CSV_ID) *</label>
+            <input type="text" id="csv_id" name="csv_id" required>
+          </div>
+          <div class="form-group">
+            <label for="fm_id">Father_Mother_ID</label>
+            <input type="text" id="fm_id" name="fm_id">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="full_name">Họ và tên *</label>
+          <input type="text" id="full_name" name="full_name" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="gender">Giới tính *</label>
+            <select id="gender" name="gender" required>
+              <option value="">-- Chọn --</option>
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+              <option value="Khác">Khác</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="status">Trạng thái *</label>
+            <select id="status" name="status" required>
+              <option value="">-- Chọn --</option>
+              <option value="Còn sống">Còn sống</option>
+              <option value="Đã mất">Đã mất</option>
+              <option value="Không rõ">Không rõ</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="generation_number">Đời</label>
+            <input type="number" id="generation_number" name="generation_number" min="1">
+          </div>
+          <div class="form-group">
+            <label for="father_name">Tên bố</label>
+            <input type="text" id="father_name" name="father_name">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="mother_name">Tên mẹ</label>
+          <input type="text" id="mother_name" name="mother_name">
+        </div>
+        <input type="hidden" id="person_id" name="person_id">
+        <div class="modal-footer">
+          <button type="button" class="btn-modal btn-modal-cancel" onclick="closeModal()">Hủy</button>
+          <button type="submit" class="btn-modal btn-modal-save">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Password protection
+    const REQUIRED_PASSWORD = 'tbqc@2025';
+    let isAuthenticated = false;
+    let pendingAction = null; // Lưu hành động đang chờ xác thực
+
+    // Check authentication state on page load
+    function checkAuthState() {
+      const authState = sessionStorage.getItem('membersAuth');
+      if (authState === 'true') {
+        isAuthenticated = true;
+      }
+    }
+
+    // Show password modal
+    function showPasswordModal(actionCallback) {
+      pendingAction = actionCallback; // Lưu hàm callback để gọi sau khi xác thực thành công
+      document.getElementById('passwordModal').style.display = 'block';
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('passwordError').style.display = 'none';
+      document.getElementById('passwordInput').focus();
+    }
+
+    // Close password modal
+    function closePasswordModal() {
+      document.getElementById('passwordModal').style.display = 'none';
+      document.getElementById('passwordInput').value = '';
+      document.getElementById('passwordError').style.display = 'none';
+      pendingAction = null;
+    }
+
+    // Verify password
+    function verifyPassword() {
+      const password = document.getElementById('passwordInput').value.trim();
+      const errorDiv = document.getElementById('passwordError');
+      
+      if (password === REQUIRED_PASSWORD) {
+        // Xác thực thành công
+        isAuthenticated = true;
+        sessionStorage.setItem('membersAuth', 'true');
+        closePasswordModal();
+        
+        // Thực hiện hành động đã lưu
+        if (pendingAction && typeof pendingAction === 'function') {
+          pendingAction();
+        }
+        pendingAction = null;
+      } else {
+        // Mật khẩu sai
+        errorDiv.style.display = 'block';
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').focus();
+      }
+    }
+
+    // Check auth before opening add modal
+    function checkAuthAndOpenAdd() {
+      if (isAuthenticated) {
+        openAddModal();
+      } else {
+        showPasswordModal(openAddModal);
+      }
+    }
+
+    // Check auth before opening update modal
+    function checkAuthAndOpenUpdate() {
+      // Kiểm tra đã chọn thành viên chưa
+      const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+      if (checkboxes.length !== 1) {
+        alert('Vui lòng chọn đúng 1 thành viên để cập nhật');
+        return;
+      }
+      
+      // Kiểm tra xác thực
+      if (isAuthenticated) {
+        openUpdateModal();
+      } else {
+        showPasswordModal(openUpdateModal);
+      }
+    }
+
+    // Check auth before deleting
+    function checkAuthAndDelete() {
+      // Kiểm tra đã chọn thành viên chưa
+      const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+      if (checkboxes.length === 0) {
+        alert('Vui lòng chọn ít nhất 1 thành viên để xóa');
+        return;
+      }
+      
+      // Kiểm tra xác thực
+      if (isAuthenticated) {
+        deleteSelected();
+      } else {
+        showPasswordModal(deleteSelected);
+      }
+    }
+
+    let allMembersData = [];
+    let filteredData = [];
+
+    // Load members data
+    async function loadMembers() {
+      const container = document.getElementById('membersTableContainer');
+      container.innerHTML = '<div class="loading">Đang tải dữ liệu...</div>';
+      
+      try {
+        const response = await fetch('/api/members');
+        const result = await response.json();
+        
+        if (result.success) {
+          allMembersData = result.data;
+          filteredData = allMembersData;
+          renderMembersTable(filteredData);
+          updateStats(filteredData.length);
+        } else {
+          container.innerHTML = `<div class="error">❌ Lỗi: ${result.error || 'Không thể tải dữ liệu'}</div>`;
+        }
+      } catch (error) {
+        container.innerHTML = `<div class="error">❌ Lỗi kết nối: ${error.message}</div>`;
+      }
+    }
+
+    // Render members table
+    function renderMembersTable(members) {
+      const container = document.getElementById('membersTableContainer');
+      
+      if (!members || members.length === 0) {
+        container.innerHTML = '<div class="loading">Không có dữ liệu</div>';
+        updateStats(0);
+        return;
+      }
+      
+      let html = '<table>';
+      html += '<thead><tr>';
+      html += '<th class="checkbox-column"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>';
+      html += '<th style="text-align: center; width: 100px;">ID</th>';
+      html += '<th style="min-width: 200px;">Họ và tên</th>';
+      html += '<th style="min-width: 120px; text-align: center;">Giới tính</th>';
+      html += '<th style="min-width: 140px; text-align: center;">Trạng thái</th>';
+      html += '<th style="min-width: 100px; text-align: center;">Đời</th>';
+      html += '<th style="min-width: 150px; text-align: center;">Father_Mother_ID</th>';
+      html += '<th style="min-width: 200px;">Tên bố</th>';
+      html += '<th style="min-width: 200px;">Tên mẹ</th>';
+      html += '<th style="min-width: 300px;">Thông tin hôn phối</th>';
+      html += '<th style="min-width: 300px;">Thông tin anh chị em</th>';
+      html += '<th style="min-width: 300px;">Thông tin con cái</th>';
+      html += '</tr></thead><tbody>';
+      
+      members.forEach((member, index) => {
+        html += '<tr>';
+        html += `<td class="checkbox-column"><input type="checkbox" class="row-checkbox" value="${member.person_id}" onchange="updateButtonStates()"></td>`;
+        html += `<td style="text-align: center; font-weight: 600; color: #8B0000;">${escapeHtml(member.csv_id || member.person_id || '-')}</td>`;
+        html += `<td style="font-weight: 600; color: #8B0000;">${escapeHtml(member.full_name || '-')}</td>`;
+        html += `<td style="text-align: center;">${escapeHtml(member.gender || '-')}</td>`;
+        html += `<td style="text-align: center;">${escapeHtml(member.status || '-')}</td>`;
+        html += `<td style="text-align: center; font-weight: 600;">${member.generation_number || '-'}</td>`;
+        html += `<td style="text-align: center; font-family: monospace; color: #666;">${escapeHtml(member.fm_id || '-')}</td>`;
+        html += `<td>${escapeHtml(member.father_name || '-')}</td>`;
+        html += `<td>${escapeHtml(member.mother_name || '-')}</td>`;
+        html += `<td style="max-width: 300px; word-wrap: break-word; line-height: 1.5;">${escapeHtml(formatText(member.spouses))}</td>`;
+        html += `<td style="max-width: 300px; word-wrap: break-word; line-height: 1.5;">${escapeHtml(formatText(member.siblings))}</td>`;
+        html += `<td style="max-width: 300px; word-wrap: break-word; line-height: 1.5;">${escapeHtml(formatText(member.children))}</td>`;
+        html += '</tr>';
+      });
+      
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // Format date
+    function formatDate(dateStr) {
+      if (!dateStr || dateStr === 'None' || dateStr === 'null') return '-';
+      try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+          // Nếu không parse được, trả về năm
+          return dateStr.split('-')[0] || dateStr;
+        }
+        return date.toLocaleDateString('vi-VN');
+      } catch {
+        return dateStr.split(' ')[0] || dateStr;
+      }
+    }
+
+    // Format text (thay ; thành xuống dòng)
+    function formatText(text) {
+      if (!text || text === 'None' || text === 'null' || text === '') return '-';
+      // Tách theo ; hoặc ,
+      const items = text.split(/[;,]/).map(s => s.trim()).filter(s => s);
+      if (items.length === 0) return '-';
+      // Nếu có nhiều item, join bằng <br> để hiển thị xuống dòng
+      if (items.length > 1) {
+        return items.join('<br>');
+      }
+      return items[0];
+    }
+
+    // Escape HTML (nhưng giữ <br> cho formatText)
+    function escapeHtml(text) {
+      if (!text) return '-';
+      // Nếu text đã có <br> (từ formatText), không escape nữa
+      if (typeof text === 'string' && text.includes('<br>')) {
+        return text;
+      }
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Filter members
+    function filterMembers() {
+      const searchTerm = document.getElementById('membersSearch').value.toLowerCase().trim();
+      
+      if (!searchTerm) {
+        filteredData = allMembersData;
+      } else {
+        filteredData = allMembersData.filter(member => {
+          const csvId = (member.csv_id || '').toLowerCase();
+          const fullName = (member.full_name || '').toLowerCase();
+          const gender = (member.gender || '').toLowerCase();
+          const status = (member.status || '').toLowerCase();
+          const generation = String(member.generation_number || '');
+          const fmId = (member.fm_id || '').toLowerCase();
+          const father = (member.father_name || '').toLowerCase();
+          const mother = (member.mother_name || '').toLowerCase();
+          const spouses = (member.spouses || '').toLowerCase();
+          const siblings = (member.siblings || '').toLowerCase();
+          const children = (member.children || '').toLowerCase();
+          
+          return csvId.includes(searchTerm) ||
+                 fullName.includes(searchTerm) || 
+                 gender.includes(searchTerm) ||
+                 status.includes(searchTerm) ||
+                 generation.includes(searchTerm) ||
+                 fmId.includes(searchTerm) ||
+                 father.includes(searchTerm) ||
+                 mother.includes(searchTerm) ||
+                 spouses.includes(searchTerm) ||
+                 siblings.includes(searchTerm) ||
+                 children.includes(searchTerm);
+        });
+      }
+      
+      renderMembersTable(filteredData);
+      updateStats(filteredData.length);
+    }
+
+    // Update stats
+    function updateStats(count) {
+      document.getElementById('totalCount').textContent = count;
+    }
+
+    // Toggle mobile menu
+    function toggleMenu() {
+      const menu = document.getElementById('navbarMenu');
+      menu.classList.toggle('active');
+    }
+
+    // Selected members
+    let selectedMembers = new Set();
+
+    // Toggle select all
+    function toggleSelectAll(checkbox) {
+      const checkboxes = document.querySelectorAll('.row-checkbox');
+      checkboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+        if (checkbox.checked) {
+          selectedMembers.add(cb.value);
+        } else {
+          selectedMembers.delete(cb.value);
+        }
+      });
+      updateButtonStates();
+    }
+
+    // Update button states based on selection
+    function updateButtonStates() {
+      const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+      const selectedCount = checkboxes.length;
+      document.getElementById('selectedCount').textContent = selectedCount;
+
+      // Update selectedMembers set
+      selectedMembers.clear();
+      checkboxes.forEach(cb => selectedMembers.add(cb.value));
+      
+      // Không disable nút nữa - luôn cho phép click để yêu cầu mật khẩu hoặc thông báo
+    }
+
+    // Open add modal
+    function openAddModal() {
+      document.getElementById('modalTitle').textContent = 'Thêm thành viên mới';
+      document.getElementById('memberForm').reset();
+      document.getElementById('person_id').value = '';
+      document.getElementById('memberModal').style.display = 'block';
+    }
+
+    // Open update modal
+    function openUpdateModal() {
+      const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+      if (checkboxes.length !== 1) {
+        alert('Vui lòng chọn đúng 1 thành viên để cập nhật');
+        return;
+      }
+
+      const personId = checkboxes[0].value;
+      const member = allMembersData.find(m => m.person_id == personId);
+      
+      if (!member) {
+        alert('Không tìm thấy thông tin thành viên');
+        return;
+      }
+
+      document.getElementById('modalTitle').textContent = 'Cập nhật thành viên';
+      document.getElementById('person_id').value = member.person_id;
+      document.getElementById('csv_id').value = member.csv_id || '';
+      document.getElementById('fm_id').value = member.fm_id || '';
+      document.getElementById('full_name').value = member.full_name || '';
+      document.getElementById('gender').value = member.gender || '';
+      document.getElementById('status').value = member.status || '';
+      document.getElementById('generation_number').value = member.generation_number || '';
+      document.getElementById('father_name').value = member.father_name || '';
+      document.getElementById('mother_name').value = member.mother_name || '';
+      document.getElementById('memberModal').style.display = 'block';
+    }
+
+    // Close modal
+    function closeModal() {
+      document.getElementById('memberModal').style.display = 'none';
+      document.getElementById('memberForm').reset();
+    }
+
+    // Save member (add or update)
+    async function saveMember(event) {
+      event.preventDefault();
+      
+      const formData = new FormData(event.target);
+      const data = Object.fromEntries(formData);
+      const personId = data.person_id;
+      const isUpdate = personId && personId !== '';
+
+      try {
+        const url = isUpdate ? `/api/persons/${personId}` : '/api/persons';
+        const method = isUpdate ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+          method: method,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          alert(isUpdate ? 'Cập nhật thành công!' : 'Thêm thành công!');
+          closeModal();
+          loadMembers();
+        } else {
+          alert('Lỗi: ' + (result.error || 'Không thể lưu dữ liệu'));
+        }
+      } catch (error) {
+        alert('Lỗi kết nối: ' + error.message);
+      }
+    }
+
+    // Delete selected members
+    async function deleteSelected() {
+      const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+      if (checkboxes.length === 0) {
+        alert('Vui lòng chọn ít nhất 1 thành viên để xóa');
+        return;
+      }
+
+      if (!confirm(`Bạn có chắc chắn muốn xóa ${checkboxes.length} thành viên đã chọn?`)) {
+        return;
+      }
+
+      const personIds = Array.from(checkboxes).map(cb => cb.value);
+      
+      try {
+        const response = await fetch('/api/persons/batch', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ person_ids: personIds })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('Xóa thành công!');
+          selectedMembers.clear();
+          loadMembers();
+        } else {
+          alert('Lỗi: ' + (result.error || 'Không thể xóa dữ liệu'));
+        }
+      } catch (error) {
+        alert('Lỗi kết nối: ' + error.message);
+      }
+    }
+
+
+    // Close password modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('memberModal');
+      const passwordModal = document.getElementById('passwordModal');
+      if (event.target == modal) {
+        closeModal();
+      }
+      if (event.target == passwordModal) {
+        closePasswordModal();
+      }
+    }
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      checkAuthState();
+      loadMembers();
+    });
+  </script>
+</body>
+</html>
