@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: tbqc-giapha
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: cd folder_py && python app.py
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_HOST
+        fromDatabase:
+          name: tbqc-db
+          property: host
+      - key: DB_USER
+        fromDatabase:
+          name: tbqc-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: tbqc-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: tbqc-db
+          property: database
+      - key: DB_PORT
+        fromDatabase:
+          name: tbqc-db
+          property: port
+
+databases:
+  - name: tbqc-db
+    databaseName: tbqc2025
+    user: tbqc_admin
+    plan: free

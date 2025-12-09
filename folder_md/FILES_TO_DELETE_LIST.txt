@@ -1,0 +1,25 @@
+DANH SÁCH FILE SẼ BỊ XÓA BỞI cleanup_files.py
+===============================================
+
+⚠️ LƯU Ý: File DROP_AND_RESET.sql đã được GIỮ LẠI theo yêu cầu
+
+FILE QUAN TRỌNG ĐƯỢC BẢO VỆ (sẽ KHÔNG xóa):
+- app.py, auth.py, admin_routes.py, marriage_api.py, audit_log.py
+- import_final_csv_to_database.py, populate_parent_fields.py, make_admin_now.py
+- database_schema.sql, database_schema_extended.sql, database_schema_in_laws.sql
+- add_grave_location_column.sql, migration_manual.sql
+- check_database_status.sql, verify_all_steps.sql
+- fix_missing_marriages_spouses.sql, fix_foreign_key_constraint.sql
+- update_views_with_csv_id.sql, check_and_migrate.sql
+- DROP_AND_RESET.sql (GIỮ LẠI)
+- README.md, QUICK_START_CHECKLIST.md, HUONG_DAN_CHAY_LAI_TU_DAU.md
+- HUONG_DAN_CHUAN_HOA_SCHEMA.md, THONG_TIN_ADMIN.md
+- index.html, members.html
+- genealogy-lineage.js, family-tree-core.js, family-tree-ui.js
+- TBQC_FINAL.csv
+- start_server.bat, run_cleanup.bat
+- requirements.txt
+
+FILE SẼ BỊ XÓA (nếu tồn tại và không trong KEEP_FILES):
+[Xem danh sách đầy đủ bằng cách chạy: python cleanup_files.py --preview]
+
