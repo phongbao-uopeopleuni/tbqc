@@ -366,6 +366,7 @@ def get_persons():
         cursor = connection.cursor(dictionary=True)
         # Sử dụng GROUP BY và MAX() để đảm bảo mỗi person chỉ xuất hiện 1 lần
         # Nếu có nhiều relationships, lấy relationship đầu tiên (theo relationship_id)
+        # Main query for persons with parent info
         cursor.execute("""
             SELECT 
                 p.person_id,
@@ -381,7 +382,6 @@ def get_persons():
                 COALESCE(p.father_name, father.full_name) AS father_name,
                 COALESCE(p.mother_id, r.mother_id) AS mother_id,
                 COALESCE(p.mother_name, mother.full_name) AS mother_name,
-                GROUP_CONCAT(DISTINCT CONCAT(sibling.full_name, ' (', sr.relation_type, ')') SEPARATOR '; ') AS siblings,
                 GROUP_CONCAT(DISTINCT ms.spouse_name SEPARATOR '; ') AS spouse,
                 GROUP_CONCAT(DISTINCT child.full_name SEPARATOR '; ') AS children
             FROM persons p
@@ -391,8 +391,6 @@ def get_persons():
             LEFT JOIN relationships r ON p.person_id = r.child_id
             LEFT JOIN persons father ON COALESCE(p.father_id, r.father_id) = father.person_id
             LEFT JOIN persons mother ON COALESCE(p.mother_id, r.mother_id) = mother.person_id
-            LEFT JOIN sibling_relationships sr ON p.person_id = sr.person_id
-            LEFT JOIN persons sibling ON sr.sibling_person_id = sibling.person_id
             LEFT JOIN marriages_spouses ms ON p.person_id = ms.person_id AND ms.is_active = TRUE
             LEFT JOIN relationships r_children ON (p.person_id = r_children.father_id OR p.person_id = r_children.mother_id)
             LEFT JOIN persons child ON r_children.child_id = child.person_id
@@ -400,6 +398,43 @@ def get_persons():
             ORDER BY g.generation_number, p.full_name
         """)
         persons = cursor.fetchall()
+        
+        # Derive siblings from relationships for each person
+        for person in persons:
+            person_id = person['person_id']
+            
+            # Get parent IDs from relationships table
+            cursor.execute("""
+                SELECT father_id, mother_id
+                FROM relationships
+                WHERE child_id = %s
+                LIMIT 1
+            """, (person_id,))
+            parent_rel = cursor.fetchone()
+            
+            # Get siblings: people who share the same father or mother
+            if parent_rel and (parent_rel.get('father_id') or parent_rel.get('mother_id')):
+                father_id = parent_rel.get('father_id')
+                mother_id = parent_rel.get('mother_id')
+                sibling_query = """
+                    SELECT DISTINCT s.full_name
+                    FROM persons s
+                    JOIN relationships r_sibling ON s.person_id = r_sibling.child_id
+                    WHERE s.person_id != %s
+                    AND (
+                        (%s IS NOT NULL AND r_sibling.father_id = %s)
+                        OR (%s IS NOT NULL AND r_sibling.mother_id = %s)
+                    )
+                    ORDER BY s.full_name
+                """
+                cursor.execute(sibling_query, (person_id, father_id, father_id, mother_id, mother_id))
+                siblings = cursor.fetchall()
+                if siblings:
+                    person['siblings'] = '; '.join([s['full_name'] for s in siblings])
+                else:
+                    person['siblings'] = None
+            else:
+                person['siblings'] = None
         
         # Xử lý giá trị mặc định cho Vua Minh Mạng
         for person in persons:
@@ -1657,14 +1692,32 @@ def get_members():
             """, (person_id,))
             spouses = cursor.fetchall()
             
-            # Lấy anh/chị/em
+            # Lấy anh/chị/em từ relationships (những người có cùng cha mẹ)
+            # Get parent info first
             cursor.execute("""
-                SELECT COALESCE(p.full_name, sr.sibling_name) AS sibling_name
-                FROM sibling_relationships sr
-                LEFT JOIN persons p ON sr.sibling_person_id = p.person_id
-                WHERE sr.person_id = %s
+                SELECT father_id, mother_id
+                FROM relationships
+                WHERE child_id = %s
+                LIMIT 1
             """, (person_id,))
-            siblings = cursor.fetchall()
+            parent_rel = cursor.fetchone()
+            
+            siblings = []
+            if parent_rel and (parent_rel.get('father_id') or parent_rel.get('mother_id')):
+                father_id = parent_rel.get('father_id')
+                mother_id = parent_rel.get('mother_id')
+                cursor.execute("""
+                    SELECT DISTINCT s.full_name AS sibling_name
+                    FROM persons s
+                    JOIN relationships r_sibling ON s.person_id = r_sibling.child_id
+                    WHERE s.person_id != %s
+                    AND (
+                        (%s IS NOT NULL AND r_sibling.father_id = %s)
+                        OR (%s IS NOT NULL AND r_sibling.mother_id = %s)
+                    )
+                    ORDER BY s.full_name
+                """, (person_id, father_id, father_id, mother_id, mother_id))
+                siblings = cursor.fetchall()
             
             # Lấy con cái
             cursor.execute("""

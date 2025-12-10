@@ -871,6 +871,9 @@ def infer_in_law_relationships(cursor, csv_id_to_person_id: Dict[str, int]):
                 f"{stats['skipped_no_gender']} bỏ qua (không có giới tính), "
                 f"{stats['skipped_no_parent']} bỏ qua (không có cha/mẹ), {stats['errors']} lỗi")
 
+# ⚠️ DEPRECATED FUNCTION: This function references sibling_relationships table which no longer exists
+# Siblings are now derived from relationships table (people sharing same parents)
+# This function is kept for legacy reference but will not work with the current schema
 def import_siblings_and_children(cursor, csv_data: List[Dict], csv_id_to_person_id: Dict[str, int]):
     """
     Bước 5: Import quan hệ anh chị em và con cái
@@ -897,7 +900,11 @@ def import_siblings_and_children(cursor, csv_data: List[Dict], csv_id_to_person_
                 
                 sibling_person_id = find_person_by_name(cursor, sibling_name)
                 
-                # Kiểm tra đã tồn tại chưa (quan hệ 1 chiều, sẽ tự động tạo ngược lại nếu cần)
+                # ⚠️ DEPRECATED: sibling_relationships table no longer exists
+                # Siblings are now derived from relationships table automatically
+                # This code is commented out as it won't work with current schema
+                # Sibling relationships are inferred from shared parents in relationships table
+                """
                 cursor.execute("""
                     SELECT sibling_id FROM sibling_relationships 
                     WHERE person_id = %s AND (sibling_person_id = %s OR sibling_name = %s)
@@ -910,6 +917,9 @@ def import_siblings_and_children(cursor, csv_data: List[Dict], csv_id_to_person_
                         VALUES (%s, %s, %s, 'khac')
                     """, (person_id, sibling_person_id, sibling_name))
                     stats['siblings'] += 1
+                """
+                # Siblings are now automatically derived from relationships table
+                # No need to insert into sibling_relationships
         
         # Import con cái (đã được xử lý ở Bước 2 qua relationships, nhưng có thể bổ sung từ cột "Thông tin con cái")
         children_text = normalize(row.get('Thông tin con cái', ''))
@@ -1023,8 +1033,21 @@ def main():
         logger.info(f"  - Marriages: {cursor.fetchone()[0]} quan hệ hôn phối")
         cursor.execute("SELECT COUNT(*) FROM in_law_relationships")
         logger.info(f"  - In-laws: {cursor.fetchone()[0]} quan hệ con dâu/con rể")
-        cursor.execute("SELECT COUNT(*) FROM sibling_relationships")
-        logger.info(f"  - Siblings: {cursor.fetchone()[0]} quan hệ anh/chị/em")
+        # ⚠️ DEPRECATED: sibling_relationships table no longer exists
+        # Siblings are derived from relationships table
+        # Count siblings by finding people who share parents
+        cursor.execute("""
+            SELECT COUNT(DISTINCT r1.child_id) as sibling_count
+            FROM relationships r1
+            JOIN relationships r2 ON (
+                (r1.father_id IS NOT NULL AND r1.father_id = r2.father_id)
+                OR (r1.mother_id IS NOT NULL AND r1.mother_id = r2.mother_id)
+            )
+            WHERE r1.child_id != r2.child_id
+        """)
+        result = cursor.fetchone()
+        sibling_count = result[0] if result else 0
+        logger.info(f"  - Siblings: {sibling_count} quan hệ anh/chị/em (derived from relationships)")
         logger.info("="*80)
         
     except Exception as e:

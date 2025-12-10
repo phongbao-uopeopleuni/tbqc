@@ -39,7 +39,10 @@ CREATE TABLE IF NOT EXISTS in_law_relationships (
 -- =====================================================
 -- BẢNG SIBLING_RELATIONSHIPS (Quan hệ anh chị em)
 -- =====================================================
-
+-- ⚠️ DEPRECATED: Bảng này đã bị loại bỏ khỏi schema chính
+-- Siblings bây giờ được tính từ bảng relationships (những người có cùng cha mẹ)
+-- Code này được comment lại để không tạo bảng nữa
+/*
 CREATE TABLE IF NOT EXISTS sibling_relationships (
     sibling_id INT PRIMARY KEY AUTO_INCREMENT,
     person_id INT NOT NULL COMMENT 'Người thứ nhất',
@@ -60,6 +63,7 @@ CREATE TABLE IF NOT EXISTS sibling_relationships (
     INDEX idx_person (person_id),
     INDEX idx_sibling (sibling_person_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+*/
 
 -- =====================================================
 -- CẬP NHẬT BẢNG MARRIAGES_SPOUSES
@@ -125,18 +129,22 @@ GROUP BY p.person_id, p.full_name, p.gender, g.generation_number;
 -- =====================================================
 -- VIEW: V_PERSON_WITH_SIBLINGS
 -- =====================================================
+-- Updated to derive siblings from relationships table instead of sibling_relationships
 
 CREATE OR REPLACE VIEW v_person_with_siblings AS
 SELECT 
     p.person_id,
     p.full_name,
     g.generation_number,
-    GROUP_CONCAT(DISTINCT CONCAT(
-        sibling.full_name,
-        ' (', sr.relation_type, ')'
-    ) ORDER BY sibling.full_name SEPARATOR '; ') AS siblings
+    (SELECT GROUP_CONCAT(DISTINCT sibling.full_name ORDER BY sibling.full_name SEPARATOR '; ')
+     FROM persons sibling
+     JOIN relationships r_sibling ON sibling.person_id = r_sibling.child_id
+     JOIN relationships r_current ON r_current.child_id = p.person_id
+     WHERE sibling.person_id != p.person_id
+     AND (
+         (r_current.father_id IS NOT NULL AND r_sibling.father_id = r_current.father_id)
+         OR (r_current.mother_id IS NOT NULL AND r_sibling.mother_id = r_current.mother_id)
+     )
+    ) AS siblings
 FROM persons p
-LEFT JOIN generations g ON p.generation_id = g.generation_id
-LEFT JOIN sibling_relationships sr ON p.person_id = sr.person_id
-LEFT JOIN persons sibling ON sr.sibling_person_id = sibling.person_id
-GROUP BY p.person_id, p.full_name, g.generation_number;
+LEFT JOIN generations g ON p.generation_id = g.generation_id;

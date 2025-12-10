@@ -2,15 +2,7 @@
 -- DATABASE SCHEMA: GIA PHẢ NGUYỄN PHƯỚC TỘC - TUY BIÊN PHÒNG
 -- Chuẩn hóa theo 1NF, 2NF, 3NF, BCNF
 -- =====================================================
-
--- Tạo database
-CREATE DATABASE IF NOT EXISTS tbqc2025
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-
-USE tbqc2025;
-
--- =====================================================
+USE railway;
 -- BẢNG 1: GENERATIONS (Đời) - Loại bỏ phụ thuộc bắc cầu
 -- =====================================================
 CREATE TABLE generations (
