@@ -9,20 +9,28 @@ from functools import wraps
 from flask import session, redirect, url_for, request, jsonify
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 import bcrypt
+import os
 import mysql.connector
 from mysql.connector import Error
 
 # Cấu hình database
 DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'tbqc2025',
-    'user': 'tbqc_admin',
-    'password': 'tbqc2025',
-    'charset': 'utf8mb4',
-    'collation': 'utf8mb4_unicode_ci'
+    "host": os.environ.get("DB_HOST") or os.environ.get("MYSQLHOST") or "localhost",
+    "database": os.environ.get("DB_NAME") or os.environ.get("MYSQLDATABASE") or "tbqc2025",
+    "user": os.environ.get("DB_USER") or os.environ.get("MYSQLUSER") or "tbqc_admin",
+    "password": os.environ.get("DB_PASSWORD") or os.environ.get("MYSQLPASSWORD") or "tbqc2025",
+    "charset": "utf8mb4",
+    "collation": "utf8mb4_unicode_ci",
 }
 
-def get_db_connection():
+db_port = os.environ.get("DB_PORT") or os.environ.get("MYSQLPORT")
+if db_port:
+    try:
+        DB_CONFIG["port"] = int(db_port)
+    except ValueError:
+        pass
+
+def get_connection():
     """Tạo kết nối database"""
     try:
         connection = mysql.connector.connect(**DB_CONFIG)
@@ -71,7 +79,7 @@ class User(UserMixin):
 
 def get_user_by_id(user_id):
     """Lấy user theo ID"""
-    connection = get_db_connection()
+    connection = get_connection()
     if not connection:
         return None
     
@@ -116,7 +124,7 @@ def get_user_by_id(user_id):
 
 def get_user_by_username(username):
     """Lấy user theo username"""
-    connection = get_db_connection()
+    connection = get_connection()
     if not connection:
         return None
     

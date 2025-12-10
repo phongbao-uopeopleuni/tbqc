@@ -413,6 +413,32 @@ def get_persons():
             cursor.close()
             connection.close()
 
+@app.route("/api/generations", methods=["GET"])
+def get_generations_api():
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()  # use the existing helper in app.py
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT
+                generation_id,
+                generation_number,
+                description AS generation_name
+            FROM generations
+            ORDER BY generation_number
+        """)
+        rows = cursor.fetchall()
+        return jsonify(rows), 200
+    except Exception as e:
+        print("Error in /api/generations:", e)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn and conn.is_connected():
+            conn.close()
+
 def get_sheet3_data_by_name(person_name, csv_id=None, father_name=None, mother_name=None):
     """Đọc dữ liệu từ Sheet3 CSV theo tên người
     QUAN TRỌNG: Dùng csv_id hoặc tên bố/mẹ để phân biệt khi có nhiều người trùng tên

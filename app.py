@@ -7,18 +7,20 @@ Kết nối HTML với MySQL database, chạy được cả local lẫn Railway.
 
 import os
 import sys
-import csv
 import secrets
 
-from flask import Flask, jsonify, send_from_directory, request, redirect
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 
+# ---------------------------------------------------------------------------
+# TÙY CHỌN: flask_login (nếu chưa cài thì app vẫn chạy bình thường)
+# ---------------------------------------------------------------------------
 try:
-    from flask_login import login_required, current_user  # có thể chưa dùng hết nhưng giữ để sau
+    from flask_login import login_required, current_user  # noqa: F401
 except ImportError:
     # Nếu flask_login chưa cài thì app vẫn có thể start (nhưng không dùng login được)
     login_required = lambda f: f  # type: ignore
-    current_user = None
+    current_user = None  # type: ignore
 
 import mysql.connector
 from mysql.connector import Error
@@ -45,6 +47,7 @@ print("=" * 80)
 # =============================================================================
 
 try:
+    # static_folder trỏ thẳng về BASE_DIR để phục vụ index.html, JS, CSS, images...
     app = Flask(__name__, static_folder=BASE_DIR, static_url_path="")
     app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
     CORS(app)
@@ -57,7 +60,7 @@ except Exception as e:
     raise
 
 # =============================================================================
-# AUTH & LOGIN_MANAGER
+# AUTH & LOGIN_MANAGER (NẾU CÓ)
 # =============================================================================
 
 init_login_manager = None
@@ -89,7 +92,7 @@ else:
     print("⚠️  Không thể khởi tạo login manager (chưa tìm thấy auth.py)")
 
 # =============================================================================
-# ĐĂNG KÝ ROUTES TỪ CÁC MODULE CON
+# ĐĂNG KÝ ROUTES TỪ CÁC MODULE CON (NẾU CÓ)
 # =============================================================================
 
 # Admin routes
@@ -134,26 +137,22 @@ if register_marriage_routes:
     except Exception as e:
         print(f"⚠️  Lỗi khi đăng ký marriage routes: {e}")
 
-# Nếu sau này em có thêm module khác (members_api, activities_api, …)
-# thì cũng import kiểu tương tự ở đây.
-
-
 # =============================================================================
 # CẤU HÌNH DATABASE – HỖ TRỢ CẢ LOCAL LẪN RAILWAY
 # =============================================================================
+# Ưu tiên bộ DB_* do em tự set. Nếu không có thì fallback sang bộ MYSQL*
+# do Railway tự tạo khi connect MySQL service.
 
 DB_CONFIG = {
-    # Ưu tiên DB_HOST, nếu không có thì dùng MYSQLHOST của Railway, cuối cùng mới local
     "host": os.environ.get("DB_HOST")
     or os.environ.get("MYSQLHOST")
     or "localhost",
-    # DB_NAME → MYSQLDATABASE → default local
     "database": os.environ.get("DB_NAME")
     or os.environ.get("MYSQLDATABASE")
     or "tbqc2025",
-    # DB_USER → MYSQLUSER → default local
-    "user": os.environ.get("DB_USER") or os.environ.get("MYSQLUSER") or "tbqc_admin",
-    # DB_PASSWORD → MYSQLPASSWORD → default local
+    "user": os.environ.get("DB_USER")
+    or os.environ.get("MYSQLUSER")
+    or "tbqc_admin",
     "password": os.environ.get("DB_PASSWORD")
     or os.environ.get("MYSQLPASSWORD")
     or "tbqc2025",
@@ -167,6 +166,10 @@ if db_port:
         DB_CONFIG["port"] = int(db_port)
     except ValueError:
         print(f"⚠️  Giá trị port không hợp lệ: {db_port}")
+
+# ---------------------------------------------------------------------------
+# Hàm tạo kết nối DB
+# ---------------------------------------------------------------------------
 
 
 def get_db_connection():
@@ -195,10 +198,9 @@ def get_db_connection():
 # ROUTES CƠ BẢN (STATIC, HEALTHCHECK)
 # =============================================================================
 
-
 @app.route("/")
 def index():
-    """Trang chủ – trả về index.html ở thư mục root."""
+    """Trang chủ – trả về index.html ở thư mục root của project."""
     return send_from_directory(BASE_DIR, "index.html")
 
 
@@ -221,7 +223,7 @@ def api_ping():
 def api_health():
     """
     Health check: kiểm tra server + kết nối DB.
-    Dùng endpoint này cho Railway / cho debug 502.
+    Dùng endpoint này cho Railway / debug 502.
     """
     health_status = {
         "server": "ok",
@@ -234,13 +236,13 @@ def api_health():
             "password_set": "Yes" if DB_CONFIG.get("password") else "No",
         },
         "env_vars": {
-            # Bộ DB_* (tự set nếu muốn)
+            # Bộ DB_* do em tự set
             "DB_HOST": os.environ.get("DB_HOST", "Not set"),
             "DB_NAME": os.environ.get("DB_NAME", "Not set"),
             "DB_USER": os.environ.get("DB_USER", "Not set"),
             "DB_PORT": os.environ.get("DB_PORT", "Not set"),
             "DB_PASSWORD": "Set" if os.environ.get("DB_PASSWORD") else "Not set",
-            # Bộ MYSQL* do Railway cung cấp khi connect service MySQL
+            # Bộ MYSQL* do Railway tạo
             "MYSQLHOST": os.environ.get("MYSQLHOST", "Not set"),
             "MYSQLDATABASE": os.environ.get("MYSQLDATABASE", "Not set"),
             "MYSQLUSER": os.environ.get("MYSQLUSER", "Not set"),
@@ -276,3 +278,11 @@ def health_short():
 # MAIN – CHỈ DÙNG KHI CHẠY LOCAL `python app.py`
 # (Khi deploy Railway với gunicorn app:app thì khối này không chạy)
 # =============================================================================
+
+if __name__ == "__main__":
+    # PORT của Railway truyền vào ENV, local thì mặc định 8080
+    port = int(os.environ.get("PORT", 8080))
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+
+    print(f"🔥 Chạy app local tại http://0.0.0.0:{port} (debug={debug})")
+    app.run(host="0.0.0.0", port=port, debug=debug)
