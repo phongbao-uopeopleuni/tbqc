@@ -18,14 +18,12 @@ ALTER TABLE users
 MODIFY COLUMN role ENUM('user', 'editor', 'admin') NOT NULL DEFAULT 'user';
 
 -- =====================================================
--- BẢNG HÔN PHỐI (Marriages/Spouses) - Bảng mới cho hôn phối dạng text
--- Lưu ý: Bảng marriages cũ (với husband_id, wife_id) vẫn giữ nguyên
--- Bảng này dùng để lưu thông tin hôn phối khi chưa có ID của spouse
+-- BẢNG HÔN PHỐI (marriages_spouses) - DEPRECATED
+-- LEGACY, DO NOT EXECUTE IN PRODUCTION
+-- Bảng này không còn được dùng. Sử dụng bảng normalized `marriages` thay thế.
+-- Code dưới đây được comment để tham khảo lịch sử, KHÔNG được chạy.
 -- =====================================================
-
--- Xóa bảng cũ nếu có (nếu muốn dùng cấu trúc mới)
--- DROP TABLE IF EXISTS marriages_spouses;
-
+/*
 CREATE TABLE IF NOT EXISTS marriages_spouses (
     marriage_id INT PRIMARY KEY AUTO_INCREMENT,
     person_id INT NOT NULL,
@@ -46,6 +44,7 @@ CREATE TABLE IF NOT EXISTS marriages_spouses (
     INDEX idx_person_id (person_id),
     INDEX idx_spouse_name (spouse_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+*/
 
 -- =====================================================
 -- BẢNG AUDIT LOG
@@ -103,10 +102,12 @@ CREATE TABLE IF NOT EXISTS edit_suggestions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================
--- VIEW: V_PERSON_WITH_SPOUSES
+-- VIEW: V_PERSON_WITH_SPOUSES (DEPRECATED - uses marriages_spouses)
+-- LEGACY, DO NOT EXECUTE IN PRODUCTION
+-- View này dùng bảng marriages_spouses đã bị xóa. KHÔNG được tạo view này.
+-- TODO: recreate using normalized `marriages` table if needed.
 -- =====================================================
-
--- Xóa view cũ nếu có lỗi
+/*
 DROP VIEW IF EXISTS v_person_with_spouses;
 
 CREATE VIEW v_person_with_spouses AS
@@ -132,6 +133,7 @@ LEFT JOIN persons father ON r.father_id = father.person_id
 LEFT JOIN persons mother ON r.mother_id = mother.person_id
 LEFT JOIN marriages_spouses m ON p.person_id = m.person_id AND m.is_active = TRUE
 GROUP BY p.person_id;
+*/
 
 -- =====================================================
 -- STORED PROCEDURE: SP_GET_DEFAULT_PERMISSIONS

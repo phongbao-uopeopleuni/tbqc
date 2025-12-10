@@ -382,7 +382,6 @@ def get_persons():
                 COALESCE(p.father_name, father.full_name) AS father_name,
                 COALESCE(p.mother_id, r.mother_id) AS mother_id,
                 COALESCE(p.mother_name, mother.full_name) AS mother_name,
-                GROUP_CONCAT(DISTINCT ms.spouse_name SEPARATOR '; ') AS spouse,
                 GROUP_CONCAT(DISTINCT child.full_name SEPARATOR '; ') AS children
             FROM persons p
             LEFT JOIN generations g ON p.generation_id = g.generation_id
@@ -391,7 +390,6 @@ def get_persons():
             LEFT JOIN relationships r ON p.person_id = r.child_id
             LEFT JOIN persons father ON COALESCE(p.father_id, r.father_id) = father.person_id
             LEFT JOIN persons mother ON COALESCE(p.mother_id, r.mother_id) = mother.person_id
-            LEFT JOIN marriages_spouses ms ON p.person_id = ms.person_id AND ms.is_active = TRUE
             LEFT JOIN relationships r_children ON (p.person_id = r_children.father_id OR p.person_id = r_children.mother_id)
             LEFT JOIN persons child ON r_children.child_id = child.person_id
             GROUP BY p.person_id, p.csv_id, p.full_name, p.common_name, p.gender, g.generation_number, b.branch_name, p.status, p.father_id, p.mother_id, r.father_id, r.mother_id
@@ -435,6 +433,9 @@ def get_persons():
                     person['siblings'] = None
             else:
                 person['siblings'] = None
+            
+            # Hôn phối: marriages_spouses deprecated -> tạm thời không trả spouse
+            person['spouse'] = None
         
         # Xử lý giá trị mặc định cho Vua Minh Mạng
         for person in persons:
@@ -676,22 +677,10 @@ def get_person(person_id):
                 origin_loc = cursor.fetchone()
                 person['origin_location'] = origin_loc['location_name'] if origin_loc else None
             
-            # Lấy thông tin hôn phối từ bảng marriages_spouses
-            cursor.execute("""
-                SELECT marriage_id, spouse_name, spouse_gender, 
-                       marriage_date_solar, marriage_date_lunar, 
-                       marriage_place, notes, source
-                FROM marriages_spouses
-                WHERE person_id = %s AND is_active = TRUE
-                ORDER BY marriage_date_solar, created_at
-            """, (person_id,))
-            marriages = cursor.fetchall()
-            person['marriages'] = marriages
-            
-            # Format spouse thành string từ marriages_spouses (QUAN TRỌNG: lấy từ database, không từ Sheet3)
-            if marriages:
-                spouse_names = [m['spouse_name'] for m in marriages if m.get('spouse_name')]
-                person['spouse'] = '; '.join(spouse_names) if spouse_names else None
+            # Hôn phối: bảng marriages_spouses đã deprecated
+            # TODO: derive spouse info from normalized `marriages` table
+            person['marriages'] = []
+            person['spouse'] = None
             
             # Lấy thông tin con từ relationships (QUAN TRỌNG: lấy từ database, không từ Sheet3)
             cursor.execute("""
@@ -710,6 +699,8 @@ def get_person(person_id):
             # QUAN TRỌNG: Truyền csv_id và tên bố/mẹ để phân biệt khi có nhiều người trùng tên
             person_name = person.get('full_name', '')
             csv_id = person.get('csv_id')
+            father_name = person.get('father_name')
+            mother_name = person.get('mother_name')
             
             # Lấy tên bố/mẹ - ưu tiên từ relationships (nếu có father_id/mother_id), 
             # fallback về persons.father_name/mother_name (từ CSV)
@@ -926,7 +917,7 @@ def get_person(person_id):
                 if sheet3_data:
                     # CHỈ lấy siblings từ Sheet3 (nếu có)
                     # QUAN TRỌNG: KHÔNG ghi đè spouse và children từ Sheet3
-                    # Vì dữ liệu từ database (marriages_spouses và relationships) là chính xác hơn
+                    # Vì dữ liệu từ database (relationships) là chính xác hơn
                     if sheet3_data.get('sheet3_siblings'):
                         person['siblings'] = sheet3_data['sheet3_siblings']
                     # KHÔNG ghi đè spouse và children từ Sheet3
@@ -1438,46 +1429,9 @@ def update_person(person_id):
             """, (person_id, father_id, mother_id))
         
         # =====================================================
-        # 5. CẬP NHẬT MARRIAGES_SPOUSES (VỢ/CHỒNG)
+        # 5. HÔN PHỐI (marriages_spouses deprecated)
         # =====================================================
-        if 'spouse' in data:
-            spouse_text = data['spouse'].strip() if data['spouse'] else ''
-            
-            # Xóa tất cả marriages_spouses cũ (inactive)
-            cursor.execute("""
-                UPDATE marriages_spouses 
-                SET is_active = FALSE 
-                WHERE person_id = %s
-            """, (person_id,))
-            
-            # Parse danh sách vợ/chồng (tách theo ; hoặc ,)
-            if spouse_text:
-                import re
-                spouse_names = [s.strip() for s in re.split(r'[;,]', spouse_text) if s.strip()]
-                
-                for spouse_name in spouse_names:
-                    # Kiểm tra đã tồn tại chưa
-                    cursor.execute("""
-                        SELECT marriage_id FROM marriages_spouses 
-                        WHERE person_id = %s AND spouse_name = %s
-                    """, (person_id, spouse_name))
-                    existing = cursor.fetchone()
-                    
-                    if existing:
-                        # Kích hoạt lại
-                        cursor.execute("""
-                            UPDATE marriages_spouses 
-                            SET is_active = TRUE 
-                            WHERE marriage_id = %s
-                        """, (existing['marriage_id'],))
-                    else:
-                        # Tạo mới
-                        # Tìm spouse_person_id nếu có
-                        spouse_person_id = find_person_by_name(cursor, spouse_name)
-                        cursor.execute("""
-                            INSERT INTO marriages_spouses (person_id, spouse_name, spouse_person_id, is_active)
-                            VALUES (%s, %s, %s, TRUE)
-                        """, (person_id, spouse_name, spouse_person_id))
+        # TODO: derive and upsert spouse info using normalized `marriages` table
         
         # =====================================================
         # 6. COMMIT TẤT CẢ THAY ĐỔI
@@ -1487,7 +1441,7 @@ def update_person(person_id):
         return jsonify({
             'success': True, 
             'message': 'Đã cập nhật và đồng bộ dữ liệu thành công!',
-            'updated_fields': list(updates.keys()) + ['birth_records', 'death_records', 'relationships', 'marriages']
+            'updated_fields': list(updates.keys()) + ['birth_records', 'death_records', 'relationships', 'marriages (todo: use normalized table)']
         })
         
     except Error as e:
@@ -1541,15 +1495,9 @@ def sync_person(person_id):
         """, (person_id,))
         current_rel = cursor.fetchone()
         
-        # 3. Lấy thông tin marriages_spouses hiện tại
-        cursor.execute("""
-            SELECT spouse_name, is_active
-            FROM marriages_spouses
-            WHERE person_id = %s
-            ORDER BY is_active DESC, created_at
-        """, (person_id,))
-        current_spouses = cursor.fetchall()
-        active_spouses = [s['spouse_name'] for s in current_spouses if s['is_active']]
+        # 3. Hôn phối: marriages_spouses deprecated
+        # TODO: fetch active spouses from normalized `marriages` table
+        active_spouses = []
         
         # 4. Lấy thông tin con cái hiện tại
         cursor.execute("""
@@ -1683,14 +1631,9 @@ def get_members():
                 """, (person_id,))
                 rel = cursor.fetchone()
             
-            # Lấy hôn phối
-            cursor.execute("""
-                SELECT spouse_name
-                FROM marriages_spouses
-                WHERE person_id = %s AND is_active = TRUE
-                ORDER BY created_at
-            """, (person_id,))
-            spouses = cursor.fetchall()
+            # Hôn phối: marriages_spouses deprecated
+            # TODO: derive spouse info from normalized `marriages` table
+            spouses = []
             
             # Lấy anh/chị/em từ relationships (những người có cùng cha mẹ)
             # Get parent info first
@@ -2336,6 +2279,27 @@ def api_logout():
     from flask_login import logout_user
     logout_user()
     return jsonify({'success': True, 'message': 'Đã đăng xuất thành công'})
+
+
+# -----------------------------------------------------------------------------
+# Lightweight smoke tests (manual run)
+# -----------------------------------------------------------------------------
+def run_smoke_tests():
+    """Basic smoke tests for key endpoints using Flask test client."""
+    with app.test_client() as client:
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+
+        resp = client.get("/api/persons")
+        assert resp.status_code == 200
+        assert isinstance(resp.get_json(), list)
+
+        persons = resp.get_json()
+        if persons:
+            pid = persons[0].get("person_id")
+            if pid:
+                detail = client.get(f"/api/person/{pid}")
+                assert detail.status_code == 200
 
 
 # Print startup info (chạy mỗi khi import, không chỉ khi __main__)

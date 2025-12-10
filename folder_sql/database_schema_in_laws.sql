@@ -66,22 +66,18 @@ CREATE TABLE IF NOT EXISTS sibling_relationships (
 */
 
 -- =====================================================
--- CẬP NHẬT BẢNG MARRIAGES_SPOUSES
--- Đảm bảo quan hệ 2 chiều
+-- CẬP NHẬT BẢNG MARRIAGES_SPOUSES (DEPRECATED)
+-- LEGACY, DO NOT EXECUTE IN PRODUCTION
+-- Bảng này không còn trong schema hiện tại. Giữ lại để tham chiếu lịch sử.
+-- Code dưới đây được comment, KHÔNG được chạy.
 -- =====================================================
-
--- Thêm cột để đánh dấu quan hệ 2 chiều đã được tạo
+/*
 ALTER TABLE marriages_spouses
 ADD COLUMN IF NOT EXISTS reverse_marriage_id INT COMMENT 'ID của quan hệ ngược lại (vợ->chồng hoặc chồng->vợ)',
 ADD COLUMN IF NOT EXISTS spouse_person_id INT COMMENT 'ID của người hôn phối nếu có trong DB';
 
--- Thêm index (nếu chưa có)
 CREATE INDEX IF NOT EXISTS idx_spouse_person ON marriages_spouses(spouse_person_id);
 
--- Thêm foreign key constraint cho spouse_person_id
--- Sử dụng tên constraint KHÁC để tránh conflict với constraint cũ cho person_id
--- Constraint cũ fk_marriage_spouse_person (cho person_id) vẫn giữ nguyên
--- Kiểm tra constraint đã tồn tại chưa trước khi thêm
 SET @constraint_exists = (
     SELECT COUNT(*) 
     FROM information_schema.table_constraints 
@@ -98,6 +94,7 @@ SET @sql = IF(@constraint_exists = 0,
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+*/
 
 -- =====================================================
 -- VIEW: V_PERSON_WITH_IN_LAWS

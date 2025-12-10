@@ -46,52 +46,11 @@ WHERE table_schema = 'tbqc2025'
   AND column_name IN ('csv_id', 'father_id', 'mother_id', 'father_name', 'mother_name');
 
 -- =====================================================
--- 4. KIỂM TRA BẢNG marriages_spouses
+-- 4. marriages_spouses DEPRECATED (schema dùng bảng marriages chuẩn hóa)
 -- =====================================================
 SELECT 
-    '4. Bảng marriages_spouses' AS 'Bước',
-    CASE 
-        WHEN COUNT(*) > 0 THEN '✅ Đã tồn tại'
-        ELSE '❌ CHƯA CÓ - Cần chạy database_schema_extended.sql'
-    END AS 'Trạng thái'
-FROM information_schema.tables 
-WHERE table_schema = 'tbqc2025' 
-  AND table_name = 'marriages_spouses';
-
--- =====================================================
--- 5. KIỂM TRA DỮ LIỆU (nếu bảng tồn tại)
--- =====================================================
-SET @marriages_exists = (
-    SELECT COUNT(*) 
-    FROM information_schema.tables 
-    WHERE table_schema = 'tbqc2025' 
-      AND table_name = 'marriages_spouses'
-);
-
-SET @sql = IF(@marriages_exists > 0,
-    'SELECT 
-        "5. Dữ liệu trong database" AS "Bước",
-        (SELECT COUNT(*) FROM persons) AS "Số persons",
-        (SELECT COUNT(*) FROM relationships) AS "Số relationships",
-        (SELECT COUNT(*) FROM marriages_spouses WHERE is_active = TRUE) AS "Số marriages",
-        CASE 
-            WHEN (SELECT COUNT(*) FROM persons) > 0 THEN "✅ Có dữ liệu"
-            ELSE "⚠️ CHƯA CÓ DỮ LIỆU - Cần import CSV"
-        END AS "Trạng thái";',
-    'SELECT 
-        "5. Dữ liệu trong database" AS "Bước",
-        (SELECT COUNT(*) FROM persons) AS "Số persons",
-        (SELECT COUNT(*) FROM relationships) AS "Số relationships",
-        NULL AS "Số marriages",
-        CASE 
-            WHEN (SELECT COUNT(*) FROM persons) > 0 THEN "✅ Có dữ liệu"
-            ELSE "⚠️ CHƯA CÓ DỮ LIỆU - Cần import CSV"
-        END AS "Trạng thái";'
-);
-
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+    '4. Bảng marriages_spouses (deprecated)' AS 'Bước',
+    'Bảng này không còn được sử dụng. Dùng bảng marriages.' AS 'Trạng thái';
 
 -- =====================================================
 -- 5. TỔNG KẾT

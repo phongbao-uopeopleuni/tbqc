@@ -666,87 +666,11 @@ def find_person_by_name(cursor, name: str) -> Optional[int]:
 
 def import_marriages(cursor, csv_data: List[Dict], csv_id_to_person_id: Dict[str, int]):
     """
-    Bước 3: Import hôn phối (vào bảng marriages_spouses)
-    UPDATED FOR TBQC_FINAL.csv: Tạo quan hệ 2 chiều
+    Bước 3: Import hôn phối (marriages_spouses DEPRECATED)
+    marriages_spouses table no longer exists; skip this step.
     """
-    logger.info("=== BƯỚC 3: Import marriages (2 chiều) ===")
-    
-    stats = {'created': 0, 'reverse_created': 0, 'errors': 0}
-    
-    for row in csv_data:
-        csv_id = normalize(row.get('ID', ''))
-        if not csv_id or csv_id not in csv_id_to_person_id:
-            continue
-        
-        person_id = csv_id_to_person_id[csv_id]
-        spouses_text = normalize(row.get('Thông tin hôn phối', ''))
-        
-        if not spouses_text:
-            continue
-        
-        spouse_names = parse_names_list(spouses_text)
-        
-        for spouse_name in spouse_names:
-            if not spouse_name or spouse_name == '??':
-                continue
-            
-            # Tìm spouse trong DB
-            spouse_person_id = find_person_by_name(cursor, spouse_name)
-            
-            # Kiểm tra đã tồn tại chưa (chiều person -> spouse)
-            cursor.execute("""
-                SELECT marriage_id FROM marriages_spouses 
-                WHERE person_id = %s AND spouse_name = %s
-            """, (person_id, spouse_name))
-            
-            existing = cursor.fetchone()
-            marriage_id = None
-            
-            if not existing:
-                # Tạo quan hệ person -> spouse
-                cursor.execute("""
-                    INSERT INTO marriages_spouses 
-                    (person_id, spouse_name, spouse_person_id, is_active)
-                    VALUES (%s, %s, %s, TRUE)
-                """, (person_id, spouse_name, spouse_person_id))
-                marriage_id = cursor.lastrowid
-                stats['created'] += 1
-            else:
-                marriage_id = existing[0]
-                # Cập nhật spouse_person_id nếu tìm thấy
-                if spouse_person_id:
-                    cursor.execute("""
-                        UPDATE marriages_spouses 
-                        SET spouse_person_id = %s 
-                        WHERE marriage_id = %s
-                    """, (spouse_person_id, marriage_id))
-            
-            # Tạo quan hệ ngược lại (spouse -> person) nếu spouse có trong DB
-            if spouse_person_id:
-                # Kiểm tra đã có quan hệ ngược chưa
-                cursor.execute("""
-                    SELECT marriage_id FROM marriages_spouses 
-                    WHERE person_id = %s AND spouse_name = %s
-                """, (spouse_person_id, row.get('Họ và tên', '').strip()))
-                
-                if not cursor.fetchone():
-                    cursor.execute("""
-                        INSERT INTO marriages_spouses 
-                        (person_id, spouse_name, spouse_person_id, reverse_marriage_id, is_active)
-                        VALUES (%s, %s, %s, %s, TRUE)
-                    """, (spouse_person_id, row.get('Họ và tên', '').strip(), person_id, marriage_id))
-                    
-                    # Cập nhật reverse_marriage_id cho quan hệ gốc
-                    cursor.execute("""
-                        UPDATE marriages_spouses 
-                        SET reverse_marriage_id = %s 
-                        WHERE marriage_id = %s
-                    """, (cursor.lastrowid, marriage_id))
-                    
-                    stats['reverse_created'] += 1
-    
-    logger.info(f"Hoàn thành import marriages: {stats['created']} mới, "
-                f"{stats['reverse_created']} quan hệ ngược, {stats['errors']} lỗi")
+    logger.warning("marriages_spouses deprecated; skip import_marriages (use normalized marriages table).")
+    return
 
 def infer_in_law_relationships(cursor, csv_id_to_person_id: Dict[str, int]):
     """
@@ -795,14 +719,9 @@ def infer_in_law_relationships(cursor, csv_id_to_person_id: Dict[str, int]):
             stats['skipped_no_gender'] += 1
             continue
         
-        # Lấy danh sách hôn phối của người con
-        cursor.execute("""
-            SELECT spouse_name, spouse_person_id 
-            FROM marriages_spouses 
-            WHERE person_id = %s AND is_active = TRUE
-        """, (child_id,))
-        
-        spouses = cursor.fetchall()
+        # Lấy danh sách hôn phối của người con (marriages_spouses deprecated)
+        # TODO: use normalized marriages table
+        spouses = []
         
         if not spouses:
             continue
@@ -1029,8 +948,8 @@ def main():
         logger.info(f"  - Persons: {len(csv_id_to_person_id)} người")
         cursor.execute("SELECT COUNT(*) FROM relationships")
         logger.info(f"  - Relationships: {cursor.fetchone()[0]} quan hệ cha/mẹ-con")
-        cursor.execute("SELECT COUNT(*) FROM marriages_spouses WHERE is_active = TRUE")
-        logger.info(f"  - Marriages: {cursor.fetchone()[0]} quan hệ hôn phối")
+        # marriages_spouses deprecated; use marriages table in the future
+        logger.info("  - Marriages: marriages_spouses deprecated (use marriages table)")
         cursor.execute("SELECT COUNT(*) FROM in_law_relationships")
         logger.info(f"  - In-laws: {cursor.fetchone()[0]} quan hệ con dâu/con rể")
         # ⚠️ DEPRECATED: sibling_relationships table no longer exists
