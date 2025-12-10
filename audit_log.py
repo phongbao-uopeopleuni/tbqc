@@ -6,21 +6,29 @@ Ghi log các hoạt động quan trọng
 """
 
 import json
+import os
 from datetime import datetime
 from flask import request
 from flask_login import current_user
 import mysql.connector
 from mysql.connector import Error
 
-# Cấu hình database
+# Cấu hình database - hỗ trợ cả DB_* và Railway MYSQL* variables
 DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'gia_pha_nguyen_phuoc_toc',
-    'user': 'admin',
-    'password': 'admin',
+    'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost',
+    'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or 'tbqc2025',
+    'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'tbqc_admin',
+    'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or 'tbqc2025',
     'charset': 'utf8mb4',
     'collation': 'utf8mb4_unicode_ci'
 }
+
+db_port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
+if db_port:
+    try:
+        DB_CONFIG['port'] = int(db_port)
+    except ValueError:
+        pass
 
 def get_db_connection():
     """Tạo kết nối database"""

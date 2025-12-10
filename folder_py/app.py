@@ -86,17 +86,22 @@ if register_marriage_routes:
         print(f"⚠️  Lỗi khi đăng ký marriage routes: {e}")
 
 # Cấu hình database - đọc từ environment variables (cho production) hoặc dùng giá trị mặc định (cho local)
+# Hỗ trợ cả DB_* và Railway MYSQL* variables
 DB_CONFIG = {
-    'host': os.environ.get('DB_HOST', 'localhost'),
-    'database': os.environ.get('DB_NAME', 'tbqc2025'),
-    'user': os.environ.get('DB_USER', 'tbqc_admin'),
-    'password': os.environ.get('DB_PASSWORD', 'tbqc2025'),
+    'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost',
+    'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or 'tbqc2025',
+    'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'tbqc_admin',
+    'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or 'tbqc2025',
     'charset': 'utf8mb4',
     'collation': 'utf8mb4_unicode_ci'
 }
 # Thêm port nếu cần (cho một số hosting)
-if os.environ.get('DB_PORT'):
-    DB_CONFIG['port'] = int(os.environ.get('DB_PORT'))
+db_port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
+if db_port:
+    try:
+        DB_CONFIG['port'] = int(db_port)
+    except ValueError:
+        pass
 
 def get_db_connection():
     """Tạo kết nối database"""

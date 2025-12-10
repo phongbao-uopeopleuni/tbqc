@@ -5,15 +5,24 @@
 import csv
 import mysql.connector
 from mysql.connector import Error
+import os
 
+# Cấu hình database - hỗ trợ cả DB_* và Railway MYSQL* variables
 DB_CONFIG = {
-    'host': 'localhost',
-    'database': 'tbqc2025',
-    'user': 'tbqc_admin',
-    'password': 'tbqc2025',
+    'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost',
+    'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or 'tbqc2025',
+    'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'tbqc_admin',
+    'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or 'tbqc2025',
     'charset': 'utf8mb4',
     'collation': 'utf8mb4_unicode_ci'
 }
+
+db_port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
+if db_port:
+    try:
+        DB_CONFIG['port'] = int(db_port)
+    except ValueError:
+        pass
 
 CSV_FILE = 'TBQC_FINAL.csv'
 
