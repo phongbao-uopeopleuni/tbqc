@@ -354,19 +354,22 @@ def serve_test_page():
     return send_from_directory(BASE_DIR, 'test_genealogy_lineage.html')
 
 @app.route('/api/persons')
+@app.route('/api/persons')
 def get_persons():
-    """Lấy danh sách tất cả người (bao gồm tên cha mẹ)"""
+    """Lấy danh sách tất cả người (bao gồm tên cha mẹ, con, anh chị em)
+       Tương thích hoàn toàn với sql_mode=ONLY_FULL_GROUP_BY
+    """
     print("📥 API /api/persons được gọi")
     connection = get_db_connection()
     if not connection:
         print("❌ Không thể kết nối database trong get_persons()")
         return jsonify({'error': 'Không thể kết nối database'}), 500
-    
+
     try:
         cursor = connection.cursor(dictionary=True)
-        # Sử dụng GROUP BY và MAX() để đảm bảo mỗi person chỉ xuất hiện 1 lần
-        # Nếu có nhiều relationships, lấy relationship đầu tiên (theo relationship_id)
-        # Main query for persons with parent info
+
+        # Query chính: lấy mỗi person 1 dòng, kèm thông tin cha/mẹ và danh sách tên con
+        # TẤT CẢ cột không-aggregate đều có mặt trong GROUP BY
         cursor.execute("""
             SELECT 
                 p.person_id,
@@ -374,34 +377,67 @@ def get_persons():
                 p.full_name,
                 p.common_name,
                 p.gender,
+                p.status,
                 g.generation_number,
                 b.branch_name,
-                p.status,
-                -- Ưu tiên dùng father_id/mother_id từ persons (đã được populate từ relationships)
-                COALESCE(p.father_id, r.father_id) AS father_id,
-                COALESCE(p.father_name, father.full_name) AS father_name,
-                COALESCE(p.mother_id, r.mother_id) AS mother_id,
-                COALESCE(p.mother_name, mother.full_name) AS mother_name,
-                GROUP_CONCAT(DISTINCT child.full_name SEPARATOR '; ') AS children
+
+                father.person_id AS father_id,
+                father.full_name AS father_name,
+
+                mother.person_id AS mother_id,
+                mother.full_name AS mother_name,
+
+                GROUP_CONCAT(
+                    DISTINCT child.full_name
+                    ORDER BY child.full_name
+                    SEPARATOR '; '
+                ) AS children
             FROM persons p
-            LEFT JOIN generations g ON p.generation_id = g.generation_id
-            LEFT JOIN branches b ON p.branch_id = b.branch_id
-            -- Fallback: Nếu chưa có trong persons, lấy từ relationships
-            LEFT JOIN relationships r ON p.person_id = r.child_id
-            LEFT JOIN persons father ON COALESCE(p.father_id, r.father_id) = father.person_id
-            LEFT JOIN persons mother ON COALESCE(p.mother_id, r.mother_id) = mother.person_id
-            LEFT JOIN relationships r_children ON (p.person_id = r_children.father_id OR p.person_id = r_children.mother_id)
-            LEFT JOIN persons child ON r_children.child_id = child.person_id
-            GROUP BY p.person_id, p.csv_id, p.full_name, p.common_name, p.gender, g.generation_number, b.branch_name, p.status, p.father_id, p.mother_id, r.father_id, r.mother_id
-            ORDER BY g.generation_number, p.full_name
+            LEFT JOIN generations g
+                ON p.generation_id = g.generation_id
+            LEFT JOIN branches b
+                ON p.branch_id = b.branch_id
+
+            -- Cha/mẹ lấy từ bảng relationships
+            LEFT JOIN relationships rel
+                ON rel.child_id = p.person_id
+            LEFT JOIN persons father
+                ON rel.father_id = father.person_id
+            LEFT JOIN persons mother
+                ON rel.mother_id = mother.person_id
+
+            -- Con cái: những người có father_id hoặc mother_id = person_id
+            LEFT JOIN relationships rel_child
+                ON (rel_child.father_id = p.person_id
+                    OR rel_child.mother_id = p.person_id)
+            LEFT JOIN persons child
+                ON child.person_id = rel_child.child_id
+
+            GROUP BY
+                p.person_id,
+                p.csv_id,
+                p.full_name,
+                p.common_name,
+                p.gender,
+                p.status,
+                g.generation_number,
+                b.branch_name,
+                father.person_id,
+                father.full_name,
+                mother.person_id,
+                mother.full_name
+            ORDER BY
+                g.generation_number,
+                p.full_name
         """)
+
         persons = cursor.fetchall()
-        
-        # Derive siblings from relationships for each person
+
+        # Tính thêm siblings và set spouse = None bằng Python
         for person in persons:
             person_id = person['person_id']
-            
-            # Get parent IDs from relationships table
+
+            # Lấy cha/mẹ từ relationships để tìm anh/chị/em ruột
             cursor.execute("""
                 SELECT father_id, mother_id
                 FROM relationships
@@ -409,50 +445,58 @@ def get_persons():
                 LIMIT 1
             """, (person_id,))
             parent_rel = cursor.fetchone()
-            
-            # Get siblings: people who share the same father or mother
+
             if parent_rel and (parent_rel.get('father_id') or parent_rel.get('mother_id')):
                 father_id = parent_rel.get('father_id')
                 mother_id = parent_rel.get('mother_id')
+
                 sibling_query = """
                     SELECT DISTINCT s.full_name
                     FROM persons s
-                    JOIN relationships r_sibling ON s.person_id = r_sibling.child_id
-                    WHERE s.person_id != %s
-                    AND (
-                        (%s IS NOT NULL AND r_sibling.father_id = %s)
-                        OR (%s IS NOT NULL AND r_sibling.mother_id = %s)
-                    )
+                    JOIN relationships r_sibling
+                      ON s.person_id = r_sibling.child_id
+                    WHERE s.person_id <> %s
+                      AND (
+                            (%s IS NOT NULL AND r_sibling.father_id = %s)
+                         OR (%s IS NOT NULL AND r_sibling.mother_id = %s)
+                          )
                     ORDER BY s.full_name
                 """
-                cursor.execute(sibling_query, (person_id, father_id, father_id, mother_id, mother_id))
+                cursor.execute(
+                    sibling_query,
+                    (person_id, father_id, father_id, mother_id, mother_id)
+                )
                 siblings = cursor.fetchall()
-                if siblings:
-                    person['siblings'] = '; '.join([s['full_name'] for s in siblings])
-                else:
-                    person['siblings'] = None
+                person['siblings'] = '; '.join(
+                    [s['full_name'] for s in siblings]
+                ) if siblings else None
             else:
                 person['siblings'] = None
-            
-            # Hôn phối: marriages_spouses deprecated -> tạm thời không trả spouse
+
+            # marriages_spouses đã bỏ – tạm thời không trả spouse
             person['spouse'] = None
-        
-        # Xử lý giá trị mặc định cho Vua Minh Mạng
+
+        # Patch đặc biệt cho Vua Minh Mạng (Đời 1) nếu thiếu cha mẹ
         for person in persons:
-            # Nếu là Vua Minh Mạng (Đời 1) và không có thông tin cha mẹ
-            if (person.get('generation_number') == 1 and 
-                'Minh Mạng' in person.get('full_name', '') and
-                not person.get('father_name') and not person.get('mother_name')):
+            if (
+                person.get('generation_number') == 1
+                and 'Minh Mạng' in (person.get('full_name') or '')
+                and not person.get('father_name')
+                and not person.get('mother_name')
+            ):
                 person['father_name'] = 'Vua Gia Long'
                 person['mother_name'] = 'Thuận Thiên Hoàng hậu'
-        
+
         return jsonify(persons)
+
     except Error as e:
+        print(f"❌ Lỗi trong /api/persons: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         if connection.is_connected():
             cursor.close()
             connection.close()
+
 
 @app.route("/api/generations", methods=["GET"])
 def get_generations_api():
