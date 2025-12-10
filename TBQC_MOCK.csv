@@ -1,0 +1,22 @@
+ID,Họ và tên,Tên thường gọi,Giới tính,Trạng thái,Đời,Nguyên quán,Quốc Tịch,Tôn giáo,Nhóm máu,Bệnh di truyền,Father_Mother_ID,Tên bố,Tên mẹ,Check tên bố,Check tên mẹ,Ngày sinh (dương lịch),Ngày sinh (âm lịch),Nơi sinh,Ngày mất(dương lịch),Ngày mất(âm lịch),Nơi mất,Mộ phần,Thông tin liên lạc,Mạng xã hội,Nghề nghiệp,Giáo dục,Sự kiện,Danh hiệu,Ghi chú,Thông tin anh chị em,Thông tin con cái
+MOCK001,Ưng Minh Mạng,Minh Mạng,Nam,Đã mất,1,Phú Xuân,Việt Nam,Phật giáo,A,,"FM001",,,,01/05/1791,01/05/1791,Phú Xuân,20/01/1841,20/01/1841,Phú Xuân,Thái Lăng,,,Vua,Thiên tử,,"Ưng Thiệu Trị; Ưng Tự Đức"
+MOCK002,Ưng Thiệu Trị,Thiệu Trị,Nam,Đã mất,2,Phú Xuân,Việt Nam,Phật giáo,B,,"FM002",Ưng Minh Mạng,??,OK,,15/09/1807,15/09/1847,Phú Xuân,04/11/1847,04/11/1847,Phú Xuân,Hiếu Lăng,,,Vua,Thiên tử,,"Ưng Tự Đức; Ưng Dục Đức"
+MOCK003,Ưng Tự Đức,Tự Đức,Nam,Đã mất,3,Phú Xuân,Việt Nam,Phật giáo,O,,"FM003",Ưng Thiệu Trị,??,OK,,22/09/1829,22/09/1829,Phú Xuân,19/07/1883,19/07/1883,Phú Xuân,Khiêm Lăng,,,Vua,Thiên tử,,"Ưng Dục Đức; Ưng Hiệp Hòa"
+MOCK004,Ưng Dục Đức,Dục Đức,Nam,Đã mất,4,Phú Xuân,Việt Nam,Phật giáo,A,,"FM004",Ưng Tự Đức,??,OK,,23/02/1852,23/02/1852,Phú Xuân,06/10/1883,06/10/1883,Phú Xuân,An Lăng,,,Vua,Thiên tử,,"Ưng Thành Thái; Ưng Khải Định"
+MOCK005,Ưng Thành Thái,Thành Thái,Nam,Đã mất,5,Phú Xuân,Việt Nam,Phật giáo,B,,"FM005",Ưng Dục Đức,??,OK,,14/03/1879,14/03/1879,Phú Xuân,20/03/1954,20/03/1954,Sài Gòn,An Lăng,,,Vua,Thiên tử,,"Ưng Duy Tân; Ưng Bảo Đại"
+MOCK006,Ưng Duy Tân,Duy Tân,Nam,Đã mất,6,Phú Xuân,Việt Nam,Phật giáo,O,,"FM006",Ưng Thành Thái,??,OK,,19/09/1900,19/09/1900,Phú Xuân,26/12/1945,26/12/1945,Trung Phi,An Lăng,,,Vua,Thiên tử,,
+MOCK007,Ưng Bảo Đại,Bảo Đại,Nam,Đã mất,6,Phú Xuân,Việt Nam,Phật giáo,A,,"FM006",Ưng Thành Thái,??,OK,,22/10/1913,22/10/1913,Phú Xuân,30/07/1997,30/07/1997,Paris,An Lăng,,,Vua,Thiên tử,,"Ưng Bảo Long; Ưng Bảo Thăng"
+MOCK008,Ưng Bảo Long,Bảo Long,Nam,Đã mất,7,Phú Xuân,Việt Nam,Phật giáo,B,,"FM007",Ưng Bảo Đại,??,OK,,04/01/1936,04/01/1936,Phú Xuân,28/07/2007,28/07/2007,Paris,An Lăng,,,Hoàng tử,Hoàng tử,,
+MOCK009,Ưng Bảo Thăng,Bảo Thăng,Nam,Còn sống,7,Phú Xuân,Việt Nam,Phật giáo,O,,"FM007",Ưng Bảo Đại,??,OK,,09/03/1943,09/03/1943,Phú Xuân,,,,,Hoàng tử,Hoàng tử,,
+MOCK010,Ưng Hiệp Hòa,Hiệp Hòa,Nam,Đã mất,4,Phú Xuân,Việt Nam,Phật giáo,A,,"FM008",Ưng Tự Đức,??,OK,,01/11/1847,01/11/1847,Phú Xuân,29/11/1883,29/11/1883,Phú Xuân,An Lăng,,,Vua,Thiên tử,,
+MOCK011,Ưng Khải Định,Khải Định,Nam,Đã mất,5,Phú Xuân,Việt Nam,Phật giáo,B,,"FM009",Ưng Dục Đức,??,OK,,08/10/1885,08/10/1885,Phú Xuân,06/11/1925,06/11/1925,Phú Xuân,Ứng Lăng,,,Vua,Thiên tử,,"Ưng Bảo Đại"
+MOCK012,Ưng Lương,Ưng Lương,Nam,Còn sống,8,Phú Xuân,Việt Nam,Phật giáo,O,,"FM010",Ưng Bảo Thăng,??,OK,,15/06/1975,15/06/1975,Sài Gòn,,,,,Kỹ sư,Đại học,,
+MOCK013,Ưng Lương-Phương,Ưng Lương Phương,Nam,Còn sống,8,Phú Xuân,Việt Nam,Phật giáo,A,,"FM010",Ưng Bảo Thăng,??,OK,,20/08/1978,20/08/1978,Sài Gòn,,,,,Bác sĩ,Đại học,,"Ưng Lương"
+MOCK014,Ưng Thị Mai,Mai,Nữ,Còn sống,8,Phú Xuân,Việt Nam,Phật giáo,B,,"FM011",Ưng Bảo Long,??,OK,,10/12/1980,10/12/1980,Paris,,,,,Giáo viên,Đại học,,
+MOCK015,Ưng Thị Lan,Lan,Nữ,Còn sống,8,Phú Xuân,Việt Nam,Phật giáo,O,,"FM011",Ưng Bảo Long,??,OK,,05/03/1983,05/03/1983,Paris,,,,,Nhà báo,Đại học,,"Ưng Thị Mai"
+MOCK016,Ưng Văn A,Văn A,Nam,Còn sống,9,Phú Xuân,Việt Nam,Phật giáo,A,,"FM012",Ưng Lương,??,OK,,01/01/2000,01/01/2000,Sài Gòn,,,,,Sinh viên,Đại học,,
+MOCK017,Ưng Văn B,Văn B,Nam,Còn sống,9,Phú Xuân,Việt Nam,Phật giáo,B,,"FM012",Ưng Lương,??,OK,,15/05/2002,15/05/2002,Sài Gòn,,,,,Học sinh,Trung học,,"Ưng Văn A"
+MOCK018,Ưng Thị C,Thị C,Nữ,Còn sống,9,Phú Xuân,Việt Nam,Phật giáo,O,,"FM012",Ưng Lương,??,OK,,20/09/2005,20/09/2005,Sài Gòn,,,,,Học sinh,Trung học,,"Ưng Văn A; Ưng Văn B"
+MOCK019,Ưng Văn D,Văn D,Nam,Còn sống,9,Phú Xuân,Việt Nam,Phật giáo,A,,"FM013",Ưng Lương-Phương,??,OK,,10/11/2007,10/11/2007,Sài Gòn,,,,,Học sinh,Trung học,,
+MOCK020,Ưng Thị E,Thị E,Nữ,Còn sống,9,Phú Xuân,Việt Nam,Phật giáo,B,,"FM013",Ưng Lương-Phương,??,OK,,25/12/2010,25/12/2010,Sài Gòn,,,,,Học sinh,Trung học,,"Ưng Văn D"
+
