@@ -30,14 +30,22 @@ if db_port:
     except ValueError:
         pass
 
-def get_db_connection():
-    """Tạo kết nối database"""
+# Import unified DB connection
+try:
+    from folder_py.db_config import get_db_connection
+except ImportError:
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
-    except Error as e:
-        print(f"Lỗi kết nối database: {e}")
-        return None
+        from db_config import get_db_connection
+    except ImportError:
+        # Fallback
+        def get_db_connection():
+            """Tạo kết nối database (fallback)"""
+            try:
+                connection = mysql.connector.connect(**DB_CONFIG)
+                return connection
+            except Error as e:
+                print(f"Lỗi kết nối database: {e}")
+                return None
 
 def log_activity(action, target_type=None, target_id=None, before_data=None, after_data=None):
     """

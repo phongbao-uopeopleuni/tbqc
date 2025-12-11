@@ -1,229 +1,235 @@
-# 📤 Hướng Dẫn Push Code Lên GitHub
+# 📤 Hướng Dẫn Push Lên GitHub - Từng Bước
 
-## 🎯 Mục Đích
-Push các file đã thay đổi (app.py, Procfile) lên GitHub repository để Railway có thể deploy.
+## 🎯 Mục Tiêu
+
+Push code lên GitHub với commit message ngắn gọn, rõ ràng.
 
 ---
 
 ## 📋 Các Bước Thực Hiện
 
-### Bước 1: Kiểm Tra Trạng Thái Git
+### Bước 1: Kiểm Tra Git Status
 
-Mở **PowerShell** hoặc **Command Prompt** trong thư mục `d:\tbqc`:
+Mở PowerShell và chạy:
 
 ```powershell
-cd d:\tbqc
+cd D:\tbqc
 git status
 ```
 
-**Kết quả mong đợi:** Sẽ hiển thị các file đã thay đổi:
-- `app.py` (modified hoặc untracked)
-- `Procfile` (modified)
-- Có thể có các file khác
+**Kết quả:** Sẽ hiển thị các files đã thay đổi (màu đỏ = chưa add, màu xanh = đã add)
 
 ---
 
-### Bước 2: Thêm Các File Vào Staging Area
+### Bước 2: Add Files Vào Staging Area
 
-Thêm các file cần commit:
-
+**Cách 1: Add tất cả files (Khuyến nghị)**
 ```powershell
-# Thêm app.py
-git add app.py
-
-# Thêm Procfile
-git add Procfile
-
-# Hoặc thêm tất cả file đã thay đổi
 git add .
 ```
 
-**Lưu ý:** 
-- `git add .` sẽ thêm TẤT CẢ file đã thay đổi
-- Nếu chỉ muốn thêm một số file cụ thể, dùng `git add <tên_file>`
+**Cách 2: Add từng file cụ thể (nếu muốn chọn lọc)**
+```powershell
+git add app.py
+git add folder_sql/update_views_procedures_tbqc.sql
+git add update_stored_procedures.py
+git add restart_server.ps1
+```
+
+**Kiểm tra lại:**
+```powershell
+git status
+```
+
+**Kết quả:** Files sẽ chuyển sang màu xanh (đã được add)
 
 ---
 
-### Bước 3: Commit Các Thay Đổi
-
-Tạo commit với message mô tả:
+### Bước 3: Commit Với Message Ngắn Gọn
 
 ```powershell
-git commit -m "Move app.py to root and update Procfile"
+git commit -m "Fix API tree và ancestors errors"
 ```
 
-**Hoặc message tiếng Việt:**
+**Hoặc các message ngắn gọn khác:**
+
 ```powershell
-git commit -m "Di chuyển app.py ra root và cập nhật Procfile"
+# Option 1: Ngắn nhất
+git commit -m "Fix API errors"
+
+# Option 2: Chi tiết hơn một chút
+git commit -m "Fix API /api/tree 404 và /api/ancestors 500"
+
+# Option 3: Tiếng Anh
+git commit -m "Fix API tree and ancestors endpoints"
 ```
 
-**Kết quả mong đợi:**
+**Kiểm tra commit:**
+```powershell
+git log --oneline -1
 ```
-[master xxxxxxx] Move app.py to root and update Procfile
- X files changed, Y insertions(+), Z deletions(-)
-```
+
+**Kết quả:** Sẽ hiển thị commit vừa tạo
 
 ---
 
 ### Bước 4: Push Lên GitHub
 
-Push code lên remote repository:
-
+**Kiểm tra remote repository:**
 ```powershell
-git push origin master
+git remote -v
 ```
 
-**Hoặc nếu branch của bạn là `main`:**
+**Kết quả:** Sẽ hiển thị URL của GitHub repository
+
+**Push lên GitHub:**
 ```powershell
 git push origin main
 ```
 
-**Kết quả mong đợi:**
-```
-Enumerating objects: X, done.
-Counting objects: 100% (X/X), done.
-Delta compression using up to Y threads
-Compressing objects: 100% (Z/Z), done.
-Writing objects: 100% (W/W), done.
-To https://github.com/username/repo-name.git
-   xxxxxxx..yyyyyyy  master -> master
-```
-
----
-
-## ⚠️ Xử Lý Lỗi Thường Gặp
-
-### Lỗi 1: "fatal: not a git repository"
-
-**Nguyên nhân:** Thư mục chưa được khởi tạo Git.
-
-**Giải pháp:**
+**Hoặc nếu branch của bạn là `master`:**
 ```powershell
-git init
-git remote add origin https://github.com/username/repo-name.git
-```
-
----
-
-### Lỗi 2: "fatal: remote origin already exists"
-
-**Nguyên nhân:** Remote đã được cấu hình.
-
-**Giải pháp:** Bỏ qua, tiếp tục bước tiếp theo.
-
----
-
-### Lỗi 3: "error: failed to push some refs"
-
-**Nguyên nhân:** Remote có commit mới hơn local.
-
-**Giải pháp:** Pull trước khi push:
-```powershell
-git pull origin master
-# Hoặc
-git pull origin main
-```
-
-Nếu có conflict, giải quyết conflict rồi commit lại:
-```powershell
-git add .
-git commit -m "Resolve merge conflicts"
 git push origin master
 ```
 
----
-
-### Lỗi 4: "Permission denied" hoặc "Authentication failed"
-
-**Nguyên nhân:** Chưa đăng nhập GitHub hoặc token hết hạn.
-
-**Giải pháp:**
-
-**Cách 1: Dùng Personal Access Token (Khuyến nghị)**
-1. Vào GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)
-2. Tạo token mới với quyền `repo`
-3. Khi push, dùng token thay vì password:
-   ```
-   Username: <your-username>
-   Password: <your-token>
-   ```
-
-**Cách 2: Dùng GitHub CLI**
+**Hoặc nếu branch khác (ví dụ: `develop`):**
 ```powershell
-gh auth login
-```
-
-**Cách 3: Cấu hình SSH (Nâng cao)**
-```powershell
-# Tạo SSH key (nếu chưa có)
-ssh-keygen -t ed25519 -C "your_email@example.com"
-
-# Copy public key và thêm vào GitHub → Settings → SSH and GPG keys
-cat ~/.ssh/id_ed25519.pub
-
-# Đổi remote URL sang SSH
-git remote set-url origin git@github.com:username/repo-name.git
+git push origin develop
 ```
 
 ---
 
-## ✅ Kiểm Tra Sau Khi Push
+### Bước 5: Verify Trên GitHub
 
-1. **Vào GitHub repository:**
-   - Mở: `https://github.com/username/repo-name`
-   - Kiểm tra file `app.py` và `Procfile` đã được cập nhật
-
-2. **Kiểm tra Railway:**
-   - Railway sẽ tự động detect commit mới và bắt đầu deploy
-   - Vào Railway Dashboard → Deployments để xem log
+1. Mở trình duyệt
+2. Truy cập GitHub repository của bạn
+3. Kiểm tra:
+   - ✅ Commit mới đã xuất hiện
+   - ✅ Files đã được cập nhật
+   - ✅ Code changes đã được push
 
 ---
 
-## 🚀 Lệnh Tổng Hợp (Copy & Paste)
+## 🎯 Quick Commands (Copy & Paste)
 
 ```powershell
-# Di chuyển vào thư mục project
-cd d:\tbqc
-
-# Kiểm tra trạng thái
+# 1. Check status
 git status
 
-# Thêm các file đã thay đổi
-git add app.py Procfile
+# 2. Add all files
+git add .
 
-# Commit
-git commit -m "Move app.py to root and update Procfile"
+# 3. Commit với message ngắn gọn
+git commit -m "Fix API tree và ancestors errors"
 
-# Push lên GitHub
-git push origin master
+# 4. Push lên GitHub
+git push origin main
 ```
 
 ---
 
-## 📝 Lưu Ý
+## ⚠️ Lưu Ý Quan Trọng
 
-1. **Luôn kiểm tra `git status` trước khi commit** để đảm bảo chỉ commit những file cần thiết.
+### Nếu Lần Đầu Push:
 
-2. **Không commit file nhạy cảm:**
-   - `.env` (nếu có)
-   - `.smtp_config` (nếu có)
-   - File chứa password/token
+Nếu đây là lần đầu push, có thể cần setup:
 
-3. **Commit message nên rõ ràng** để dễ dàng theo dõi lịch sử thay đổi.
+```powershell
+# Set user name và email (nếu chưa set)
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
 
-4. **Nếu có nhiều thay đổi**, có thể tách thành nhiều commit nhỏ:
-   ```powershell
-   git add app.py
-   git commit -m "Move app.py to root directory"
-   
-   git add Procfile
-   git commit -m "Update Procfile to remove folder_py path"
-   
-   git push origin master
-   ```
+# Kiểm tra remote
+git remote -v
+
+# Nếu chưa có remote, thêm remote:
+git remote add origin https://github.com/your-username/your-repo.git
+```
+
+### Nếu Có Conflict:
+
+```powershell
+# Pull code mới nhất trước
+git pull origin main
+
+# Resolve conflicts (nếu có)
+# Sau đó:
+git add .
+git commit -m "Resolve conflicts"
+git push origin main
+```
+
+### Nếu Cần Đổi Branch:
+
+```powershell
+# Xem branch hiện tại
+git branch
+
+# Đổi sang branch khác
+git checkout main
+# hoặc
+git checkout master
+```
 
 ---
 
-## 🆘 Cần Hỗ Trợ?
+## 📝 Commit Message Best Practices
 
-Nếu gặp lỗi, copy toàn bộ thông báo lỗi và gửi lại để được hỗ trợ.
+### ✅ Tốt (Ngắn gọn, rõ ràng):
+```
+Fix API tree và ancestors errors
+Update stored procedures
+Fix collation issues
+Add restart server script
+```
+
+### ❌ Tránh (Quá dài hoặc không rõ ràng):
+```
+fix
+update
+changes
+sửa lỗi và cập nhật nhiều thứ
+```
+
+---
+
+## 🆘 Troubleshooting
+
+### Lỗi: "Please tell me who you are"
+```powershell
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
+
+### Lỗi: "Permission denied"
+- Kiểm tra bạn đã login GitHub chưa
+- Hoặc dùng Personal Access Token thay vì password
+
+### Lỗi: "Remote origin already exists"
+- Không sao, remote đã được setup rồi
+- Tiếp tục với `git push origin main`
+
+### Lỗi: "Branch 'main' does not exist"
+- Thử `git push origin master` thay vì `main`
+- Hoặc tạo branch mới: `git checkout -b main`
+
+---
+
+## ✅ Checklist
+
+- [ ] Đã chạy `git status` và kiểm tra files
+- [ ] Đã chạy `git add .` để add files
+- [ ] Đã chạy `git commit -m "message"` với message ngắn gọn
+- [ ] Đã chạy `git push origin main` (hoặc master)
+- [ ] Đã verify trên GitHub
+
+---
+
+## 🎉 Hoàn Thành!
+
+Sau khi push thành công, bạn sẽ thấy trên GitHub:
+- ✅ Commit mới với message của bạn
+- ✅ Files đã được cập nhật
+- ✅ Code changes có thể xem được
+
+**Chúc bạn thành công! 🚀**

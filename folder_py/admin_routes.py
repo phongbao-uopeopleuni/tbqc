@@ -7,7 +7,11 @@ Routes cho trang quản trị
 
 from flask import render_template_string, request, jsonify, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
-from auth import (get_user_by_username, verify_password, hash_password, get_db_connection, 
+try:
+    from folder_py.db_config import get_db_connection
+except ImportError:
+    from db_config import get_db_connection
+from auth import (get_user_by_username, verify_password, hash_password,
                   admin_required, permission_required, role_required)
 from audit_log import log_activity, log_login, log_user_update
 import mysql.connector

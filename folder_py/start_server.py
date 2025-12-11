@@ -20,8 +20,11 @@ os.chdir(current_dir)
 
 # Import và chạy app
 if __name__ == '__main__':
-    # Import app từ folder_py
-    from folder_py.app import app
+    # Import app từ root (go up one level)
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from app import app
     
     print("="*80)
     print("🚀 ĐANG KHỞI ĐỘNG SERVER...")

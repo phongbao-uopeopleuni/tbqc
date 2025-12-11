@@ -20,7 +20,7 @@ print("="*80)
 
 try:
     print("1. Đang import app...")
-    from folder_py.app import app
+    from app import app
     print("   ✅ Import thành công")
     
     print("\n2. Đang kiểm tra routes...")
@@ -32,7 +32,7 @@ try:
     print("   - /api/persons")
     
     print("\n3. Đang kiểm tra database connection...")
-    from folder_py.app import get_db_connection
+    from folder_py.db_config import get_db_connection
     conn = get_db_connection()
     if conn:
         print("   ✅ Kết nối database thành công")
@@ -44,9 +44,7 @@ try:
     print("✅ TẤT CẢ KIỂM TRA THÀNH CÔNG!")
     print("="*80)
     print("\n🚀 Bạn có thể chạy server bằng:")
-    print("   python start_server.py")
-    print("   hoặc")
-    print("   python folder_py/app.py")
+    print("   python app.py")
     print("="*80)
     
 except Exception as e:

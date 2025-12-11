@@ -20,25 +20,23 @@ import logging
 import os
 from typing import Dict, List, Optional, Tuple
 
+# Import unified DB config
+try:
+    from db_config import get_db_config
+except ImportError:
+    try:
+        from folder_py.db_config import get_db_config
+    except ImportError:
+        print("❌ ERROR: Cannot import db_config.py")
+        import sys
+        sys.exit(1)
+
 # =====================================================
 # CẤU HÌNH
 # =====================================================
 
-DB_CONFIG = {
-    'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost',
-    'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or 'tbqc2025',
-    'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'tbqc_admin',
-    'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or 'tbqc2025',
-    'charset': 'utf8mb4',
-    'collation': 'utf8mb4_unicode_ci'
-}
-
-db_port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
-if db_port:
-    try:
-        DB_CONFIG['port'] = int(db_port)
-    except ValueError:
-        pass
+# Get DB config using unified function
+DB_CONFIG = get_db_config()
 
 CSV_FILE = 'TBQC_FINAL.csv'
 

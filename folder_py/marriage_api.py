@@ -7,8 +7,18 @@ API endpoints cho quản lý hôn phối
 
 from flask import jsonify, request
 from flask_login import login_required, current_user
-from auth import get_db_connection, permission_required
-from audit_log import log_spouse_update, log_activity
+try:
+    from folder_py.db_config import get_db_connection
+except ImportError:
+    from db_config import get_db_connection
+try:
+    from folder_py.auth import permission_required
+except ImportError:
+    from auth import permission_required
+try:
+    from folder_py.audit_log import log_spouse_update, log_activity
+except ImportError:
+    from audit_log import log_spouse_update, log_activity
 import mysql.connector
 from mysql.connector import Error
 import json

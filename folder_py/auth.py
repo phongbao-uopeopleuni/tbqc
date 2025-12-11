@@ -13,31 +13,39 @@ import os
 import mysql.connector
 from mysql.connector import Error
 
-# Cấu hình database
-DB_CONFIG = {
-    "host": os.environ.get("DB_HOST") or os.environ.get("MYSQLHOST") or "localhost",
-    "database": os.environ.get("DB_NAME") or os.environ.get("MYSQLDATABASE") or "tbqc2025",
-    "user": os.environ.get("DB_USER") or os.environ.get("MYSQLUSER") or "tbqc_admin",
-    "password": os.environ.get("DB_PASSWORD") or os.environ.get("MYSQLPASSWORD") or "tbqc2025",
-    "charset": "utf8mb4",
-    "collation": "utf8mb4_unicode_ci",
-}
-
-db_port = os.environ.get("DB_PORT") or os.environ.get("MYSQLPORT")
-if db_port:
+# Import unified DB connection
+try:
+    from folder_py.db_config import get_db_connection
+except ImportError:
     try:
-        DB_CONFIG["port"] = int(db_port)
-    except ValueError:
-        pass
+        from db_config import get_db_connection
+    except ImportError:
+        # Fallback for backward compatibility
+        DB_CONFIG = {
+            "host": os.environ.get("DB_HOST") or os.environ.get("MYSQLHOST") or "localhost",
+            "database": os.environ.get("DB_NAME") or os.environ.get("MYSQLDATABASE") or "tbqc2025",
+            "user": os.environ.get("DB_USER") or os.environ.get("MYSQLUSER") or "tbqc_admin",
+            "password": os.environ.get("DB_PASSWORD") or os.environ.get("MYSQLPASSWORD") or "tbqc2025",
+            "charset": "utf8mb4",
+            "collation": "utf8mb4_unicode_ci",
+        }
+        db_port = os.environ.get("DB_PORT") or os.environ.get("MYSQLPORT")
+        if db_port:
+            try:
+                DB_CONFIG["port"] = int(db_port)
+            except ValueError:
+                pass
+        def get_db_connection():
+            """Tạo kết nối database (fallback)"""
+            try:
+                connection = mysql.connector.connect(**DB_CONFIG)
+                return connection
+            except Error as e:
+                print(f"Lỗi kết nối database: {e}")
+                return None
 
-def get_connection():
-    """Tạo kết nối database"""
-    try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
-    except Error as e:
-        print(f"Lỗi kết nối database: {e}")
-        return None
+# Alias for backward compatibility
+get_connection = get_db_connection
 
 class User(UserMixin):
     """User class cho Flask-Login với permissions"""
