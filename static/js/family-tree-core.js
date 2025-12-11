@@ -46,9 +46,9 @@ function fetchWithTimeout(url, timeout = 30000) {
 /**
  * Load tree data từ API /api/tree
  * @param {number} maxGeneration - Đời tối đa (mặc định 5)
- * @param {number} rootId - ID người gốc (mặc định 1 - Vua Minh Mạng)
+ * @param {string} rootId - ID người gốc (mặc định 'P-1-1' - Vua Minh Mạng)
  */
-async function loadTreeData(maxGeneration = 5, rootId = 1) {
+async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
   const container = document.getElementById("treeContainer");
   const statusEl = container?.querySelector('.tree-loading') || container;
   
@@ -197,7 +197,7 @@ function convertTreeToGraph(treeData) {
  */
 async function loadData() {
   // Redirect to new API
-  return await loadTreeData(MAX_DEFAULT_GENERATION, 1);
+  return await loadTreeData(MAX_DEFAULT_GENERATION, 'P-1-1');
 }
 
 /**
