@@ -1219,24 +1219,72 @@ def get_ancestors(person_id):
             break
         
         ancestors_chain = []
+        seen_person_ids = set()  # Track duplicates
+        duplicate_count = 0
+        
         if ancestors_result:
             for row in ancestors_result:
                 if isinstance(row, dict):
+                    person_id_item = row.get('person_id')
+                else:
+                    person_id_item = row[0] if len(row) > 0 else None
+                
+                # Normalize person_id: convert to string and strip
+                if person_id_item:
+                    person_id_item = str(person_id_item).strip()
+                
+                # Skip duplicates
+                if not person_id_item or person_id_item in seen_person_ids:
+                    if person_id_item:
+                        duplicate_count += 1
+                        full_name = row.get('full_name', 'N/A') if isinstance(row, dict) else (row[1] if len(row) > 1 else 'N/A')
+                        logger.warning(f"Duplicate person_id={person_id_item}, name={full_name} in ancestors chain, skipping")
+                    continue
+                
+                seen_person_ids.add(person_id_item)
+                
+                if isinstance(row, dict):
                     ancestors_chain.append({
-                        'person_id': row.get('person_id'),
+                        'person_id': person_id_item,
                         'full_name': row.get('full_name', ''),
                         'gender': row.get('gender'),
                         'generation_level': row.get('generation_level'),
+                        'generation_number': row.get('generation_level'),  # Alias for frontend compatibility
                         'level': row.get('level', 0)
                     })
                 else:
                     ancestors_chain.append({
-                        'person_id': row[0] if len(row) > 0 else None,
+                        'person_id': person_id_item,
                         'full_name': row[1] if len(row) > 1 else '',
                         'gender': row[2] if len(row) > 2 else None,
                         'generation_level': row[3] if len(row) > 3 else None,
+                        'generation_number': row[3] if len(row) > 3 else None,  # Alias for frontend compatibility
                         'level': row[4] if len(row) > 4 else 0
                     })
+        
+        # Enrich với father_name và mother_name từ relationships
+        enriched_chain = []
+        for ancestor in ancestors_chain:
+            ancestor_id = ancestor.get('person_id')
+            if ancestor_id:
+                cursor.execute("""
+                    SELECT 
+                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END) AS father_name,
+                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END) AS mother_name
+                    FROM persons p
+                    LEFT JOIN relationships r ON r.child_id = p.person_id
+                    LEFT JOIN persons parent ON r.parent_id = parent.person_id
+                    WHERE p.person_id = %s
+                    GROUP BY p.person_id
+                """, (ancestor_id,))
+                parent_info = cursor.fetchone()
+                if parent_info:
+                    ancestor['father_name'] = parent_info.get('father_name')
+                    ancestor['mother_name'] = parent_info.get('mother_name')
+            enriched_chain.append(ancestor)
+        
+        # Sort enriched_chain theo generation_level tăng dần
+        enriched_chain.sort(key=lambda x: (x.get('generation_level') or 999, x.get('person_id') or ''))
         
         # Lấy thông tin person hiện tại
         cursor.execute("""
@@ -1246,10 +1294,33 @@ def get_ancestors(person_id):
         """, (person_id,))
         person_info = cursor.fetchone()
         
-        logger.info(f"Built ancestors chain for person_id={person_id}, length={len(ancestors_chain)}")
+        # Enrich person_info với father_name và mother_name
+        if person_info:
+            cursor.execute("""
+                SELECT 
+                    GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END) AS father_name,
+                    GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END) AS mother_name
+                FROM persons p
+                LEFT JOIN relationships r ON r.child_id = p.person_id
+                LEFT JOIN persons parent ON r.parent_id = parent.person_id
+                WHERE p.person_id = %s
+                GROUP BY p.person_id
+            """, (person_id,))
+            parent_info = cursor.fetchone()
+            if parent_info:
+                person_info['father_name'] = parent_info.get('father_name')
+                person_info['mother_name'] = parent_info.get('mother_name')
+            person_info['generation_number'] = person_info.get('generation_level')  # Alias for frontend compatibility
+            
+            # Check if person is already in ancestors_chain (shouldn't happen, but just in case)
+            person_in_chain = any(a.get('person_id') == person_id for a in enriched_chain)
+            if person_in_chain:
+                logger.warning(f"Person {person_id} already in ancestors_chain, will be filtered by frontend")
+        
+        logger.info(f"Built ancestors chain for person_id={person_id}, length={len(enriched_chain)} (after deduplication, removed {duplicate_count} duplicates)")
         return jsonify({
             "person": person_info,
-            "ancestors_chain": ancestors_chain
+            "ancestors_chain": enriched_chain
         })
         
     except Error as e:
@@ -1989,33 +2060,35 @@ def get_members():
             return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
         cursor = connection.cursor(dictionary=True)
         
-        # Lấy danh sách tất cả persons với thông tin đầy đủ
+        # Lấy danh sách tất cả persons với thông tin đầy đủ (schema mới)
         cursor.execute("""
             SELECT 
                 p.person_id,
-                p.csv_id,
-                p.fm_id,
+                p.father_mother_id AS fm_id,
                 p.full_name,
+                p.alias,
                 p.gender,
                 p.status,
-                g.generation_number,
-                br.birth_date_solar,
-                br.birth_date_lunar,
-                dr.death_date_solar,
-                dr.death_date_lunar,
-                dr.grave_location AS grave
+                p.generation_level AS generation_number,
+                p.birth_date_solar,
+                p.birth_date_lunar,
+                p.death_date_solar,
+                p.death_date_lunar,
+                p.grave_info AS grave
             FROM persons p
-            LEFT JOIN generations g ON p.generation_id = g.generation_id
-            LEFT JOIN birth_records br ON p.person_id = br.person_id
-            LEFT JOIN death_records dr ON p.person_id = dr.person_id
             ORDER BY 
-                COALESCE(g.generation_number, 999) ASC,
+                COALESCE(p.generation_level, 999) ASC,
                 CASE 
-                    WHEN p.csv_id LIKE 'P%' AND SUBSTRING(p.csv_id, 2) REGEXP '^[0-9]+$' 
-                    THEN CAST(SUBSTRING(p.csv_id, 2) AS UNSIGNED)
+                    WHEN p.person_id LIKE 'P-%' AND SUBSTRING(p.person_id, 3) REGEXP '^[0-9]+-[0-9]+$' 
+                    THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(p.person_id, '-', 2), '-', -1) AS UNSIGNED)
                     ELSE 999999
                 END ASC,
-                p.csv_id ASC,
+                CASE 
+                    WHEN p.person_id LIKE 'P-%' AND SUBSTRING(p.person_id, 3) REGEXP '^[0-9]+-[0-9]+$' 
+                    THEN CAST(SUBSTRING_INDEX(p.person_id, '-', -1) AS UNSIGNED)
+                    ELSE 999999
+                END ASC,
+                p.person_id ASC,
                 p.full_name ASC
         """)
         
@@ -2026,90 +2099,78 @@ def get_members():
         for person in persons:
             person_id = person['person_id']
             
-            # Lấy tên bố/mẹ - ưu tiên từ relationships (nếu có father_id/mother_id), 
-            # fallback về persons.father_name/mother_name (từ CSV)
+            # Lấy tên bố/mẹ từ relationships table (schema mới)
             cursor.execute("""
                 SELECT 
-                    COALESCE(f.full_name, p.father_name) AS father_name,
-                    COALESCE(m.full_name, p.mother_name) AS mother_name
+                    GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END) AS father_name,
+                    GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END) AS mother_name
                 FROM persons p
                 LEFT JOIN relationships r ON r.child_id = p.person_id
-                LEFT JOIN persons f ON r.father_id = f.person_id
-                LEFT JOIN persons m ON r.mother_id = m.person_id
+                LEFT JOIN persons parent ON r.parent_id = parent.person_id
                 WHERE p.person_id = %s
-                LIMIT 1
+                GROUP BY p.person_id
             """, (person_id,))
             rel = cursor.fetchone()
             
-            # Nếu vẫn không có, lấy trực tiếp từ persons table (backup)
-            if not rel:
-                cursor.execute("""
-                    SELECT father_name, mother_name
-                    FROM persons
-                    WHERE person_id = %s
-                """, (person_id,))
-                rel = cursor.fetchone()
+            # Nếu không có, trả về None
+            if not rel or (not rel.get('father_name') and not rel.get('mother_name')):
+                rel = {'father_name': None, 'mother_name': None}
             
             # Hôn phối: marriages_spouses deprecated
             # TODO: derive spouse info from normalized `marriages` table
             spouses = []
             
-            # Lấy anh/chị/em từ relationships (những người có cùng cha mẹ)
-            # Get parent info first
+            # Lấy anh/chị/em từ relationships (những người có cùng cha mẹ) - schema mới
+            # Get parent IDs first
             cursor.execute("""
-                SELECT father_id, mother_id
+                SELECT DISTINCT parent_id
                 FROM relationships
-                WHERE child_id = %s
-                LIMIT 1
+                WHERE child_id = %s AND relation_type IN ('father', 'mother')
             """, (person_id,))
-            parent_rel = cursor.fetchone()
+            parent_ids = [row['parent_id'] for row in cursor.fetchall()]
             
             siblings = []
-            if parent_rel and (parent_rel.get('father_id') or parent_rel.get('mother_id')):
-                father_id = parent_rel.get('father_id')
-                mother_id = parent_rel.get('mother_id')
-                cursor.execute("""
+            if parent_ids:
+                placeholders = ','.join(['%s'] * len(parent_ids))
+                cursor.execute(f"""
                     SELECT DISTINCT s.full_name AS sibling_name
                     FROM persons s
                     JOIN relationships r_sibling ON s.person_id = r_sibling.child_id
                     WHERE s.person_id != %s
-                    AND (
-                        (%s IS NOT NULL AND r_sibling.father_id = %s)
-                        OR (%s IS NOT NULL AND r_sibling.mother_id = %s)
-                    )
+                    AND r_sibling.parent_id IN ({placeholders})
                     ORDER BY s.full_name
-                """, (person_id, father_id, father_id, mother_id, mother_id))
+                """, [person_id] + parent_ids)
                 siblings = cursor.fetchall()
             
-            # Lấy con cái
+            # Lấy con cái từ relationships
             cursor.execute("""
-                SELECT child.full_name
+                SELECT child.full_name AS child_name
                 FROM relationships r
                 JOIN persons child ON r.child_id = child.person_id
-                WHERE r.father_id = %s OR r.mother_id = %s
+                WHERE r.parent_id = %s
                 ORDER BY child.full_name
-            """, (person_id, person_id))
+            """, (person_id,))
             children = cursor.fetchall()
             
-            # Tạo object member
+            # Tạo object member (schema mới)
             member = {
                 'person_id': person_id,
-                'csv_id': person.get('csv_id'),
-                'fm_id': person.get('fm_id'),
+                'fm_id': person.get('fm_id'),  # father_mother_id
                 'full_name': person.get('full_name'),
+                'alias': person.get('alias'),
                 'gender': person.get('gender'),
                 'status': person.get('status'),
-                'generation_number': person.get('generation_number'),
+                'generation_number': person.get('generation_number'),  # generation_level
                 'birth_date_solar': str(person['birth_date_solar']) if person.get('birth_date_solar') else None,
                 'birth_date_lunar': str(person['birth_date_lunar']) if person.get('birth_date_lunar') else None,
                 'death_date_solar': str(person['death_date_solar']) if person.get('death_date_solar') else None,
                 'death_date_lunar': str(person['death_date_lunar']) if person.get('death_date_lunar') else None,
-                'grave': person.get('grave'),
+                'grave': person.get('grave'),  # grave_info
                 'father_name': rel.get('father_name') if rel else None,
                 'mother_name': rel.get('mother_name') if rel else None,
                 'spouses': '; '.join([s.get('spouse_name', '') for s in spouses]) if spouses else None,
                 'siblings': '; '.join([s.get('sibling_name', '') for s in siblings]) if siblings else None,
-                'children': '; '.join([c.get('full_name', '') for c in children]) if children else None
+                'children': '; '.join([c.get('child_name', '') for c in children]) if children else None
             }
             
             members.append(member)

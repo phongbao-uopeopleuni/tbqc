@@ -1376,12 +1376,12 @@
           
           // Display suggestions with full format
           suggestionsDiv.innerHTML = results.map((person) => {
-            const gen = person.generation_number || '?';
+            const gen = person.generation_level || person.generation_number || '?';
             const name = person.full_name || 'Không rõ tên';
             const fatherName = person.father_name || '';
             const motherName = person.mother_name || '';
             
-            // Format parent info
+            // Format parent info (không dùng <em>)
             let parentInfo = '';
             if (fatherName && motherName) {
               parentInfo = `Con của: Ông ${escapeHtml(fatherName)} & Bà ${escapeHtml(motherName)}`;
@@ -1394,14 +1394,14 @@
             }
             
             // Add FM_ID indicator if available to help distinguish duplicates
-            const fmIdDisplay = person.fm_id ? ` <span style="color: #999; font-size: 12px;">(FM: ${escapeHtml(person.fm_id)})</span>` : '';
+            const fmIdDisplay = person.father_mother_id || person.fm_id ? ` <span style="color: #999; font-size: 12px;">(FM: ${escapeHtml(person.father_mother_id || person.fm_id)})</span>` : '';
             
             return `
-              <div class="suggestion-item" onclick="selectSuggestionFromSearch(${person.person_id})" style="cursor: pointer; padding: 12px; border-bottom: 1px solid #eee;">
+              <div class="suggestion-item" onclick="selectSuggestionFromSearch('${person.person_id}')" style="cursor: pointer; padding: 12px; border-bottom: 1px solid #eee;">
                 <div class="suggestion-name" style="font-weight: 600; color: #7b1a1a; font-size: 16px; margin-bottom: 4px;">
                   ${escapeHtml(name)} – Đời ${gen}${fmIdDisplay}
                 </div>
-                <div class="suggestion-details" style="color: #666; font-size: 14px; font-style: italic;">
+                <div class="suggestion-details" style="color: #666; font-size: 14px;">
                   ${parentInfo}
                 </div>
               </div>
@@ -1520,7 +1520,7 @@
         resultContent.querySelectorAll('.lineage-item').forEach(item => {
           item.style.cursor = 'pointer';
           item.addEventListener('click', () => {
-            const personId = parseInt(item.getAttribute('data-person-id'));
+            const personId = item.getAttribute('data-person-id'); // Giữ nguyên string
             const allPersons = window.GenealogyLineage.getAllPersons();
             const clickedPerson = allPersons.find(p => p.person_id === personId);
             if (clickedPerson) {
@@ -1575,12 +1575,12 @@
           // Hiển thị suggestions để người dùng chọn
           if (suggestionsDiv) {
             suggestionsDiv.innerHTML = results.map((person) => {
-              const gen = person.generation_number || '?';
+              const gen = person.generation_level || person.generation_number || '?';
               const name = person.full_name || 'Không rõ tên';
               const fatherName = person.father_name || '';
               const motherName = person.mother_name || '';
               
-              // Format parent info
+              // Format parent info (không dùng <em>)
               let parentInfo = '';
               if (fatherName && motherName) {
                 parentInfo = `Con của: Ông ${escapeHtml(fatherName)} & Bà ${escapeHtml(motherName)}`;
@@ -1593,14 +1593,14 @@
               }
               
               // Add FM_ID indicator if available to help distinguish duplicates
-              const fmIdDisplay = person.fm_id ? ` <span style="color: #999; font-size: 12px;">(FM: ${escapeHtml(person.fm_id)})</span>` : '';
+              const fmIdDisplay = person.father_mother_id || person.fm_id ? ` <span style="color: #999; font-size: 12px;">(FM: ${escapeHtml(person.father_mother_id || person.fm_id)})</span>` : '';
               
               return `
-                <div class="suggestion-item" onclick="selectSuggestionFromSearch(${person.person_id})" style="cursor: pointer; padding: 12px; border-bottom: 1px solid #eee;">
+                <div class="suggestion-item" onclick="selectSuggestionFromSearch('${person.person_id}')" style="cursor: pointer; padding: 12px; border-bottom: 1px solid #eee;">
                   <div class="suggestion-name" style="font-weight: 600; color: #7b1a1a; font-size: 16px; margin-bottom: 4px;">
                     ${escapeHtml(name)} – Đời ${gen}${fmIdDisplay}
                   </div>
-                  <div class="suggestion-details" style="color: #666; font-size: 14px; font-style: italic;">
+                  <div class="suggestion-details" style="color: #666; font-size: 14px;">
                     ${parentInfo}
                   </div>
                 </div>
@@ -1649,22 +1649,34 @@
         const ancestorsData = await ancestorsRes.json();
         console.log('[Lineage] Ancestors API response:', ancestorsData);
         
-        // Build lineage chain: ancestors_chain + current person
+        // Build lineage chain: ancestors_chain + current person (avoid duplicates)
         let lineage = [];
         
         if (ancestorsData.ancestors_chain && Array.isArray(ancestorsData.ancestors_chain)) {
           lineage = ancestorsData.ancestors_chain;
         }
         
-        // Add current person to lineage (from API response)
+        // Add current person to lineage only if not already in ancestors_chain
         if (ancestorsData.person) {
-          lineage.push(ancestorsData.person);
+          const currentPersonId = String(ancestorsData.person.person_id || '').trim();
+          // Check with normalized comparison
+          const alreadyInChain = lineage.some(p => {
+            const pId = String(p.person_id || '').trim();
+            return pId === currentPersonId && pId !== '';
+          });
+          
+          if (!alreadyInChain && currentPersonId) {
+            lineage.push(ancestorsData.person);
+            console.log(`[Lineage] Added current person ${currentPersonId} to lineage`);
+          } else {
+            console.log(`[Lineage] Person ${currentPersonId} already in ancestors_chain, skipping duplicate`);
+          }
         }
         
         console.log(`[Lineage] Built lineage chain with ${lineage.length} generations`);
         console.log('[Lineage] Lineage data:', lineage);
         
-        // Display lineage with beautiful timeline
+        // Display lineage with beautiful timeline (will remove duplicates again)
         displayLineageChain(lineage);
         
         // Show detail panel (fetch full person details)
@@ -1729,53 +1741,92 @@
         return;
       }
       
-      // Remove duplicates by person_id
+      // Remove duplicates by person_id (strict check with string conversion and normalization)
       const seenIds = new Set();
-      const uniqueLineage = lineage.filter(p => {
-        const personId = p.person_id;
-        if (!personId || seenIds.has(personId)) {
-          console.warn(`[Lineage] Removing duplicate person_id=${personId}`);
-          return false;
-        }
-        seenIds.add(personId);
-        return true;
-      });
+      const uniqueLineage = [];
+      const duplicateLog = [];
       
-      // Sort by generation_number (ascending)
+      for (const p of lineage) {
+        // Normalize person_id: trim, convert to string, handle null/undefined
+        let personId = p.person_id;
+        if (personId === null || personId === undefined || personId === '') {
+          console.warn(`[Lineage] Skipping person without person_id:`, p);
+          continue;
+        }
+        
+        // Convert to string and trim whitespace
+        const personIdStr = String(personId).trim();
+        if (!personIdStr) {
+          console.warn(`[Lineage] Skipping person with empty person_id after trim:`, p);
+          continue;
+        }
+        
+        // Check for duplicate
+        if (seenIds.has(personIdStr)) {
+          const duplicateInfo = {
+            person_id: personIdStr,
+            name: p.full_name || 'N/A',
+            generation: p.generation_number || p.generation_level || 'N/A'
+          };
+          duplicateLog.push(duplicateInfo);
+          console.warn(`[Lineage] DUPLICATE DETECTED: person_id=${personIdStr}, name=${duplicateInfo.name}, generation=${duplicateInfo.generation}`);
+          continue;
+        }
+        
+        // Add to seen set and unique lineage
+        seenIds.add(personIdStr);
+        uniqueLineage.push(p);
+      }
+      
+      if (duplicateLog.length > 0) {
+        console.warn(`[Lineage] Found ${duplicateLog.length} duplicates:`, duplicateLog);
+      }
+      console.log(`[Lineage] After deduplication: ${uniqueLineage.length} unique persons (from ${lineage.length} total)`);
+      
+      // Log all person_ids for debugging
+      const allPersonIds = uniqueLineage.map(p => `${p.person_id} (${p.full_name})`).join(', ');
+      console.log(`[Lineage] Unique person_ids: ${allPersonIds}`);
+      
+      // Sort by generation_number (ascending), then by person_id
       const sortedLineage = [...uniqueLineage].sort((a, b) => {
-        const genA = a.generation_number || 0;
-        const genB = b.generation_number || 0;
+        const genA = a.generation_number || a.generation_level || 0;
+        const genB = b.generation_number || b.generation_level || 0;
         if (genA !== genB) {
           return genA - genB;
         }
-        // If same generation, sort by person_id
-        return (a.person_id || 0) - (b.person_id || 0);
+        // If same generation, sort by person_id (string comparison for VARCHAR IDs)
+        const idA = String(a.person_id || '');
+        const idB = String(b.person_id || '');
+        return idA.localeCompare(idB);
       });
       
       console.log(`[Lineage] After deduplication: ${sortedLineage.length} unique persons`);
       console.log('[Lineage] Generations:', sortedLineage.map(p => `${p.generation_number}: ${p.full_name}`));
       
       // Ensure Generation 1 exists (Vua Minh Mạng)
-      const hasGen1 = sortedLineage.some(p => p.generation_number === 1);
+      const hasGen1 = sortedLineage.some(p => (p.generation_number === 1 || p.generation_level === 1));
       if (!hasGen1) {
         // Find Vua Minh Mạng or create placeholder
         const gen1Person = {
-          person_id: 1,
+          person_id: 'P-1-1',
           full_name: 'Vua Minh Mạng',
           generation_number: 1,
+          generation_level: 1,
           father_name: 'Vua Gia Long',
           mother_name: 'Thuận Thiên Hoàng hậu',
           gender: 'Nam',
           status: 'Đã mất'
         };
         sortedLineage.unshift(gen1Person);
+        console.log('[Lineage] Added Generation 1 placeholder (Vua Minh Mạng)');
       } else {
         // Normalize Gen 1 parents
-        const gen1Index = sortedLineage.findIndex(p => p.generation_number === 1);
+        const gen1Index = sortedLineage.findIndex(p => (p.generation_number === 1 || p.generation_level === 1));
         if (gen1Index !== -1) {
           const gen1Parents = getGen1Parents();
           sortedLineage[gen1Index].father_name = gen1Parents.father_name;
           sortedLineage[gen1Index].mother_name = gen1Parents.mother_name;
+          console.log('[Lineage] Normalized Generation 1 parents');
         }
       }
       
@@ -1788,19 +1839,19 @@
       
       // Generate timeline HTML
       const timelineHTML = sortedLineage.map((p, index) => {
-        const gen = p.generation_number || '?';
+        const gen = p.generation_number || p.generation_level || '?';
         const name = p.full_name || 'Không rõ tên';
         const fatherName = normalizeParentName(p.father_name, true) || p.father_name || '';
         const motherName = normalizeParentName(p.mother_name, false) || p.mother_name || '';
         
-        // Format parent info according to spec
+        // Format parent info according to spec: "Con của:" in nghiêng
         let parentInfo = '';
         if (fatherName && motherName) {
-          parentInfo = `Con của: Ông ${escapeHtml(fatherName)} & Bà ${escapeHtml(motherName)}`;
+          parentInfo = `<em>Con của:</em> Ông ${escapeHtml(fatherName)} & Bà ${escapeHtml(motherName)}`;
         } else if (fatherName) {
-          parentInfo = `Con của: Ông ${escapeHtml(fatherName)}`;
+          parentInfo = `<em>Con của:</em> Ông ${escapeHtml(fatherName)}`;
         } else if (motherName) {
-          parentInfo = `Con của: Bà ${escapeHtml(motherName)}`;
+          parentInfo = `<em>Con của:</em> Bà ${escapeHtml(motherName)}`;
         } else {
           parentInfo = 'Chưa có thông tin cha mẹ';
         }
@@ -1841,9 +1892,12 @@
                 font-weight: 700;
                 font-size: 14px;
                 padding: 8px 20px;
-                border-radius: 20px;
+                border-radius: 50px;
                 white-space: nowrap;
                 box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+                display: inline-block;
+                min-width: 80px;
+                text-align: center;
               ">Đời ${gen}</span>
               <h3 style="
                 color: #7b1a1a;
@@ -2556,7 +2610,7 @@
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
-            person_id: parseInt(personId),
+            person_id: personId, // Giữ nguyên string (P-1-1 format)
             person_name: personName,
             person_generation: parseInt(personGeneration),
             requester_name: fullName,
@@ -3557,8 +3611,12 @@
           // Node click handler
           network.on('click', (params) => {
             if (params.nodes.length > 0) {
-              const nodeId = parseInt(params.nodes[0]);
-              showPersonInfo(nodeId);
+              const nodeId = params.nodes[0]; // Giữ nguyên string, không parse thành số
+              if (nodeId && nodeId !== 'NaN' && nodeId !== 'undefined') {
+                showPersonInfo(nodeId);
+              } else {
+                console.warn('[Tree] Invalid nodeId:', nodeId);
+              }
             }
           });
           
