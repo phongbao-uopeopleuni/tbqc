@@ -3369,7 +3369,7 @@
     document.head.appendChild(visStyle);
 
     let network = null;
-    let currentRootId = 1; // Default: Vua Minh Mạng
+    let currentRootId = 'P-1-1'; // Default: Vua Minh Mạng (phải là string, không phải số)
     let currentMaxGen = 5;
     let treeData = null;
 
@@ -3704,7 +3704,7 @@
         // Add click handlers
         resultsDiv.querySelectorAll('.search-result').forEach(el => {
           el.addEventListener('click', () => {
-            const personId = parseInt(el.getAttribute('data-person-id'));
+            const personId = el.getAttribute('data-person-id'); // Giữ nguyên string, không parse thành số
             currentRootId = personId;
             resultsDiv.style.display = 'none';
             document.getElementById('searchInput').value = '';
