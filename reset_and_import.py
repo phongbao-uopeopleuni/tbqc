@@ -114,11 +114,33 @@ def execute_sql_file(connection, file_path: str) -> bool:
 
 
 def parse_date(date_str: str) -> Optional[str]:
-    """Parse date từ CSV format (dd/mm/yyyy) sang MySQL DATE format"""
+    """
+    Parse date từ CSV format:
+    - dd/mm/yyyy (format thông thường)
+    - Số serial Excel (34672, 34368, ...) - days since 1900-01-01
+    """
     if not date_str or date_str.strip() == '':
         return None
     
     date_str = date_str.strip()
+    
+    # Thử parse số serial Excel trước (nếu là số lớn hơn 1000)
+    try:
+        serial_number = float(date_str)
+        # Excel serial date: 1900-01-01 = 1
+        # MySQL DATE có thể là số ngày từ epoch hoặc Excel serial
+        if serial_number > 1000:  # Có thể là Excel serial
+            # Excel epoch: 1899-12-30 (vì Excel tính từ 1900-01-01 = 1)
+            from datetime import datetime, timedelta
+            excel_epoch = datetime(1899, 12, 30)
+            date_obj = excel_epoch + timedelta(days=int(serial_number) - 1)
+            # Validate: năm phải hợp lý (1800-2100)
+            if 1800 <= date_obj.year <= 2100:
+                return date_obj.strftime('%Y-%m-%d')
+    except (ValueError, OverflowError):
+        pass  # Không phải số, tiếp tục parse format khác
+    
+    # Parse format dd/mm/yyyy
     try:
         # Format: dd/mm/yyyy hoặc dd/mm/--
         if '--' in date_str:

@@ -790,21 +790,25 @@ def get_person(person_id):
                 person['siblings'] = '; '.join(sibling_names)
             else:
                 person['siblings'] = None
-            
-            # Lấy con từ relationships
-            cursor.execute("""
+        else:
+            person['siblings'] = None
+        
+        # Lấy con từ relationships (luôn chạy, không phụ thuộc vào father_id/mother_id)
+        cursor.execute("""
             SELECT 
                 r.child_id,
                 child.full_name AS child_name
-                FROM relationships r
+            FROM relationships r
             JOIN persons child ON r.child_id = child.person_id
             WHERE r.parent_id = %s AND r.relation_type IN ('father', 'mother')
             ORDER BY child.full_name
         """, (person_id,))
-            children_records = cursor.fetchall()
-            if children_records:
-                child_names = [c['child_name'] for c in children_records if c.get('child_name')]
-                person['children'] = '; '.join(child_names) if child_names else None
+        children_records = cursor.fetchall()
+        if children_records:
+            child_names = [c['child_name'] for c in children_records if c.get('child_name')]
+            person['children'] = '; '.join(child_names) if child_names else None
+        else:
+            person['children'] = None
             
         # Lấy spouses từ marriages
             cursor.execute("""
@@ -990,6 +994,48 @@ def get_person(person_id):
                     person['ancestors_chain'] = []
         
         if person:
+            # Format dates để đảm bảo hiển thị đúng
+            from datetime import date, datetime
+            if person.get('birth_date_solar'):
+                if isinstance(person['birth_date_solar'], (date, datetime)):
+                    person['birth_date_solar'] = person['birth_date_solar'].strftime('%Y-%m-%d')
+                elif isinstance(person['birth_date_solar'], str) and not person['birth_date_solar'].startswith('19') and not person['birth_date_solar'].startswith('20'):
+                    # Nếu là số serial, bỏ qua (để frontend xử lý)
+                    pass
+            if person.get('birth_date_lunar'):
+                if isinstance(person['birth_date_lunar'], (date, datetime)):
+                    person['birth_date_lunar'] = person['birth_date_lunar'].strftime('%Y-%m-%d')
+            if person.get('death_date_solar'):
+                if isinstance(person['death_date_solar'], (date, datetime)):
+                    person['death_date_solar'] = person['death_date_solar'].strftime('%Y-%m-%d')
+            if person.get('death_date_lunar'):
+                if isinstance(person['death_date_lunar'], (date, datetime)):
+                    person['death_date_lunar'] = person['death_date_lunar'].strftime('%Y-%m-%d')
+            
+            # Debug: Log person data trước khi trả về
+            logger.info(f"[API /api/person/{person_id}] Returning person data:")
+            logger.info(f"  - full_name: {person.get('full_name')}")
+            logger.info(f"  - alias: {person.get('alias')}")
+            logger.info(f"  - generation_level: {person.get('generation_level')}")
+            logger.info(f"  - father_id: {person.get('father_id')}")
+            logger.info(f"  - father_name: {person.get('father_name')}")
+            logger.info(f"  - mother_id: {person.get('mother_id')}")
+            logger.info(f"  - mother_name: {person.get('mother_name')}")
+            logger.info(f"  - birth_date_solar: {person.get('birth_date_solar')}")
+            logger.info(f"  - home_town: {person.get('home_town')}")
+            logger.info(f"  - occupation: {person.get('occupation')}")
+            logger.info(f"  - education: {person.get('education')}")
+            logger.info(f"  - religion: {person.get('religion')}")
+            logger.info(f"  - events: {person.get('events')}")
+            logger.info(f"  - titles: {person.get('titles')}")
+            logger.info(f"  - blood_type: {person.get('blood_type')}")
+            logger.info(f"  - genetic_disease: {person.get('genetic_disease')}")
+            logger.info(f"  - place_of_death: {person.get('place_of_death')}")
+            logger.info(f"  - grave_info: {person.get('grave_info')}")
+            logger.info(f"  - contact: {person.get('contact')}")
+            logger.info(f"  - social: {person.get('social')}")
+            logger.info(f"  - note: {person.get('note')}")
+            
             return jsonify(person)
         return jsonify({'error': 'Không tìm thấy'}), 404
     except Error as e:
@@ -2155,6 +2201,7 @@ def get_members():
             # Tạo object member (schema mới)
             member = {
                 'person_id': person_id,
+                'csv_id': person_id,  # Frontend expects csv_id, use person_id as fallback
                 'fm_id': person.get('fm_id'),  # father_mother_id
                 'full_name': person.get('full_name'),
                 'alias': person.get('alias'),

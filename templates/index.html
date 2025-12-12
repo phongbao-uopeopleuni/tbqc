@@ -1837,9 +1837,38 @@
         resultTitle.textContent = `Chuỗi phả hệ của ${targetPerson.full_name || 'Người được chọn'}`;
       }
       
-      // Generate timeline HTML
-      const timelineHTML = sortedLineage.map((p, index) => {
-        const gen = p.generation_number || p.generation_level || '?';
+      // Group by generation for special handling of Đời 1 (vợ chồng song song)
+      const groupedByGen = {};
+      sortedLineage.forEach(p => {
+        const gen = p.generation_number || p.generation_level || 0;
+        if (!groupedByGen[gen]) {
+          groupedByGen[gen] = [];
+        }
+        groupedByGen[gen].push(p);
+      });
+      
+      // Generate timeline HTML grouped by generation
+      let timelineHTML = '';
+      Object.keys(groupedByGen).sort((a, b) => parseInt(a) - parseInt(b)).forEach(gen => {
+        const personsInGen = groupedByGen[gen];
+        const genNum = parseInt(gen);
+        
+        // Special handling for Đời 1: display vợ chồng song song
+        if (genNum === 1 && personsInGen.length > 1) {
+          timelineHTML += '<div style="display: flex; flex-direction: row; gap: 16px; width: 100%; margin-bottom: 16px;">';
+          personsInGen.forEach(p => {
+            timelineHTML += generatePersonCard(p, genNum, false); // 50% width for Đời 1 couple
+          });
+          timelineHTML += '</div>';
+        } else {
+          // Normal display for other generations (one person per card, full width)
+          personsInGen.forEach(p => {
+            timelineHTML += generatePersonCard(p, genNum, true);
+          });
+        }
+      });
+      
+      function generatePersonCard(p, gen, isFullWidth = true) {
         const name = p.full_name || 'Không rõ tên';
         const fatherName = normalizeParentName(p.father_name, true) || p.father_name || '';
         const motherName = normalizeParentName(p.mother_name, false) || p.mother_name || '';
@@ -1874,16 +1903,20 @@
           badgeColor = 'background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);'; // Gray
         }
         
+        // For Đời 1 with multiple people, use 50% width, otherwise 100%
+        const cardWidth = (!isFullWidth) ? 'calc(50% - 8px)' : '100%';
+        const cardMargin = (!isFullWidth) ? '0' : '0 0 16px 0';
+        
         return `
           <div class="lineage-timeline-card" style="
             background: linear-gradient(180deg, #FFF8DC 0%, #FFFFFF 100%);
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 16px;
+            margin: ${cardMargin};
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             border: 2px solid #DAA520;
             position: relative;
-            width: 100%;
+            width: ${cardWidth};
           ">
             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px;">
               <span class="generation-badge" style="
@@ -1917,7 +1950,7 @@
             </div>
           </div>
         `;
-      }).join('');
+      }
       
       if (resultContent) {
         resultContent.innerHTML = `
@@ -1971,10 +2004,56 @@
       
       // Fetch thông tin chi tiết từ API (bao gồm hôn phối)
       fetch(`/api/person/${person.person_id}`)
-        .then(response => response.json())
-        .then(detailedPerson => {
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`API trả mã ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          // API có thể trả về {person: {...}} hoặc {...} trực tiếp
+          const detailedPerson = data.person || data;
+          if (detailedPerson.error) {
+            console.error('API trả về lỗi:', detailedPerson.error);
+            renderDetailPanel(person);
+            return;
+          }
+          
+          // Debug: Log data từ API
+          console.log('[Detail Panel] API Response:', detailedPerson);
+          console.log('[Detail Panel] Fields:', {
+            full_name: detailedPerson.full_name,
+            alias: detailedPerson.alias,
+            generation_level: detailedPerson.generation_level,
+            father_id: detailedPerson.father_id,
+            father_name: detailedPerson.father_name,
+            mother_id: detailedPerson.mother_id,
+            mother_name: detailedPerson.mother_name,
+            birth_date_solar: detailedPerson.birth_date_solar,
+            birth_date_lunar: detailedPerson.birth_date_lunar,
+            home_town: detailedPerson.home_town,
+            occupation: detailedPerson.occupation,
+            education: detailedPerson.education,
+            religion: detailedPerson.religion,
+            events: detailedPerson.events,
+            titles: detailedPerson.titles,
+            blood_type: detailedPerson.blood_type,
+            genetic_disease: detailedPerson.genetic_disease,
+            place_of_death: detailedPerson.place_of_death,
+            grave_info: detailedPerson.grave_info,
+            contact: detailedPerson.contact,
+            social: detailedPerson.social,
+            note: detailedPerson.note
+          });
+          
           // Merge thông tin chi tiết vào person
           Object.assign(selectedPerson, detailedPerson);
+          // Đảm bảo generation_number được set
+          if (!selectedPerson.generation_number && selectedPerson.generation_level) {
+            selectedPerson.generation_number = selectedPerson.generation_level;
+          }
+          
+          console.log('[Detail Panel] Merged person:', selectedPerson);
           renderDetailPanel(selectedPerson);
         })
         .catch(error => {
@@ -1998,9 +2077,15 @@
               <label>Tên đầy đủ:</label>
               <div class="detail-value">${person.full_name || 'Chưa có thông tin'}</div>
             </div>
+            ${person.alias ? `
+            <div class="form-group">
+              <label>Tên thường gọi:</label>
+              <div class="detail-value">${person.alias}</div>
+            </div>
+            ` : ''}
             <div class="form-group">
               <label>Đời:</label>
-              <div class="detail-value">${person.generation_number || 'Chưa có thông tin'}</div>
+              <div class="detail-value">${person.generation_number || person.generation_level || 'Chưa có thông tin'}</div>
             </div>
             <div class="form-group">
               <label>Giới tính:</label>
@@ -2027,26 +2112,78 @@
               <label>Năm sinh:</label>
               <div class="detail-value">
                 ${(() => {
-                  let yearDL = null;
-                  let yearAL = null;
-                  
-                  if (person.birth_date_solar) {
-                    try {
-                      const date = new Date(person.birth_date_solar);
-                      yearDL = isNaN(date.getTime()) ? (person.birth_date_solar.split('-')[0] || person.birth_date_solar) : date.getFullYear();
-                    } catch {
-                      yearDL = person.birth_date_solar.split('-')[0] || person.birth_date_solar;
+                  // Helper function để parse năm từ date
+                  function parseYear(dateValue) {
+                    if (!dateValue) return null;
+                    
+                    // Nếu là số (có thể là serial date từ Excel hoặc timestamp)
+                    if (typeof dateValue === 'number') {
+                      // Nếu số lớn hơn 10000, có thể là serial date (Excel: days since 1900-01-01)
+                      if (dateValue > 10000) {
+                        // Excel serial date: 1900-01-01 = 1
+                        // MySQL DATE có thể trả về số ngày từ epoch hoặc serial
+                        try {
+                          // Thử convert từ Excel serial (1900-01-01 = 1)
+                          const excelEpoch = new Date(1899, 11, 30); // 1899-12-30 (Excel epoch)
+                          const date = new Date(excelEpoch.getTime() + (dateValue - 1) * 86400000);
+                          if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+                            return date.getFullYear();
+                          }
+                          // Thử convert từ Unix timestamp (milliseconds)
+                          const date2 = new Date(dateValue);
+                          if (!isNaN(date2.getTime()) && date2.getFullYear() > 1900 && date2.getFullYear() < 2100) {
+                            return date2.getFullYear();
+                          }
+                        } catch (e) {
+                          // Ignore
+                        }
+                      }
+                      // Nếu số nhỏ (có thể là năm trực tiếp)
+                      if (dateValue >= 1800 && dateValue <= 2100) {
+                        return dateValue;
+                      }
+                      return null;
                     }
+                    
+                    // Nếu là chuỗi
+                    if (typeof dateValue === 'string') {
+                      // Format YYYY-MM-DD hoặc YYYY/MM/DD
+                      const dateMatch = dateValue.match(/^(\d{4})[-/]/);
+                      if (dateMatch) {
+                        const year = parseInt(dateMatch[1]);
+                        if (year >= 1800 && year <= 2100) {
+                          return year;
+                        }
+                      }
+                      
+                      // Thử parse bằng Date
+                      try {
+                        const date = new Date(dateValue);
+                        if (!isNaN(date.getTime())) {
+                          const year = date.getFullYear();
+                          if (year >= 1800 && year <= 2100) {
+                            return year;
+                          }
+                        }
+                      } catch (e) {
+                        // Ignore
+                      }
+                      
+                      // Nếu chỉ là số trong chuỗi (năm)
+                      const numMatch = dateValue.match(/^\d{4}$/);
+                      if (numMatch) {
+                        const year = parseInt(numMatch[0]);
+                        if (year >= 1800 && year <= 2100) {
+                          return year;
+                        }
+                      }
+                    }
+                    
+                    return null;
                   }
                   
-                  if (person.birth_date_lunar) {
-                    try {
-                      const date = new Date(person.birth_date_lunar);
-                      yearAL = isNaN(date.getTime()) ? (person.birth_date_lunar.split('-')[0] || person.birth_date_lunar) : date.getFullYear();
-                    } catch {
-                      yearAL = person.birth_date_lunar.split('-')[0] || person.birth_date_lunar;
-                    }
-                  }
+                  let yearDL = parseYear(person.birth_date_solar);
+                  let yearAL = parseYear(person.birth_date_lunar);
                   
                   // Logic hiển thị
                   if (yearDL && yearAL) {
@@ -2060,7 +2197,8 @@
                   } else if (yearAL) {
                     return yearAL + (person.birth_location ? ' - ' + person.birth_location : '');
                   }
-                  return '';
+                  // Nếu không parse được, hiển thị giá trị gốc (tránh hiển thị số serial)
+                  return person.birth_date_solar || person.birth_date_lunar || '';
                 })()}
               </div>
             </div>
@@ -2069,24 +2207,78 @@
             <div class="form-group">
               <label>Năm mất:</label>
               <div class="detail-value">
-                ${person.death_date_solar ? (() => {
-                  try {
-                    const date = new Date(person.death_date_solar);
-                    return isNaN(date.getTime()) ? (person.death_date_solar.split('-')[0] || person.death_date_solar) : date.getFullYear();
-                  } catch {
-                    return person.death_date_solar.split('-')[0] || person.death_date_solar;
+                ${(() => {
+                  // Helper function để parse năm từ date (dùng lại logic từ birth_date)
+                  function parseYear(dateValue) {
+                    if (!dateValue) return null;
+                    
+                    if (typeof dateValue === 'number') {
+                      if (dateValue > 10000) {
+                        try {
+                          const excelEpoch = new Date(1899, 11, 30);
+                          const date = new Date(excelEpoch.getTime() + (dateValue - 1) * 86400000);
+                          if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+                            return date.getFullYear();
+                          }
+                          const date2 = new Date(dateValue);
+                          if (!isNaN(date2.getTime()) && date2.getFullYear() > 1900 && date2.getFullYear() < 2100) {
+                            return date2.getFullYear();
+                          }
+                        } catch (e) {}
+                      }
+                      if (dateValue >= 1800 && dateValue <= 2100) {
+                        return dateValue;
+                      }
+                      return null;
+                    }
+                    
+                    if (typeof dateValue === 'string') {
+                      const dateMatch = dateValue.match(/^(\d{4})[-/]/);
+                      if (dateMatch) {
+                        const year = parseInt(dateMatch[1]);
+                        if (year >= 1800 && year <= 2100) {
+                          return year;
+                        }
+                      }
+                      try {
+                        const date = new Date(dateValue);
+                        if (!isNaN(date.getTime())) {
+                          const year = date.getFullYear();
+                          if (year >= 1800 && year <= 2100) {
+                            return year;
+                          }
+                        }
+                      } catch (e) {}
+                      const numMatch = dateValue.match(/^\d{4}$/);
+                      if (numMatch) {
+                        const year = parseInt(numMatch[0]);
+                        if (year >= 1800 && year <= 2100) {
+                          return year;
+                        }
+                      }
+                    }
+                    
+                    return null;
                   }
-                })() : ''}
-                ${person.death_date_solar && person.death_date_lunar ? ' / ' : ''}
-                ${person.death_date_lunar ? (() => {
-                  try {
-                    const date = new Date(person.death_date_lunar);
-                    return isNaN(date.getTime()) ? (person.death_date_lunar.split('-')[0] || person.death_date_lunar) : date.getFullYear();
-                  } catch {
-                    return person.death_date_lunar.split('-')[0] || person.death_date_lunar;
+                  
+                  const yearDL = parseYear(person.death_date_solar);
+                  const yearAL = parseYear(person.death_date_lunar);
+                  
+                  let result = '';
+                  if (yearDL && yearAL) {
+                    result = `DL: ${yearDL} / AL: ${yearAL}`;
+                  } else if (yearDL) {
+                    result = yearDL.toString();
+                  } else if (yearAL) {
+                    result = yearAL.toString();
                   }
-                })() : ''}
-                ${person.sheet3_death_place || person.death_location ? ' - ' + (person.sheet3_death_place || person.death_location || '') : ''}
+                  
+                  if (result && (person.sheet3_death_place || person.death_location)) {
+                    result += ' - ' + (person.sheet3_death_place || person.death_location);
+                  }
+                  
+                  return result || '';
+                })()}
               </div>
             </div>
             ` : ''}
@@ -2108,16 +2300,88 @@
               <div class="detail-value">${formatTextWithLineBreaks(person.sheet3_parents)}</div>
             </div>
             ` : ''}
-            ${person.origin_location ? `
+            ${person.home_town || person.origin_location ? `
             <div class="form-group">
               <label>Nguyên quán:</label>
-              <div class="detail-value">${person.origin_location}</div>
+              <div class="detail-value">${person.home_town || person.origin_location || 'Chưa có thông tin'}</div>
             </div>
             ` : ''}
             ${person.nationality ? `
             <div class="form-group">
               <label>Quốc tịch:</label>
               <div class="detail-value">${person.nationality}</div>
+            </div>
+            ` : ''}
+            ${person.religion ? `
+            <div class="form-group">
+              <label>Tôn giáo:</label>
+              <div class="detail-value">${person.religion}</div>
+            </div>
+            ` : ''}
+            ${person.occupation ? `
+            <div class="form-group">
+              <label>Nghề nghiệp:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.occupation)}</div>
+            </div>
+            ` : ''}
+            ${person.education ? `
+            <div class="form-group">
+              <label>Học vấn:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.education)}</div>
+            </div>
+            ` : ''}
+            ${person.events ? `
+            <div class="form-group">
+              <label>Sự kiện:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.events)}</div>
+            </div>
+            ` : ''}
+            ${person.titles ? `
+            <div class="form-group">
+              <label>Danh hiệu:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.titles)}</div>
+            </div>
+            ` : ''}
+            ${person.blood_type ? `
+            <div class="form-group">
+              <label>Nhóm máu:</label>
+              <div class="detail-value">${person.blood_type}</div>
+            </div>
+            ` : ''}
+            ${person.genetic_disease ? `
+            <div class="form-group">
+              <label>Bệnh di truyền:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.genetic_disease)}</div>
+            </div>
+            ` : ''}
+            ${person.place_of_death || person.sheet3_death_place || person.death_location ? `
+            <div class="form-group">
+              <label>Nơi mất:</label>
+              <div class="detail-value">${person.place_of_death || person.sheet3_death_place || person.death_location || 'Chưa có thông tin'}</div>
+            </div>
+            ` : ''}
+            ${person.grave_info || person.sheet3_grave ? `
+            <div class="form-group">
+              <label>Mộ phần:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.grave_info || person.sheet3_grave)}</div>
+            </div>
+            ` : ''}
+            ${person.contact ? `
+            <div class="form-group">
+              <label>Thông tin liên lạc:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.contact)}</div>
+            </div>
+            ` : ''}
+            ${person.social ? `
+            <div class="form-group">
+              <label>Mạng xã hội:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.social)}</div>
+            </div>
+            ` : ''}
+            ${person.note ? `
+            <div class="form-group">
+              <label>Ghi chú:</label>
+              <div class="detail-value">${formatTextWithLineBreaks(person.note)}</div>
             </div>
             ` : ''}
             <div class="form-group">
@@ -3262,23 +3526,31 @@
         `<span class="mini-slider-dot ${index === 0 ? 'active' : ''}" data-index="${index}" style="width:10px;height:10px;border-radius:50%;background:${index === 0 ? '#DAA520' : '#ddd'};cursor:pointer;transition:background 0.3s;"></span>`
       ).join('');
 
-      // Event listeners
-      document.getElementById('miniSliderPrev').addEventListener('click', () => {
-        pauseMiniAutoPlay();
-        prevMiniSlide();
-      });
-      document.getElementById('miniSliderNext').addEventListener('click', () => {
-        pauseMiniAutoPlay();
-        nextMiniSlide();
-      });
-
-      dotsContainer.querySelectorAll('.mini-slider-dot').forEach(dot => {
-        dot.addEventListener('click', () => {
+      // Event listeners (with null checks)
+      const miniSliderPrev = document.getElementById('miniSliderPrev');
+      const miniSliderNext = document.getElementById('miniSliderNext');
+      if (miniSliderPrev) {
+        miniSliderPrev.addEventListener('click', () => {
           pauseMiniAutoPlay();
-          const index = parseInt(dot.getAttribute('data-index'));
-          showMiniSlide(index);
+          prevMiniSlide();
         });
-      });
+      }
+      if (miniSliderNext) {
+        miniSliderNext.addEventListener('click', () => {
+          pauseMiniAutoPlay();
+          nextMiniSlide();
+        });
+      }
+
+      if (dotsContainer) {
+        dotsContainer.querySelectorAll('.mini-slider-dot').forEach(dot => {
+          dot.addEventListener('click', () => {
+            pauseMiniAutoPlay();
+            const index = parseInt(dot.getAttribute('data-index'));
+            showMiniSlide(index);
+          });
+        });
+      }
 
       // Start auto-play
       startMiniAutoPlay();
