@@ -126,25 +126,59 @@ BEGIN
             p.full_name,
             p.gender,
             p.generation_level,
+            p.father_mother_id,
             0 AS level
         FROM persons p
         WHERE p.person_id COLLATE utf8mb4_unicode_ci = person_id COLLATE utf8mb4_unicode_ci
         
         UNION ALL
         
-        -- Recursive case: cha mẹ
+        -- Recursive case: CHA (chỉ theo dòng cha, không lấy mẹ)
+        -- Ưu tiên 1: Tìm cha theo relationships table (relation_type = 'father') - chính xác nhất
+        -- Ưu tiên 2: Tìm cha theo father_mother_id (nếu không có trong relationships)
         SELECT 
-            parent.person_id,
-            parent.full_name,
-            parent.gender,
-            parent.generation_level,
+            COALESCE(parent_by_rel.person_id, parent_by_fm.person_id) AS person_id,
+            COALESCE(parent_by_rel.full_name, parent_by_fm.full_name) AS full_name,
+            COALESCE(parent_by_rel.gender, parent_by_fm.gender) AS gender,
+            COALESCE(parent_by_rel.generation_level, parent_by_fm.generation_level) AS generation_level,
+            COALESCE(parent_by_rel.father_mother_id, parent_by_fm.father_mother_id) AS father_mother_id,
             a.level + 1
         FROM ancestors a
-        INNER JOIN relationships r ON a.person_id COLLATE utf8mb4_unicode_ci = r.child_id COLLATE utf8mb4_unicode_ci
-        INNER JOIN persons parent ON r.parent_id COLLATE utf8mb4_unicode_ci = parent.person_id COLLATE utf8mb4_unicode_ci
+        INNER JOIN persons child ON a.person_id COLLATE utf8mb4_unicode_ci = child.person_id COLLATE utf8mb4_unicode_ci
+        -- Ưu tiên 1: Tìm cha theo relationships table (chính xác nhất)
+        LEFT JOIN relationships r ON (
+            a.person_id COLLATE utf8mb4_unicode_ci = r.child_id COLLATE utf8mb4_unicode_ci
+            AND r.relation_type = 'father'
+        )
+        LEFT JOIN persons parent_by_rel ON (
+            r.parent_id COLLATE utf8mb4_unicode_ci = parent_by_rel.person_id COLLATE utf8mb4_unicode_ci
+        )
+        -- Ưu tiên 2: Tìm cha theo father_mother_id (fallback nếu không có trong relationships)
+        -- Logic: Nếu child có father_mother_id, tìm person có cùng father_mother_id, generation_level nhỏ hơn, và gender = 'Nam'
+        LEFT JOIN persons parent_by_fm ON (
+            parent_by_rel.person_id IS NULL  -- Chỉ dùng nếu không tìm được qua relationships
+            AND child.father_mother_id IS NOT NULL 
+            AND child.father_mother_id != ''
+            AND parent_by_fm.father_mother_id COLLATE utf8mb4_unicode_ci = child.father_mother_id COLLATE utf8mb4_unicode_ci
+            AND parent_by_fm.generation_level < child.generation_level
+            AND parent_by_fm.gender = 'Nam'  -- Chỉ lấy cha (Nam)
+            -- Ưu tiên generation_level gần nhất (lớn nhất trong các generation_level nhỏ hơn child)
+            AND parent_by_fm.generation_level = (
+                SELECT MAX(p2.generation_level)
+                FROM persons p2
+                WHERE p2.father_mother_id COLLATE utf8mb4_unicode_ci = child.father_mother_id COLLATE utf8mb4_unicode_ci
+                    AND p2.generation_level < child.generation_level
+                    AND p2.gender = 'Nam'
+            )
+        )
         WHERE a.level < max_level
+            AND (parent_by_rel.person_id IS NOT NULL OR parent_by_fm.person_id IS NOT NULL)
     )
-    SELECT * FROM ancestors WHERE level > 0 ORDER BY level, full_name;
+    -- Chỉ lấy CHA (Nam), loại bỏ vợ/chồng (Nữ) và các bản ghi không hợp lệ
+    SELECT * FROM ancestors 
+    WHERE level > 0 
+        AND gender = 'Nam'  -- CHỈ LẤY CHA (NAM), KHÔNG LẤY VỢ/CHỒNG
+    ORDER BY level, generation_level, full_name;
 END //
 
 -- Procedure: Tìm tất cả con cháu của một người (đệ quy)

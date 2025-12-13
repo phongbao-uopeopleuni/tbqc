@@ -37,28 +37,62 @@ def execute_sql_file(cursor, file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             sql_content = f.read()
         
-        # Split by delimiter
-        statements = sql_content.split('DELIMITER')
+        # Split by DELIMITER // ... DELIMITER ;
+        # Handle both DELIMITER // and DELIMITER ; patterns
+        statements = []
+        current_statement = ""
+        in_delimiter_block = False
         
-        for statement in statements:
-            statement = statement.strip()
-            if not statement or statement.startswith('--') or statement.startswith('//'):
+        for line in sql_content.split('\n'):
+            line_stripped = line.strip()
+            
+            # Check for DELIMITER //
+            if line_stripped.startswith('DELIMITER //'):
+                in_delimiter_block = True
+                continue
+            # Check for DELIMITER ;
+            elif line_stripped.startswith('DELIMITER ;'):
+                if current_statement.strip():
+                    statements.append(current_statement.strip())
+                current_statement = ""
+                in_delimiter_block = False
                 continue
             
-            # Remove DELIMITER // and DELIMITER ;
-            statement = statement.replace('DELIMITER //', '').replace('DELIMITER ;', '').strip()
+            # Skip comments
+            if line_stripped.startswith('--') or not line_stripped:
+                continue
+            
+            # Add line to current statement
+            current_statement += line + '\n'
+        
+        # Add last statement if exists
+        if current_statement.strip():
+            statements.append(current_statement.strip())
+        
+        # Execute each statement
+        for statement in statements:
+            if not statement or statement.startswith('--'):
+                continue
+            
+            # Remove trailing // if exists
+            statement = statement.rstrip().rstrip('//').strip()
             
             if statement:
                 try:
-                    cursor.execute(statement)
-                    print(f"✓ Executed: {statement[:50]}...")
+                    # Execute statement
+                    for result in cursor.execute(statement, multi=True):
+                        if result.with_rows:
+                            result.fetchall()
+                    print(f"✓ Executed stored procedure")
                 except Error as e:
                     print(f"✗ Error executing statement: {e}")
-                    print(f"  Statement: {statement[:100]}...")
+                    print(f"  Statement preview: {statement[:200]}...")
         
         return True
     except Exception as e:
         print(f"Error reading SQL file: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def main():
@@ -85,87 +119,71 @@ def main():
         cursor.execute("DROP PROCEDURE IF EXISTS sp_get_children")
         print("[OK] Old procedures dropped")
         
-        print("\n2. Creating sp_get_ancestors...")
-        cursor.execute("""
-            CREATE PROCEDURE sp_get_ancestors(IN person_id VARCHAR(50), IN max_level INT)
-            BEGIN
-                WITH RECURSIVE ancestors AS (
-                    SELECT 
-                        p.person_id,
-                        p.full_name,
-                        p.gender,
-                        p.generation_level,
-                        0 AS level
-                    FROM persons p
-                    WHERE p.person_id COLLATE utf8mb4_unicode_ci = person_id COLLATE utf8mb4_unicode_ci
-                    
-                    UNION ALL
-                    
-                    SELECT 
-                        parent.person_id,
-                        parent.full_name,
-                        parent.gender,
-                        parent.generation_level,
-                        a.level + 1
-                    FROM ancestors a
-                    INNER JOIN relationships r ON a.person_id COLLATE utf8mb4_unicode_ci = r.child_id COLLATE utf8mb4_unicode_ci
-                    INNER JOIN persons parent ON r.parent_id COLLATE utf8mb4_unicode_ci = parent.person_id COLLATE utf8mb4_unicode_ci
-                    WHERE a.level < max_level
-                )
-                SELECT * FROM ancestors WHERE level > 0 ORDER BY level, full_name;
-            END
-        """)
-        print("[OK] sp_get_ancestors created")
-        
-        print("\n3. Creating sp_get_descendants...")
-        cursor.execute("""
-            CREATE PROCEDURE sp_get_descendants(IN person_id VARCHAR(50), IN max_level INT)
-            BEGIN
-                WITH RECURSIVE descendants AS (
-                    SELECT 
-                        p.person_id,
-                        p.full_name,
-                        p.gender,
-                        p.generation_level,
-                        0 AS level
-                    FROM persons p
-                    WHERE p.person_id COLLATE utf8mb4_unicode_ci = person_id COLLATE utf8mb4_unicode_ci
-                    
-                    UNION ALL
-                    
-                    SELECT 
-                        child.person_id,
-                        child.full_name,
-                        child.gender,
-                        child.generation_level,
-                        d.level + 1
-                    FROM descendants d
-                    INNER JOIN relationships r ON d.person_id COLLATE utf8mb4_unicode_ci = r.parent_id COLLATE utf8mb4_unicode_ci
-                    INNER JOIN persons child ON r.child_id COLLATE utf8mb4_unicode_ci = child.person_id COLLATE utf8mb4_unicode_ci
-                    WHERE d.level < max_level
-                )
-                SELECT * FROM descendants WHERE level > 0 ORDER BY level, full_name;
-            END
-        """)
-        print("[OK] sp_get_descendants created")
-        
-        print("\n4. Creating sp_get_children...")
-        cursor.execute("""
-            CREATE PROCEDURE sp_get_children(IN parent_id VARCHAR(50))
-            BEGIN
-                SELECT 
-                    p.person_id,
-                    p.full_name,
-                    p.gender,
-                    p.generation_level,
-                    r.relation_type
-                FROM relationships r
-                INNER JOIN persons p ON r.child_id COLLATE utf8mb4_unicode_ci = p.person_id COLLATE utf8mb4_unicode_ci
-                WHERE r.parent_id COLLATE utf8mb4_unicode_ci = parent_id COLLATE utf8mb4_unicode_ci
-                ORDER BY p.full_name;
-            END
-        """)
-        print("[OK] sp_get_children created")
+        print("\n2. Reading SQL file and creating procedures...")
+        sql_file = os.path.join(current_dir, 'folder_sql', 'update_views_procedures_tbqc.sql')
+        if os.path.exists(sql_file):
+            # Extract only the stored procedures part
+            with open(sql_file, 'r', encoding='utf-8') as f:
+                sql_content = f.read()
+            
+            # Extract sp_get_ancestors procedure
+            import re
+            ancestors_match = re.search(r'DROP PROCEDURE IF EXISTS sp_get_ancestors.*?END //', sql_content, re.DOTALL)
+            if ancestors_match:
+                ancestors_proc = ancestors_match.group(0).replace('//', ';')
+                try:
+                    for result in cursor.execute(ancestors_proc, multi=True):
+                        if result.with_rows:
+                            result.fetchall()
+                    print("[OK] sp_get_ancestors created (with gender filter)")
+                except Error as e:
+                    print(f"[ERROR] Failed to create sp_get_ancestors: {e}")
+            
+            # Extract sp_get_descendants procedure
+            descendants_match = re.search(r'DROP PROCEDURE IF EXISTS sp_get_descendants.*?END //', sql_content, re.DOTALL)
+            if descendants_match:
+                descendants_proc = descendants_match.group(0).replace('//', ';')
+                try:
+                    for result in cursor.execute(descendants_proc, multi=True):
+                        if result.with_rows:
+                            result.fetchall()
+                    print("[OK] sp_get_descendants created")
+                except Error as e:
+                    print(f"[ERROR] Failed to create sp_get_descendants: {e}")
+            
+            # Extract sp_get_children procedure
+            children_match = re.search(r'DROP PROCEDURE IF EXISTS sp_get_children.*?END //', sql_content, re.DOTALL)
+            if children_match:
+                children_proc = children_match.group(0).replace('//', ';')
+                try:
+                    for result in cursor.execute(children_proc, multi=True):
+                        if result.with_rows:
+                            result.fetchall()
+                    print("[OK] sp_get_children created")
+                except Error as e:
+                    print(f"[ERROR] Failed to create sp_get_children: {e}")
+        else:
+            print(f"[WARNING] SQL file not found: {sql_file}")
+            print("Using fallback procedures...")
+            # Fallback to old procedures if file not found
+            cursor.execute("""
+                CREATE PROCEDURE sp_get_ancestors(IN person_id VARCHAR(50), IN max_level INT)
+                BEGIN
+                    WITH RECURSIVE ancestors AS (
+                        SELECT p.person_id, p.full_name, p.gender, p.generation_level, 0 AS level
+                        FROM persons p
+                        WHERE p.person_id COLLATE utf8mb4_unicode_ci = person_id COLLATE utf8mb4_unicode_ci
+                        UNION ALL
+                        SELECT parent.person_id, parent.full_name, parent.gender, parent.generation_level, a.level + 1
+                        FROM ancestors a
+                        INNER JOIN relationships r ON a.person_id COLLATE utf8mb4_unicode_ci = r.child_id COLLATE utf8mb4_unicode_ci
+                        INNER JOIN persons parent ON r.parent_id COLLATE utf8mb4_unicode_ci = parent.person_id COLLATE utf8mb4_unicode_ci
+                        WHERE a.level < max_level AND r.relation_type = 'father'
+                    )
+                    SELECT * FROM ancestors WHERE level > 0 AND gender = 'Nam' ORDER BY level, generation_level, full_name;
+                END
+            """)
+            print("[OK] sp_get_ancestors created (fallback)")
         
         connection.commit()
         print("\n" + "="*80)

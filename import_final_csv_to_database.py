@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Script import dữ liệu từ TBQC_FINAL.csv vào database
-UPDATED FOR TBQC_FINAL.csv
+Script import dữ liệu từ CSV vào database
+Hỗ trợ tự động tìm file CSV: TBQC_FINAL.csv, person.csv, TBQC_MOCK.csv, TBQC.csv
+Hoặc set environment variable: CSV_FILE=path/to/your/file.csv
 
 Yêu cầu:
 - Giữ nguyên tiền tố trong tên (TBQC, Ưng, Bửu, CTTN, CHTN, v.v.)
@@ -18,32 +19,14 @@ from datetime import datetime
 import re
 import logging
 import os
+import sys
 from typing import Dict, List, Optional, Tuple
 
 # =====================================================
 # CẤU HÌNH
 # =====================================================
 
-# Cấu hình database - hỗ trợ cả DB_* và Railway MYSQL* variables
-DB_CONFIG = {
-    'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost',
-    'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or 'tbqc2025',
-    'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'tbqc_admin',
-    'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or 'tbqc2025',
-    'charset': 'utf8mb4',
-    'collation': 'utf8mb4_unicode_ci'
-}
-
-db_port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
-if db_port:
-    try:
-        DB_CONFIG['port'] = int(db_port)
-    except ValueError:
-        pass
-
-CSV_FILE = 'TBQC_FINAL.csv'
-
-# Thiết lập logging
+# Thiết lập logging trước (cần cho get_db_config)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -54,6 +37,91 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Cấu hình database - sử dụng unified db_config nếu có, fallback về cấu hình cũ
+def get_db_config():
+    """Lấy cấu hình database, ưu tiên dùng db_config.py, fallback về cấu hình cũ"""
+    # Thử import db_config từ folder_py
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'folder_py'))
+        from db_config import get_db_config as get_unified_db_config
+        config = get_unified_db_config()
+        logger.info("Đã sử dụng cấu hình từ folder_py/db_config.py")
+        return config
+    except ImportError as e:
+        logger.debug(f"Không thể import db_config: {e}, sử dụng fallback")
+    
+    # Fallback: load từ tbqc_db.env nếu có
+    env_file = 'tbqc_db.env'
+    if os.path.exists(env_file):
+        logger.info(f"Đang load cấu hình từ {env_file}")
+        try:
+            with open(env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        # Remove quotes if present
+                        if value.startswith('"') and value.endswith('"'):
+                            value = value[1:-1]
+                        elif value.startswith("'") and value.endswith("'"):
+                            value = value[1:-1]
+                        # Set in environment
+                        os.environ[key] = value
+        except Exception as e:
+            logger.warning(f"Lỗi đọc {env_file}: {e}")
+    
+    # Fallback về cấu hình cũ
+    config = {
+        'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost',
+        'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or 'tbqc2025',
+        'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'tbqc_admin',
+        'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or 'tbqc2025',
+        'charset': 'utf8mb4',
+        'collation': 'utf8mb4_unicode_ci'
+    }
+    
+    db_port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
+    if db_port:
+        try:
+            config['port'] = int(db_port)
+        except ValueError:
+            pass
+    
+    # Log config (ẩn password)
+    config_log = {k: v if k != 'password' else '***' for k, v in config.items()}
+    logger.info(f"Cấu hình database: {config_log}")
+    
+    return config
+
+# Tự động tìm file CSV có sẵn
+CSV_FILE_OPTIONS = [
+    'TBQC_FINAL.csv',
+    'person.csv',
+    'TBQC_MOCK.csv',
+    'TBQC.csv'
+]
+
+def find_csv_file():
+    """Tìm file CSV có sẵn trong thư mục hiện tại"""
+    # Kiểm tra environment variable trước
+    csv_file = os.environ.get('CSV_FILE')
+    if csv_file and os.path.exists(csv_file):
+        return csv_file
+    
+    # Tìm trong danh sách các file có thể có
+    for filename in CSV_FILE_OPTIONS:
+        if os.path.exists(filename):
+            return filename
+    
+    # Nếu không tìm thấy, trả về None
+    return None
+
+CSV_FILE = find_csv_file()
 
 # File log cho các trường hợp mơ hồ
 ambiguous_log = open('genealogy_ambiguous_parents.log', 'w', encoding='utf-8')
@@ -399,7 +467,15 @@ def import_persons(cursor, csv_data: List[Dict]) -> Dict[str, int]:
         religion = normalize(row.get('Tôn giáo', ''))
         blood_type = normalize(row.get('Nhóm máu', ''))
         genetic_disease = normalize(row.get('Bệnh di truyền', ''))
-        fm_id = normalize(row.get('Father_Mother_ID', ''))  # Lấy FM_ID từ CSV
+        # Lấy FM_ID từ CSV - thử nhiều tên cột có thể có
+        fm_id = normalize(
+            row.get('Father_Mother_ID', '') or 
+            row.get('father_mother_ID', '') or 
+            row.get('FATHER_MOTHER_ID', '') or
+            row.get('father_mother_id', '') or
+            row.get('fm_id', '') or
+            row.get('FM_ID', '')
+        )
         
         # Lấy tên bố/mẹ từ CSV (lấy cột cuối cùng nếu có nhiều cột trùng tên)
         row_keys = list(row.keys())
@@ -793,7 +869,6 @@ def infer_in_law_relationships(cursor, csv_id_to_person_id: Dict[str, int]):
 def import_siblings_and_children(cursor, csv_data: List[Dict], csv_id_to_person_id: Dict[str, int]):
     """
     Bước 5: Import quan hệ anh chị em và con cái
-    UPDATED FOR TBQC_FINAL.csv
     """
     logger.info("=== BƯỚC 5: Import siblings and children ===")
     
@@ -816,26 +891,9 @@ def import_siblings_and_children(cursor, csv_data: List[Dict], csv_id_to_person_
                 
                 sibling_person_id = find_person_by_name(cursor, sibling_name)
                 
-                # ⚠️ DEPRECATED: sibling_relationships table no longer exists
-                # Siblings are now derived from relationships table automatically
-                # This code is commented out as it won't work with current schema
-                # Sibling relationships are inferred from shared parents in relationships table
-                """
-                cursor.execute("""
-                    SELECT sibling_id FROM sibling_relationships 
-                    WHERE person_id = %s AND (sibling_person_id = %s OR sibling_name = %s)
-                """, (person_id, sibling_person_id, sibling_name))
-                
-                if not cursor.fetchone():
-                    cursor.execute("""
-                        INSERT INTO sibling_relationships 
-                        (person_id, sibling_person_id, sibling_name, relation_type)
-                        VALUES (%s, %s, %s, 'khac')
-                    """, (person_id, sibling_person_id, sibling_name))
-                    stats['siblings'] += 1
-                """
                 # Siblings are now automatically derived from relationships table
                 # No need to insert into sibling_relationships
+                # (Sibling relationships are inferred from shared parents in relationships table)
         
         # Import con cái (đã được xử lý ở Bước 2 qua relationships, nhưng có thể bổ sung từ cột "Thông tin con cái")
         children_text = normalize(row.get('Thông tin con cái', ''))
@@ -890,26 +948,79 @@ def populate_parent_fields_in_persons(cursor):
 
 def main():
     """Hàm chính"""
-    logger.info("Bắt đầu import TBQC_FINAL.csv")
+    # Tìm file CSV
+    csv_file = find_csv_file()
+    if not csv_file:
+        logger.error("=" * 80)
+        logger.error("KHÔNG TÌM THẤY FILE CSV!")
+        logger.error("=" * 80)
+        logger.error(f"Đã tìm kiếm các file sau trong thư mục hiện tại:")
+        for filename in CSV_FILE_OPTIONS:
+            logger.error(f"  - {filename}")
+        logger.error("")
+        logger.error("Các file CSV có sẵn trong thư mục:")
+        try:
+            csv_files = [f for f in os.listdir('.') if f.endswith('.csv')]
+            if csv_files:
+                for f in csv_files:
+                    logger.error(f"  - {f}")
+            else:
+                logger.error("  (Không có file CSV nào)")
+        except Exception as e:
+            logger.error(f"  (Lỗi khi liệt kê file: {e})")
+        logger.error("")
+        logger.error("Giải pháp:")
+        logger.error("  1. Đảm bảo file CSV có tên một trong các tên trên")
+        logger.error("  2. Hoặc đặt file CSV vào thư mục hiện tại")
+        logger.error("  3. Hoặc set environment variable: CSV_FILE=path/to/your/file.csv")
+        logger.error("=" * 80)
+        return
+    
+    logger.info(f"Bắt đầu import từ file: {csv_file}")
     
     # Đọc CSV
     csv_data = []
     try:
-        with open(CSV_FILE, 'r', encoding='utf-8-sig') as f:
+        with open(csv_file, 'r', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
             csv_data = list(reader)
-        logger.info(f"Đọc được {len(csv_data)} dòng từ {CSV_FILE}")
+        logger.info(f"Đọc được {len(csv_data)} dòng từ {csv_file}")
+    except FileNotFoundError:
+        logger.error(f"File không tồn tại: {csv_file}")
+        return
     except Exception as e:
         logger.error(f"Lỗi đọc CSV: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return
     
     # Kết nối database
+    db_config = get_db_config()  # Lấy config mới nhất (có thể đã load từ tbqc_db.env)
+    logger.info(f"Đang kết nối database: host={db_config.get('host')}, port={db_config.get('port', 3306)}, database={db_config.get('database')}, user={db_config.get('user')}")
+    
     try:
-        conn = mysql.connector.connect(**DB_CONFIG)
+        conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
-        logger.info("Kết nối database thành công")
+        logger.info("✓ Kết nối database thành công")
     except Error as e:
-        logger.error(f"Lỗi kết nối database: {e}")
+        logger.error("=" * 80)
+        logger.error("LỖI KẾT NỐI DATABASE!")
+        logger.error("=" * 80)
+        logger.error(f"Chi tiết lỗi: {e}")
+        logger.error(f"")
+        logger.error(f"Cấu hình đã sử dụng:")
+        logger.error(f"  - Host: {db_config.get('host')}")
+        logger.error(f"  - Port: {db_config.get('port', 3306)}")
+        logger.error(f"  - Database: {db_config.get('database')}")
+        logger.error(f"  - User: {db_config.get('user')}")
+        logger.error(f"")
+        logger.error("Giải pháp:")
+        logger.error("  1. Kiểm tra MySQL/MariaDB server có đang chạy không")
+        logger.error("  2. Kiểm tra file tbqc_db.env có đúng cấu hình không")
+        logger.error("  3. Kiểm tra network/firewall nếu kết nối remote")
+        logger.error("  4. Kiểm tra user/password có đúng không")
+        logger.error("  5. Kiểm tra database có tồn tại không")
+        logger.error("=" * 80)
         return
     
     try:

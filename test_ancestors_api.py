@@ -1,54 +1,89 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Test API /api/ancestors
+Test API /api/ancestors để kiểm tra ancestors_chain
 """
 
 import sys
-import os
 import io
+import json
 
-# Fix encoding for Windows console
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+# Fix encoding cho Windows console
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-# Add folder_py to path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-folder_py = os.path.join(current_dir, 'folder_py')
-if folder_py not in sys.path:
-    sys.path.insert(0, folder_py)
-    sys.path.insert(0, current_dir)
+# Try to import requests, fallback to urllib
+try:
+    import requests
+    USE_REQUESTS = True
+except ImportError:
+    USE_REQUESTS = False
+    try:
+        from urllib.request import urlopen, Request
+        from urllib.error import URLError, HTTPError
+    except ImportError:
+        print("ERROR: Cannot import requests or urllib")
+        sys.exit(1)
 
-os.chdir(current_dir)
+BASE_URL = 'http://localhost:5000'
+PERSON_ID = 'P-4-23'  # Ưng Lương Thái Thường Tự Khanh
 
-from app import app
+def fetch_json(url):
+    """Fetch JSON từ URL"""
+    try:
+        if USE_REQUESTS:
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {'error': f'Status {response.status_code}'}
+        else:
+            req = Request(url)
+            with urlopen(req, timeout=10) as response:
+                if response.getcode() == 200:
+                    body = response.read().decode('utf-8')
+                    return json.loads(body)
+                else:
+                    return {'error': f'Status {response.getcode()}'}
+    except Exception as e:
+        return {'error': str(e)}
 
-# Create test client
-client = app.test_client()
+def main():
+    print("=" * 60)
+    print(f"TEST API /api/ancestors/{PERSON_ID}")
+    print("=" * 60)
+    print("\nLưu ý: Đảm bảo server đang chạy (python app.py)\n")
+    
+    url = f"{BASE_URL}/api/ancestors/{PERSON_ID}"
+    result = fetch_json(url)
+    
+    if 'error' in result:
+        print(f"[ERROR] {result['error']}")
+        sys.exit(1)
+    
+    ancestors_chain = result.get('ancestors_chain', [])
+    person = result.get('person', {})
+    
+    print(f"Person: {person.get('full_name')} (Đời {person.get('generation_level')})")
+    print(f"\nAncestors chain length: {len(ancestors_chain)}")
+    print("\nAncestors chain:")
+    print("-" * 60)
+    
+    for i, ancestor in enumerate(ancestors_chain, 1):
+        person_id = ancestor.get('person_id', 'N/A')
+        full_name = ancestor.get('full_name', 'N/A')
+        generation = ancestor.get('generation_level') or ancestor.get('generation_number', 'N/A')
+        gender = ancestor.get('gender', 'N/A')
+        print(f"{i}. {person_id}: {full_name} (Đời {generation}, {gender})")
+    
+    print("\n" + "=" * 60)
+    print("KẾT QUẢ MONG ĐỢI:")
+    print("  - P-1-1: Vua Minh Mạng (Đời 1)")
+    print("  - P-2-3: TBQC Miên Sủng (Đời 2)")
+    print("  - P-3-12: Kỳ Ngoại Hầu Hường Phiêu (Đời 3)")
+    print("  - P-4-23: Ưng Lương Thái Thường Tự Khanh (Đời 4)")
+    print("=" * 60)
 
-print("="*80)
-print("TEST API /api/ancestors/P-7-654")
-print("="*80)
-
-# Test
-response = client.get('/api/ancestors/P-7-654')
-print(f"\nStatus Code: {response.status_code}")
-
-if response.status_code == 200:
-    data = response.get_json()
-    if data:
-        person = data.get('person', {})
-        ancestors = data.get('ancestors_chain', [])
-        print(f"\n[OK] Person ID: {person.get('person_id')}")
-        print(f"[OK] Person Name: {person.get('full_name')}")
-        print(f"[OK] Ancestors Count: {len(ancestors)}")
-        if ancestors:
-            print(f"\nFirst 3 ancestors:")
-            for i, anc in enumerate(ancestors[:3], 1):
-                print(f"  {i}. {anc.get('person_id')} - {anc.get('full_name')} (Level {anc.get('level')})")
-    else:
-        print("[ERROR] No data returned")
-else:
-    print(f"\n[ERROR] Response: {response.get_data(as_text=True)[:500]}")
-
-print("\n" + "="*80)
+if __name__ == '__main__':
+    main()
 

@@ -1,6 +1,8 @@
 ﻿person_id,father_mother_ID,full_name,father_name,mother_name
 P-1-1,fm_272,Vua Minh Mạng,Vua Gia Long,Thuận Thiên Hoàng hậu
 P-1-2,fm_151,Tiệp dư Nguyễn Thị Viên,Nguyễn Văn Khiêm,Trần Thị
+P-2-10,fm_273,Mỹ Thuận Công Chúa - NP Nhàn Tuệ,Vua Minh Mạng,Tiệp dư Nguyễn Thị Viên
+P-2-11,fm_273,Lâm Thạnh Công Chúa - NP Hòa Trinh,Vua Minh Mạng,Tiệp dư Nguyễn Thị Viên
 P-2-3,fm_273,TBQC Miên Sủng,Vua Minh Mạng,Tiệp dư Nguyễn Thị Viên
 P-2-4,,Trương-Thị-Mẫn,,
 P-2-5,,Trương Thị Vị,,
@@ -8,8 +10,6 @@ P-2-6,,Lê Thị Thanh,,
 P-2-7,,Nguyên Phối - Nguyễn Thị Tình,,
 P-2-8,fm_273,Duy Xuyên QC - Miên Tiệp,Vua Minh Mạng,Tiệp dư Nguyễn Thị Viên
 P-2-9,fm_273,Phú Hậu Công Chúa - NP Phương Trinh,Vua Minh Mạng,Tiệp dư Nguyễn Thị Viên
-P-2-10,fm_273,Mỹ Thuận Công Chúa - NP Nhàn Tuệ,Vua Minh Mạng,Tiệp dư Nguyễn Thị Viên
-P-2-11,fm_273,Lâm Thạnh Công Chúa - NP Hòa Trinh,Vua Minh Mạng,Tiệp dư Nguyễn Thị Viên
 P-3-12,fm_179,Kỳ Ngoại Hầu Hường Phiêu,TBQC Miên Sủng,Trương Thị Mẫn
 P-3-13,,Trần Thị Vung,,
 P-3-14,fm_179,Hường Linh,TBQC Miên Sủng,Trương Thị Mẫn
@@ -62,42 +62,6 @@ P-4-60,fm_86,CTN Thị Chắc (Bà Tha),Hường Chiêm,Phan Thị Trích
 P-4-61,fm_86,Ưng Đà (Di),Hường Chiêm,Phan Thị Trích
 P-4-62,,Lê Thị Thôi (Hảo),,
 P-4-63,fm_04,Lê Thị Sâm,,Công Nữ Thị Giáp
-P-5-64,fm_216,Bửu Châu,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
-P-5-65,,Đặng Thị Minh Tâm,,
-P-5-66,,Trần Thị Hòe,,
-P-5-67,,Trần Thị Duyên,,
-P-5-68,fm_215,Bửu Cường,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Các
-P-5-69,fm_213,Nguyễn Phước Bửu Bang,Ưng Lương Thái Thường Tự Khanh,Hồ Thị Hườn
-P-5-70,,Đồng-Thị-Lý,,
-P-5-71,,Hồ Thị Huệ,,
-P-5-72,fm_214,Bửu Lộc,Ưng Lương Thái Thường Tự Khanh,Lê Thị Cam
-P-5-73,,Nguyễn Thị Chín,,
-P-5-74,fm_214,CTTN Thị Cừ (Tâm),Ưng Lương Thái Thường Tự Khanh,Lê Thị Cam
-P-5-75,,Nguyễn Huy Chiêm,,
-P-5-76,fm_214,CTTN Bạch Yến (Mừng),Ưng Lương Thái Thường Tự Khanh,Lê Thị Cam
-P-5-77,,Cao Văn Đẩu,,
-P-5-78,fm_216,Bửu Du (Hùng),Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
-P-5-79,fm_216,Bửu Cầu,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
-P-5-80,,Nguyễn Thị Như,,
-P-5-81,fm_216,Bửu Túc,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
-P-5-82,fm_216,CTT Tảo Thương,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
-P-5-83,fm_216,CTTN Lệ Dung,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
-P-5-84,,Hoàng Tấn Liên,,
-P-5-85,fm_216,CTTN Thị Trân,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
-P-5-86,fm_216,CTTN Thị Ngoạn,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
-P-5-87,,Phan Văn Liệu,,
-P-5-88,fm_215,Bửu Đồng,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Các
-P-5-89,fm_220,Bửu Tuất,Ưng Thùy,Võ Thị Bính
-P-5-90,,Nguyễn Thị Minh Lý,,
-P-5-91,fm_220,Bửu Diệp,Ưng Thùy,Võ Thị Bính
-P-5-92,,Trần Thị Nhẫn,,
-P-5-93,fm_220,CTTN Thị Châu,Ưng Thùy,Võ Thị Bính
-P-5-94,,Nguyễn Đức Triêm,,
-P-5-95,fm_220,CTTN Thị Kỳ,Ưng Thùy,Võ Thị Bính
-P-5-96,fm_218,CTTN Thị Hường,Ưng Phất,Lê Thị Quyên
-P-5-97,,Quách Vịnh,,
-P-5-98,fm_219,CTTN Diệu Chương,Ưng Phất,Nguyễn Thị Liễu
-P-5-99,,Nguyễn Tương Cầu,,
 P-5-100,,Bùi Văn Thiện,,
 P-5-101,fm_219,Bửu Đôn,Ưng Phất,Nguyễn Thị Liễu
 P-5-102,,Huỳnh Thị Phi Anh,,
@@ -187,6 +151,42 @@ P-5-185,,Mai Thị Tư,,
 P-5-186,fm_209,Bửu Lễ (Chú Tám),Ưng Đà (Di),Lê Thị Thôi (Hảo)
 P-5-187,fm_209,CTTN Thị Lục (Lan),Ưng Đà (Di),Lê Thị Thôi (Hảo)
 P-5-188,,Mai Văn Khiết,,
+P-5-64,fm_216,Bửu Châu,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
+P-5-65,,Đặng Thị Minh Tâm,,
+P-5-66,,Trần Thị Hòe,,
+P-5-67,,Trần Thị Duyên,,
+P-5-68,fm_215,Bửu Cường,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Các
+P-5-69,fm_213,Nguyễn Phước Bửu Bang,Ưng Lương Thái Thường Tự Khanh,Hồ Thị Hườn
+P-5-70,,Đồng-Thị-Lý,,
+P-5-71,,Hồ Thị Huệ,,
+P-5-72,fm_214,Bửu Lộc,Ưng Lương Thái Thường Tự Khanh,Lê Thị Cam
+P-5-73,,Nguyễn Thị Chín,,
+P-5-74,fm_214,CTTN Thị Cừ (Tâm),Ưng Lương Thái Thường Tự Khanh,Lê Thị Cam
+P-5-75,,Nguyễn Huy Chiêm,,
+P-5-76,fm_214,CTTN Bạch Yến (Mừng),Ưng Lương Thái Thường Tự Khanh,Lê Thị Cam
+P-5-77,,Cao Văn Đẩu,,
+P-5-78,fm_216,Bửu Du (Hùng),Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
+P-5-79,fm_216,Bửu Cầu,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
+P-5-80,,Nguyễn Thị Như,,
+P-5-81,fm_216,Bửu Túc,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
+P-5-82,fm_216,CTT Tảo Thương,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
+P-5-83,fm_216,CTTN Lệ Dung,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
+P-5-84,,Hoàng Tấn Liên,,
+P-5-85,fm_216,CTTN Thị Trân,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
+P-5-86,fm_216,CTTN Thị Ngoạn,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Cẩm
+P-5-87,,Phan Văn Liệu,,
+P-5-88,fm_215,Bửu Đồng,Ưng Lương Thái Thường Tự Khanh,Nguyễn Chính Thị Các
+P-5-89,fm_220,Bửu Tuất,Ưng Thùy,Võ Thị Bính
+P-5-90,,Nguyễn Thị Minh Lý,,
+P-5-91,fm_220,Bửu Diệp,Ưng Thùy,Võ Thị Bính
+P-5-92,,Trần Thị Nhẫn,,
+P-5-93,fm_220,CTTN Thị Châu,Ưng Thùy,Võ Thị Bính
+P-5-94,,Nguyễn Đức Triêm,,
+P-5-95,fm_220,CTTN Thị Kỳ,Ưng Thùy,Võ Thị Bính
+P-5-96,fm_218,CTTN Thị Hường,Ưng Phất,Lê Thị Quyên
+P-5-97,,Quách Vịnh,,
+P-5-98,fm_219,CTTN Diệu Chương,Ưng Phất,Nguyễn Thị Liễu
+P-5-99,,Nguyễn Tương Cầu,,
 P-6-189,fm_37,CHTN Thị Sung,Bửu Châu,Đặng Thị Minh Tâm
 P-6-190,fm_37,Vĩnh Phát,Bửu Châu,Đặng Thị Minh Tâm
 P-6-191,fm_37,Vĩnh Đạt,Bửu Châu,Đặng Thị Minh Tâm
@@ -599,6 +599,60 @@ P-6-597,,Nguyễn Thị Lành,,
 P-6-598,fm_112,Mai Huy Hậu,Mai Văn Khiết,CTTN Thị Lục (Lan)
 P-6-599,,Đặng Thị Tý,,
 P-6-600,fm_112,Mai Vân Ngọc Diệp,Mai Văn Khiết,CTTN Thị Lục (Lan)
+P-7-1000,,Nguyễn Ngọc Sơn,,
+P-7-1001,fm_259,Nguyễn Thị Kim Ngọc,Vĩnh Thuộc,Nguyễn Thị Thủy
+P-7-1002,,Vũ Duy Đông,,
+P-7-1003,fm_259,Nguyễn Thị Ngọc Bích,Vĩnh Thuộc,Nguyễn Thị Thủy
+P-7-1004,,Đỗ Kim Long,,
+P-7-1005,fm_74,Đồng Thị Mĩ Nương,Đồng Cho,HTN Thị Thuận
+P-7-1006,,Trần Hoa Vấn,,
+P-7-1007,fm_74,Đồng Thị Mĩ Hiệp,Đồng Cho,HTN Thị Thuận
+P-7-1008,,Phan Văn Cường,,
+P-7-1009,fm_74,Đồng Thanh Hải,Đồng Cho,HTN Thị Thuận
+P-7-1010,,Nguyễn Thị Ánh Hồng,,
+P-7-1011,fm_74,Đồng Thị Bích Hạnh,Đồng Cho,HTN Thị Thuận
+P-7-1012,,Võ Phước,,
+P-7-1013,fm_255,Bảo Phước Tính,Vĩnh Thành,Nguyễn Thị Trung
+P-7-1014,fm_255,Bảo Phước Tài,Vĩnh Thành,Nguyễn Thị Trung
+P-7-1015,,Phạm Thị Ngọc Hân,,
+P-7-1016,fm_255,Bảo Phước Tuấn,Vĩnh Thành,Nguyễn Thị Trung
+P-7-1017,,Lê Đăng Thư,,
+P-7-1018,fm_255,Bảo Thị Huyền Trân,Vĩnh Thành,Nguyễn Thị Trung
+P-7-1019,fm_93,Huỳnh Thị Mỹ Nga,Huỳnh Văn Bảy,HTN Thị Khá
+P-7-1020,,Trần Viết Duy,,
+P-7-1021,fm_93,Huỳnh Văn Khánh,Huỳnh Văn Bảy,HTN Thị Khá
+P-7-1022,,Ngô Thị Kiều Oanh,,
+P-7-1023,fm_93,Huỳnh Văn Hưng,Huỳnh Văn Bảy,HTN Thị Khá
+P-7-1024,fm_93,Huỳnh Thị Mỹ Hằng,Huỳnh Văn Bảy,HTN Thị Khá
+P-7-1025,fm_223,Tôn Nữ Thiên Hương,Vĩnh An,Dương Thiên Nga
+P-7-1026,,Nguyễn Tâm Phúc,,
+P-7-1027,fm_223,Bảo Nam,Vĩnh An,Dương Thiên Nga
+P-7-1028,fm_223,Bảo Duy Phương,Vĩnh An,Dương Thiên Nga
+P-7-1029,,Đỗ Thị Thu Hậu,,
+P-7-1030,fm_114,Nguyễn Đăng Tuấn,Nguyễn Đăng Hoàng,HTN Thị Vui
+P-7-1031,,Phạm Thị Thu Hà,,
+P-7-1032,fm_114,Nguyễn Thanh Vân,Nguyễn Đăng Hoàng,HTN Thị Vui
+P-7-1033,,Huỳnh Tấn Việt,,
+P-7-1034,fm_114,Nguyễn Thanh Thúy,Nguyễn Đăng Hoàng,HTN Thị Vui
+P-7-1035,fm_114,Nguyễn Đăng Vũ,Nguyễn Đăng Hoàng,HTN Thị Vui
+P-7-1036,fm_114,Nguyễn Thị Thanh Tuyền,Nguyễn Đăng Hoàng,HTN Thị Vui
+P-7-1037,fm_157,Phạm Văn Mẫn,Phạm Văn Minh,HTN Thị Mừng
+P-7-1038,fm_157,Phạm Văn Mạnh,Phạm Văn Minh,HTN Thị Mừng
+P-7-1039,fm_157,Phạm Văn Hùng,Phạm Văn Minh,HTN Thị Mừng
+P-7-1040,fm_157,Phạm Văn Huy,Phạm Văn Minh,HTN Thị Mừng
+P-7-1041,fm_264,Võ Hồng Tấn,Võ Hồng Niệm,HTN Thị Long
+P-7-1042,fm_264,Võ Hồng Phát,Võ Hồng Niệm,HTN Thị Long
+P-7-1043,,Đặng Mai Diễm Phương,,
+P-7-1044,fm_264,Võ Hồng Đạt,Võ Hồng Niệm,HTN Thị Long
+P-7-1045,fm_264,Võ Thị Ngọc Như,Võ Hồng Niệm,HTN Thị Long
+P-7-1046,fm_225,Tôn Nữ Minh Trang,Vĩnh Bình,Phan Thị Hạnh
+P-7-1047,fm_225,Bảo Hưng,Vĩnh Bình,Phan Thị Hạnh
+P-7-1048,fm_238,Tôn Nữ Quỳnh Như,Vĩnh Minh,Nguyễn Thị Thảo
+P-7-1049,fm_111,Mai Pha Mi,Mai Huy Hùng,Nguyễn Thị Lành
+P-7-1050,fm_111,Mai Sa Mi,Mai Huy Hùng,Nguyễn Thị Lành
+P-7-1051,fm_110,Mai Ngọc Bội Châu,Mai Huy Hậu,Đặng Thị Tý
+P-7-1052,fm_110,Mai Ngọc Thảo Minh,Mai Huy Hậu,Đặng Thị Tý
+P-7-1053,fm_110,Mai Huy Hiếu,Mai Huy Hậu,Đặng Thị Tý
 P-7-601,fm_232,Tôn Nữ Phương Lan,Vĩnh Hoàng,Lê Thị Hoa
 P-7-602,,Trần Văn Tuấn,,
 P-7-603,fm_232,Bảo Toàn,Vĩnh Hoàng,Lê Thị Hoa
@@ -998,60 +1052,6 @@ P-7-996,fm_226,Bảo Thắng,Vĩnh Cư,Nguyễn Thị Lành
 P-7-997,,Đỗ Việt Cường,,
 P-7-998,,Nguyễn Văn Thiện,,
 P-7-999,fm_259,Nguyễn Thị Kim Anh,Vĩnh Thuộc,Nguyễn Thị Thủy
-P-7-1000,,Nguyễn Ngọc Sơn,,
-P-7-1001,fm_259,Nguyễn Thị Kim Ngọc,Vĩnh Thuộc,Nguyễn Thị Thủy
-P-7-1002,,Vũ Duy Đông,,
-P-7-1003,fm_259,Nguyễn Thị Ngọc Bích,Vĩnh Thuộc,Nguyễn Thị Thủy
-P-7-1004,,Đỗ Kim Long,,
-P-7-1005,fm_74,Đồng Thị Mĩ Nương,Đồng Cho,HTN Thị Thuận
-P-7-1006,,Trần Hoa Vấn,,
-P-7-1007,fm_74,Đồng Thị Mĩ Hiệp,Đồng Cho,HTN Thị Thuận
-P-7-1008,,Phan Văn Cường,,
-P-7-1009,fm_74,Đồng Thanh Hải,Đồng Cho,HTN Thị Thuận
-P-7-1010,,Nguyễn Thị Ánh Hồng,,
-P-7-1011,fm_74,Đồng Thị Bích Hạnh,Đồng Cho,HTN Thị Thuận
-P-7-1012,,Võ Phước,,
-P-7-1013,fm_255,Bảo Phước Tính,Vĩnh Thành,Nguyễn Thị Trung
-P-7-1014,fm_255,Bảo Phước Tài,Vĩnh Thành,Nguyễn Thị Trung
-P-7-1015,,Phạm Thị Ngọc Hân,,
-P-7-1016,fm_255,Bảo Phước Tuấn,Vĩnh Thành,Nguyễn Thị Trung
-P-7-1017,,Lê Đăng Thư,,
-P-7-1018,fm_255,Bảo Thị Huyền Trân,Vĩnh Thành,Nguyễn Thị Trung
-P-7-1019,fm_93,Huỳnh Thị Mỹ Nga,Huỳnh Văn Bảy,HTN Thị Khá
-P-7-1020,,Trần Viết Duy,,
-P-7-1021,fm_93,Huỳnh Văn Khánh,Huỳnh Văn Bảy,HTN Thị Khá
-P-7-1022,,Ngô Thị Kiều Oanh,,
-P-7-1023,fm_93,Huỳnh Văn Hưng,Huỳnh Văn Bảy,HTN Thị Khá
-P-7-1024,fm_93,Huỳnh Thị Mỹ Hằng,Huỳnh Văn Bảy,HTN Thị Khá
-P-7-1025,fm_223,Tôn Nữ Thiên Hương,Vĩnh An,Dương Thiên Nga
-P-7-1026,,Nguyễn Tâm Phúc,,
-P-7-1027,fm_223,Bảo Nam,Vĩnh An,Dương Thiên Nga
-P-7-1028,fm_223,Bảo Duy Phương,Vĩnh An,Dương Thiên Nga
-P-7-1029,,Đỗ Thị Thu Hậu,,
-P-7-1030,fm_114,Nguyễn Đăng Tuấn,Nguyễn Đăng Hoàng,HTN Thị Vui
-P-7-1031,,Phạm Thị Thu Hà,,
-P-7-1032,fm_114,Nguyễn Thanh Vân,Nguyễn Đăng Hoàng,HTN Thị Vui
-P-7-1033,,Huỳnh Tấn Việt,,
-P-7-1034,fm_114,Nguyễn Thanh Thúy,Nguyễn Đăng Hoàng,HTN Thị Vui
-P-7-1035,fm_114,Nguyễn Đăng Vũ,Nguyễn Đăng Hoàng,HTN Thị Vui
-P-7-1036,fm_114,Nguyễn Thị Thanh Tuyền,Nguyễn Đăng Hoàng,HTN Thị Vui
-P-7-1037,fm_157,Phạm Văn Mẫn,Phạm Văn Minh,HTN Thị Mừng
-P-7-1038,fm_157,Phạm Văn Mạnh,Phạm Văn Minh,HTN Thị Mừng
-P-7-1039,fm_157,Phạm Văn Hùng,Phạm Văn Minh,HTN Thị Mừng
-P-7-1040,fm_157,Phạm Văn Huy,Phạm Văn Minh,HTN Thị Mừng
-P-7-1041,fm_264,Võ Hồng Tấn,Võ Hồng Niệm,HTN Thị Long
-P-7-1042,fm_264,Võ Hồng Phát,Võ Hồng Niệm,HTN Thị Long
-P-7-1043,,Đặng Mai Diễm Phương,,
-P-7-1044,fm_264,Võ Hồng Đạt,Võ Hồng Niệm,HTN Thị Long
-P-7-1045,fm_264,Võ Thị Ngọc Như,Võ Hồng Niệm,HTN Thị Long
-P-7-1046,fm_225,Tôn Nữ Minh Trang,Vĩnh Bình,Phan Thị Hạnh
-P-7-1047,fm_225,Bảo Hưng,Vĩnh Bình,Phan Thị Hạnh
-P-7-1048,fm_238,Tôn Nữ Quỳnh Như,Vĩnh Minh,Nguyễn Thị Thảo
-P-7-1049,fm_111,Mai Pha Mi,Mai Huy Hùng,Nguyễn Thị Lành
-P-7-1050,fm_111,Mai Sa Mi,Mai Huy Hùng,Nguyễn Thị Lành
-P-7-1051,fm_110,Mai Ngọc Bội Châu,Mai Huy Hậu,Đặng Thị Tý
-P-7-1052,fm_110,Mai Ngọc Thảo Minh,Mai Huy Hậu,Đặng Thị Tý
-P-7-1053,fm_110,Mai Huy Hiếu,Mai Huy Hậu,Đặng Thị Tý
 P-8-1054,fm_201,Trần Nữ Uyên Ngọc,Trần Văn Tuấn,Tôn Nữ Phương Lan
 P-8-1055,fm_201,Trần Nữ Uyên Kim,Trần Văn Tuấn,Tôn Nữ Phương Lan
 P-8-1056,fm_201,Trần Nguyễn Thành Đạt,Trần Văn Tuấn,Tôn Nữ Phương Lan

@@ -1144,7 +1144,7 @@
           </label>
           
           <div style="display: flex; gap: 10px; flex: 1; min-width: 300px;">
-            <input id="searchInput" type="text" placeholder="Tìm theo tên (ví dụ: 'Ưng Minh Mạng')" 
+            <input id="searchInput" type="text" placeholder="Vui lòng nhập tên cần tìm kiếm" 
                    style="flex: 1; padding: 8px 12px; border: 2px solid #DAA520; border-radius: 6px; font-size: 14px;">
             <button id="searchBtn" style="padding: 8px 20px; background: #DAA520; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
               Tìm kiếm
@@ -1155,8 +1155,8 @@
         <!-- Search Results -->
         <div id="searchResults" style="margin-top: 15px; display: none;"></div>
         
-        <!-- Breadcrumb -->
-        <div id="breadcrumb" style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 6px; display: none;"></div>
+        <!-- Breadcrumb - ĐÃ XÓA (Nâng cấp 1) -->
+        <!-- <div id="breadcrumb" style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 6px; display: none;"></div> -->
       </div>
       
       <!-- Tree Container -->
@@ -1282,18 +1282,27 @@
     // Navbar functionality
     function toggleMenu() {
       const menu = document.getElementById('navbarMenu');
-      menu.classList.toggle('active');
+      if (menu) {
+        menu.classList.toggle('active');
+      }
     }
 
     function setActive(element) {
+      if (!element) return;
+      
       // Remove active from all links
       document.querySelectorAll('.navbar-menu a').forEach(link => {
-        link.classList.remove('active');
+        if (link) {
+          link.classList.remove('active');
+        }
       });
       // Add active to clicked link
       element.classList.add('active');
       // Close mobile menu
-      document.getElementById('navbarMenu').classList.remove('active');
+      const navbarMenu = document.getElementById('navbarMenu');
+      if (navbarMenu) {
+        navbarMenu.classList.remove('active');
+      }
     }
 
     // Set active on scroll
@@ -1309,9 +1318,11 @@
           
           if (scrollPos >= top && scrollPos < bottom) {
             document.querySelectorAll('.navbar-menu a').forEach(link => {
-              link.classList.remove('active');
-              if (link.getAttribute('href') === `#${sectionId}`) {
-                link.classList.add('active');
+              if (link) {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${sectionId}`) {
+                  link.classList.add('active');
+                }
               }
             });
           }
@@ -1345,6 +1356,12 @@
     function handleLineageSearchInput() {
       const nameInput = document.getElementById('lineageName');
       const suggestionsDiv = document.getElementById('lineageSuggestions');
+      
+      if (!nameInput || !suggestionsDiv) {
+        console.warn('[Lineage] Required elements not found for search input');
+        return;
+      }
+      
       const query = nameInput.value.trim();
       
       if (searchTimeout) {
@@ -1424,6 +1441,11 @@
       const nameInput = document.getElementById('lineageName');
       const suggestionsDiv = document.getElementById('lineageSuggestions');
       
+      if (!nameInput || !suggestionsDiv) {
+        console.warn('[Lineage] Required elements not found for suggestion selection');
+        return;
+      }
+      
       suggestionsDiv.style.display = 'none';
       
       // Dùng personId để tìm đúng Person (không dựa vào tên/đời vì có thể trùng)
@@ -1437,7 +1459,9 @@
       }
       
       // Cập nhật input với tên của người được chọn
-      nameInput.value = person.full_name;
+      if (nameInput) {
+        nameInput.value = person.full_name;
+      }
       
       // Lưu selectedPerson và hiển thị
       selectedPerson = person;
@@ -1517,17 +1541,21 @@
         resultTitle.textContent = `Chuỗi phả hệ của ${person.full_name} (Đời ${person.generation_number}) - ${uniquePersons.size} người`;
         resultDiv.style.display = 'block';
         
-        resultContent.querySelectorAll('.lineage-item').forEach(item => {
-          item.style.cursor = 'pointer';
-          item.addEventListener('click', () => {
-            const personId = item.getAttribute('data-person-id'); // Giữ nguyên string
-            const allPersons = window.GenealogyLineage.getAllPersons();
-            const clickedPerson = allPersons.find(p => p.person_id === personId);
-            if (clickedPerson) {
-              showDetailPanel(clickedPerson);
+        if (resultContent) {
+          resultContent.querySelectorAll('.lineage-item').forEach(item => {
+            if (item) {
+              item.style.cursor = 'pointer';
+              item.addEventListener('click', () => {
+                const personId = item.getAttribute('data-person-id'); // Giữ nguyên string
+                const allPersons = window.GenealogyLineage.getAllPersons();
+                const clickedPerson = allPersons.find(p => p.person_id === personId);
+                if (clickedPerson) {
+                  showDetailPanel(clickedPerson);
+                }
+              });
             }
           });
-        });
+        }
         
       } catch (error) {
         console.error('Lỗi khi hiển thị lineage:', error);
@@ -1542,6 +1570,13 @@
      */
     async function searchLineage() {
       const nameInput = document.getElementById('lineageName');
+      
+      if (!nameInput) {
+        console.error('[Lineage] lineageName input not found');
+        alert('Lỗi: Không tìm thấy ô nhập liệu');
+        return;
+      }
+      
       const name = nameInput.value.trim();
       
       if (!name) {
@@ -1689,15 +1724,35 @@
           }
         } catch (err) {
           console.warn('[Lineage] Could not fetch full person details:', err);
-          // Use person from ancestors API
+          // Use person from ancestors API (có thể thiếu một số thông tin nhưng vẫn hiển thị được)
           if (ancestorsData.person) {
             selectedPerson = ancestorsData.person;
             showDetailPanel(ancestorsData.person);
+          } else {
+            // Nếu không có dữ liệu từ ancestors API, hiển thị lỗi
+            const resultDiv = document.getElementById('lineageResult');
+            const resultContent = document.getElementById('lineageResultContent');
+            const resultTitle = document.getElementById('lineageResultTitle');
+            if (resultDiv && resultContent) {
+              resultContent.innerHTML = `<div class="lineage-error" style="padding: 20px; color: #d32f2f;">❌ Không thể tải thông tin chi tiết cho người này (ID: ${personId})</div>`;
+              if (resultTitle) {
+                resultTitle.textContent = 'Lỗi';
+              }
+              resultDiv.style.display = 'block';
+            }
           }
         }
       } catch (err) {
         console.error('Error displaying lineage:', err);
-        alert(`Lỗi khi hiển thị chuỗi phả hệ: ${err.message}`);
+        // Hiển thị lỗi thân thiện hơn
+        const errorMessage = err.message || 'Không xác định';
+        if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+          alert(`Không tìm thấy người với ID: ${personId}\n\nVui lòng kiểm tra lại dữ liệu.`);
+        } else if (errorMessage.includes('500')) {
+          alert(`Lỗi server khi tải dữ liệu.\n\nVui lòng thử lại sau hoặc liên hệ quản trị viên.\n\nChi tiết: ${errorMessage}`);
+        } else {
+          alert(`Lỗi khi hiển thị chuỗi phả hệ: ${errorMessage}`);
+        }
       }
     }
     
@@ -1801,7 +1856,26 @@
       });
       
       console.log(`[Lineage] After deduplication: ${sortedLineage.length} unique persons`);
-      console.log('[Lineage] Generations:', sortedLineage.map(p => `${p.generation_number}: ${p.full_name}`));
+      console.log('[Lineage] Generations:', sortedLineage.map(p => `${p.generation_number || p.generation_level}: ${p.full_name}`));
+      
+      // Kiểm tra xem có thiếu đời nào không (từ đời 1 đến đời của người tìm kiếm)
+      if (sortedLineage.length > 0) {
+        const maxGen = Math.max(...sortedLineage.map(p => p.generation_number || p.generation_level || 0));
+        const minGen = Math.min(...sortedLineage.map(p => p.generation_number || p.generation_level || 0));
+        const presentGens = new Set(sortedLineage.map(p => p.generation_number || p.generation_level || 0));
+        const missingGens = [];
+        for (let gen = minGen; gen <= maxGen; gen++) {
+          if (!presentGens.has(gen)) {
+            missingGens.push(gen);
+          }
+        }
+        if (missingGens.length > 0) {
+          console.warn(`[Lineage] WARNING: Missing generations: ${missingGens.join(', ')}`);
+          console.warn(`[Lineage] Present generations: ${Array.from(presentGens).sort((a, b) => a - b).join(', ')}`);
+        } else {
+          console.log(`[Lineage] All generations present from ${minGen} to ${maxGen}`);
+        }
+      }
       
       // Ensure Generation 1 exists (Vua Minh Mạng)
       const hasGen1 = sortedLineage.some(p => (p.generation_number === 1 || p.generation_level === 1));
@@ -1873,16 +1947,19 @@
         const fatherName = normalizeParentName(p.father_name, true) || p.father_name || '';
         const motherName = normalizeParentName(p.mother_name, false) || p.mother_name || '';
         
-        // Format parent info according to spec: "Con của:" in nghiêng
+        // Format theo yêu cầu: "Đời X – Tên tổ tiên" (không có tên bố trong ngoặc)
+        const titleLine = `Đời ${gen} – ${escapeHtml(name)}`;
+        
+        // Format parent info: "Con của Ông ... và Bà ..." (không có "Con của:" in nghiêng)
         let parentInfo = '';
         if (fatherName && motherName) {
-          parentInfo = `<em>Con của:</em> Ông ${escapeHtml(fatherName)} & Bà ${escapeHtml(motherName)}`;
+          parentInfo = `Con của Ông ${escapeHtml(fatherName)} và Bà ${escapeHtml(motherName)}`;
         } else if (fatherName) {
-          parentInfo = `<em>Con của:</em> Ông ${escapeHtml(fatherName)}`;
+          parentInfo = `Con của Ông ${escapeHtml(fatherName)} và Bà Chưa có thông tin`;
         } else if (motherName) {
-          parentInfo = `<em>Con của:</em> Bà ${escapeHtml(motherName)}`;
+          parentInfo = `Con của Ông Chưa có thông tin và Bà ${escapeHtml(motherName)}`;
         } else {
-          parentInfo = 'Chưa có thông tin cha mẹ';
+          parentInfo = 'Con của Ông Chưa có thông tin và Bà Chưa có thông tin';
         }
         
         // Badge color by generation
@@ -1909,42 +1986,44 @@
         
         return `
           <div class="lineage-timeline-card" style="
-            background: linear-gradient(180deg, #FFF8DC 0%, #FFFFFF 100%);
-            border-radius: 12px;
-            padding: 20px;
+            background: #FFF8DC;
+            border-radius: 8px;
+            padding: 16px 20px;
             margin: ${cardMargin};
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border: 2px solid #DAA520;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #DAA520;
             position: relative;
             width: ${cardWidth};
           ">
-            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
               <span class="generation-badge" style="
                 ${badgeColor}
                 color: white;
                 font-weight: 700;
-                font-size: 14px;
-                padding: 8px 20px;
-                border-radius: 50px;
+                font-size: 13px;
+                padding: 6px 16px;
+                border-radius: 20px;
                 white-space: nowrap;
-                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
                 display: inline-block;
-                min-width: 80px;
+                min-width: 70px;
                 text-align: center;
               ">Đời ${gen}</span>
               <h3 style="
-                color: #7b1a1a;
+                color: #8B0000;
                 font-weight: 700;
-                font-size: 20px;
+                font-size: 18px;
                 margin: 0;
                 flex: 1;
-              ">Đời ${gen} – ${escapeHtml(name)}</h3>
+                line-height: 1.4;
+              ">${titleLine}</h3>
             </div>
             <div style="
               color: #333;
-              font-size: 15px;
+              font-size: 14px;
               line-height: 1.6;
-              padding-left: 5px;
+              padding-left: 0;
+              margin-top: 6px;
             ">
               ${parentInfo}
             </div>
@@ -1991,6 +2070,42 @@
     function formatTextWithLineBreaks(text) {
       if (!text || text === 'Chưa có thông tin') return text;
       return text.split(';').map(item => item.trim()).filter(item => item).join('<br>');
+    }
+    
+    /**
+     * Chuẩn hóa dữ liệu Hôn phối từ person object
+     * Thống nhất logic: ưu tiên marriages array, sau đó spouse_name, sau đó spouse
+     * @param {Object} person - Person object
+     * @returns {string} - Formatted spouse display text
+     */
+    function getSpouseDisplay(person) {
+      if (!person) return 'Chưa có thông tin';
+      
+      // Ưu tiên 1: marriages array (đầy đủ thông tin nhất)
+      if (person.marriages && Array.isArray(person.marriages) && person.marriages.length > 0) {
+        return person.marriages.map(m => {
+          let display = m.spouse_name || '';
+          if (m.marriage_date_solar) {
+            display += ` (${m.marriage_date_solar})`;
+          }
+          if (m.marriage_place) {
+            display += ` - ${m.marriage_place}`;
+          }
+          return display;
+        }).join('<br>');
+      }
+      
+      // Ưu tiên 2: spouse_name (string)
+      if (person.spouse_name) {
+        return formatTextWithLineBreaks(person.spouse_name);
+      }
+      
+      // Ưu tiên 3: spouse (string)
+      if (person.spouse) {
+        return formatTextWithLineBreaks(person.spouse);
+      }
+      
+      return 'Chưa có thông tin';
     }
 
     function showDetailPanel(person) {
@@ -2074,6 +2189,10 @@
         <div class="detail-view-mode">
           <div class="detail-form">
             <div class="form-group">
+              <label>Person ID:</label>
+              <div class="detail-value">${person.person_id || 'Chưa có thông tin'}</div>
+            </div>
+            <div class="form-group">
               <label>Tên đầy đủ:</label>
               <div class="detail-value">${person.full_name || 'Chưa có thông tin'}</div>
             </div>
@@ -2093,11 +2212,17 @@
             </div>
             <div class="form-group">
               <label>Tên bố:</label>
-              <div class="detail-value">${person.father_name ? 'Ông ' + person.father_name : 'Chưa có thông tin'}</div>
+              <div class="detail-value">${(() => {
+                const fatherDisplay = person.father_name || person.father || null;
+                return fatherDisplay ? 'Ông ' + fatherDisplay : 'Chưa có thông tin';
+              })()}</div>
             </div>
             <div class="form-group">
               <label>Tên mẹ:</label>
-              <div class="detail-value">${person.mother_name ? 'Bà ' + person.mother_name : 'Chưa có thông tin'}</div>
+              <div class="detail-value">${(() => {
+                const motherDisplay = person.mother_name || person.mother || null;
+                return motherDisplay ? 'Bà ' + motherDisplay : 'Chưa có thông tin';
+              })()}</div>
             </div>
             <div class="form-group">
               <label>Nhánh:</label>
@@ -2306,18 +2431,6 @@
               <div class="detail-value">${person.home_town || person.origin_location || 'Chưa có thông tin'}</div>
             </div>
             ` : ''}
-            ${person.nationality ? `
-            <div class="form-group">
-              <label>Quốc tịch:</label>
-              <div class="detail-value">${person.nationality}</div>
-            </div>
-            ` : ''}
-            ${person.religion ? `
-            <div class="form-group">
-              <label>Tôn giáo:</label>
-              <div class="detail-value">${person.religion}</div>
-            </div>
-            ` : ''}
             ${person.occupation ? `
             <div class="form-group">
               <label>Nghề nghiệp:</label>
@@ -2385,27 +2498,28 @@
             </div>
             ` : ''}
             <div class="form-group">
+              <label>Hôn phối:</label>
+              <div class="detail-value">${getSpouseDisplay(person)}</div>
+            </div>
+            <div class="form-group">
               <label>Anh/Chị/Em:</label>
-              <div class="detail-value">${formatTextWithLineBreaks(person.siblings) || 'Chưa có thông tin'}</div>
+              <div class="detail-value">${(() => {
+                const siblingsDisplay = person.siblings || person.siblingsText || null;
+                if (Array.isArray(siblingsDisplay)) {
+                  return siblingsDisplay.join(', ');
+                }
+                return siblingsDisplay ? formatTextWithLineBreaks(siblingsDisplay) : 'Chưa có thông tin';
+              })()}</div>
             </div>
-            ${person.marriages && person.marriages.length > 0 ? `
-            <div class="form-group">
-              <label>Hôn phối:</label>
-              <div class="detail-value">
-                ${person.marriages.map(m => 
-                  `${m.spouse_name}${m.marriage_date_solar ? ' (' + m.marriage_date_solar + ')' : ''}${m.marriage_place ? ' - ' + m.marriage_place : ''}`
-                ).join('<br>')}
-              </div>
-            </div>
-            ` : person.spouse ? `
-            <div class="form-group">
-              <label>Hôn phối:</label>
-              <div class="detail-value">${formatTextWithLineBreaks(person.spouse) || 'Chưa có thông tin'}</div>
-            </div>
-            ` : ''}
             <div class="form-group">
               <label>Thông tin con:</label>
-              <div class="detail-value">${formatTextWithLineBreaks(person.children) || 'Chưa có thông tin'}</div>
+              <div class="detail-value">${(() => {
+                const childrenDisplay = person.children || person.childrenText || null;
+                if (Array.isArray(childrenDisplay)) {
+                  return childrenDisplay.join(', ');
+                }
+                return childrenDisplay ? formatTextWithLineBreaks(childrenDisplay) : 'Chưa có thông tin';
+              })()}</div>
             </div>
           </div>
           <div class="form-actions">
@@ -2628,7 +2742,10 @@
           // Xóa khỏi input tìm kiếm
           const nameInput = document.getElementById('lineageName');
           if (nameInput) {
-            nameInput.value = '';
+            const nameInput = document.getElementById('lineageName');
+            if (nameInput) {
+              nameInput.value = '';
+            }
           }
           
           // Ẩn kết quả
@@ -2663,6 +2780,10 @@
       content.innerHTML = `
         <form id="personEditForm" onsubmit="savePersonData(event)">
           <div class="detail-form">
+            <div class="form-group">
+              <label>Person ID:</label>
+              <div class="detail-value">${person.person_id || 'Chưa có thông tin'}</div>
+            </div>
             <div class="form-group">
               <label>Tên đầy đủ:</label>
               <input type="text" name="full_name" value="${(person.full_name || '').replace(/"/g, '&quot;')}" required>
@@ -2726,14 +2847,6 @@
             <div class="form-group">
               <label>Nguyên quán:</label>
               <input type="text" name="origin_location" value="${(person.origin_location || '').replace(/"/g, '&quot;')}">
-            </div>
-            <div class="form-group">
-              <label>Quốc tịch:</label>
-              <input type="text" name="nationality" value="${(person.nationality || 'Việt Nam').replace(/"/g, '&quot;')}">
-            </div>
-            <div class="form-group">
-              <label>Tôn giáo:</label>
-              <input type="text" name="religion" value="${(person.religion || '').replace(/"/g, '&quot;')}">
             </div>
             <div class="form-group">
               <label>Anh/Chị/Em:</label>
@@ -2829,14 +2942,23 @@
       }
       
       // Cập nhật giá trị
-      document.getElementById('request_person_id').value = selectedPerson.person_id;
-      document.getElementById('request_person_name').value = selectedPerson.full_name;
-      document.getElementById('request_person_generation').value = selectedPerson.generation_number || '';
-      document.getElementById('request_full_name').value = '';
-      document.getElementById('request_contact').value = '';
-      document.getElementById('request_content').value = '';
+      const personIdInput = document.getElementById('request_person_id');
+      const personNameInput = document.getElementById('request_person_name');
+      const personGenInput = document.getElementById('request_person_generation');
+      const fullNameInput = document.getElementById('request_full_name');
+      const contactInput = document.getElementById('request_contact');
+      const contentInput = document.getElementById('request_content');
       
-      modal.style.display = 'block';
+      if (personIdInput) personIdInput.value = selectedPerson.person_id;
+      if (personNameInput) personNameInput.value = selectedPerson.full_name;
+      if (personGenInput) personGenInput.value = selectedPerson.generation_number || '';
+      if (fullNameInput) fullNameInput.value = '';
+      if (contactInput) contactInput.value = '';
+      if (contentInput) contentInput.value = '';
+      
+      if (modal) {
+        modal.style.display = 'block';
+      }
     }
     
     /**
@@ -2857,12 +2979,25 @@
     async function submitEditRequest(event) {
       event.preventDefault();
       
-      const personId = document.getElementById('request_person_id').value;
-      const personName = document.getElementById('request_person_name').value;
-      const personGeneration = document.getElementById('request_person_generation').value;
-      const fullName = document.getElementById('request_full_name').value.trim();
-      const contact = document.getElementById('request_contact').value.trim();
-      const content = document.getElementById('request_content').value.trim();
+      const personIdInput = document.getElementById('request_person_id');
+      const personNameInput = document.getElementById('request_person_name');
+      const personGenInput = document.getElementById('request_person_generation');
+      const fullNameInput = document.getElementById('request_full_name');
+      const contactInput = document.getElementById('request_contact');
+      const contentInput = document.getElementById('request_content');
+      
+      if (!personIdInput || !personNameInput || !personGenInput || !fullNameInput || !contactInput || !contentInput) {
+        console.error('[EditRequest] Required form elements not found');
+        alert('Lỗi: Không tìm thấy các trường form');
+        return;
+      }
+      
+      const personId = personIdInput.value;
+      const personName = personNameInput.value;
+      const personGeneration = personGenInput.value;
+      const fullName = fullNameInput.value.trim();
+      const contact = contactInput.value.trim();
+      const content = contentInput.value.trim();
       
       if (!fullName || !contact || !content) {
         alert('Vui lòng điền đầy đủ thông tin');
@@ -3489,13 +3624,22 @@
       }).slice(0, 5);
 
       if (miniCarouselActivities.length === 0) {
-        document.getElementById('activitiesMiniSlider').style.display = 'none';
+        const sliderEl = document.getElementById('activitiesMiniSlider');
+        if (sliderEl) {
+          sliderEl.style.display = 'none';
+        }
         return;
       }
 
       const sliderEl = document.getElementById('activitiesMiniSlider');
       const slidesContainer = document.getElementById('miniSliderSlides');
       const dotsContainer = document.getElementById('miniSliderDots');
+
+      // Null checks
+      if (!sliderEl || !slidesContainer || !dotsContainer) {
+        console.warn('[MiniCarousel] Required elements not found');
+        return;
+      }
 
       sliderEl.style.display = 'block';
 
@@ -3544,11 +3688,13 @@
 
       if (dotsContainer) {
         dotsContainer.querySelectorAll('.mini-slider-dot').forEach(dot => {
-          dot.addEventListener('click', () => {
-            pauseMiniAutoPlay();
-            const index = parseInt(dot.getAttribute('data-index'));
-            showMiniSlide(index);
-          });
+          if (dot) {
+            dot.addEventListener('click', () => {
+              pauseMiniAutoPlay();
+              const index = parseInt(dot.getAttribute('data-index'));
+              showMiniSlide(index);
+            });
+          }
         });
       }
 
@@ -3820,7 +3966,6 @@
             font: { 
               size: 16,
               face: 'Arial, sans-serif',
-              bold: true,
               color: '#333'
             },
             borderWidth: 4,
@@ -3904,8 +4049,8 @@
           throw err;
         }
         
-        // Load breadcrumb
-        await loadBreadcrumb(rootId);
+        // Load breadcrumb - ĐÃ XÓA (Nâng cấp 1)
+        // await loadBreadcrumb(rootId);
         
         loading.style.display = 'none';
       } catch (err) {
@@ -3998,10 +4143,19 @@
     }
 
     async function handleSearch() {
-      const query = document.getElementById('searchInput').value.trim();
+      const searchInput = document.getElementById('searchInput');
+      if (!searchInput) {
+        console.warn('[Tree] searchInput not found');
+        return;
+      }
+      const query = searchInput.value.trim();
       if (!query) return;
       
       const resultsDiv = document.getElementById('searchResults');
+      if (!resultsDiv) {
+        console.warn('[Tree] searchResults not found');
+        return;
+      }
       resultsDiv.style.display = 'block';
       resultsDiv.innerHTML = '<div style="padding: 10px; color: #666;">Đang tìm kiếm...</div>';
       
@@ -4032,21 +4186,32 @@
         }).join('');
         
         // Add click handlers
-        resultsDiv.querySelectorAll('.search-result').forEach(el => {
-          el.addEventListener('click', () => {
-            const personId = el.getAttribute('data-person-id'); // Giữ nguyên string, không parse thành số
-            currentRootId = personId;
-            resultsDiv.style.display = 'none';
-            document.getElementById('searchInput').value = '';
-            loadTree(personId, currentMaxGen);
+        if (resultsDiv) {
+          resultsDiv.querySelectorAll('.search-result').forEach(el => {
+            if (el) {
+              el.addEventListener('click', () => {
+                const personId = el.getAttribute('data-person-id'); // Giữ nguyên string, không parse thành số
+                currentRootId = personId;
+                if (resultsDiv) {
+                  resultsDiv.style.display = 'none';
+                }
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput) {
+                  searchInput.value = '';
+                }
+                loadTree(personId, currentMaxGen);
+              });
+            }
           });
-        });
+        }
       } catch (err) {
         console.error('Search error:', err);
         resultsDiv.innerHTML = `<div style="padding: 10px; color: #d32f2f;">Lỗi: ${err.message}</div>`;
       }
     }
 
+    // Hàm loadBreadcrumb - ĐÃ XÓA (Nâng cấp 1)
+    /*
     async function loadBreadcrumb(personId) {
       const breadcrumbDiv = document.getElementById('breadcrumb');
       
@@ -4071,6 +4236,7 @@
         breadcrumbDiv.style.display = 'none';
       }
     }
+    */
 
     async function showPersonInfo(personId) {
       const infoContent = document.getElementById('infoContent');
@@ -4103,6 +4269,13 @@
         const ancestors = ancestorsRes.ok ? await ancestorsRes.json() : { ancestors_chain: [] };
         const descendants = descendantsRes.ok ? await descendantsRes.json() : { descendants: [] };
         
+        // FALLBACK: Nếu ancestors.ancestors_chain rỗng, thử dùng person.ancestors_chain
+        let ancestors_chain = ancestors.ancestors_chain || [];
+        if (!ancestors_chain || ancestors_chain.length === 0) {
+            ancestors_chain = person.ancestors_chain || [];
+            console.log(`[PersonInfo] Using fallback ancestors_chain from /api/person, length: ${ancestors_chain.length}`);
+        }
+        
         let html = `
           <div style="margin-bottom: 20px;">
             <h4 style="color: #8B0000; margin-bottom: 10px; font-size: 20px;">${escapeHtml(person.full_name || '')}</h4>
@@ -4114,18 +4287,36 @@
           </div>
         `;
         
-        // Ancestors
-        if (ancestors.ancestors_chain && ancestors.ancestors_chain.length > 1) {
-          html += `
-            <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
-              <h5 style="color: #8B0000; margin-bottom: 10px; font-size: 16px;">Tổ tiên</h5>
-              <div style="font-size: 14px; line-height: 1.8;">
-                ${ancestors.ancestors_chain.slice(0, -1).reverse().map(p => 
-                  `<div>${escapeHtml(p.full_name)} ${p.generation_number ? `(Đời ${p.generation_number})` : ''}</div>`
-                ).join('')}
+        // Ancestors - Debug log
+        console.log(`[PersonInfo] ancestors_chain length: ${ancestors_chain ? ancestors_chain.length : 0}`);
+        if (ancestors_chain && ancestors_chain.length > 0) {
+          // Filter: loại bỏ người hiện tại (dựa trên person_id) thay vì slice(0, -1)
+          // Đảm bảo không bỏ sót bất kỳ tổ tiên nào
+          const currentPersonId = String(person.person_id || '').trim();
+          const ancestorsOnly = ancestors_chain.filter(p => {
+            const pId = String(p.person_id || '').trim();
+            return pId !== currentPersonId;
+          });
+          
+          // Sắp xếp tổ tiên theo đời tăng dần (đời 1 → đời 2 → ... → đời n)
+          const sortedAncestors = ancestorsOnly.sort((a, b) => {
+            const genA = a.generation_number || a.generation_level || 999;
+            const genB = b.generation_number || b.generation_level || 999;
+            return genA - genB;
+          });
+          
+          if (sortedAncestors.length > 0) {
+            html += `
+              <div style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+                <h5 style="color: #8B0000; margin-bottom: 10px; font-size: 16px;">Tổ tiên</h5>
+                <div style="font-size: 14px; line-height: 1.8;">
+                  ${sortedAncestors.map(p => 
+                    `<div>${escapeHtml(p.full_name)} ${p.generation_number ? `(Đời ${p.generation_number})` : (p.generation_level ? `(Đời ${p.generation_level})` : '')}</div>`
+                  ).join('')}
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          }
         }
         
         // Descendants

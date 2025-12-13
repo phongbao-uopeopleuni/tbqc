@@ -1011,14 +1011,23 @@
 
         const result = await response.json();
         
-        if (result.success) {
+        if (response.ok && result.success) {
           alert(isUpdate ? 'Cập nhật thành công!' : 'Thêm thành công!');
           closeModal();
           loadMembers();
         } else {
-          alert('Lỗi: ' + (result.error || 'Không thể lưu dữ liệu'));
+          // Hiển thị message từ server hoặc message mặc định
+          const errorMsg = result.error || result.message || 'Không thể lưu dữ liệu';
+          if (response.status === 404) {
+            alert(`Không tìm thấy: ${errorMsg}`);
+          } else if (response.status === 400) {
+            alert(`Dữ liệu không hợp lệ: ${errorMsg}`);
+          } else {
+            alert(`Lỗi: ${errorMsg}`);
+          }
         }
       } catch (error) {
+        console.error('[Members] Error saving member:', error);
         alert('Lỗi kết nối: ' + error.message);
       }
     }

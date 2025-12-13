@@ -690,14 +690,21 @@ def get_sheet3_data_by_name(person_name, csv_id=None, father_name=None, mother_n
 @app.route('/api/person/<person_id>')
 def get_person(person_id):
     """Lấy thông tin chi tiết một người từ schema mới"""
+    # Normalize person_id
+    person_id = str(person_id).strip() if person_id else None
+    if not person_id:
+        return jsonify({'error': 'person_id không hợp lệ'}), 400
+    
     connection = get_db_connection()
     if not connection:
         return jsonify({'error': 'Không thể kết nối database'}), 500
     
+    cursor = None
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # Lấy thông tin từ persons (schema mới)
+        # Lấy thông tin đầy đủ từ persons (schema mới) - chỉ lấy các column chắc chắn có
+        # Sử dụng COALESCE để xử lý các cột có thể không tồn tại
         cursor.execute("""
             SELECT 
                 p.person_id,
@@ -733,121 +740,229 @@ def get_person(person_id):
         if not person:
             return jsonify({'error': 'Không tìm thấy'}), 404
         
+        # Thêm alias generation_number cho frontend compatibility
+        person['generation_number'] = person.get('generation_level')
+        
+        # Thêm các field có thể không có trong database (dùng giá trị mặc định)
+        if 'origin_location' not in person:
+            person['origin_location'] = person.get('home_town')
+        if 'death_location' not in person:
+            person['death_location'] = person.get('place_of_death')
+        if 'birth_location' not in person:
+            person['birth_location'] = None
+        
+        # Lấy branch_name nếu có bảng branches và branch_id
+        try:
+            # Kiểm tra xem có branch_id trong person không
+            cursor.execute("SHOW COLUMNS FROM persons LIKE 'branch_id'")
+            has_branch_id = cursor.fetchone()
+            
+            if has_branch_id:
+                # Lấy branch_id từ person nếu có
+                cursor.execute("SELECT branch_id FROM persons WHERE person_id = %s", (person_id,))
+                branch_row = cursor.fetchone()
+                if branch_row and branch_row.get('branch_id'):
+                    cursor.execute("SELECT branch_name FROM branches WHERE branch_id = %s", (branch_row['branch_id'],))
+                    branch = cursor.fetchone()
+                    person['branch_name'] = branch['branch_name'] if branch else None
+                else:
+                    person['branch_name'] = None
+            else:
+                person['branch_name'] = None
+        except Exception as e:
+            logger.warning(f"Could not fetch branch_name: {e}")
+            person['branch_name'] = None
+        
         # Lấy thông tin cha mẹ từ relationships
+        try:
             cursor.execute("""
-            SELECT 
-                r.parent_id,
-                r.relation_type,
-                parent.full_name AS parent_name
+                SELECT 
+                    r.parent_id,
+                    r.relation_type,
+                    parent.full_name AS parent_name
                 FROM relationships r
-            JOIN persons parent ON r.parent_id = parent.person_id
-            WHERE r.child_id = %s AND r.relation_type IN ('father', 'mother')
+                JOIN persons parent ON r.parent_id = parent.person_id
+                WHERE r.child_id = %s AND r.relation_type IN ('father', 'mother')
             """, (person_id,))
-        parent_rels = cursor.fetchall()
-        
-        father_id = None
-        father_name = None
-        mother_id = None
-        mother_name = None
-        
-        for rel in parent_rels:
-            if rel['relation_type'] == 'father':
-                father_id = rel['parent_id']
-                father_name = rel['parent_name']
-            elif rel['relation_type'] == 'mother':
-                mother_id = rel['parent_id']
-                mother_name = rel['parent_name']
-        
-        person['father_id'] = father_id
-        person['father_name'] = father_name
-        person['mother_id'] = mother_id
-        person['mother_name'] = mother_name
+            parent_rels = cursor.fetchall()
+            
+            father_id = None
+            father_name = None
+            mother_id = None
+            mother_name = None
+            
+            for rel in parent_rels:
+                if rel and rel.get('relation_type') == 'father':
+                    father_id = rel.get('parent_id')
+                    father_name = rel.get('parent_name')
+                elif rel and rel.get('relation_type') == 'mother':
+                    mother_id = rel.get('parent_id')
+                    mother_name = rel.get('parent_name')
+            
+            person['father_id'] = father_id
+            person['father_name'] = father_name
+            person['mother_id'] = mother_id
+            person['mother_name'] = mother_name
+        except Exception as e:
+            logger.warning(f"Error fetching parents for {person_id}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            person['father_id'] = None
+            person['father_name'] = None
+            person['mother_id'] = None
+            person['mother_name'] = None
         
         # Lấy siblings (cùng cha hoặc cùng mẹ)
-        if father_id or mother_id:
-            conditions = []
-            params = [person_id]
-            
-            if father_id:
-                conditions.append("(r.parent_id = %s AND r.relation_type = 'father')")
-                params.append(father_id)
-            if mother_id:
-                conditions.append("(r.parent_id = %s AND r.relation_type = 'mother')")
-                params.append(mother_id)
-            
-            sibling_query = f"""
-                SELECT DISTINCT s.person_id, s.full_name
-                FROM persons s
-                JOIN relationships r ON s.person_id = r.child_id
-                WHERE s.person_id <> %s
-                  AND ({' OR '.join(conditions)})
-                ORDER BY s.full_name
-            """
-            cursor.execute(sibling_query, params)
-            siblings = cursor.fetchall()
-            if siblings:
-                sibling_names = [s['full_name'] for s in siblings]
-                person['siblings'] = '; '.join(sibling_names)
+        try:
+            if father_id or mother_id:
+                conditions = []
+                params = [person_id]
+                
+                if father_id:
+                    conditions.append("(r.parent_id = %s AND r.relation_type = 'father')")
+                    params.append(father_id)
+                if mother_id:
+                    conditions.append("(r.parent_id = %s AND r.relation_type = 'mother')")
+                    params.append(mother_id)
+                
+                if conditions:
+                    sibling_query = f"""
+                        SELECT DISTINCT s.person_id, s.full_name
+                        FROM persons s
+                        JOIN relationships r ON s.person_id = r.child_id
+                        WHERE s.person_id <> %s
+                          AND ({' OR '.join(conditions)})
+                        ORDER BY s.full_name
+                    """
+                    cursor.execute(sibling_query, params)
+                    siblings = cursor.fetchall()
+                    if siblings:
+                        sibling_names = [s.get('full_name') for s in siblings if s and s.get('full_name')]
+                        person['siblings'] = '; '.join(sibling_names) if sibling_names else None
+                    else:
+                        person['siblings'] = None
+                else:
+                    person['siblings'] = None
             else:
                 person['siblings'] = None
-        else:
+        except Exception as e:
+            logger.warning(f"Error fetching siblings for {person_id}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             person['siblings'] = None
         
         # Lấy con từ relationships (luôn chạy, không phụ thuộc vào father_id/mother_id)
-        cursor.execute("""
-            SELECT 
-                r.child_id,
-                child.full_name AS child_name
-            FROM relationships r
-            JOIN persons child ON r.child_id = child.person_id
-            WHERE r.parent_id = %s AND r.relation_type IN ('father', 'mother')
-            ORDER BY child.full_name
-        """, (person_id,))
-        children_records = cursor.fetchall()
-        if children_records:
-            child_names = [c['child_name'] for c in children_records if c.get('child_name')]
-            person['children'] = '; '.join(child_names) if child_names else None
-        else:
+        try:
+            cursor.execute("""
+                SELECT 
+                    r.child_id,
+                    child.full_name AS child_name
+                FROM relationships r
+                JOIN persons child ON r.child_id = child.person_id
+                WHERE r.parent_id = %s AND r.relation_type IN ('father', 'mother')
+                ORDER BY child.full_name
+            """, (person_id,))
+            children_records = cursor.fetchall()
+            if children_records:
+                child_names = [c.get('child_name') for c in children_records if c and c.get('child_name')]
+                person['children'] = '; '.join(child_names) if child_names else None
+            else:
+                person['children'] = None
+        except Exception as e:
+            logger.warning(f"Error fetching children for {person_id}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             person['children'] = None
             
         # Lấy spouses từ marriages
+        try:
             cursor.execute("""
                 SELECT 
-                m.id AS marriage_id,
-                CASE 
-                    WHEN m.person_id = %s THEN m.spouse_person_id
-                    ELSE m.person_id
-                END AS spouse_id,
-                sp.full_name AS spouse_name,
-                sp.gender AS spouse_gender,
-                m.status AS marriage_status,
-                m.note AS marriage_note
-            FROM marriages m
-            JOIN persons sp ON (
-                CASE 
-                    WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id
-                    ELSE sp.person_id = m.person_id
-                END
-            )
-            WHERE (m.person_id = %s OR m.spouse_person_id = %s)
-            ORDER BY m.created_at
-        """, (person_id, person_id, person_id, person_id))
-        marriages = cursor.fetchall()
-        
-        if marriages:
-            person['marriages'] = marriages
-            spouse_names = [m['spouse_name'] for m in marriages if m.get('spouse_name')]
-            person['spouse'] = '; '.join(spouse_names) if spouse_names else None
-        else:
+                    m.id AS marriage_id,
+                    CASE 
+                        WHEN m.person_id = %s THEN m.spouse_person_id
+                        ELSE m.person_id
+                    END AS spouse_id,
+                    sp.full_name AS spouse_name,
+                    sp.gender AS spouse_gender,
+                    m.status AS marriage_status,
+                    m.note AS marriage_note,
+                    m.marriage_date_solar,
+                    m.marriage_place
+                FROM marriages m
+                LEFT JOIN persons sp ON (
+                    CASE 
+                        WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id
+                        ELSE sp.person_id = m.person_id
+                    END
+                )
+                WHERE (m.person_id = %s OR m.spouse_person_id = %s)
+                ORDER BY m.created_at
+            """, (person_id, person_id, person_id, person_id))
+            marriages = cursor.fetchall()
+            
+            if marriages:
+                person['marriages'] = marriages
+                spouse_names = [m['spouse_name'] for m in marriages if m.get('spouse_name')]
+                person['spouse'] = '; '.join(spouse_names) if spouse_names else None
+            else:
+                person['marriages'] = []
+                person['spouse'] = None
+        except Exception as e:
+            logger.warning(f"Error fetching marriages for {person_id}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             person['marriages'] = []
             person['spouse'] = None
             
+        # Nếu không có spouse từ marriages, thử lấy từ bảng spouse_sibling_children
+        if not person.get('spouse') or person.get('spouse') == '':
+            try:
+                # Kiểm tra xem bảng có tồn tại không
+                cursor.execute("""
+                    SELECT TABLE_NAME 
+                    FROM information_schema.TABLES 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'spouse_sibling_children'
+                """)
+                table_exists = cursor.fetchone()
+                
+                if table_exists:
+                    cursor.execute("""
+                        SELECT spouse_name 
+                        FROM spouse_sibling_children 
+                        WHERE person_id = %s AND spouse_name IS NOT NULL AND spouse_name != ''
+                    """, (person_id,))
+                    ssc_row = cursor.fetchone()
+                    if ssc_row and ssc_row.get('spouse_name'):
+                        person['spouse'] = ssc_row['spouse_name'].strip()
+                        logger.info(f"Found spouse_name from spouse_sibling_children table for {person_id}: {person['spouse']}")
+            except Exception as e:
+                logger.debug(f"Could not read spouse from spouse_sibling_children table for {person_id}: {e}")
+                # Fallback: thử đọc từ CSV file trực tiếp
+                try:
+                    import csv
+                    import os
+                    csv_file = 'spouse_sibling_children.csv'
+                    if os.path.exists(csv_file):
+                        with open(csv_file, 'r', encoding='utf-8-sig') as f:
+                            reader = csv.DictReader(f)
+                            for row in reader:
+                                if row.get('person_id', '').strip() == person_id:
+                                    spouse_name = row.get('spouse_name', '').strip()
+                                    if spouse_name:
+                                        person['spouse'] = spouse_name
+                                        logger.info(f"Found spouse_name from CSV for {person_id}: {spouse_name}")
+                                        break
+                except Exception as e2:
+                    logger.debug(f"Could not read spouse from CSV for {person_id}: {e2}")
+        
             # =====================================================
             # LẤY THÔNG TIN TỔ TIÊN (ANCESTORS) - ĐỆ QUY
             # =====================================================
             try:
-            # Sử dụng stored procedure mới để lấy tổ tiên (lên đến 10 cấp)
-            # Schema mới: person_id là VARCHAR(50)
+                # Sử dụng stored procedure mới để lấy tổ tiên (lên đến 10 cấp)
+                # Schema mới: person_id là VARCHAR(50)
                 cursor.callproc('sp_get_ancestors', [person_id, 10])
                 
                 # Lấy kết quả từ stored procedure
@@ -870,7 +985,7 @@ def get_person(person_id):
                                 'level': row.get('level', 0)
                             })
                         else:
-                        # Nếu là tuple, giả định thứ tự: person_id, full_name, gender, generation_level, level
+                            # Nếu là tuple, giả định thứ tự: person_id, full_name, gender, generation_level, level
                             ancestors.append({
                                 'person_id': row[0] if len(row) > 0 else None,
                                 'full_name': row[1] if len(row) > 1 else '',
@@ -911,12 +1026,16 @@ def get_person(person_id):
                     # Sắp xếp theo level (từ xa đến gần - level cao nhất trước)
                     ancestors_chain.sort(key=lambda x: x['level'], reverse=True)
                     person['ancestors_chain'] = ancestors_chain
+                    logger.info(f"[API /api/person/{person_id}] Found {len(ancestors_chain)} ancestors via stored procedure")
                 else:
                     person['ancestors'] = []
                     person['ancestors_chain'] = []
+                    logger.warning(f"[API /api/person/{person_id}] Stored procedure returned empty ancestors")
             except Exception as e:
                 # Nếu stored procedure không hoạt động, thử cách khác (đệ quy thủ công)
-                print(f"Lỗi khi gọi sp_get_ancestors: {e}")
+                logger.warning(f"Error calling sp_get_ancestors for {person_id}: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
                 try:
                     # Thử lấy tổ tiên bằng cách đệ quy thủ công (3 cấp)
                     ancestors_chain = []
@@ -986,63 +1105,185 @@ def get_person(person_id):
                     ancestors_chain.sort(key=lambda x: x['level'], reverse=True)
                     person['ancestors_chain'] = ancestors_chain
                     person['ancestors'] = ancestors_chain
+                    logger.info(f"[API /api/person/{person_id}] Found {len(ancestors_chain)} ancestors via manual query")
                 except Exception as e2:
-                    print(f"Lỗi khi lấy tổ tiên thủ công: {e2}")
+                    logger.warning(f"Error fetching ancestors manually for {person_id}: {e2}")
+                    import traceback
+                    logger.debug(traceback.format_exc())
                     person['ancestors_chain'] = []
                     person['ancestors'] = []
-                    person['ancestors'] = []
-                    person['ancestors_chain'] = []
+            
+            # Đảm bảo ancestors_chain luôn có trong person dict (ngay cả khi rỗng)
+            if 'ancestors_chain' not in person:
+                person['ancestors_chain'] = []
+                person['ancestors'] = []
+                logger.warning(f"[API /api/person/{person_id}] ancestors_chain not set, initializing empty")
         
         if person:
-            # Format dates để đảm bảo hiển thị đúng
+            # Format dates để đảm bảo hiển thị đúng - với error handling
             from datetime import date, datetime
-            if person.get('birth_date_solar'):
-                if isinstance(person['birth_date_solar'], (date, datetime)):
-                    person['birth_date_solar'] = person['birth_date_solar'].strftime('%Y-%m-%d')
-                elif isinstance(person['birth_date_solar'], str) and not person['birth_date_solar'].startswith('19') and not person['birth_date_solar'].startswith('20'):
-                    # Nếu là số serial, bỏ qua (để frontend xử lý)
-                    pass
-            if person.get('birth_date_lunar'):
-                if isinstance(person['birth_date_lunar'], (date, datetime)):
-                    person['birth_date_lunar'] = person['birth_date_lunar'].strftime('%Y-%m-%d')
-            if person.get('death_date_solar'):
-                if isinstance(person['death_date_solar'], (date, datetime)):
-                    person['death_date_solar'] = person['death_date_solar'].strftime('%Y-%m-%d')
-            if person.get('death_date_lunar'):
-                if isinstance(person['death_date_lunar'], (date, datetime)):
-                    person['death_date_lunar'] = person['death_date_lunar'].strftime('%Y-%m-%d')
+            try:
+                birth_date_solar = person.get('birth_date_solar')
+                if birth_date_solar:
+                    if isinstance(birth_date_solar, (date, datetime)):
+                        person['birth_date_solar'] = birth_date_solar.strftime('%Y-%m-%d')
+                    elif isinstance(birth_date_solar, str):
+                        # Nếu là số serial hoặc format không hợp lệ, giữ nguyên string
+                        if not (birth_date_solar.startswith('19') or birth_date_solar.startswith('20')):
+                            # Có thể là số serial, giữ nguyên để frontend xử lý
+                            pass
+            except Exception as e:
+                logger.warning(f"Error formatting birth_date_solar for {person_id}: {e}")
+                # Giữ nguyên giá trị gốc hoặc set None
+                if 'birth_date_solar' in person:
+                    person['birth_date_solar'] = str(person['birth_date_solar']) if person['birth_date_solar'] else None
             
-            # Debug: Log person data trước khi trả về
-            logger.info(f"[API /api/person/{person_id}] Returning person data:")
+            try:
+                birth_date_lunar = person.get('birth_date_lunar')
+                if birth_date_lunar and isinstance(birth_date_lunar, (date, datetime)):
+                    person['birth_date_lunar'] = birth_date_lunar.strftime('%Y-%m-%d')
+            except Exception as e:
+                logger.warning(f"Error formatting birth_date_lunar for {person_id}: {e}")
+                if 'birth_date_lunar' in person:
+                    person['birth_date_lunar'] = str(person.get('birth_date_lunar')) if person.get('birth_date_lunar') else None
+            
+            try:
+                death_date_solar = person.get('death_date_solar')
+                if death_date_solar and isinstance(death_date_solar, (date, datetime)):
+                    person['death_date_solar'] = death_date_solar.strftime('%Y-%m-%d')
+            except Exception as e:
+                logger.warning(f"Error formatting death_date_solar for {person_id}: {e}")
+                if 'death_date_solar' in person:
+                    person['death_date_solar'] = str(person.get('death_date_solar')) if person.get('death_date_solar') else None
+            
+            try:
+                death_date_lunar = person.get('death_date_lunar')
+                if death_date_lunar and isinstance(death_date_lunar, (date, datetime)):
+                    person['death_date_lunar'] = death_date_lunar.strftime('%Y-%m-%d')
+            except Exception as e:
+                logger.warning(f"Error formatting death_date_lunar for {person_id}: {e}")
+                if 'death_date_lunar' in person:
+                    person['death_date_lunar'] = str(person.get('death_date_lunar')) if person.get('death_date_lunar') else None
+            
+            # Debug: Log person data trước khi trả về (đầy đủ các trường)
+            logger.info(f"[API /api/person/{person_id}] Returning complete person data:")
+            logger.info(f"  - person_id: {person.get('person_id')}")
             logger.info(f"  - full_name: {person.get('full_name')}")
             logger.info(f"  - alias: {person.get('alias')}")
+            logger.info(f"  - gender: {person.get('gender')}")
+            logger.info(f"  - status: {person.get('status')}")
             logger.info(f"  - generation_level: {person.get('generation_level')}")
+            logger.info(f"  - generation_number: {person.get('generation_number')}")
+            logger.info(f"  - branch_name: {person.get('branch_name')}")
             logger.info(f"  - father_id: {person.get('father_id')}")
             logger.info(f"  - father_name: {person.get('father_name')}")
             logger.info(f"  - mother_id: {person.get('mother_id')}")
             logger.info(f"  - mother_name: {person.get('mother_name')}")
+            logger.info(f"  - siblings: {person.get('siblings')}")
+            logger.info(f"  - children: {person.get('children')}")
+            logger.info(f"  - spouse: {person.get('spouse')}")
+            logger.info(f"  - marriages: {len(person.get('marriages', []))} records")
             logger.info(f"  - birth_date_solar: {person.get('birth_date_solar')}")
+            logger.info(f"  - birth_date_lunar: {person.get('birth_date_lunar')}")
+            logger.info(f"  - birth_location: {person.get('birth_location')}")
+            logger.info(f"  - death_date_solar: {person.get('death_date_solar')}")
+            logger.info(f"  - death_date_lunar: {person.get('death_date_lunar')}")
+            logger.info(f"  - death_location: {person.get('death_location')}")
+            logger.info(f"  - place_of_death: {person.get('place_of_death')}")
             logger.info(f"  - home_town: {person.get('home_town')}")
+            logger.info(f"  - origin_location: {person.get('origin_location')}")
+            logger.info(f"  - nationality: {person.get('nationality')}")
+            logger.info(f"  - religion: {person.get('religion')}")
             logger.info(f"  - occupation: {person.get('occupation')}")
             logger.info(f"  - education: {person.get('education')}")
-            logger.info(f"  - religion: {person.get('religion')}")
             logger.info(f"  - events: {person.get('events')}")
             logger.info(f"  - titles: {person.get('titles')}")
             logger.info(f"  - blood_type: {person.get('blood_type')}")
             logger.info(f"  - genetic_disease: {person.get('genetic_disease')}")
-            logger.info(f"  - place_of_death: {person.get('place_of_death')}")
             logger.info(f"  - grave_info: {person.get('grave_info')}")
             logger.info(f"  - contact: {person.get('contact')}")
             logger.info(f"  - social: {person.get('social')}")
             logger.info(f"  - note: {person.get('note')}")
+            ancestors_chain_len = len(person.get('ancestors_chain', []))
+            logger.info(f"  - ancestors_chain: {ancestors_chain_len} records")
+            if ancestors_chain_len > 0:
+                logger.info(f"  - ancestors_chain details: {[a.get('full_name', 'N/A') for a in person.get('ancestors_chain', [])[:5]]}")
+            else:
+                logger.warning(f"  - ancestors_chain is EMPTY for {person_id}")
             
-            return jsonify(person)
+            # Clean person dict để đảm bảo JSON serializable
+            def clean_value(v):
+                """Helper function để clean nested values"""
+                if v is None:
+                    return None
+                elif isinstance(v, (str, int, float, bool)):
+                    return v
+                elif isinstance(v, (date, datetime)):
+                    return v.strftime('%Y-%m-%d')
+                else:
+                    return str(v)
+            
+            try:
+                # Đảm bảo tất cả values có thể serialize được
+                clean_person = {}
+                for key, value in person.items():
+                    if value is None:
+                        clean_person[key] = None
+                    elif isinstance(value, (str, int, float, bool)):
+                        clean_person[key] = value
+                    elif isinstance(value, (date, datetime)):
+                        clean_person[key] = value.strftime('%Y-%m-%d')
+                    elif isinstance(value, list):
+                        # Recursively clean nested lists (đặc biệt cho ancestors_chain)
+                        if key == 'ancestors_chain' or key == 'ancestors':
+                            # Đảm bảo ancestors_chain được serialize đúng
+                            clean_person[key] = []
+                            for item in value:
+                                if isinstance(item, dict):
+                                    clean_item = {}
+                                    for k, v in item.items():
+                                        clean_item[k] = clean_value(v)
+                                    clean_person[key].append(clean_item)
+                                else:
+                                    clean_person[key].append(clean_value(item))
+                        else:
+                            clean_person[key] = [clean_value(v) for v in value]
+                    elif isinstance(value, dict):
+                        # Recursively clean nested dicts
+                        clean_person[key] = {k: clean_value(v) for k, v in value.items()}
+                    else:
+                        # Convert các type khác thành string
+                        clean_person[key] = clean_value(value)
+                
+                return jsonify(clean_person)
+            except Exception as e:
+                logger.error(f"Error serializing person data for {person_id}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                # Trả về dữ liệu cơ bản nếu serialize fail
+                basic_person = {
+                    'person_id': person.get('person_id'),
+                    'full_name': person.get('full_name'),
+                    'generation_level': person.get('generation_level'),
+                    'error': 'Có lỗi khi xử lý dữ liệu'
+                }
+                return jsonify(basic_person), 500
+        
         return jsonify({'error': 'Không tìm thấy'}), 404
     except Error as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Database error in /api/person/{person_id}: {e}")
+        import traceback
+        logger.error(f"Error traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error in /api/person/{person_id}: {e}")
+        import traceback
+        logger.error(f"Error traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
     finally:
-        if connection.is_connected():
-            cursor.close()
+        if connection and connection.is_connected():
+            if cursor:
+                cursor.close()
             connection.close()
 
 @app.route('/api/family-tree')
@@ -1238,46 +1479,174 @@ def get_tree():
 @app.route('/api/ancestors/<person_id>', methods=['GET'])
 def get_ancestors(person_id):
     """Get ancestors chain for a person (schema mới - dùng stored procedure)"""
-    connection = get_db_connection()
-    if not connection:
-        return jsonify({'error': 'Không thể kết nối database'}), 500
+    # Normalize person_id: trim whitespace
+    if not person_id:
+        return jsonify({'error': 'person_id is required'}), 400
+    
+    person_id = str(person_id).strip()
+    if not person_id:
+        return jsonify({'error': 'person_id cannot be empty'}), 400
+    
+    connection = None
+    cursor = None
     
     try:
-        max_level = int(request.args.get('max_level', 10))
-    except (ValueError, TypeError):
-        max_level = 10
-    
-    try:
+        connection = get_db_connection()
+        if not connection:
+            logger.error(f"Cannot connect to database for /api/ancestors/{person_id}")
+            return jsonify({'error': 'Không thể kết nối database'}), 500
+        
+        try:
+            max_level = int(request.args.get('max_level', 10))
+        except (ValueError, TypeError):
+            max_level = 10
+        
         cursor = connection.cursor(dictionary=True)
         
-        # Validate person_id exists
-        cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
-        if not cursor.fetchone():
-            return jsonify({'error': f'Person {person_id} not found'}), 404
+        # Validate person_id exists - trả 404 thay vì 500
+        try:
+            cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
+            person_exists = cursor.fetchone()
+            if not person_exists:
+                logger.warning(f"Person {person_id} not found in database")
+                return jsonify({'error': f'Person {person_id} not found'}), 404
+        except Exception as e:
+            logger.error(f"Error checking if person exists: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return jsonify({'error': f'Database error while checking person: {str(e)}'}), 500
         
-        # Sử dụng stored procedure mới
-        cursor.callproc('sp_get_ancestors', [person_id, max_level])
-        
-        # Lấy kết quả từ stored procedure
+        # Sử dụng stored procedure mới - với error handling
+        # Nếu stored procedure không trả về đầy đủ, fallback về query trực tiếp
         ancestors_result = None
-        for result_set in cursor.stored_results():
-            ancestors_result = result_set.fetchall()
-            break
+        try:
+            cursor.callproc('sp_get_ancestors', [person_id, max_level])
+            
+            # Lấy kết quả từ stored procedure
+            for result_set in cursor.stored_results():
+                ancestors_result = result_set.fetchall()
+                break
+        except Exception as e:
+            logger.warning(f"Error calling sp_get_ancestors for person_id={person_id}: {e}")
+            ancestors_result = None
+        
+        # FALLBACK: Nếu stored procedure không trả về đầy đủ hoặc lỗi, dùng query trực tiếp
+        if not ancestors_result or len(ancestors_result) == 0:
+            logger.info(f"[API /api/ancestors/{person_id}] Stored procedure returned empty, using direct query fallback")
+            try:
+                # Query trực tiếp để lấy ancestors theo relationships và father_mother_id
+                cursor.execute("""
+                    WITH RECURSIVE ancestors AS (
+                        -- Base case: người hiện tại
+                        SELECT 
+                            p.person_id,
+                            p.full_name,
+                            p.gender,
+                            p.generation_level,
+                            p.father_mother_id,
+                            0 AS level
+                        FROM persons p
+                        WHERE p.person_id = %s
+                        
+                        UNION ALL
+                        
+                        -- Recursive case: CHA (chỉ theo dòng cha)
+                        SELECT 
+                            COALESCE(parent_by_rel.person_id, parent_by_fm.person_id) AS person_id,
+                            COALESCE(parent_by_rel.full_name, parent_by_fm.full_name) AS full_name,
+                            COALESCE(parent_by_rel.gender, parent_by_fm.gender) AS gender,
+                            COALESCE(parent_by_rel.generation_level, parent_by_fm.generation_level) AS generation_level,
+                            COALESCE(parent_by_rel.father_mother_id, parent_by_fm.father_mother_id) AS father_mother_id,
+                            a.level + 1
+                        FROM ancestors a
+                        INNER JOIN persons child ON a.person_id = child.person_id
+                        -- Ưu tiên 1: Tìm cha theo relationships table
+                        LEFT JOIN relationships r ON (
+                            a.person_id = r.child_id
+                            AND r.relation_type = 'father'
+                        )
+                        LEFT JOIN persons parent_by_rel ON (
+                            r.parent_id = parent_by_rel.person_id
+                        )
+                        -- Ưu tiên 2: Tìm cha theo father_mother_id (fallback)
+                        LEFT JOIN persons parent_by_fm ON (
+                            parent_by_rel.person_id IS NULL
+                            AND child.father_mother_id IS NOT NULL 
+                            AND child.father_mother_id != ''
+                            AND parent_by_fm.father_mother_id = child.father_mother_id
+                            AND parent_by_fm.generation_level < child.generation_level
+                            AND (parent_by_fm.gender = 'Nam' OR parent_by_fm.gender IS NULL)
+                            AND parent_by_fm.generation_level = (
+                                SELECT MAX(p2.generation_level)
+                                FROM persons p2
+                                WHERE p2.father_mother_id = child.father_mother_id
+                                    AND p2.generation_level < child.generation_level
+                                    AND (p2.gender = 'Nam' OR p2.gender IS NULL)
+                            )
+                        )
+                        WHERE a.level < %s
+                            AND (parent_by_rel.person_id IS NOT NULL OR parent_by_fm.person_id IS NOT NULL)
+                    )
+                    SELECT * FROM ancestors 
+                    WHERE level > 0 
+                        AND (gender = 'Nam' OR gender IS NULL)
+                    ORDER BY level, generation_level, full_name
+                """, (person_id, max_level))
+                ancestors_result = cursor.fetchall()
+                logger.info(f"[API /api/ancestors/{person_id}] Direct query returned {len(ancestors_result) if ancestors_result else 0} rows")
+            except Exception as e2:
+                logger.error(f"Error in direct query fallback for person_id={person_id}: {e2}")
+                import traceback
+                logger.error(traceback.format_exc())
+                ancestors_result = []
         
         ancestors_chain = []
         seen_person_ids = set()  # Track duplicates
         duplicate_count = 0
         
+        # Debug: Log số lượng kết quả từ stored procedure
+        logger.info(f"[API /api/ancestors/{person_id}] Stored procedure returned {len(ancestors_result) if ancestors_result else 0} rows")
+        if ancestors_result:
+            # Log các đời có trong kết quả
+            generations_found = set()
+            for row in ancestors_result:
+                if isinstance(row, dict):
+                    gen = row.get('generation_level') or row.get('generation_number')
+                else:
+                    gen = row[3] if len(row) > 3 else None
+                if gen:
+                    generations_found.add(gen)
+            logger.info(f"[API /api/ancestors/{person_id}] Generations found: {sorted(generations_found)}")
+        
         if ancestors_result:
             for row in ancestors_result:
                 if isinstance(row, dict):
                     person_id_item = row.get('person_id')
+                    gender = row.get('gender')
+                    full_name = row.get('full_name', 'N/A')
+                    generation_level = row.get('generation_level')
                 else:
                     person_id_item = row[0] if len(row) > 0 else None
+                    gender = row[2] if len(row) > 2 else None
+                    full_name = row[1] if len(row) > 1 else 'N/A'
+                    generation_level = row[3] if len(row) > 3 else None
                 
                 # Normalize person_id: convert to string and strip
                 if person_id_item:
                     person_id_item = str(person_id_item).strip()
+                
+                # Debug: Log từng row trước khi filter
+                logger.debug(f"[API /api/ancestors/{person_id}] Processing row: person_id={person_id_item}, name={full_name}, gender={gender}, generation={generation_level}")
+                
+                # CHỈ LẤY CHA (NAM) - LOẠI BỎ VỢ/CHỒNG (NỮ)
+                # Filter: chỉ lấy người có gender = 'Nam' (cha), bỏ qua Nữ (vợ/chồng)
+                # Nếu gender = None hoặc rỗng, giả sử là Nam (không bỏ qua)
+                if gender:
+                    gender_upper = str(gender).upper().strip()
+                    if gender_upper not in ['NAM', 'MALE', 'M', '']:
+                        logger.debug(f"[API /api/ancestors/{person_id}] Skipping non-father person_id={person_id_item}, gender={gender}, name={full_name}")
+                        continue
+                # Nếu gender = None hoặc rỗng, không bỏ qua (giả sử là Nam)
                 
                 # Skip duplicates
                 if not person_id_item or person_id_item in seen_person_ids:
@@ -1308,54 +1677,263 @@ def get_ancestors(person_id):
                         'level': row[4] if len(row) > 4 else 0
                     })
         
-        # Enrich với father_name và mother_name từ relationships
+        # Enrich với father_name, mother_name, spouse, siblings, children
         enriched_chain = []
         for ancestor in ancestors_chain:
             ancestor_id = ancestor.get('person_id')
-            if ancestor_id:
+            if not ancestor_id:
+                # Skip nếu không có person_id
+                enriched_chain.append(ancestor)
+                continue
+            
+            try:
+                # Lấy thông tin cha mẹ từ relationships - với error handling
+                try:
+                    cursor.execute("""
+                        SELECT 
+                            GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END SEPARATOR ', ') AS father_name,
+                            GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END SEPARATOR ', ') AS mother_name
+                        FROM persons p
+                        LEFT JOIN relationships r ON r.child_id = p.person_id
+                        LEFT JOIN persons parent ON r.parent_id = parent.person_id
+                        WHERE p.person_id = %s
+                        GROUP BY p.person_id
+                    """, (ancestor_id,))
+                    parent_info = cursor.fetchone()
+                    if parent_info:
+                        ancestor['father_name'] = parent_info.get('father_name') or None
+                        ancestor['mother_name'] = parent_info.get('mother_name') or None
+                    else:
+                        ancestor['father_name'] = None
+                        ancestor['mother_name'] = None
+                except Exception as e:
+                    logger.warning(f"Error fetching parent info for {ancestor_id}: {e}")
+                    ancestor['father_name'] = None
+                    ancestor['mother_name'] = None
+                
+                # Lấy thông tin hôn phối (marriages) - thống nhất với API /api/person - với error handling
+                try:
+                    cursor.execute("""
+                        SELECT 
+                            m.id AS marriage_id,
+                            CASE 
+                                WHEN m.person_id = %s THEN m.spouse_person_id
+                                ELSE m.person_id
+                            END AS spouse_id,
+                            sp.full_name AS spouse_name,
+                            sp.gender AS spouse_gender,
+                            m.status AS marriage_status,
+                            m.note AS marriage_note,
+                            m.marriage_date_solar,
+                            m.marriage_place
+                        FROM marriages m
+                        JOIN persons sp ON (
+                            CASE 
+                                WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id
+                                ELSE sp.person_id = m.person_id
+                            END
+                        )
+                        WHERE (m.person_id = %s OR m.spouse_person_id = %s)
+                        ORDER BY m.created_at
+                    """, (ancestor_id, ancestor_id, ancestor_id, ancestor_id))
+                    marriages = cursor.fetchall()
+                    
+                    if marriages:
+                        ancestor['marriages'] = marriages
+                        spouse_names = [m['spouse_name'] for m in marriages if m.get('spouse_name')]
+                        ancestor['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                        ancestor['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                    else:
+                        ancestor['marriages'] = []
+                        ancestor['spouse_name'] = None
+                        ancestor['spouse'] = None
+                except Exception as e:
+                    logger.warning(f"Error fetching marriages for {ancestor_id}: {e}")
+                    ancestor['marriages'] = []
+                    ancestor['spouse_name'] = None
+                    ancestor['spouse'] = None
+                
+                # Lấy thông tin anh/chị/em (siblings) - cùng cha mẹ - với error handling
+                try:
+                    cursor.execute("""
+                        SELECT GROUP_CONCAT(DISTINCT sibling.full_name SEPARATOR '; ') AS sibling_names
+                        FROM relationships r1
+                        INNER JOIN relationships r2 ON r1.parent_id = r2.parent_id AND r1.relation_type = r2.relation_type
+                        INNER JOIN persons sibling ON r2.child_id = sibling.person_id
+                        WHERE r1.child_id = %s
+                            AND r2.child_id != %s
+                            AND r1.relation_type IN ('father', 'mother')
+                    """, (ancestor_id, ancestor_id))
+                    sibling_info = cursor.fetchone()
+                    ancestor['siblings_infor'] = sibling_info.get('sibling_names') if sibling_info and sibling_info.get('sibling_names') else None
+                except Exception as e:
+                    logger.warning(f"Error fetching siblings for {ancestor_id}: {e}")
+                    ancestor['siblings_infor'] = None
+                
+                # Lấy thông tin con cái (children) - với error handling
+                try:
+                    cursor.execute("""
+                        SELECT GROUP_CONCAT(DISTINCT child.full_name SEPARATOR '; ') AS children_names
+                        FROM relationships r
+                        INNER JOIN persons child ON r.child_id = child.person_id
+                        WHERE r.parent_id = %s
+                            AND r.relation_type IN ('father', 'mother')
+                    """, (ancestor_id,))
+                    children_info = cursor.fetchone()
+                    ancestor['children_infor'] = children_info.get('children_names') if children_info and children_info.get('children_names') else None
+                except Exception as e:
+                    logger.warning(f"Error fetching children for {ancestor_id}: {e}")
+                    ancestor['children_infor'] = None
+                    
+            except Exception as e:
+                logger.error(f"Unexpected error enriching ancestor {ancestor_id}: {e}")
+                # Vẫn thêm vào chain với dữ liệu cơ bản
+                pass
+                
+            enriched_chain.append(ancestor)
+        
+        # Sort enriched_chain theo generation_level tăng dần
+        # Đảm bảo sắp xếp đúng để không bỏ sót bất kỳ đời nào
+        enriched_chain.sort(key=lambda x: (
+            x.get('generation_level') or x.get('generation_number') or 999,
+            x.get('level', 0),
+            x.get('person_id') or ''
+        ))
+        
+        # Debug: Log ancestors chain sau khi sort
+        logger.info(f"[API /api/ancestors/{person_id}] Final ancestors_chain length: {len(enriched_chain)}")
+        generations_in_chain = set()
+        for i, ancestor in enumerate(enriched_chain, 1):
+            gen = ancestor.get('generation_level') or ancestor.get('generation_number')
+            generations_in_chain.add(gen)
+            logger.info(f"  {i}. {ancestor.get('person_id')}: {ancestor.get('full_name')} (Đời {gen})")
+        
+        # Kiểm tra xem có thiếu đời nào không
+        if enriched_chain:
+            min_gen = min(generations_in_chain)
+            max_gen = max(generations_in_chain)
+            expected_gens = set(range(min_gen, max_gen + 1))
+            missing_gens = expected_gens - generations_in_chain
+            if missing_gens:
+                logger.warning(f"[API /api/ancestors/{person_id}] MISSING GENERATIONS: {sorted(missing_gens)} (Present: {sorted(generations_in_chain)})")
+            else:
+                logger.info(f"[API /api/ancestors/{person_id}] All generations present from {min_gen} to {max_gen}")
+        
+        # Lấy thông tin person hiện tại - với error handling
+        person_info = None
+        try:
+            cursor.execute("""
+                SELECT person_id, full_name, alias, gender, generation_level, status
+                FROM persons
+                WHERE person_id = %s
+            """, (person_id,))
+            person_info = cursor.fetchone()
+        except Exception as e:
+            logger.error(f"Error fetching person_info for {person_id}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            person_info = None
+        
+        # Enrich person_info với father_name, mother_name, spouse, siblings, children
+        if person_info:
+            # Lấy thông tin cha mẹ - với error handling
+            try:
                 cursor.execute("""
                     SELECT 
-                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END) AS father_name,
-                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END) AS mother_name
+                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END SEPARATOR ', ') AS father_name,
+                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END SEPARATOR ', ') AS mother_name
                     FROM persons p
                     LEFT JOIN relationships r ON r.child_id = p.person_id
                     LEFT JOIN persons parent ON r.parent_id = parent.person_id
                     WHERE p.person_id = %s
                     GROUP BY p.person_id
-                """, (ancestor_id,))
+                """, (person_id,))
                 parent_info = cursor.fetchone()
                 if parent_info:
-                    ancestor['father_name'] = parent_info.get('father_name')
-                    ancestor['mother_name'] = parent_info.get('mother_name')
-            enriched_chain.append(ancestor)
-        
-        # Sort enriched_chain theo generation_level tăng dần
-        enriched_chain.sort(key=lambda x: (x.get('generation_level') or 999, x.get('person_id') or ''))
-        
-        # Lấy thông tin person hiện tại
-        cursor.execute("""
-            SELECT person_id, full_name, alias, gender, generation_level, status
-            FROM persons
-            WHERE person_id = %s
-        """, (person_id,))
-        person_info = cursor.fetchone()
-        
-        # Enrich person_info với father_name và mother_name
-        if person_info:
-            cursor.execute("""
-                SELECT 
-                    GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END) AS father_name,
-                    GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END) AS mother_name
-                FROM persons p
-                LEFT JOIN relationships r ON r.child_id = p.person_id
-                LEFT JOIN persons parent ON r.parent_id = parent.person_id
-                WHERE p.person_id = %s
-                GROUP BY p.person_id
-            """, (person_id,))
-            parent_info = cursor.fetchone()
-            if parent_info:
-                person_info['father_name'] = parent_info.get('father_name')
-                person_info['mother_name'] = parent_info.get('mother_name')
+                    person_info['father_name'] = parent_info.get('father_name') or None
+                    person_info['mother_name'] = parent_info.get('mother_name') or None
+                else:
+                    person_info['father_name'] = None
+                    person_info['mother_name'] = None
+            except Exception as e:
+                logger.warning(f"Error fetching parent info for person {person_id}: {e}")
+                person_info['father_name'] = None
+                person_info['mother_name'] = None
+            
+            # Lấy thông tin hôn phối (marriages) - thống nhất với API /api/person - với error handling
+            try:
+                cursor.execute("""
+                    SELECT 
+                        m.id AS marriage_id,
+                        CASE 
+                            WHEN m.person_id = %s THEN m.spouse_person_id
+                            ELSE m.person_id
+                        END AS spouse_id,
+                        sp.full_name AS spouse_name,
+                        sp.gender AS spouse_gender,
+                        m.status AS marriage_status,
+                        m.note AS marriage_note,
+                        m.marriage_date_solar,
+                        m.marriage_place
+                    FROM marriages m
+                    JOIN persons sp ON (
+                        CASE 
+                            WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id
+                            ELSE sp.person_id = m.person_id
+                        END
+                    )
+                    WHERE (m.person_id = %s OR m.spouse_person_id = %s)
+                    ORDER BY m.created_at
+                """, (person_id, person_id, person_id, person_id))
+                marriages = cursor.fetchall()
+                
+                if marriages:
+                    person_info['marriages'] = marriages
+                    spouse_names = [m['spouse_name'] for m in marriages if m.get('spouse_name')]
+                    person_info['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                    person_info['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                else:
+                    person_info['marriages'] = []
+                    person_info['spouse_name'] = None
+                    person_info['spouse'] = None
+            except Exception as e:
+                logger.warning(f"Error fetching marriages for person {person_id}: {e}")
+                person_info['marriages'] = []
+                person_info['spouse_name'] = None
+                person_info['spouse'] = None
+            
+            # Lấy thông tin anh/chị/em - với error handling
+            try:
+                cursor.execute("""
+                    SELECT GROUP_CONCAT(DISTINCT sibling.full_name SEPARATOR '; ') AS sibling_names
+                    FROM relationships r1
+                    INNER JOIN relationships r2 ON r1.parent_id = r2.parent_id AND r1.relation_type = r2.relation_type
+                    INNER JOIN persons sibling ON r2.child_id = sibling.person_id
+                    WHERE r1.child_id = %s
+                        AND r2.child_id != %s
+                        AND r1.relation_type IN ('father', 'mother')
+                """, (person_id, person_id))
+                sibling_info = cursor.fetchone()
+                person_info['siblings_infor'] = sibling_info.get('sibling_names') if sibling_info and sibling_info.get('sibling_names') else None
+            except Exception as e:
+                logger.warning(f"Error fetching siblings for person {person_id}: {e}")
+                person_info['siblings_infor'] = None
+            
+            # Lấy thông tin con cái - với error handling
+            try:
+                cursor.execute("""
+                    SELECT GROUP_CONCAT(DISTINCT child.full_name SEPARATOR '; ') AS children_names
+                    FROM relationships r
+                    INNER JOIN persons child ON r.child_id = child.person_id
+                    WHERE r.parent_id = %s
+                        AND r.relation_type IN ('father', 'mother')
+                """, (person_id,))
+                children_info = cursor.fetchone()
+                person_info['children_infor'] = children_info.get('children_names') if children_info and children_info.get('children_names') else None
+            except Exception as e:
+                logger.warning(f"Error fetching children for person {person_id}: {e}")
+                person_info['children_infor'] = None
+            
             person_info['generation_number'] = person_info.get('generation_level')  # Alias for frontend compatibility
             
             # Check if person is already in ancestors_chain (shouldn't happen, but just in case)
@@ -1370,13 +1948,19 @@ def get_ancestors(person_id):
         })
         
     except Error as e:
-        logger.error(f"Error in /api/ancestors/{person_id}: {e}")
+        logger.error(f"Database error in /api/ancestors/{person_id}: {e}")
         import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error in /api/ancestors/{person_id}: {e}")
+        import traceback
+        logger.error(f"Error traceback: {traceback.format_exc()}")
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
     finally:
         if connection and connection.is_connected():
-            cursor.close()
+            if cursor:
+                cursor.close()
             connection.close()
 
 @app.route('/api/descendants/<person_id>', methods=['GET'])
@@ -2140,31 +2724,175 @@ def get_members():
         
         persons = cursor.fetchall()
         
+        # TỐI ƯU: Kiểm tra table tồn tại MỘT LẦN trước vòng lặp
+        spouse_table_exists = False
+        try:
+            cursor.execute("""
+                SELECT TABLE_NAME 
+                FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'spouse_sibling_children'
+            """)
+            spouse_table_exists = cursor.fetchone() is not None
+        except Exception as e:
+            logger.debug(f"Could not check spouse_sibling_children table: {e}")
+        
+        # TỐI ƯU: Load tất cả spouse data từ table MỘT LẦN (nếu table tồn tại)
+        spouse_data_from_table = {}
+        if spouse_table_exists:
+            try:
+                cursor.execute("""
+                    SELECT person_id, spouse_name 
+                    FROM spouse_sibling_children 
+                    WHERE spouse_name IS NOT NULL AND spouse_name != ''
+                """)
+                for row in cursor.fetchall():
+                    person_id_key = row.get('person_id')
+                    spouse_name_str = row.get('spouse_name', '').strip()
+                    if person_id_key and spouse_name_str:
+                        # Parse nhiều spouse (phân cách bằng ;)
+                        spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
+                        spouse_data_from_table[person_id_key] = spouse_names
+                logger.debug(f"Loaded {len(spouse_data_from_table)} spouse records from table")
+            except Exception as e:
+                logger.warning(f"Error loading spouse data from table: {e}")
+        
+        # TỐI ƯU: Load CSV vào memory MỘT LẦN (nếu cần fallback)
+        spouse_data_from_csv = {}
+        try:
+            import csv
+            import os
+            csv_file = 'spouse_sibling_children.csv'
+            if os.path.exists(csv_file):
+                with open(csv_file, 'r', encoding='utf-8-sig') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        person_id_key = row.get('person_id', '').strip()
+                        spouse_name_str = row.get('spouse_name', '').strip()
+                        if person_id_key and spouse_name_str:
+                            # Parse nhiều spouse (phân cách bằng ;)
+                            spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
+                            spouse_data_from_csv[person_id_key] = spouse_names
+                logger.debug(f"Loaded {len(spouse_data_from_csv)} spouse records from CSV")
+        except Exception as e:
+            logger.debug(f"Could not load spouse data from CSV: {e}")
+        
+        # TỐI ƯU: Load tất cả marriages data MỘT LẦN
+        spouse_data_from_marriages = {}
+        try:
+            cursor.execute("""
+                SELECT 
+                    m.person_id,
+                    m.spouse_person_id,
+                    sp_spouse.full_name AS spouse_name
+                FROM marriages m
+                LEFT JOIN persons sp_spouse ON sp_spouse.person_id = m.spouse_person_id
+                WHERE sp_spouse.full_name IS NOT NULL
+                
+                UNION
+                
+                SELECT 
+                    m.spouse_person_id AS person_id,
+                    m.person_id AS spouse_person_id,
+                    sp_person.full_name AS spouse_name
+                FROM marriages m
+                LEFT JOIN persons sp_person ON sp_person.person_id = m.person_id
+                WHERE sp_person.full_name IS NOT NULL
+            """)
+            for row in cursor.fetchall():
+                person_id_key = row.get('person_id')
+                spouse_name = row.get('spouse_name')
+                
+                if person_id_key and spouse_name:
+                    if person_id_key not in spouse_data_from_marriages:
+                        spouse_data_from_marriages[person_id_key] = []
+                    if spouse_name not in spouse_data_from_marriages[person_id_key]:
+                        spouse_data_from_marriages[person_id_key].append(spouse_name)
+            
+            logger.debug(f"Loaded {len(spouse_data_from_marriages)} spouse records from marriages")
+        except Exception as e:
+            logger.warning(f"Error loading spouse data from marriages: {e}")
+        
+        # TỐI ƯU: Load tất cả father/mother data từ CSV MỘT LẦN (fallback nếu không có trong relationships)
+        parent_data_from_csv = {}
+        try:
+            import csv
+            import os
+            # Thử load từ fulldata.csv trước (có đầy đủ thông tin nhất)
+            csv_files = ['fulldata.csv', 'father_mother.csv']
+            for csv_file in csv_files:
+                if os.path.exists(csv_file):
+                    with open(csv_file, 'r', encoding='utf-8-sig') as f:
+                        reader = csv.DictReader(f)
+                        for row in reader:
+                            person_id_key = row.get('person_id', '').strip()
+                            father_name = row.get('father_name', '').strip()
+                            mother_name = row.get('mother_name', '').strip()
+                            
+                            if person_id_key:
+                                # Chỉ cập nhật nếu chưa có hoặc nếu có dữ liệu mới
+                                if person_id_key not in parent_data_from_csv:
+                                    parent_data_from_csv[person_id_key] = {'father_name': None, 'mother_name': None}
+                                
+                                # Cập nhật nếu có dữ liệu và chưa có hoặc rỗng
+                                if father_name and (not parent_data_from_csv[person_id_key]['father_name'] or parent_data_from_csv[person_id_key]['father_name'].strip() == ''):
+                                    parent_data_from_csv[person_id_key]['father_name'] = father_name
+                                if mother_name and (not parent_data_from_csv[person_id_key]['mother_name'] or parent_data_from_csv[person_id_key]['mother_name'].strip() == ''):
+                                    parent_data_from_csv[person_id_key]['mother_name'] = mother_name
+                    logger.debug(f"Loaded {len(parent_data_from_csv)} parent records from {csv_file}")
+                    break  # Chỉ cần load từ một file (ưu tiên fulldata.csv)
+        except Exception as e:
+            logger.debug(f"Could not load parent data from CSV: {e}")
+        
         # Lấy thông tin quan hệ cho từng person
         members = []
         for person in persons:
             person_id = person['person_id']
             
-            # Lấy tên bố/mẹ từ relationships table (schema mới)
-            cursor.execute("""
-                SELECT 
-                    GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END) AS father_name,
-                    GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END) AS mother_name
-                FROM persons p
-                LEFT JOIN relationships r ON r.child_id = p.person_id
-                LEFT JOIN persons parent ON r.parent_id = parent.person_id
-                WHERE p.person_id = %s
-                GROUP BY p.person_id
-            """, (person_id,))
-            rel = cursor.fetchone()
+            # Lấy tên bố/mẹ - ƯU TIÊN CSV (fulldata.csv/father_mother.csv) vì đây là nguồn chuẩn
+            rel = {'father_name': None, 'mother_name': None}
             
-            # Nếu không có, trả về None
-            if not rel or (not rel.get('father_name') and not rel.get('mother_name')):
-                rel = {'father_name': None, 'mother_name': None}
+            # Bước 1: Ưu tiên lấy từ CSV (fulldata.csv hoặc father_mother.csv)
+            if person_id in parent_data_from_csv:
+                csv_data = parent_data_from_csv[person_id]
+                rel['father_name'] = csv_data.get('father_name')
+                rel['mother_name'] = csv_data.get('mother_name')
             
-            # Hôn phối: marriages_spouses deprecated
-            # TODO: derive spouse info from normalized `marriages` table
-            spouses = []
+            # Bước 2: Nếu CSV không có hoặc thiếu, bổ sung từ relationships table
+            if not rel.get('father_name') or not rel.get('mother_name'):
+                cursor.execute("""
+                    SELECT 
+                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END) AS father_name,
+                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END) AS mother_name
+                    FROM persons p
+                    LEFT JOIN relationships r ON r.child_id = p.person_id
+                    LEFT JOIN persons parent ON r.parent_id = parent.person_id
+                    WHERE p.person_id = %s
+                    GROUP BY p.person_id
+                """, (person_id,))
+                rel_db = cursor.fetchone()
+                
+                # Chỉ bổ sung nếu CSV không có
+                if rel_db:
+                    if not rel.get('father_name') and rel_db.get('father_name'):
+                        rel['father_name'] = rel_db.get('father_name')
+                    if not rel.get('mother_name') and rel_db.get('mother_name'):
+                        rel['mother_name'] = rel_db.get('mother_name')
+            
+            # Lấy hôn phối - ƯU TIÊN từ spouse_sibling_children table/CSV
+            spouse_names = []
+            
+            # Bước 1: Ưu tiên lấy từ spouse_sibling_children table (đã load sẵn)
+            if person_id in spouse_data_from_table:
+                spouse_names = spouse_data_from_table[person_id]
+            
+            # Bước 2: Nếu không có, thử lấy từ marriages table (đã load sẵn)
+            if not spouse_names and person_id in spouse_data_from_marriages:
+                spouse_names = spouse_data_from_marriages[person_id]
+            
+            # Bước 3: Nếu vẫn không có, thử lấy từ CSV (đã load sẵn)
+            if not spouse_names and person_id in spouse_data_from_csv:
+                spouse_names = spouse_data_from_csv[person_id]
             
             # Lấy anh/chị/em từ relationships (những người có cùng cha mẹ) - schema mới
             # Get parent IDs first
@@ -2215,7 +2943,7 @@ def get_members():
                 'grave': person.get('grave'),  # grave_info
                 'father_name': rel.get('father_name') if rel else None,
                 'mother_name': rel.get('mother_name') if rel else None,
-                'spouses': '; '.join([s.get('spouse_name', '') for s in spouses]) if spouses else None,
+                'spouses': '; '.join(spouse_names) if spouse_names else None,
                 'siblings': '; '.join([s.get('sibling_name', '') for s in siblings]) if siblings else None,
                 'children': '; '.join([c.get('child_name', '') for c in children]) if children else None
             }
@@ -2244,44 +2972,77 @@ def create_person():
     if not connection:
         return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
     
+    cursor = None
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Không có dữ liệu'}), 400
+        
         cursor = connection.cursor(dictionary=True)
         
-        # Kiểm tra csv_id đã tồn tại chưa
-        if data.get('csv_id'):
-            cursor.execute("SELECT person_id FROM persons WHERE csv_id = %s", (data['csv_id'],))
+        # Kiểm tra person_id đã tồn tại chưa (nếu có)
+        person_id = data.get('person_id') or data.get('csv_id')
+        if person_id:
+            person_id = str(person_id).strip()
+            cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
             if cursor.fetchone():
-                return jsonify({'success': False, 'error': f'ID {data["csv_id"]} đã tồn tại'}), 400
-        
-        # Lấy hoặc tạo generation_id nếu có generation_number
-        generation_id = None
-        if data.get('generation_number'):
-            cursor.execute("SELECT generation_id FROM generations WHERE generation_number = %s", (data['generation_number'],))
-            gen = cursor.fetchone()
-            if gen:
-                generation_id = gen['generation_id']
+                return jsonify({'success': False, 'error': f'person_id {person_id} đã tồn tại'}), 400
+        else:
+            # Tạo person_id mới nếu không có
+            # Tìm max ID trong cùng generation
+            generation_num = data.get('generation_number')
+            if generation_num:
+                cursor.execute("""
+                    SELECT MAX(CAST(SUBSTRING_INDEX(person_id, '-', -1) AS UNSIGNED)) as max_num
+                    FROM persons 
+                    WHERE person_id LIKE %s
+                """, (f'P-{generation_num}-%',))
+                result = cursor.fetchone()
+                next_num = (result['max_num'] or 0) + 1
+                person_id = f'P-{generation_num}-{next_num}'
             else:
-                cursor.execute("INSERT INTO generations (generation_number) VALUES (%s)", (data['generation_number'],))
-                generation_id = cursor.lastrowid
+                return jsonify({'success': False, 'error': 'Cần có person_id hoặc generation_number để tạo ID'}), 400
+        
+        # Kiểm tra các cột có tồn tại không
+        cursor.execute("""
+            SELECT COLUMN_NAME 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'persons'
+        """)
+        columns = [row['COLUMN_NAME'] for row in cursor.fetchall()]
+        
+        # Build INSERT query động
+        insert_fields = ['person_id']
+        insert_values = [person_id]
+        
+        if 'full_name' in columns:
+            insert_fields.append('full_name')
+            insert_values.append(data.get('full_name'))
+        
+        if 'gender' in columns:
+            insert_fields.append('gender')
+            insert_values.append(data.get('gender'))
+        
+        if 'status' in columns:
+            insert_fields.append('status')
+            insert_values.append(data.get('status', 'Không rõ'))
+        
+        if 'generation_level' in columns and data.get('generation_number'):
+            insert_fields.append('generation_level')
+            insert_values.append(data.get('generation_number'))
+        
+        if 'father_mother_id' in columns:
+            insert_fields.append('father_mother_id')
+            insert_values.append(data.get('fm_id'))
+        elif 'fm_id' in columns:
+            insert_fields.append('fm_id')
+            insert_values.append(data.get('fm_id'))
         
         # Thêm person
-        cursor.execute("""
-            INSERT INTO persons (
-                csv_id, fm_id, full_name, gender, status, generation_id, father_name, mother_name
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-        """, (
-            data.get('csv_id'),
-            data.get('fm_id'),
-            data.get('full_name'),
-            data.get('gender'),
-            data.get('status', 'Không rõ'),
-            generation_id,
-            data.get('father_name'),
-            data.get('mother_name')
-        ))
-        
-        person_id = cursor.lastrowid
+        placeholders = ','.join(['%s'] * len(insert_values))
+        insert_query = f"INSERT INTO persons ({', '.join(insert_fields)}) VALUES ({placeholders})"
+        cursor.execute(insert_query, insert_values)
         
         # Nếu có tên bố/mẹ, tìm và tạo relationship
         if data.get('father_name') or data.get('mother_name'):
@@ -2300,39 +3061,20 @@ def create_person():
                 if mother:
                     mother_id = mother['person_id']
             
-            if father_id or mother_id or data.get('fm_id'):
-                # Kiểm tra relationship đã tồn tại chưa
+            # Tạo relationships (schema mới: parent_id/child_id với relation_type)
+            if father_id:
                 cursor.execute("""
-                    SELECT relationship_id FROM relationships WHERE child_id = %s
-                """, (person_id,))
-                existing = cursor.fetchone()
+                    INSERT INTO relationships (child_id, parent_id, relation_type)
+                    VALUES (%s, %s, 'father')
+                    ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)
+                """, (person_id, father_id))
                 
-                if existing:
-                    # Cập nhật relationship hiện có
+            if mother_id:
                     cursor.execute("""
-                        UPDATE relationships SET
-                            father_id = %s,
-                            mother_id = %s,
-                            fm_id = %s,
-                            updated_at = NOW()
-                        WHERE child_id = %s
-                    """, (
-                        father_id,
-                        mother_id,
-                        data.get('fm_id'),
-                        person_id
-                    ))
-                else:
-                    # Tạo relationship mới
-                    cursor.execute("""
-                        INSERT INTO relationships (child_id, father_id, mother_id, fm_id)
-                        VALUES (%s, %s, %s, %s)
-                    """, (
-                        person_id,
-                        father_id,
-                        mother_id,
-                        data.get('fm_id')
-                    ))
+                    INSERT INTO relationships (child_id, parent_id, relation_type)
+                    VALUES (%s, %s, 'mother')
+                    ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)
+                """, (person_id, mother_id))
         
         connection.commit()
         return jsonify({'success': True, 'message': 'Thêm thành viên thành công', 'person_id': person_id})
@@ -2348,7 +3090,7 @@ def create_person():
             cursor.close()
             connection.close()
 
-@app.route('/api/persons/<int:person_id>', methods=['PUT'])
+@app.route('/api/persons/<person_id>', methods=['PUT'])
 def update_person_members(person_id):
     """API cập nhật thành viên từ trang members"""
     connection = get_db_connection()
@@ -2359,10 +3101,16 @@ def update_person_members(person_id):
         data = request.get_json()
         cursor = connection.cursor(dictionary=True)
         
+        # Normalize person_id
+        person_id = str(person_id).strip() if person_id else None
+        if not person_id:
+            return jsonify({'success': False, 'error': 'person_id không hợp lệ'}), 400
+        
         # Kiểm tra person có tồn tại không
         cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
-        if not cursor.fetchone():
-            return jsonify({'success': False, 'error': 'Không tìm thấy thành viên'}), 404
+        existing_person = cursor.fetchone()
+        if not existing_person:
+            return jsonify({'success': False, 'error': f'Không tìm thấy person_id: {person_id}'}), 404
         
         # Kiểm tra csv_id trùng (nếu thay đổi)
         if data.get('csv_id'):
@@ -2370,9 +3118,37 @@ def update_person_members(person_id):
             if cursor.fetchone():
                 return jsonify({'success': False, 'error': f'ID {data["csv_id"]} đã tồn tại'}), 400
         
-        # Lấy hoặc tạo generation_id
-        generation_id = None
-        if data.get('generation_number'):
+        # Cập nhật person (schema mới: không có csv_id, generation_id, dùng generation_level)
+        # Kiểm tra các cột có tồn tại không
+        cursor.execute("""
+            SELECT COLUMN_NAME 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'persons'
+        """)
+        columns = [row['COLUMN_NAME'] for row in cursor.fetchall()]
+        
+        # Build UPDATE query động dựa trên cột có sẵn
+        update_fields = []
+        update_values = []
+        
+        if 'full_name' in columns:
+            update_fields.append('full_name = %s')
+            update_values.append(data.get('full_name'))
+        
+        if 'gender' in columns:
+            update_fields.append('gender = %s')
+            update_values.append(data.get('gender'))
+        
+        if 'status' in columns:
+            update_fields.append('status = %s')
+            update_values.append(data.get('status'))
+        
+        if 'generation_level' in columns and data.get('generation_number'):
+            update_fields.append('generation_level = %s')
+            update_values.append(data.get('generation_number'))
+        elif 'generation_id' in columns and data.get('generation_number'):
+            # Fallback: nếu có generation_id, tìm hoặc tạo
             cursor.execute("SELECT generation_id FROM generations WHERE generation_number = %s", (data['generation_number'],))
             gen = cursor.fetchone()
             if gen:
@@ -2380,33 +3156,24 @@ def update_person_members(person_id):
             else:
                 cursor.execute("INSERT INTO generations (generation_number) VALUES (%s)", (data['generation_number'],))
                 generation_id = cursor.lastrowid
+            update_fields.append('generation_id = %s')
+            update_values.append(generation_id)
         
-        # Cập nhật person
-        cursor.execute("""
-            UPDATE persons SET
-                csv_id = %s,
-                fm_id = %s,
-                full_name = %s,
-                gender = %s,
-                status = %s,
-                generation_id = %s,
-                father_name = %s,
-                mother_name = %s,
-                updated_at = NOW()
-            WHERE person_id = %s
-        """, (
-            data.get('csv_id'),
-            data.get('fm_id'),
-            data.get('full_name'),
-            data.get('gender'),
-            data.get('status'),
-            generation_id,
-            data.get('father_name'),
-            data.get('mother_name'),
-            person_id
-        ))
+        if 'father_mother_id' in columns:
+            update_fields.append('father_mother_id = %s')
+            update_values.append(data.get('fm_id'))
+        elif 'fm_id' in columns:
+            update_fields.append('fm_id = %s')
+            update_values.append(data.get('fm_id'))
         
-        # Cập nhật relationship
+        # Không update father_name, mother_name trong persons table (lưu trong relationships)
+        
+        if update_fields:
+            update_values.append(person_id)
+            update_query = f"UPDATE persons SET {', '.join(update_fields)} WHERE person_id = %s"
+            cursor.execute(update_query, update_values)
+        
+        # Cập nhật relationships (schema mới: dùng parent_id/child_id với relation_type)
         father_id = None
         mother_id = None
         
@@ -2422,38 +3189,26 @@ def update_person_members(person_id):
             if mother:
                 mother_id = mother['person_id']
         
-        # Kiểm tra relationship đã tồn tại chưa
+        # Xóa relationships cũ (father/mother) của person này
         cursor.execute("""
-            SELECT relationship_id FROM relationships WHERE child_id = %s
+            DELETE FROM relationships 
+            WHERE child_id = %s AND relation_type IN ('father', 'mother')
         """, (person_id,))
-        existing = cursor.fetchone()
         
-        if existing:
-            # Cập nhật relationship hiện có
+        # Thêm relationships mới
+        if father_id:
             cursor.execute("""
-                UPDATE relationships SET
-                    father_id = %s,
-                    mother_id = %s,
-                    fm_id = %s,
-                    updated_at = NOW()
-                WHERE child_id = %s
-            """, (
-                father_id,
-                mother_id,
-                data.get('fm_id'),
-                person_id
-            ))
-        else:
-            # Tạo relationship mới
+                INSERT INTO relationships (child_id, parent_id, relation_type)
+                VALUES (%s, %s, 'father')
+                ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)
+            """, (person_id, father_id))
+        
+        if mother_id:
             cursor.execute("""
-                INSERT INTO relationships (child_id, father_id, mother_id, fm_id)
-                VALUES (%s, %s, %s, %s)
-            """, (
-                person_id,
-                father_id,
-                mother_id,
-                data.get('fm_id')
-            ))
+                INSERT INTO relationships (child_id, parent_id, relation_type)
+                VALUES (%s, %s, 'mother')
+                ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)
+            """, (person_id, mother_id))
         
         connection.commit()
         return jsonify({'success': True, 'message': 'Cập nhật thành viên thành công'})

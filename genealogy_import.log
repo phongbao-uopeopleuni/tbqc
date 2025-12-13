@@ -12050,3 +12050,92 @@
 2025-12-11 01:06:57,194 - INFO -   - Siblings: 771 quan hệ anh/chị/em (derived from relationships)
 2025-12-11 01:06:57,194 - INFO - ================================================================================
 2025-12-11 01:06:57,196 - INFO - Đóng kết nối database
+2025-12-13 13:03:04,195 - INFO - Bắt đầu import TBQC_FINAL.csv
+2025-12-13 13:03:04,196 - ERROR - Lỗi đọc CSV: [Errno 2] No such file or directory: 'TBQC_FINAL.csv'
+2025-12-13 13:04:31,727 - INFO - Bắt đầu import từ file: person.csv
+2025-12-13 13:04:31,730 - INFO - Đọc được 1178 dòng từ person.csv
+2025-12-13 13:04:33,787 - ERROR - Lỗi kết nối database: 2003: Can't connect to MySQL server on 'localhost:3306' (10061 No connection could be made because the target machine actively refused it)
+2025-12-13 13:06:17,356 - INFO - Loading DB config from D:\tbqc\tbqc_db.env
+2025-12-13 13:06:17,357 - INFO - Loaded DB config from tbqc_db.env
+2025-12-13 13:06:17,357 - INFO - DB Config resolved: {'host': 'tramway.proxy.rlwy.net', 'database': 'railway', 'user': 'root', 'password': '***', 'charset': 'utf8mb4', 'collation': 'utf8mb4_unicode_ci', 'port': 16930}
+2025-12-13 13:06:17,357 - INFO - Đã sử dụng cấu hình từ folder_py/db_config.py
+2025-12-13 13:06:40,177 - INFO - Bắt đầu import từ file: person.csv
+2025-12-13 13:06:40,181 - INFO - Đọc được 1178 dòng từ person.csv
+2025-12-13 13:06:40,182 - INFO - Loading DB config from D:\tbqc\tbqc_db.env
+2025-12-13 13:06:40,182 - INFO - Loaded DB config from tbqc_db.env
+2025-12-13 13:06:40,182 - INFO - DB Config resolved: {'host': 'tramway.proxy.rlwy.net', 'database': 'railway', 'user': 'root', 'password': '***', 'charset': 'utf8mb4', 'collation': 'utf8mb4_unicode_ci', 'port': 16930}
+2025-12-13 13:06:40,182 - INFO - Đã sử dụng cấu hình từ folder_py/db_config.py
+2025-12-13 13:06:40,182 - INFO - Đang kết nối database: host=tramway.proxy.rlwy.net, port=16930, database=railway, user=root
+2025-12-13 13:06:40,551 - INFO - package: mysql.connector.plugins
+2025-12-13 13:06:40,552 - INFO - plugin_name: caching_sha2_password
+2025-12-13 13:06:40,552 - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-13 13:06:40,832 - INFO - ✓ Kết nối database thành công
+2025-12-13 13:06:40,833 - INFO - === BƯỚC 1: Import persons ===
+2025-12-13 13:06:40,834 - INFO - Hoàn thành import persons: 0 mới, 0 cập nhật, 0 bỏ qua (duplicate), 0 lỗi
+2025-12-13 13:06:40,835 - INFO - ✅ Validation: Mỗi csv_id chỉ map với 1 person_id (0 mappings)
+2025-12-13 13:06:40,881 - INFO - === BƯỚC 2: Import relationships ===
+2025-12-13 13:06:40,882 - INFO - Hoàn thành import relationships: 0 mới, 0 cập nhật, 0 mơ hồ, 0 lỗi
+2025-12-13 13:06:40,928 - WARNING - marriages_spouses deprecated; skip import_marriages (use normalized marriages table).
+2025-12-13 13:06:40,974 - INFO - === BƯỚC 4: Suy diễn quan hệ con dâu / con rể ===
+2025-12-13 13:06:41,031 - ERROR - Lỗi trong quá trình import: 1054 (42S22): Unknown column 'r.father_id' in 'field list'
+2025-12-13 13:06:41,079 - INFO - Đóng kết nối database
+2025-12-13 13:15:13,294 - INFO - Bắt đầu import từ file: person.csv
+2025-12-13 13:15:13,299 - INFO - Đọc được 1178 dòng từ person.csv
+2025-12-13 13:15:13,300 - INFO - Loading DB config from D:\tbqc\tbqc_db.env
+2025-12-13 13:15:13,301 - INFO - Loaded DB config from tbqc_db.env
+2025-12-13 13:15:13,301 - INFO - DB Config resolved: {'host': 'tramway.proxy.rlwy.net', 'database': 'railway', 'user': 'root', 'password': '***', 'charset': 'utf8mb4', 'collation': 'utf8mb4_unicode_ci', 'port': 16930}
+2025-12-13 13:15:13,301 - INFO - Đã sử dụng cấu hình từ folder_py/db_config.py
+2025-12-13 13:15:13,301 - INFO - Đang kết nối database: host=tramway.proxy.rlwy.net, port=16930, database=railway, user=root
+2025-12-13 13:15:13,578 - INFO - package: mysql.connector.plugins
+2025-12-13 13:15:13,578 - INFO - plugin_name: caching_sha2_password
+2025-12-13 13:15:13,579 - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-13 13:15:13,878 - INFO - ✓ Kết nối database thành công
+2025-12-13 13:15:13,878 - INFO - === BƯỚC 1: Import persons ===
+2025-12-13 13:15:13,879 - INFO - Hoàn thành import persons: 0 mới, 0 cập nhật, 0 bỏ qua (duplicate), 0 lỗi
+2025-12-13 13:15:13,880 - INFO - ✅ Validation: Mỗi csv_id chỉ map với 1 person_id (0 mappings)
+2025-12-13 13:15:13,927 - INFO - === BƯỚC 2: Import relationships ===
+2025-12-13 13:15:13,928 - INFO - Hoàn thành import relationships: 0 mới, 0 cập nhật, 0 mơ hồ, 0 lỗi
+2025-12-13 13:15:13,977 - WARNING - marriages_spouses deprecated; skip import_marriages (use normalized marriages table).
+2025-12-13 13:15:14,026 - INFO - === BƯỚC 4: Suy diễn quan hệ con dâu / con rể ===
+2025-12-13 13:15:14,076 - ERROR - Lỗi trong quá trình import: 1054 (42S22): Unknown column 'r.father_id' in 'field list'
+2025-12-13 13:15:14,126 - INFO - Đóng kết nối database
+2025-12-13 14:04:27,377 - INFO - Bắt đầu import từ file: person.csv
+2025-12-13 14:04:27,381 - INFO - Đọc được 1178 dòng từ person.csv
+2025-12-13 14:04:27,386 - INFO - Loading DB config from D:\tbqc\tbqc_db.env
+2025-12-13 14:04:27,386 - INFO - Loaded DB config from tbqc_db.env
+2025-12-13 14:04:27,386 - INFO - DB Config resolved: {'host': 'tramway.proxy.rlwy.net', 'database': 'railway', 'user': 'root', 'password': '***', 'charset': 'utf8mb4', 'collation': 'utf8mb4_unicode_ci', 'port': 16930}
+2025-12-13 14:04:27,387 - INFO - Đã sử dụng cấu hình từ folder_py/db_config.py
+2025-12-13 14:04:27,387 - INFO - Đang kết nối database: host=tramway.proxy.rlwy.net, port=16930, database=railway, user=root
+2025-12-13 14:04:27,890 - INFO - package: mysql.connector.plugins
+2025-12-13 14:04:27,890 - INFO - plugin_name: caching_sha2_password
+2025-12-13 14:04:27,890 - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-13 14:04:28,187 - INFO - ✓ Kết nối database thành công
+2025-12-13 14:04:28,187 - INFO - === BƯỚC 1: Import persons ===
+2025-12-13 14:04:28,187 - INFO - Hoàn thành import persons: 0 mới, 0 cập nhật, 0 bỏ qua (duplicate), 0 lỗi
+2025-12-13 14:04:28,187 - INFO - ✅ Validation: Mỗi csv_id chỉ map với 1 person_id (0 mappings)
+2025-12-13 14:04:28,238 - INFO - === BƯỚC 2: Import relationships ===
+2025-12-13 14:04:28,239 - INFO - Hoàn thành import relationships: 0 mới, 0 cập nhật, 0 mơ hồ, 0 lỗi
+2025-12-13 14:04:28,288 - WARNING - marriages_spouses deprecated; skip import_marriages (use normalized marriages table).
+2025-12-13 14:04:28,337 - INFO - === BƯỚC 4: Suy diễn quan hệ con dâu / con rể ===
+2025-12-13 14:04:28,390 - ERROR - Lỗi trong quá trình import: 1054 (42S22): Unknown column 'r.father_id' in 'field list'
+2025-12-13 14:04:28,440 - INFO - Đóng kết nối database
+2025-12-13 15:16:28,905 - INFO - Bắt đầu import từ file: person.csv
+2025-12-13 15:16:28,909 - INFO - Đọc được 1178 dòng từ person.csv
+2025-12-13 15:16:28,910 - INFO - Loading DB config from D:\tbqc\tbqc_db.env
+2025-12-13 15:16:28,910 - INFO - Loaded DB config from tbqc_db.env
+2025-12-13 15:16:28,910 - INFO - DB Config resolved: {'host': 'tramway.proxy.rlwy.net', 'database': 'railway', 'user': 'root', 'password': '***', 'charset': 'utf8mb4', 'collation': 'utf8mb4_unicode_ci', 'port': 16930}
+2025-12-13 15:16:28,911 - INFO - Đã sử dụng cấu hình từ folder_py/db_config.py
+2025-12-13 15:16:28,911 - INFO - Đang kết nối database: host=tramway.proxy.rlwy.net, port=16930, database=railway, user=root
+2025-12-13 15:16:29,258 - INFO - package: mysql.connector.plugins
+2025-12-13 15:16:29,258 - INFO - plugin_name: caching_sha2_password
+2025-12-13 15:16:29,259 - INFO - AUTHENTICATION_PLUGIN_CLASS: MySQLCachingSHA2PasswordAuthPlugin
+2025-12-13 15:16:29,545 - INFO - ✓ Kết nối database thành công
+2025-12-13 15:16:29,546 - INFO - === BƯỚC 1: Import persons ===
+2025-12-13 15:16:29,546 - INFO - Hoàn thành import persons: 0 mới, 0 cập nhật, 0 bỏ qua (duplicate), 0 lỗi
+2025-12-13 15:16:29,547 - INFO - ✅ Validation: Mỗi csv_id chỉ map với 1 person_id (0 mappings)
+2025-12-13 15:16:29,595 - INFO - === BƯỚC 2: Import relationships ===
+2025-12-13 15:16:29,595 - INFO - Hoàn thành import relationships: 0 mới, 0 cập nhật, 0 mơ hồ, 0 lỗi
+2025-12-13 15:16:29,644 - WARNING - marriages_spouses deprecated; skip import_marriages (use normalized marriages table).
+2025-12-13 15:16:29,692 - INFO - === BƯỚC 4: Suy diễn quan hệ con dâu / con rể ===
+2025-12-13 15:16:29,743 - ERROR - Lỗi trong quá trình import: 1054 (42S22): Unknown column 'r.father_id' in 'field list'
+2025-12-13 15:16:29,791 - INFO - Đóng kết nối database

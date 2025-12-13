@@ -33,6 +33,10 @@ let focusedPersonId = null;
  */
 function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   const container = document.getElementById("treeContainer");
+  if (!container) {
+    console.error('[Tree] treeContainer not found');
+    return;
+  }
   container.innerHTML = "";
   
   if (!graph || !personMap || personMap.size === 0) {
@@ -53,15 +57,36 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   }
 
   // Ẩn chuỗi phả hệ
-  document.getElementById("genealogyString").style.display = "none";
+  const genealogyString = document.getElementById("genealogyString");
+  if (genealogyString) {
+    genealogyString.style.display = "none";
+  }
 
-  // Render tree với layout vertical (generations ngang, people dọc)
+  // Render tree với hierarchical layout (đời cao ở trên, con cháu phía dưới)
   const treeDiv = document.createElement("div");
   treeDiv.className = "tree";
   treeDiv.style.position = "relative";
   
   const levelPositions = {};
   calculatePositions(treeRoot, 0, 0, levelPositions);
+  adjustHorizontalPositions(treeRoot, levelPositions);
+  redistributeNodesByGeneration(levelPositions);
+  
+  // Điều chỉnh lại parent positions sau khi phân bổ
+  function adjustParents(node) {
+    if (!node) return;
+    node.children.forEach(child => adjustParents(child));
+    
+    if (node.children.length > 0) {
+      const childrenX = node.children.map(c => c.x || 0).filter(x => x > 0);
+      if (childrenX.length > 0) {
+        const minChildX = Math.min(...childrenX);
+        const maxChildX = Math.max(...childrenX);
+        node.x = (minChildX + maxChildX) / 2;
+      }
+    }
+  }
+  adjustParents(treeRoot);
 
   // Render nodes và connectors
   function renderNode(node) {
@@ -79,8 +104,15 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
     treeDiv.appendChild(nodeDiv);
 
     // Vẽ connectors
+    // Chỉ vẽ connector từ parent nếu đây là child đầu tiên hoặc không có siblings trước đó
     if (node.parent) {
-      drawConnector(node.parent, node, treeDiv);
+      const siblings = node.parent.children || [];
+      const isFirstSibling = siblings[0] && siblings[0].id === node.id;
+      // Vẽ connector cho tất cả siblings cùng lúc từ parent
+      if (isFirstSibling && siblings.length > 0) {
+        // Vẽ connector từ parent đến tất cả siblings
+        drawConnectorToSiblings(node.parent, siblings, treeDiv);
+      }
     }
 
     // Render children
@@ -122,6 +154,10 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
  */
 function renderFocusTree(targetId) {
   const container = document.getElementById("treeContainer");
+  if (!container) {
+    console.error('[Tree] treeContainer not found');
+    return;
+  }
   container.innerHTML = "";
   
   const target = personMap.get(targetId);
@@ -143,13 +179,31 @@ function renderFocusTree(targetId) {
   genealogyDiv.textContent = genealogyStr;
   genealogyDiv.style.display = "block";
 
-  // Render tree với layout vertical (generations ngang, people dọc)
+  // Render tree với hierarchical layout (đời cao ở trên, con cháu phía dưới)
   const treeDiv = document.createElement("div");
   treeDiv.className = "tree";
   treeDiv.style.position = "relative";
   
   const levelPositions = {};
   calculatePositions(focusTree, 0, 0, levelPositions);
+  adjustHorizontalPositions(focusTree, levelPositions);
+  redistributeNodesByGeneration(levelPositions);
+  
+  // Điều chỉnh lại parent positions sau khi phân bổ
+  function adjustParents(node) {
+    if (!node) return;
+    node.children.forEach(child => adjustParents(child));
+    
+    if (node.children.length > 0) {
+      const childrenX = node.children.map(c => c.x || 0).filter(x => x > 0);
+      if (childrenX.length > 0) {
+        const minChildX = Math.min(...childrenX);
+        const maxChildX = Math.max(...childrenX);
+        node.x = (minChildX + maxChildX) / 2;
+      }
+    }
+  }
+  adjustParents(focusTree);
 
   // Render nodes và connectors
   function renderNode(node) {
@@ -173,8 +227,15 @@ function renderFocusTree(targetId) {
     treeDiv.appendChild(nodeDiv);
 
     // Vẽ connectors
+    // Chỉ vẽ connector từ parent nếu đây là child đầu tiên hoặc không có siblings trước đó
     if (node.parent) {
-      drawConnector(node.parent, node, treeDiv);
+      const siblings = node.parent.children || [];
+      const isFirstSibling = siblings[0] && siblings[0].id === node.id;
+      // Vẽ connector cho tất cả siblings cùng lúc từ parent
+      if (isFirstSibling && siblings.length > 0) {
+        // Vẽ connector từ parent đến tất cả siblings
+        drawConnectorToSiblings(node.parent, siblings, treeDiv);
+      }
     }
 
     // Render children
@@ -246,78 +307,239 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
 }
 
 /**
- * Vẽ đường nối giữa parent và child
+ * Vẽ đường nối từ parent đến tất cả siblings (hierarchical layout: giống hình mẫu)
+ * Đường dọc từ giữa cha mẹ xuống, sau đó phân nhánh đến từng child
  */
-function drawConnector(parentNode, childNode, container) {
-  const parentX = parentNode.x + 80;
-  const parentY = parentNode.y + 30;
-  const childX = childNode.x + 10;
-  const childY = childNode.y + 30;
+function drawConnectorToSiblings(parentNode, siblings, container) {
+  if (!parentNode || !siblings || siblings.length === 0) return;
 
-  // Đường ngang từ parent
-  const connectorH = document.createElement("div");
-  connectorH.className = "connector horizontal";
-  connectorH.style.left = parentX + "px";
-  connectorH.style.top = childY + "px";
-  connectorH.style.width = (childX - parentX) + "px";
-  container.appendChild(connectorH);
+  const nodeWidth = 160;
+  const nodeHeight = 140;
+  const parentCenterX = parentNode.x + nodeWidth / 2;
+  const parentBottomY = parentNode.y + nodeHeight;
 
-  // Đường dọc nếu cần
-  if (Math.abs(parentY - childY) > 5) {
+  // Tính điểm giữa của tất cả siblings
+  const minSiblingX = Math.min(...siblings.map(s => s.x + nodeWidth / 2));
+  const maxSiblingX = Math.max(...siblings.map(s => s.x + nodeWidth / 2));
+  const siblingsMidX = (minSiblingX + maxSiblingX) / 2;
+  const firstChildTopY = siblings[0].y;
+
+  // Đường dọc chính từ parent xuống đến level của children
+  const verticalStartY = parentBottomY;
+  const verticalEndY = firstChildTopY - 20; // 20px trước khi đến children
+  const verticalHeight = verticalEndY - verticalStartY;
+  
+  if (verticalHeight > 0) {
     const connectorV = document.createElement("div");
     connectorV.className = "connector vertical";
-    connectorV.style.left = parentX + "px";
-    connectorV.style.top = Math.min(parentY, childY) + "px";
-    connectorV.style.height = Math.abs(parentY - childY) + "px";
+    connectorV.style.left = (siblingsMidX - 1) + "px";
+    connectorV.style.top = verticalStartY + "px";
+    connectorV.style.height = verticalHeight + "px";
+    connectorV.style.width = "2px";
+    connectorV.style.backgroundColor = "#333";
+    connectorV.style.zIndex = "1";
     container.appendChild(connectorV);
+  }
+
+  // Đường ngang từ đường dọc chính đến tất cả siblings
+  if (siblings.length > 1) {
+    const connectorH = document.createElement("div");
+    connectorH.className = "connector horizontal";
+    connectorH.style.left = minSiblingX + "px";
+    connectorH.style.top = (firstChildTopY - 20) + "px";
+    connectorH.style.width = (maxSiblingX - minSiblingX) + "px";
+    connectorH.style.height = "2px";
+    connectorH.style.backgroundColor = "#333";
+    connectorH.style.zIndex = "1";
+    container.appendChild(connectorH);
+  }
+
+  // Đường dọc từ đường ngang xuống từng child
+  siblings.forEach(child => {
+    const childCenterX = child.x + nodeWidth / 2;
+    const childTopY = child.y;
+    
+    // Đường dọc từ đường ngang xuống child
+    const connectorV2 = document.createElement("div");
+    connectorV2.className = "connector vertical";
+    connectorV2.style.left = (childCenterX - 1) + "px";
+    connectorV2.style.top = (childTopY - 20) + "px";
+    connectorV2.style.height = "20px";
+    connectorV2.style.width = "2px";
+    connectorV2.style.backgroundColor = "#333";
+    connectorV2.style.zIndex = "1";
+    container.appendChild(connectorV2);
+  });
+}
+
+/**
+ * Vẽ đường nối giữa parent và child (legacy function, giữ lại để tương thích)
+ */
+function drawConnector(parentNode, childNode, container) {
+  drawConnectorToSiblings(parentNode, [childNode], container);
+}
+
+/**
+ * Tính toán vị trí các nodes (hierarchical layout: đời cao ở trên, con cháu phía dưới)
+ * Y = generation (dọc) - đời 1 ở trên, đời 2 ở dưới
+ * X = vị trí ngang trong cùng generation, được phân bổ để giảm giao cắt
+ */
+function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
+  if (!node) return { x: 0, width: 0 };
+
+  // Tìm min và max generation để normalize
+  function findGenerationRange(n, minGen = Infinity, maxGen = -Infinity) {
+    if (!n) return { min: 1, max: 1 };
+    const gen = n.generation || (n.depth || 0) + 1;
+    const newMin = Math.min(minGen, gen);
+    const newMax = Math.max(maxGen, gen);
+    
+    let result = { min: newMin, max: newMax };
+    n.children.forEach(child => {
+      const childRange = findGenerationRange(child, result.min, result.max);
+      result.min = Math.min(result.min, childRange.min);
+      result.max = Math.max(result.max, childRange.max);
+    });
+    return result;
+  }
+
+  // Tính generation range nếu chưa có
+  if (!levelPositions._minGeneration || !levelPositions._maxGeneration) {
+    const range = findGenerationRange(node);
+    levelPositions._minGeneration = range.min;
+    levelPositions._maxGeneration = range.max;
+  }
+
+  const minGeneration = levelPositions._minGeneration;
+  const generation = node.generation || (node.depth || 0) + minGeneration;
+  
+  // Khởi tạo levelPositions cho generation này nếu chưa có
+  if (!levelPositions[generation]) {
+    levelPositions[generation] = [];
+  }
+
+  // Y = generation (dọc) - đời cao ở trên
+  const verticalGap = 200; // Tăng khoảng cách giữa các đời để rõ ràng hơn
+  const normalizedGeneration = generation - minGeneration;
+  node.y = normalizedGeneration * verticalGap + 50;
+
+  // Tính vị trí cho children trước (bottom-up approach)
+  if (node.children.length === 0) {
+    // Leaf node: đặt ở vị trí tiếp theo trong generation
+    const horizontalSpacing = 180; // Giảm spacing để compact hơn
+    const currentCount = levelPositions[generation].length;
+    node.x = currentCount * horizontalSpacing + 100;
+    levelPositions[generation].push(node);
+    return { x: node.x, width: 160 }; // Giả sử node width ~160px
+  }
+
+  // Có children: tính toán subtree width
+  let subtreeLeft = Infinity;
+  let subtreeRight = -Infinity;
+  const childResults = [];
+
+  node.children.forEach(child => {
+    const result = calculatePositions(child, 0, 0, levelPositions);
+    childResults.push(result);
+    subtreeLeft = Math.min(subtreeLeft, result.x);
+    subtreeRight = Math.max(subtreeRight, result.x + result.width);
+  });
+
+  // Đảm bảo siblings có khoảng cách đều
+  if (node.children.length > 1) {
+    const minSpacing = 180; // Khoảng cách tối thiểu giữa siblings
+    let currentX = subtreeLeft;
+    node.children.forEach((child, index) => {
+      if (index > 0) {
+        currentX += minSpacing;
+      }
+      child.x = currentX;
+      currentX += 160; // node width
+    });
+    // Cập nhật lại subtree bounds
+    subtreeRight = currentX;
+  }
+
+  // Đặt parent ở giữa children để giảm giao cắt
+  const subtreeWidth = subtreeRight - subtreeLeft;
+  const nodeWidth = 160; // Giả sử node width
+  node.x = (subtreeLeft + subtreeRight) / 2 - nodeWidth / 2;
+
+  // Lưu node vào levelPositions
+  levelPositions[generation].push(node);
+
+  return { 
+    x: Math.min(subtreeLeft, node.x), 
+    width: Math.max(subtreeWidth, nodeWidth) 
+  };
+}
+
+/**
+ * Điều chỉnh lại vị trí X sau khi tính toán tất cả nodes để giảm giao cắt
+ * Đảm bảo parent ở giữa children và tránh overlap
+ */
+function adjustHorizontalPositions(node, levelPositions = {}) {
+  if (!node) return;
+
+  // Điều chỉnh children trước (bottom-up)
+  node.children.forEach(child => {
+    adjustHorizontalPositions(child, levelPositions);
+  });
+
+  // Nếu có children, đảm bảo parent ở giữa children
+  if (node.children.length > 0) {
+    const childrenX = node.children.map(c => c.x || 0).filter(x => x > 0);
+    if (childrenX.length > 0) {
+      const minChildX = Math.min(...childrenX);
+      const maxChildX = Math.max(...childrenX);
+      node.x = (minChildX + maxChildX) / 2;
+    }
   }
 }
 
 /**
- * Tính toán vị trí các nodes (layout vertical: generations ngang, people dọc)
+ * Phân bổ lại nodes trong cùng generation để tránh overlap
+ * Giữ nguyên thứ tự tương đối nhưng đảm bảo khoảng cách tối thiểu
  */
-function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
-  if (!node) return { y: 0, nextY: 0 };
-
-  const depth = node.depth || 0;
-  if (!levelPositions[depth]) {
-    levelPositions[depth] = 0;
-  }
-
-  // X = generation (ngang) - dùng generation thực tế thay vì depth
-  const generation = node.generation || depth;
-  node.x = (generation - 1) * 250 + 50;
-
-  const verticalSpacing = 140;
-  if (node.children.length === 0) {
-    node.y = levelPositions[depth] * verticalSpacing + 20;
-    levelPositions[depth]++;
-    return { y: node.y, nextY: levelPositions[depth] * verticalSpacing };
-  }
-
-  // Tính vị trí cho children trước
-  let childY = levelPositions[depth] * verticalSpacing;
-  let maxChildY = childY;
-
-  node.children.forEach((child, index) => {
-    const childResult = calculatePositions(child, 0, 0, levelPositions);
-    if (index === 0) {
-      childY = childResult.y;
+function redistributeNodesByGeneration(levelPositions) {
+  const minGen = levelPositions._minGeneration || 1;
+  const maxGen = levelPositions._maxGeneration || 1;
+  const nodeWidth = 160;
+  const minSpacing = 50;
+  
+  for (let gen = minGen; gen <= maxGen; gen++) {
+    const nodes = levelPositions[gen] || [];
+    if (nodes.length === 0) continue;
+    
+    // Sắp xếp nodes theo X hiện tại để giữ thứ tự tương đối
+    nodes.sort((a, b) => (a.x || 0) - (b.x || 0));
+    
+    // Đảm bảo khoảng cách tối thiểu giữa các nodes
+    for (let i = 1; i < nodes.length; i++) {
+      const prevRight = nodes[i - 1].x + nodeWidth;
+      const currentLeft = nodes[i].x;
+      if (currentLeft < prevRight + minSpacing) {
+        nodes[i].x = prevRight + minSpacing;
+      }
     }
-    maxChildY = Math.max(maxChildY, childResult.nextY);
-  });
-
-  // Đặt parent ở giữa children
-  if (node.children.length > 0) {
-    const firstChildY = node.children[0].y;
-    const lastChildY = node.children[node.children.length - 1].y;
-    node.y = (firstChildY + lastChildY) / 2;
-  } else {
-    node.y = levelPositions[depth] * verticalSpacing + 20;
-    levelPositions[depth]++;
   }
-
-  return { y: childY, nextY: maxChildY };
+  
+  // Sau khi phân bổ lại, điều chỉnh lại parent positions để ở giữa children
+  function adjustParents(node) {
+    if (!node) return;
+    node.children.forEach(child => adjustParents(child));
+    
+    if (node.children.length > 0) {
+      const childrenX = node.children.map(c => c.x || 0).filter(x => x > 0);
+      if (childrenX.length > 0) {
+        const minChildX = Math.min(...childrenX);
+        const maxChildX = Math.max(...childrenX);
+        node.x = (minChildX + maxChildX) / 2;
+      }
+    }
+  }
+  
+  // Cần root node để điều chỉnh - sẽ được gọi từ render functions với root node
 }
 
 // ============================================
@@ -331,10 +553,15 @@ function resetToDefault() {
   currentMode = 'default';
   focusedPersonId = null;
   
-  document.getElementById("btnDefaultMode").style.display = "none";
-  document.getElementById("btnFocusMode").style.display = "none";
-  document.getElementById("genealogyString").style.display = "none";
-  document.getElementById("searchName").value = "";
+  const btnDefaultMode = document.getElementById("btnDefaultMode");
+  const btnFocusMode = document.getElementById("btnFocusMode");
+  const genealogyString = document.getElementById("genealogyString");
+  const searchName = document.getElementById("searchName");
+  
+  if (btnDefaultMode) btnDefaultMode.style.display = "none";
+  if (btnFocusMode) btnFocusMode.style.display = "none";
+  if (genealogyString) genealogyString.style.display = "none";
+  if (searchName) searchName.value = "";
   
   renderDefaultTree(graph, MAX_DEFAULT_GENERATION);
 }
@@ -350,8 +577,11 @@ function switchToFocusMode() {
   }
   
   currentMode = 'focus';
-  document.getElementById("btnDefaultMode").style.display = "inline-block";
-  document.getElementById("btnFocusMode").style.display = "none";
+  const btnDefaultMode = document.getElementById("btnDefaultMode");
+  const btnFocusMode = document.getElementById("btnFocusMode");
+  
+  if (btnDefaultMode) btnDefaultMode.style.display = "inline-block";
+  if (btnFocusMode) btnFocusMode.style.display = "none";
   
   renderFocusTree(focusedPersonId);
 }
@@ -363,6 +593,16 @@ function switchToFocusMode() {
 function setupSearch() {
   const searchInput = document.getElementById("searchName");
   const autocompleteDiv = document.getElementById("autocompleteResults");
+  
+  if (!searchInput) {
+    console.warn('[Tree] searchName input not found');
+    return;
+  }
+  
+  if (!autocompleteDiv) {
+    console.warn('[Tree] autocompleteResults div not found');
+    return;
+  }
   
   let searchTimeout;
   searchInput.addEventListener("input", (e) => {
@@ -439,16 +679,19 @@ function focusOnPerson(personId) {
 // ============================================
 
 function updateStats(displayedCount, generation = null) {
-  document.getElementById("totalPeople").textContent = personMap.size;
+  const totalPeople = document.getElementById("totalPeople");
+  const totalGenerations = document.getElementById("totalGenerations");
+  const displayedPeople = document.getElementById("displayedPeople");
+  
+  if (totalPeople) totalPeople.textContent = personMap.size;
   
   // Tính max generation
   let maxGen = 0;
   personMap.forEach(p => {
     if (p.generation > maxGen) maxGen = p.generation;
   });
-  document.getElementById("totalGenerations").textContent = maxGen;
-  
-  document.getElementById("displayedPeople").textContent = displayedCount;
+  if (totalGenerations) totalGenerations.textContent = maxGen;
+  if (displayedPeople) displayedPeople.textContent = displayedCount;
 }
 
 function showPersonInfo(personId) {
@@ -458,6 +701,11 @@ function showPersonInfo(personId) {
   const modal = document.getElementById("personModal");
   const modalName = document.getElementById("modalName");
   const modalBody = document.getElementById("modalBody");
+  
+  if (!modal || !modalName || !modalBody) {
+    console.warn('[Tree] Modal elements not found');
+    return;
+  }
   
   modalName.textContent = person.name;
   modalBody.innerHTML = '<div class="loading">Đang tải thông tin...</div>';
@@ -477,6 +725,10 @@ function showPersonInfo(personId) {
 
 function displayPersonInfo(personData) {
   const modalBody = document.getElementById("modalBody");
+  if (!modalBody) {
+    console.warn('[Tree] modalBody not found');
+    return;
+  }
   let html = '';
   
   const fields = [
@@ -503,7 +755,10 @@ function displayPersonInfo(personData) {
 }
 
 function closeModal() {
-  document.getElementById("personModal").style.display = "none";
+  const modal = document.getElementById("personModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
 }
 
 function resetView() {
@@ -588,13 +843,18 @@ async function init() {
     personMap.forEach(p => {
       if (p.generation) genSet.add(p.generation);
     });
-    const genSelect = document.getElementById("filterGeneration");
-    Array.from(genSet).sort((a, b) => a - b).forEach(gen => {
-      const opt = document.createElement("option");
-      opt.value = gen;
-      opt.textContent = `Đời ${gen}`;
-      genSelect.appendChild(opt);
-    });
+    // Sửa selector để khớp với HTML: genFilter thay vì filterGeneration
+    const genSelect = document.getElementById("genFilter");
+    if (genSelect) {
+      Array.from(genSet).sort((a, b) => a - b).forEach(gen => {
+        const opt = document.createElement("option");
+        opt.value = gen;
+        opt.textContent = `Đời ${gen}`;
+        genSelect.appendChild(opt);
+      });
+    } else {
+      console.warn('[Tree] genFilter select not found');
+    }
     
     console.log('Khởi tạo hoàn tất!');
     
