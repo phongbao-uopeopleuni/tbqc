@@ -4,127 +4,99 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Đăng nhập - Gia Phả Nguyễn Phước Tộc</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Noto Serif TC', serif;
-      background: linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DAA520 75%, #FFD700 100%);
-      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      min-height: 100vh;
+      padding: var(--space-5);
     }
-    .login-card {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-      max-width: 420px;
+    
+    .login-wrapper {
       width: 100%;
-      padding: 32px;
+      max-width: 420px;
     }
+    
+    .login-card {
+      padding: var(--space-8);
+    }
+    
     .login-card h1 {
       text-align: center;
-      color: #8B0000;
-      margin-bottom: 12px;
-      font-size: 26px;
+      margin-bottom: var(--space-3);
+      font-size: var(--font-size-2xl);
     }
-    .login-card p {
+    
+    .login-card > p {
       text-align: center;
-      color: #555;
-      margin-bottom: 24px;
-      font-size: 14px;
-      line-height: 1.5;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-6);
+      font-size: var(--font-size-sm);
     }
-    .form-group { margin-bottom: 16px; }
-    label {
-      display: block;
-      margin-bottom: 6px;
-      color: #333;
-      font-weight: 600;
-      font-size: 14px;
-    }
-    input[type="text"],
-    input[type="password"] {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #DAA520;
-      border-radius: 8px;
-      font-size: 15px;
-      font-family: 'Noto Serif TC', serif;
-    }
-    .remember {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
-      color: #444;
-      font-size: 14px;
-    }
-    .submit-btn {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 8px;
-      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
-      color: #FFD700;
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .submit-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-    }
-    .error {
-      display: none;
-      background: #ffebee;
-      color: #c62828;
-      padding: 12px;
-      border-radius: 8px;
-      border-left: 4px solid #c62828;
-      margin-bottom: 16px;
-      font-size: 14px;
-    }
+    
     .footer-links {
-      margin-top: 18px;
+      margin-top: var(--space-5);
       text-align: center;
-      font-size: 14px;
+      font-size: var(--font-size-sm);
     }
+    
     .footer-links a {
-      color: #8B0000;
-      text-decoration: none;
-      font-weight: 600;
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
     }
   </style>
 </head>
 <body>
-  <div class="login-card">
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công – Gia Phả Nguyễn Phước Tộc</a>
+    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/genealogy">Gia phả</a></li>
+      <li><a href="/activities">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/login" class="active">Đăng nhập</a></li>
+    </ul>
+  </nav>
+  
+  <div class="login-wrapper">
+    <div class="card login-card">
     <h1>Đăng nhập</h1>
     <p>Đăng nhập để truy cập trang quản trị gia phả.</p>
-    <div id="loginError" class="error"></div>
-    <form id="loginForm">
-      <div class="form-group">
-        <label for="account">Tài khoản (username hoặc email)</label>
-        <input type="text" id="account" name="account" autocomplete="username" required>
+      <h1>Đăng nhập</h1>
+      <p>Đăng nhập để truy cập trang quản trị gia phả.</p>
+      
+      <div id="loginError" class="alert alert-error" style="display: none;"></div>
+      
+      <form id="loginForm">
+        <div class="input-group">
+          <label class="input-label" for="account">Tài khoản (username hoặc email)</label>
+          <input type="text" class="input" id="account" name="account" autocomplete="username" required>
+        </div>
+        <div class="input-group">
+          <label class="input-label" for="password">Mật khẩu</label>
+          <input type="password" class="input" id="password" name="password" autocomplete="current-password" required>
+        </div>
+        <label style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); color: var(--color-text); font-size: var(--font-size-sm);">
+          <input type="checkbox" id="remember" name="remember" style="width: auto;">
+          Lưu đăng nhập
+        </label>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">🔐 Đăng nhập</button>
+      </form>
+      
+      <div class="footer-links">
+        <a href="/">← Quay lại trang chủ</a>
       </div>
-      <div class="form-group">
-        <label for="password">Mật khẩu</label>
-        <input type="password" id="password" name="password" autocomplete="current-password" required>
-      </div>
-      <label class="remember">
-        <input type="checkbox" id="remember" name="remember">
-        Lưu đăng nhập
-      </label>
-      <button type="submit" class="submit-btn">🔐 Đăng nhập</button>
-    </form>
-    <div class="footer-links">
-      <a href="/">← Quay lại trang chủ</a>
     </div>
   </div>
 
+  <script src="/static/js/common.js"></script>
   <script>
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -151,16 +123,18 @@
         const result = await response.json();
 
         if (response.ok && result.success) {
-          // Use redirect from server response, or default based on role
-          const redirectUrl = result.redirect || (result.user && result.user.role === 'admin' ? '/admin/activities' : '/activities');
+          // Redirect to editor page after login
+          const redirectUrl = result.redirect || '/editor';
           window.location.href = redirectUrl;
         } else {
           errorDiv.textContent = result.error || 'Đăng nhập thất bại. Vui lòng thử lại.';
           errorDiv.style.display = 'block';
+          errorDiv.className = 'alert alert-error';
         }
       } catch (error) {
         errorDiv.textContent = 'Lỗi kết nối: ' + error.message;
         errorDiv.style.display = 'block';
+        errorDiv.className = 'alert alert-error';
       }
     });
   </script>

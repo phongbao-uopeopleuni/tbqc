@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gia Phả - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    /* Page-specific styles */
+    .genealogy-page {
+      padding-top: var(--space-8);
+      padding-bottom: var(--space-10);
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    /* Override container max-width để full width */
+    .genealogy-page .container {
+      max-width: 100% !important;
+      width: 100% !important;
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+    }
+    
+    .page-header {
+      text-align: center;
+      margin-bottom: var(--space-8);
+    }
+    
+    .page-header h1 {
+      font-size: var(--font-size-4xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-3);
+    }
+    
+    .page-subtitle {
+      font-size: var(--font-size-lg);
+      color: var(--color-text-muted);
+    }
+    
+    /* Layout dọc: Cây trên, Tra cứu dưới */
+    .genealogy-layout {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      margin-top: var(--space-6);
+    }
+    
+    /* Phần trên: Cây tương tác */
+    .tree-section {
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    .tree-panel {
+      width: 100%;
+      max-width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 350px;
+      gap: var(--space-4);
+      align-items: start;
+    }
+    
+    .tree-container-wrapper {
+      grid-column: 1;
+    }
+    
+    .tree-info-panel {
+      grid-column: 2;
+    }
+    
+    @media (max-width: 1200px) {
+      .tree-panel {
+        grid-template-columns: 1fr;
+      }
+      
+      .tree-container-wrapper {
+        grid-column: 1;
+      }
+      
+      .tree-info-panel {
+        grid-column: 1;
+        order: -1;
+        max-height: 300px;
+      }
+    }
+    
+    /* Phần dưới: Tra cứu */
+    .lineage-panel {
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .lineage-card {
+      padding: var(--space-6);
+    }
+    
+    .lineage-header h2 {
+      font-size: var(--font-size-xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-2);
+    }
+    
+    .lineage-header p {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-4);
+    }
+    
+    .lineage-controls {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    
+    .lineage-input-group {
+      position: relative;
+    }
+    
+    .lineage-input-group label {
+      display: block;
+      margin-bottom: var(--space-2);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-primary);
+      font-size: var(--font-size-sm);
+    }
+    
+    .lineage-input-group input {
+      width: 100%;
+      height: 44px;
+      padding: 0 var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+    }
+    
+    .lineage-input-group input:focus {
+      outline: 2px solid rgba(139, 0, 0, 0.25);
+      border-color: var(--color-primary);
+    }
+    
+    .suggestions-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      margin-top: var(--space-1);
+    }
+    
+    .suggestion-item {
+      padding: var(--space-3) var(--space-4);
+      cursor: pointer;
+      border-bottom: 1px solid var(--color-border);
+      transition: background var(--transition-fast);
+    }
+    
+    .suggestion-item:hover {
+      background: var(--color-bg);
+    }
+    
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    
+    .lineage-result {
+      margin-top: var(--space-4);
+      padding: var(--space-5);
+    }
+    
+    .lineage-result-header h3 {
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+    }
+    
+    .lineage-result-content {
+      color: var(--color-text);
+      line-height: var(--line-height-relaxed);
+    }
+    
+    .lineage-detail-panel {
+      margin-top: var(--space-4);
+      padding: var(--space-5);
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .detail-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .detail-panel-header h3 {
+      color: var(--color-primary);
+      margin: 0;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: var(--font-size-2xl);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+    }
+    
+    .close-btn:hover {
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    
+    /* Cây tương tác */
+    .tree-panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      width: 100%;
+    }
+    
+    .tree-controls {
+      padding: var(--space-5);
+    }
+    
+    .tree-controls-row {
+      display: flex;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .tree-controls-row label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+    }
+    
+    .tree-controls-row .input-group {
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .tree-controls-row .input-group input {
+      width: 100%;
+    }
+    
+    .tree-container-wrapper {
+      position: relative;
+      height: 70vh;
+      min-height: 600px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: auto;
+      background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+      /* Full width - mở rộng full ngang */
+      width: 100%;
+      max-width: 100%;
+      /* Smooth scrolling */
+      scroll-behavior: smooth;
+    }
+    
+    /* Custom scrollbar */
+    .tree-container-wrapper::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    
+    .tree-container-wrapper::-webkit-scrollbar-track {
+      background: var(--color-bg);
+      border-radius: var(--radius-sm);
+    }
+    
+    .tree-container-wrapper::-webkit-scrollbar-thumb {
+      background: var(--color-primary);
+      border-radius: var(--radius-sm);
+    }
+    
+    .tree-container-wrapper::-webkit-scrollbar-thumb:hover {
+      background: var(--color-primary-strong);
+    }
+    
+    #treeContainer {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      position: relative;
+      /* Cho phép tree mở rộng vượt quá container để có scroll ngang */
+      overflow: visible;
+    }
+    
+    /* Tree container cần có width lớn hơn để scroll ngang */
+    #treeContainer .tree {
+      min-width: 2000px;
+      width: auto;
+      height: 100%;
+      position: relative;
+      overflow: visible;
+    }
+    
+    /* Đảm bảo tree có thể mở rộng theo chiều ngang */
+    #treeContainer > div {
+      min-width: 2000px;
+      width: auto;
+    }
+    
+    /* Tree Node Styles */
+    #treeContainer .node {
+      position: absolute;
+      width: 180px;
+      min-height: 130px;
+      background: var(--color-surface);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-3);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    
+    #treeContainer .node:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-primary);
+      z-index: 20;
+    }
+    
+    #treeContainer .node.founder {
+      background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%);
+      border-color: var(--color-primary);
+      border-width: 3px;
+      font-weight: var(--font-weight-bold);
+    }
+    
+    #treeContainer .node.male {
+      background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+      border-color: #1976D2;
+    }
+    
+    #treeContainer .node.female {
+      background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 100%);
+      border-color: #C2185B;
+    }
+    
+    #treeContainer .node.dead {
+      opacity: 0.7;
+      border-style: dashed;
+    }
+    
+    #treeContainer .node.highlighted {
+      border-color: #FF6B35;
+      border-width: 3px;
+      box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
+      }
+      50% {
+        box-shadow: 0 0 25px rgba(255, 107, 53, 0.8);
+      }
+    }
+    
+    #treeContainer .node-name {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+      margin-bottom: var(--space-2);
+      line-height: 1.3;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+    
+    #treeContainer .node-generation {
+      display: inline-block;
+      background: var(--color-primary);
+      color: var(--color-surface);
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-bold);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      margin-top: var(--space-1);
+    }
+    
+    /* Connector Styles */
+    #treeContainer .connector {
+      position: absolute;
+      z-index: 1;
+      pointer-events: none;
+    }
+    
+    #treeContainer .connector.vertical {
+      background: linear-gradient(to bottom, var(--color-primary) 0%, var(--color-primary) 100%);
+      width: 3px;
+      box-shadow: 0 0 3px rgba(139, 0, 0, 0.4);
+    }
+    
+    #treeContainer .connector.horizontal {
+      background: linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) 100%);
+      height: 3px;
+      box-shadow: 0 0 3px rgba(139, 0, 0, 0.4);
+    }
+    
+    .tree-loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: var(--font-size-lg);
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+    
+    .tree-info-panel {
+      padding: var(--space-5);
+      max-height: 70vh;
+      overflow-y: auto;
+      position: sticky;
+      top: var(--space-4);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .tree-info-panel h3 {
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+      font-size: var(--font-size-lg);
+    }
+    
+    .tree-info-content {
+      color: var(--color-text);
+      line-height: var(--line-height-relaxed);
+    }
+    
+    .tree-info-content p {
+      color: var(--color-text-muted);
+      font-style: italic;
+    }
+    
+    #searchResults {
+      margin-top: var(--space-4);
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--color-bg);
+      display: none;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .search-result-item {
+      padding: var(--space-3) var(--space-4);
+      margin: var(--space-2) 0;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      border-left: 3px solid var(--color-primary);
+      transition: all var(--transition-fast);
+    }
+    
+    .search-result-item:hover {
+      background: var(--color-bg);
+      transform: translateX(4px);
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 1023px) {
+      .tree-container-wrapper {
+        height: 60vh;
+        min-height: 500px;
+      }
+      
+      .tree-controls-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .tree-controls-row .input-group {
+        min-width: auto;
+      }
+      
+      .lineage-panel {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công – Gia Phả Nguyễn Phước Tộc</a>
+    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/genealogy" class="active">Gia phả</a></li>
+      <li><a href="/activities">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/login">Đăng nhập</a></li>
+    </ul>
+  </nav>
+
+  <div class="container genealogy-page">
+    <div class="page-header">
+      <h1>🌳 Gia Phả</h1>
+      <p class="page-subtitle">Cây Gia Phả Tương Tác và Tra Cứu Chuỗi Phả Hệ</p>
+    </div>
+
+    <div class="genealogy-layout">
+      <!-- Phần trên: Cây tương tác -->
+      <div class="tree-section">
+        <div class="tree-panel">
+          <div class="card tree-controls">
+            <div class="tree-controls-row">
+              <label>
+                <span>Hiển thị đến đời:</span>
+                <select id="genFilter" class="select">
+                  <option value="5" selected>Đến đời 5</option>
+                  <option value="6">Đến đời 6</option>
+                  <option value="7">Đến đời 7</option>
+                  <option value="8">Đến đời 8</option>
+                </select>
+              </label>
+              
+              <div class="input-group" style="flex: 1; min-width: 300px;">
+                <input type="text" class="input" id="searchInput" placeholder="Vui lòng nhập tên cần tìm kiếm">
+              </div>
+              <button id="searchBtn" class="btn btn-primary">Tìm kiếm</button>
+            </div>
+            
+            <!-- Search Results -->
+            <div id="searchResults" style="margin-top: var(--space-4); display: none;"></div>
+          </div>
+          
+          <!-- Tree Container -->
+          <div class="tree-container-wrapper">
+            <div id="treeContainer">
+              <div class="tree-loading">Đang tải cây gia phả...</div>
+            </div>
+          </div>
+          
+          <!-- Info Panel -->
+          <div class="card tree-info-panel" id="infoPanel">
+            <h3>Thông tin chi tiết</h3>
+            <div class="tree-info-content" id="infoContent">
+              <p>Chọn một người trong cây để xem thông tin</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phần dưới: Tra cứu chuỗi phả hệ -->
+      <div class="lineage-panel">
+        <div class="card lineage-card">
+          <div class="lineage-header">
+            <h2>🔍 Tra cứu chuỗi phả hệ</h2>
+            <p>Nhập tên để tìm kiếm chuỗi phả hệ theo dòng cha. Hệ thống sẽ tự động gợi ý.</p>
+          </div>
+          
+          <div class="lineage-controls">
+            <div class="lineage-input-group">
+              <label for="lineageName">Tên (tìm kiếm thông minh):</label>
+              <input type="text" class="input" id="lineageName" placeholder="Ví dụ: Bảo Phong hoặc Bao Ph..." 
+                     autocomplete="off" oninput="handleLineageSearchInput()">
+              <div id="lineageSuggestions" class="suggestions-dropdown" style="display: none;">
+                <!-- Suggestions sẽ được điền bằng JavaScript -->
+              </div>
+            </div>
+            <button id="btnSearchLineage" onclick="searchLineage()" class="btn btn-primary">🔍 Tìm chuỗi phả hệ</button>
+          </div>
+
+          <!-- Panel thông tin chi tiết -->
+          <div class="lineage-detail-panel card" id="lineageDetailPanel" style="display: none;">
+            <div class="detail-panel-header">
+              <h3>📋 Thông tin chi tiết</h3>
+              <button onclick="closeDetailPanel()" class="close-btn">&times;</button>
+            </div>
+            <div class="detail-panel-content" id="lineageDetailContent">
+              <!-- Nội dung sẽ được điền bằng JavaScript -->
+            </div>
+          </div>
+
+          <!-- Kết quả tra cứu -->
+          <div class="lineage-result card" id="lineageResult" style="display: none;">
+            <div class="lineage-result-header">
+              <h3 id="lineageResultTitle"></h3>
+            </div>
+            <div class="lineage-result-content" id="lineageResultContent">
+              <!-- Kết quả sẽ được điền bằng JavaScript -->
+            </div>
+          </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Member Stats -->
+      <section id="stats" style="margin-top: var(--space-10);">
+        <div class="section-container" style="max-width: 1200px; margin: 0 auto; padding: 0 var(--space-4);">
+          <h2 class="section-title" style="text-align: center; font-size: var(--font-size-3xl); color: var(--color-primary); margin-bottom: var(--space-4);">Thống Kê Thành Viên</h2>
+          <p class="stats-subtitle" style="text-align: center; color: var(--color-text-muted); margin-bottom: var(--space-6); font-size: var(--font-size-base);">
+            Thống kê nhanh số lượng thành viên trong gia phả Tuy Biên Phòng – Nam, Nữ và các trường hợp chưa rõ.
+          </p>
+
+          <div class="stats-layout" style="display: grid; grid-template-columns: 1.2fr 2fr; gap: var(--space-8); align-items: stretch;">
+            <div class="stats-summary" style="display: grid; grid-template-columns: 1fr; gap: var(--space-4);">
+              <div class="stats-card card" style="border-left: 5px solid var(--color-primary);">
+                <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Tổng thành viên</div>
+                <div class="stats-value" id="statsTotalMembers" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="stats-card card" style="border-left: 5px solid var(--color-primary);">
+                <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Số Nam</div>
+                <div class="stats-value" id="statsMaleCount" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="stats-card card" style="border-left: 5px solid var(--color-primary);">
+                <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Số Nữ</div>
+                <div class="stats-value" id="statsFemaleCount" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="stats-card card" style="border-left: 5px solid var(--color-primary);">
+                <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Không rõ / khác</div>
+                <div class="stats-value" id="statsUnknownCount" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+            </div>
+
+            <div class="stats-charts" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);">
+              <div class="stats-chart-card card">
+                <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Cơ cấu giới tính</h3>
+                <canvas id="genderPieChart"></canvas>
+              </div>
+              <div class="stats-chart-card card">
+                <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Thành viên theo giới tính</h3>
+                <canvas id="genderBarChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Thống kê theo đời -->
+          <div class="generation-stats-section" style="margin-top: var(--space-8);">
+            <h3 style="text-align: center; font-size: var(--font-size-xl); color: var(--color-primary); margin-bottom: var(--space-5);">Thống Kê Theo Đời</h3>
+            <div class="generation-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-4); margin-bottom: var(--space-6);">
+              <div class="generation-stat-card card" id="gen1Card" style="text-align: center; padding: var(--space-4); border-left: 4px solid var(--color-primary);">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Đời 1</div>
+                <div class="generation-stat-value" id="gen1Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="generation-stat-card card" id="gen2Card" style="text-align: center; padding: var(--space-4); border-left: 4px solid var(--color-primary);">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Đời 2</div>
+                <div class="generation-stat-value" id="gen2Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="generation-stat-card card" id="gen3Card" style="text-align: center; padding: var(--space-4); border-left: 4px solid var(--color-primary);">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Đời 3</div>
+                <div class="generation-stat-value" id="gen3Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="generation-stat-card card" id="gen4Card" style="text-align: center; padding: var(--space-4); border-left: 4px solid var(--color-primary);">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Đời 4</div>
+                <div class="generation-stat-value" id="gen4Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="generation-stat-card card" id="gen5Card" style="text-align: center; padding: var(--space-4); border-left: 4px solid var(--color-primary);">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Đời 5</div>
+                <div class="generation-stat-value" id="gen5Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="generation-stat-card card" id="gen6Card" style="text-align: center; padding: var(--space-4); border-left: 4px solid var(--color-primary);">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Đời 6</div>
+                <div class="generation-stat-value" id="gen6Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="generation-stat-card card" id="gen7Card" style="text-align: center; padding: var(--space-4); border-left: 4px solid var(--color-primary);">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Đời 7</div>
+                <div class="generation-stat-value" id="gen7Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+              <div class="generation-stat-card card" id="gen8Card" style="text-align: center; padding: var(--space-4); border-left: 4px solid var(--color-primary);">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Đời 8</div>
+                <div class="generation-stat-value" id="gen8Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
+              </div>
+            </div>
+            <div class="generation-chart-container card" style="padding: var(--space-5);">
+              <h3 style="margin-bottom: var(--space-4); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Biểu đồ số người theo đời</h3>
+              <canvas id="generationBarChart"></canvas>
+            </div>
+          </div>
+
+          <div id="statsErrorMessage" style="display:none; margin-top: var(--space-5); text-align: center; color: var(--color-error); font-weight: var(--font-weight-semibold);">
+            Lỗi: Không thể tải dữ liệu thống kê. Vui lòng thử lại sau.
+          </div>
+        </div>
+      </section>
+    </div>
+
+  <!-- Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Load genealogy scripts -->
+  <script src="/static/js/common.js"></script>
+  <script src="/static/js/family-tree-core.js"></script>
+  <script src="/static/js/family-tree-ui.js"></script>
+  <script src="/static/js/genealogy-lineage.js"></script>
+  
+  <!-- Tree controls event listeners -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // GenFilter change handler
+      const genFilter = document.getElementById('genFilter');
+      if (genFilter) {
+        genFilter.addEventListener('change', async (e) => {
+          const maxGen = parseInt(e.target.value);
+          console.log('[Genealogy] GenFilter changed to:', maxGen);
+          
+          // Reload tree với maxGeneration mới
+          try {
+            const container = document.getElementById('treeContainer');
+            if (container) {
+              container.innerHTML = '<div class="tree-loading">Đang tải cây gia phả...</div>';
+            }
+            
+            // Load lại tree data với maxGeneration mới
+            if (typeof loadTreeData === 'function') {
+              const { graph: newGraph } = await loadTreeData(maxGen, 'P-1-1');
+              if (newGraph && typeof renderDefaultTree === 'function') {
+                renderDefaultTree(newGraph, maxGen);
+              }
+            } else {
+              console.error('[Genealogy] loadTreeData function not found');
+            }
+          } catch (err) {
+            console.error('[Genealogy] Error reloading tree:', err);
+            const container = document.getElementById('treeContainer');
+            if (container) {
+              container.innerHTML = `<div style="padding: 20px; color: #d32f2f; text-align: center;">
+                <h3>Lỗi khi tải cây gia phả</h3>
+                <p>${err.message}</p>
+              </div>`;
+            }
+          }
+        });
+      }
+      
+      // Search button handler
+      const searchBtn = document.getElementById('searchBtn');
+      const searchInput = document.getElementById('searchInput');
+      const searchResults = document.getElementById('searchResults');
+      
+      if (searchBtn && searchInput) {
+        const handleSearch = async () => {
+          const query = searchInput.value.trim();
+          if (!query) {
+            alert('Vui lòng nhập tên cần tìm kiếm');
+            return;
+          }
+          
+          const maxGen = genFilter ? parseInt(genFilter.value) : 5;
+          console.log('[Genealogy] Searching for:', query, 'maxGen:', maxGen);
+          
+          // Hiển thị loading
+          if (searchResults) {
+            searchResults.style.display = 'block';
+            searchResults.innerHTML = '<div style="padding: 10px; color: #666;">Đang tìm kiếm...</div>';
+          }
+          
+          try {
+            const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=30`);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const results = await response.json();
+            if (results.length === 0) {
+              if (searchResults) {
+                searchResults.innerHTML = `<div style="padding: 10px; color: #666;">Không tìm thấy "${query}"</div>`;
+              } else {
+                alert(`Không tìm thấy "${query}"`);
+              }
+              return;
+            }
+            
+            // Hiển thị kết quả tìm kiếm
+            if (searchResults) {
+              searchResults.innerHTML = results.map(person => {
+                const gen = person.generation_number || person.generation_level || '';
+                return `
+                  <div class="search-result-item" data-person-id="${person.person_id}" 
+                       style="padding: 10px; margin: 5px 0; background: #f5f5f5; border-radius: 6px; cursor: pointer; border-left: 3px solid var(--color-primary);"
+                       onmouseover="this.style.background='#FFE4B5'" 
+                       onmouseout="this.style.background='#f5f5f5'">
+                    <strong>${escapeHtml(person.full_name || person.name || '')}</strong>
+                    ${gen ? ` - Đời ${gen}` : ''}
+            </div>
+                `;
+              }).join('');
+              
+              // Add click handlers
+              searchResults.querySelectorAll('.search-result-item').forEach(el => {
+                el.addEventListener('click', async () => {
+                  const personId = el.getAttribute('data-person-id');
+                  console.log('[Genealogy] Selected person:', personId);
+                  
+                  // Hiển thị thông tin chi tiết ngay lập tức
+                  if (typeof showPersonInfo === 'function') {
+                    showPersonInfo(personId);
+                  }
+                  
+                  // Reload tree với maxGen và focus vào person này
+                  try {
+                    const container = document.getElementById('treeContainer');
+                    if (container) {
+                      container.innerHTML = '<div class="tree-loading">Đang tải cây gia phả...</div>';
+                    }
+                    
+                    // Load lại tree data với maxGeneration
+                    if (typeof loadTreeData === 'function') {
+                      const { graph: newGraph } = await loadTreeData(maxGen, 'P-1-1');
+                      if (newGraph && typeof renderFocusTree === 'function') {
+                        renderFocusTree(personId);
+                      } else if (newGraph && typeof renderDefaultTree === 'function') {
+                        renderDefaultTree(newGraph, maxGen);
+                        // Highlight person sau khi render
+                        setTimeout(() => {
+                          const node = document.querySelector(`[data-person-id="${personId}"]`);
+                          if (node) {
+                            node.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                            node.classList.add('highlighted');
+                          }
+                        }, 500);
+                      }
+                    }
+                    
+                    // Ẩn search results
+                    if (searchResults) {
+                      searchResults.style.display = 'none';
+                    }
+                    if (searchInput) {
+                      searchInput.value = '';
+                    }
+                  } catch (err) {
+                    console.error('[Genealogy] Error loading tree:', err);
+                    alert(`Lỗi khi tải cây gia phả: ${err.message}`);
+                  }
+                });
+              });
+            } else {
+              // Fallback: nếu không có searchResults div, dùng alert
+              if (results.length === 1) {
+                const person = results[0];
+                if (typeof renderFocusTree === 'function') {
+                  renderFocusTree(person.person_id);
+                }
+              } else {
+                alert(`Tìm thấy ${results.length} kết quả. Vui lòng chọn từ danh sách.`);
+              }
+            }
+          } catch (err) {
+            console.error('[Genealogy] Search error:', err);
+            if (searchResults) {
+              searchResults.innerHTML = `<div style="padding: 10px; color: #d32f2f;">Lỗi: ${err.message}</div>`;
+            } else {
+              alert(`Lỗi khi tìm kiếm: ${err.message}`);
+            }
+          }
+        };
+        
+        searchBtn.addEventListener('click', handleSearch);
+        searchInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            handleSearch();
+          }
+        });
+      }
+    });
+  </script>
+  
+  <!-- Lineage UI Functions -->
+  <script>
+    // Lineage search state
+    let selectedPerson = null;
+    let searchTimeout = null;
+    
+    /**
+     * Xử lý khi người dùng gõ vào ô tìm kiếm (autocomplete)
+     */
+    function handleLineageSearchInput() {
+      const nameInput = document.getElementById('lineageName');
+      const suggestionsDiv = document.getElementById('lineageSuggestions');
+      
+      if (!nameInput || !suggestionsDiv) {
+        console.warn('[Lineage] Required elements not found for search input');
+        return;
+      }
+      
+      const query = nameInput.value.trim();
+      
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+      
+      if (!query || query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        return;
+      }
+      
+      searchTimeout = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=10`);
+          
+          if (!response.ok) {
+            suggestionsDiv.style.display = 'none';
+            return;
+          }
+          
+          const results = await response.json();
+          
+          if (results.length === 0) {
+            suggestionsDiv.innerHTML = '<div class="suggestion-item" style="color: #999; font-style: italic;">Không tìm thấy kết quả</div>';
+            suggestionsDiv.style.display = 'block';
+            return;
+          }
+          
+          suggestionsDiv.innerHTML = results.map((person) => {
+            const gen = person.generation_level || person.generation_number || '?';
+            const name = person.full_name || 'Không rõ tên';
+            const fatherName = person.father_name || '';
+            const motherName = person.mother_name || '';
+            
+            let parentInfo = '';
+            if (fatherName && motherName) {
+              parentInfo = `Con của: Ông ${escapeHtml(fatherName)} & Bà ${escapeHtml(motherName)}`;
+            } else if (fatherName) {
+              parentInfo = `Con của: Ông ${escapeHtml(fatherName)}`;
+            } else if (motherName) {
+              parentInfo = `Con của: Bà ${escapeHtml(motherName)}`;
+            } else {
+              parentInfo = 'Chưa có thông tin cha mẹ';
+            }
+            
+            return `
+              <div class="suggestion-item" onclick="selectSuggestionFromSearch('${person.person_id}')" style="cursor: pointer;">
+                <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                  ${escapeHtml(name)} – Đời ${gen}
+          </div>
+                <div style="color: var(--color-text-muted); font-size: 14px;">
+                  ${parentInfo}
+                </div>
+              </div>
+            `;
+          }).join('');
+          
+          suggestionsDiv.style.display = 'block';
+        } catch (err) {
+          console.error('Error in autocomplete:', err);
+          suggestionsDiv.style.display = 'none';
+        }
+      }, 300);
+    }
+    
+    /**
+     * Select suggestion from search results
+     */
+    async function selectSuggestionFromSearch(personId) {
+      const suggestionsDiv = document.getElementById('lineageSuggestions');
+      if (suggestionsDiv) {
+        suggestionsDiv.style.display = 'none';
+      }
+      
+      await displayLineageForPersonFromAPI(personId);
+    }
+    
+    /**
+     * Search lineage
+     */
+    async function searchLineage() {
+      const nameInput = document.getElementById('lineageName');
+      
+      if (!nameInput) {
+        console.error('[Lineage] lineageName input not found');
+        alert('Lỗi: Không tìm thấy ô nhập liệu');
+        return;
+      }
+      
+      const name = nameInput.value.trim();
+      
+      if (!name) {
+        alert('Vui lòng nhập tên hoặc chọn từ danh sách gợi ý');
+        return;
+      }
+      
+      const suggestionsDiv = document.getElementById('lineageSuggestions');
+      if (suggestionsDiv) {
+        suggestionsDiv.style.display = 'none';
+      }
+      
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(name)}&limit=20`);
+        
+        if (!response.ok) {
+          throw new Error(`API trả mã ${response.status}`);
+        }
+        
+        const results = await response.json();
+        
+        if (results.length === 0) {
+          alert(`Không tìm thấy "${name}"`);
+          return;
+        }
+        
+        if (results.length > 1) {
+          if (suggestionsDiv) {
+            suggestionsDiv.innerHTML = results.map((person) => {
+              const gen = person.generation_level || person.generation_number || '?';
+              const name = person.full_name || 'Không rõ tên';
+              const fatherName = person.father_name || '';
+              const motherName = person.mother_name || '';
+              
+              let parentInfo = '';
+              if (fatherName && motherName) {
+                parentInfo = `Con của: Ông ${escapeHtml(fatherName)} & Bà ${escapeHtml(motherName)}`;
+              } else if (fatherName) {
+                parentInfo = `Con của: Ông ${escapeHtml(fatherName)}`;
+              } else if (motherName) {
+                parentInfo = `Con của: Bà ${escapeHtml(motherName)}`;
+              } else {
+                parentInfo = 'Chưa có thông tin cha mẹ';
+              }
+              
+              return `
+                <div class="suggestion-item" onclick="selectSuggestionFromSearch('${person.person_id}')" style="cursor: pointer;">
+                  <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                    ${escapeHtml(name)} – Đời ${gen}
+        </div>
+                  <div style="color: var(--color-text-muted); font-size: 14px;">
+                    ${parentInfo}
+                  </div>
+                </div>
+              `;
+            }).join('');
+            suggestionsDiv.style.display = 'block';
+          }
+          return;
+        }
+        
+        const person = results[0];
+        await displayLineageForPersonFromAPI(person.person_id);
+      } catch (err) {
+        console.error('Error searching lineage:', err);
+        alert(`Lỗi khi tìm kiếm: ${err.message}`);
+      }
+    }
+    
+    /**
+     * Display lineage for person using API
+     */
+    async function displayLineageForPersonFromAPI(personId) {
+      try {
+        console.log(`[Lineage] Fetching lineage for person_id: ${personId}`);
+        
+        const ancestorsRes = await fetch(`/api/ancestors/${personId}`);
+        
+        if (!ancestorsRes.ok) {
+          throw new Error(`API /api/ancestors/${personId} trả mã ${ancestorsRes.status}`);
+        }
+        
+        const ancestorsData = await ancestorsRes.json();
+        
+        let lineage = [];
+        if (ancestorsData.ancestors_chain && Array.isArray(ancestorsData.ancestors_chain)) {
+          lineage = ancestorsData.ancestors_chain;
+        }
+        
+        if (ancestorsData.person) {
+          const currentPersonId = String(ancestorsData.person.person_id || '').trim();
+          const alreadyInChain = lineage.some(p => {
+            const pId = String(p.person_id || '').trim();
+            return pId === currentPersonId && pId !== '';
+          });
+          
+          if (!alreadyInChain && currentPersonId) {
+            lineage.push(ancestorsData.person);
+          }
+        }
+        
+        displayLineageChain(lineage);
+        
+        try {
+          const personRes = await fetch(`/api/person/${personId}`);
+          if (personRes.ok) {
+            const person = await personRes.json();
+            selectedPerson = person.person || person;
+            showDetailPanel(selectedPerson);
+          }
+        } catch (err) {
+          console.warn('[Lineage] Could not fetch full person details:', err);
+          if (ancestorsData.person) {
+            selectedPerson = ancestorsData.person;
+            showDetailPanel(ancestorsData.person);
+          }
+        }
+      } catch (err) {
+        console.error('Error displaying lineage:', err);
+        alert(`Lỗi khi hiển thị chuỗi phả hệ: ${err.message}`);
+      }
+    }
+    
+    /**
+     * Normalize parent names
+     */
+    function normalizeParentName(name, isFather = true) {
+      if (!name) return null;
+      name = name.replace(/^(Ông|Bà|Vua)\s+/i, '').trim();
+      return name;
+    }
+    
+    /**
+     * Get Gen 1 parents
+     */
+    function getGen1Parents() {
+      return {
+        father_name: 'Vua Gia Long',
+        mother_name: 'Thuận Thiên Hoàng hậu'
+      };
+    }
+    
+    /**
+     * Display lineage chain
+     */
+    function displayLineageChain(lineage) {
+      const resultDiv = document.getElementById('lineageResult');
+      const resultContent = document.getElementById('lineageResultContent');
+      const resultTitle = document.getElementById('lineageResultTitle');
+      
+      if (!resultDiv) return;
+      
+      if (!lineage || lineage.length === 0) {
+        if (resultContent) {
+          resultContent.innerHTML = '<div style="padding: 20px; color: #666; text-align: center;">Không có dữ liệu chuỗi phả hệ</div>';
+        }
+        resultDiv.style.display = 'block';
+        return;
+      }
+      
+      const seenIds = new Set();
+      const uniqueLineage = [];
+      
+      for (const p of lineage) {
+        let personId = p.person_id;
+        if (personId === null || personId === undefined || personId === '') {
+          continue;
+        }
+        
+        const personIdStr = String(personId).trim();
+        if (!personIdStr || seenIds.has(personIdStr)) {
+          continue;
+        }
+        
+        seenIds.add(personIdStr);
+        uniqueLineage.push(p);
+      }
+      
+      const sortedLineage = [...uniqueLineage].sort((a, b) => {
+        const genA = a.generation_number || a.generation_level || 0;
+        const genB = b.generation_number || b.generation_level || 0;
+        if (genA !== genB) {
+          return genA - genB;
+        }
+        const idA = String(a.person_id || '');
+        const idB = String(b.person_id || '');
+        return idA.localeCompare(idB);
+      });
+      
+      const hasGen1 = sortedLineage.some(p => (p.generation_number === 1 || p.generation_level === 1));
+      if (!hasGen1) {
+        const gen1Person = {
+          person_id: 'P-1-1',
+          full_name: 'Vua Minh Mạng',
+          generation_number: 1,
+          generation_level: 1,
+          father_name: 'Vua Gia Long',
+          mother_name: 'Thuận Thiên Hoàng hậu',
+          gender: 'Nam',
+          status: 'Đã mất'
+        };
+        sortedLineage.unshift(gen1Person);
+      } else {
+        const gen1Index = sortedLineage.findIndex(p => (p.generation_number === 1 || p.generation_level === 1));
+        if (gen1Index !== -1) {
+          const gen1Parents = getGen1Parents();
+          sortedLineage[gen1Index].father_name = gen1Parents.father_name;
+          sortedLineage[gen1Index].mother_name = gen1Parents.mother_name;
+        }
+      }
+      
+      const targetPerson = sortedLineage[sortedLineage.length - 1];
+      
+      if (resultTitle) {
+        resultTitle.textContent = `Chuỗi phả hệ của ${targetPerson.full_name || 'Người được chọn'}`;
+      }
+      
+      const groupedByGen = {};
+      sortedLineage.forEach(p => {
+        const gen = p.generation_number || p.generation_level || 0;
+        if (!groupedByGen[gen]) {
+          groupedByGen[gen] = [];
+        }
+        groupedByGen[gen].push(p);
+      });
+      
+      let timelineHTML = '';
+      Object.keys(groupedByGen).sort((a, b) => parseInt(a) - parseInt(b)).forEach(gen => {
+        const personsInGen = groupedByGen[gen];
+        const genNum = parseInt(gen);
+        
+        if (genNum === 1 && personsInGen.length > 1) {
+          timelineHTML += '<div style="display: flex; flex-direction: row; gap: 16px; width: 100%; margin-bottom: 16px;">';
+          personsInGen.forEach(p => {
+            timelineHTML += generatePersonCard(p, genNum, false);
+          });
+          timelineHTML += '</div>';
+        } else {
+          personsInGen.forEach(p => {
+            timelineHTML += generatePersonCard(p, genNum, true);
+          });
+        }
+      });
+      
+      function generatePersonCard(p, gen, isFullWidth = true) {
+        const name = p.full_name || 'Không rõ tên';
+        const fatherName = normalizeParentName(p.father_name, true) || p.father_name || '';
+        const motherName = normalizeParentName(p.mother_name, false) || p.mother_name || '';
+        
+        const titleLine = `Đời ${gen} – ${escapeHtml(name)}`;
+        
+        let parentInfo = '';
+        if (fatherName && motherName) {
+          parentInfo = `Con của Ông ${escapeHtml(fatherName)} và Bà ${escapeHtml(motherName)}`;
+        } else if (fatherName) {
+          parentInfo = `Con của Ông ${escapeHtml(fatherName)} và Bà Chưa có thông tin`;
+        } else if (motherName) {
+          parentInfo = `Con của Ông Chưa có thông tin và Bà ${escapeHtml(motherName)}`;
+        } else {
+          parentInfo = 'Con của Ông Chưa có thông tin và Bà Chưa có thông tin';
+        }
+        
+        let badgeColor = '';
+        if (gen === 1) badgeColor = 'background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);';
+        else if (gen === 2) badgeColor = 'background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);';
+        else if (gen === 3) badgeColor = 'background: linear-gradient(135deg, #ca8a04 0%, #a16207 100%);';
+        else if (gen === 4) badgeColor = 'background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);';
+        else if (gen === 5) badgeColor = 'background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);';
+        else if (gen >= 6) badgeColor = 'background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);';
+        else badgeColor = 'background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);';
+        
+        const cardWidth = (!isFullWidth) ? 'calc(50% - 8px)' : '100%';
+        const cardMargin = (!isFullWidth) ? '0' : '0 0 16px 0';
+        
+        return `
+          <div style="
+            background: #FFF8DC;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: ${cardMargin};
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border: 1px solid #DAA520;
+            width: ${cardWidth};
+          ">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+              <span style="
+                ${badgeColor}
+                color: white;
+                font-weight: 700;
+                font-size: 13px;
+                padding: 6px 16px;
+                border-radius: 20px;
+                white-space: nowrap;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+                display: inline-block;
+                min-width: 70px;
+                text-align: center;
+              ">Đời ${gen}</span>
+              <h3 style="
+                color: var(--color-primary);
+                font-weight: 700;
+                font-size: 18px;
+                margin: 0;
+                flex: 1;
+                line-height: 1.4;
+              ">${titleLine}</h3>
+          </div>
+            <div style="
+              color: var(--color-text);
+              font-size: 14px;
+              line-height: 1.6;
+              padding-left: 0;
+              margin-top: 6px;
+            ">
+              ${parentInfo}
+        </div>
+          </div>
+        `;
+      }
+      
+      if (resultContent) {
+        resultContent.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: 0; width: 100%;">
+            ${timelineHTML}
+          </div>
+        `;
+      }
+      
+      resultDiv.style.display = 'block';
+    }
+    
+    /**
+     * Show detail panel
+     */
+    function showDetailPanel(person) {
+      const panel = document.getElementById('lineageDetailPanel');
+      const content = document.getElementById('lineageDetailContent');
+      
+      if (!person || !panel || !content) return;
+      
+      selectedPerson = person;
+      
+      fetch(`/api/person/${person.person_id}`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`API trả mã ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          const detailedPerson = data.person || data;
+          if (detailedPerson.error) {
+            renderDetailPanel(person);
+            return;
+          }
+          
+          Object.assign(selectedPerson, detailedPerson);
+          if (!selectedPerson.generation_number && selectedPerson.generation_level) {
+            selectedPerson.generation_number = selectedPerson.generation_level;
+          }
+          
+          renderDetailPanel(selectedPerson);
+        })
+        .catch(error => {
+          console.error('Lỗi khi fetch thông tin chi tiết:', error);
+          renderDetailPanel(person);
+        });
+    }
+    
+    /**
+     * Format marriages for display
+     */
+    function formatMarriages(person) {
+      if (!person) return 'Chưa có thông tin';
+      
+      // Ưu tiên marriages array (đầy đủ thông tin nhất)
+      if (person.marriages && Array.isArray(person.marriages) && person.marriages.length > 0) {
+        return person.marriages.map(m => {
+          let display = m.spouse_name || '';
+          if (m.marriage_date_solar) {
+            display += ` (${m.marriage_date_solar})`;
+          }
+          if (m.marriage_place) {
+            display += ` - ${m.marriage_place}`;
+          }
+          return display;
+        }).join('<br>');
+      }
+      
+      // Ưu tiên spouse_name (string)
+      if (person.spouse_name) {
+        const spouses = person.spouse_name.split(';').map(s => s.trim()).filter(s => s);
+        return spouses.join('<br>');
+      }
+      
+      // Fallback: spouse (string)
+      if (person.spouse) {
+        const spouses = person.spouse.split(';').map(s => s.trim()).filter(s => s);
+        return spouses.join('<br>');
+      }
+      
+      return 'Chưa có thông tin';
+    }
+    
+    /**
+     * Format siblings for display
+     */
+    function formatSiblings(person) {
+      if (!person) return 'Chưa có thông tin';
+      
+      if (person.siblings) {
+        const siblings = person.siblings.split(';').map(s => s.trim()).filter(s => s);
+        return siblings.length > 0 ? siblings.join('<br>') : 'Chưa có thông tin';
+      }
+      
+      return 'Chưa có thông tin';
+    }
+    
+    /**
+     * Format children for display
+     */
+    function formatChildren(person) {
+      if (!person) return 'Chưa có thông tin';
+      
+      // Ưu tiên children array
+      if (person.children && Array.isArray(person.children) && person.children.length > 0) {
+        return person.children.map(c => {
+          let display = c.full_name || c.name || '';
+          if (c.generation_level || c.generation_number) {
+            display += ` (Đời ${c.generation_level || c.generation_number})`;
+          }
+          return display;
+        }).join('<br>');
+      }
+      
+      // Fallback: children (string)
+      if (person.children && typeof person.children === 'string') {
+        const children = person.children.split(';').map(c => c.trim()).filter(c => c);
+        return children.length > 0 ? children.join('<br>') : 'Chưa có thông tin';
+      }
+      
+      return 'Chưa có thông tin';
+    }
+    
+    /**
+     * Render detail panel
+     */
+    function renderDetailPanel(person) {
+      const content = document.getElementById('lineageDetailContent');
+      const panel = document.getElementById('lineageDetailPanel');
+      if (!content || !panel) return;
+      
+      content.innerHTML = `
+        <div style="line-height: 1.6;">
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Person ID:</strong> ${person.person_id || 'Chưa có thông tin'}
+        </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Tên đầy đủ:</strong> ${person.full_name || 'Chưa có thông tin'}
+      </div>
+          ${person.alias ? `<div style="margin-bottom: var(--space-3);"><strong>Tên thường gọi:</strong> ${person.alias}</div>` : ''}
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Đời:</strong> ${person.generation_number || person.generation_level || 'Chưa có thông tin'}
+    </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Giới tính:</strong> ${person.gender || 'Chưa có thông tin'}
+  </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Tên bố:</strong> ${person.father_name ? 'Ông ' + escapeHtml(person.father_name) : 'Chưa có thông tin'}
+          </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Tên mẹ:</strong> ${person.mother_name ? 'Bà ' + escapeHtml(person.mother_name) : 'Chưa có thông tin'}
+          </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Hôn phối:</strong><br>
+            <div style="margin-top: 4px; color: var(--color-text);">${formatMarriages(person)}</div>
+          </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Anh chị em:</strong><br>
+            <div style="margin-top: 4px; color: var(--color-text);">${formatSiblings(person)}</div>
+          </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Thông tin con:</strong><br>
+            <div style="margin-top: 4px; color: var(--color-text);">${formatChildren(person)}</div>
+          </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Nhánh:</strong> ${person.branch_name || 'Chưa có thông tin'}
+          </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Trạng thái:</strong> ${person.status || 'Chưa có thông tin'}
+          </div>
+        </div>
+      `;
+      
+      panel.style.display = 'block';
+    }
+    
+    /**
+     * Close detail panel
+     */
+    function closeDetailPanel() {
+      const panel = document.getElementById('lineageDetailPanel');
+      if (panel) {
+        panel.style.display = 'none';
+      }
+    }
+  </script>
+
+  <!-- Member statistics -->
+  <script>
+    // Generic fetch helper
+    async function fetchJson(url, options) {
+      const res = await fetch(url, options);
+      const contentType = res.headers.get('Content-Type') || '';
+      const text = await res.text();
+
+      if (!res.ok) {
+        console.error('HTTP error for', url, res.status, text);
+        throw new Error(`HTTP ${res.status} when fetching ${url}`);
+      }
+
+      if (!contentType.includes('application/json')) {
+        console.error('Non-JSON response for', url, 'contentType =', contentType, 'body =', text.slice(0, 300));
+        throw new Error(`Expected JSON but got non-JSON response from ${url}`);
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error('JSON parse error for', url, 'body =', text.slice(0, 300));
+        throw e;
+      }
+    }
+
+    async function loadMemberStats() {
+      const errorEl = document.getElementById('statsErrorMessage');
+      try {
+        const data = await fetchJson('/api/stats/members');
+        const total = data.total_members || 0;
+        const male = data.male_count || 0;
+        const female = data.female_count || 0;
+        const unknown = data.unknown_gender_count || 0;
+
+        document.getElementById('statsTotalMembers').textContent = total.toLocaleString('vi-VN');
+        document.getElementById('statsMaleCount').textContent = male.toLocaleString('vi-VN');
+        document.getElementById('statsFemaleCount').textContent = female.toLocaleString('vi-VN');
+        document.getElementById('statsUnknownCount').textContent = unknown.toLocaleString('vi-VN');
+
+        renderGenderCharts({ male, female, unknown });
+
+        // Hiển thị thống kê theo đời
+        if (data.generation_counts && Array.isArray(data.generation_counts)) {
+          const generationCounts = data.generation_counts;
+          
+          // Cập nhật số liệu cho từng đời
+          for (let i = 1; i <= 8; i++) {
+            const genElement = document.getElementById(`gen${i}Count`);
+            if (genElement) {
+              const genData = generationCounts.find(g => g.generation_level === i);
+              const count = genData ? genData.count : 0;
+              genElement.textContent = count.toLocaleString('vi-VN');
+            }
+          }
+          
+          // Vẽ biểu đồ
+          renderGenerationChart(generationCounts);
+        }
+      } catch (err) {
+        console.error('Error loading stats:', err);
+        if (errorEl) errorEl.style.display = 'block';
+      }
+    }
+
+    function renderGenderCharts({ male, female, unknown }) {
+      const pieCtx = document.getElementById('genderPieChart')?.getContext('2d');
+      const barCtx = document.getElementById('genderBarChart')?.getContext('2d');
+      if (!pieCtx || !barCtx || typeof Chart === 'undefined') return;
+
+      const labels = ['Nam', 'Nữ', 'Không rõ / khác'];
+      const values = [male, female, unknown];
+
+      new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: ['#1976d2', '#e91e63', '#9e9e9e'],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+
+      new Chart(barCtx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Số lượng',
+            data: values,
+            backgroundColor: ['#1976d2', '#e91e63', '#9e9e9e']
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 }
+            }
+          }
+        }
+      });
+    }
+
+    function renderGenerationChart(generationCounts) {
+      const ctx = document.getElementById('generationBarChart')?.getContext('2d');
+      if (!ctx || typeof Chart === 'undefined') return;
+
+      // Sắp xếp theo generation_level
+      const sorted = generationCounts.sort((a, b) => a.generation_level - b.generation_level);
+      const labels = sorted.map(g => `Đời ${g.generation_level}`);
+      const values = sorted.map(g => g.count);
+
+      // Màu sắc khác nhau cho từng đời
+      const colors = [
+        '#8B0000', // Đời 1 - Dark red
+        '#CD853F', // Đời 2 - Peru
+        '#DAA520', // Đời 3 - Goldenrod
+        '#B8860B', // Đời 4 - Dark goldenrod
+        '#9ACD32', // Đời 5 - Yellow green
+        '#9370DB', // Đời 6 - Medium purple
+        '#20B2AA', // Đời 7 - Light sea green
+        '#FF6347'  // Đời 8 - Tomato
+      ];
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Số người',
+            data: values,
+            backgroundColor: colors.slice(0, labels.length),
+            borderColor: colors.slice(0, labels.length).map(c => c + 'DD'),
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `Số người: ${context.parsed.y.toLocaleString('vi-VN')}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0,
+                callback: function(value) {
+                  return value.toLocaleString('vi-VN');
+                }
+              }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 12
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Load stats on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMemberStats();
+    });
+  </script>
+
+  <style>
+    @media (max-width: 900px) {
+      .stats-layout {
+        grid-template-columns: 1fr !important;
+      }
+      .stats-charts {
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+</body>
+</html>
+

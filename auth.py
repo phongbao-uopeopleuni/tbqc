@@ -85,17 +85,30 @@ def get_user_by_id(user_id):
     
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT user_id, username, role, full_name, email, permissions 
-            FROM users 
-            WHERE user_id = %s AND is_active = TRUE
-        """, (user_id,))
+        # Check if permissions column exists
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
+        has_permissions = cursor.fetchone() is not None
+        
+        # Build SELECT query based on available columns
+        if has_permissions:
+            cursor.execute("""
+                SELECT user_id, username, role, full_name, email, permissions 
+                FROM users 
+                WHERE user_id = %s AND is_active = TRUE
+            """, (user_id,))
+        else:
+            cursor.execute("""
+                SELECT user_id, username, role, full_name, email
+                FROM users 
+                WHERE user_id = %s AND is_active = TRUE
+            """, (user_id,))
+        
         user_data = cursor.fetchone()
         
         if user_data:
-            # Parse permissions JSON
+            # Parse permissions JSON if column exists
             permissions = {}
-            if user_data.get('permissions'):
+            if has_permissions and user_data.get('permissions'):
                 import json
                 try:
                     if isinstance(user_data['permissions'], str):
@@ -130,20 +143,36 @@ def get_user_by_username(username):
     
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT user_id, username, password_hash, role, full_name, email, permissions 
-            FROM users 
-            WHERE username = %s AND is_active = TRUE
-        """, (username,))
+        # Check if permissions column exists
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
+        has_permissions = cursor.fetchone() is not None
+        
+        # Build SELECT query based on available columns
+        if has_permissions:
+            cursor.execute("""
+                SELECT user_id, username, password_hash, role, full_name, email, permissions 
+                FROM users 
+                WHERE username = %s AND is_active = TRUE
+            """, (username,))
+        else:
+            cursor.execute("""
+                SELECT user_id, username, password_hash, role, full_name, email
+                FROM users 
+                WHERE username = %s AND is_active = TRUE
+            """, (username,))
+        
         user_data = cursor.fetchone()
         
         # Parse permissions nếu có
-        if user_data and user_data.get('permissions'):
-            import json
-            try:
-                if isinstance(user_data['permissions'], str):
-                    user_data['permissions'] = json.loads(user_data['permissions'])
-            except:
+        if user_data:
+            if has_permissions and user_data.get('permissions'):
+                import json
+                try:
+                    if isinstance(user_data['permissions'], str):
+                        user_data['permissions'] = json.loads(user_data['permissions'])
+                except:
+                    user_data['permissions'] = {}
+            else:
                 user_data['permissions'] = {}
         
         return user_data

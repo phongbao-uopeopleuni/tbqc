@@ -1,0 +1,137 @@
+/* ============================================
+   NAVBAR
+   ============================================ */
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: white;
+  padding: 0 var(--space-6);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: var(--z-fixed);
+  box-shadow: var(--shadow-md);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.navbar-logo {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.navbar-logo:hover {
+  opacity: 0.9;
+}
+
+.navbar-menu {
+  display: flex;
+  gap: var(--space-2);
+  list-style: none;
+  align-items: center;
+}
+
+.navbar-menu a {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  position: relative;
+  white-space: nowrap;
+}
+
+.navbar-menu a:hover {
+  color: var(--color-accent);
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.navbar-menu a.active {
+  color: var(--color-accent);
+}
+
+.navbar-menu a.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: var(--space-3);
+  right: var(--space-3);
+  height: 2px;
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+}
+
+.navbar-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: var(--font-size-2xl);
+  cursor: pointer;
+  padding: var(--space-2);
+  line-height: 1;
+}
+
+/* Mobile Menu */
+@media (max-width: 1023px) {
+  .navbar-toggle {
+    display: block;
+  }
+  
+  .navbar-menu {
+    position: fixed;
+    top: 64px;
+    left: -100%;
+    width: 100%;
+    height: calc(100vh - 64px);
+    background: rgba(17, 24, 39, 0.98);
+    backdrop-filter: blur(10px);
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-6);
+    gap: var(--space-2);
+    transition: left var(--transition-slow);
+    overflow-y: auto;
+  }
+  
+  .navbar-menu.active {
+    left: 0;
+  }
+  
+  .navbar-menu a {
+    padding: var(--space-4);
+    border-radius: var(--radius-md);
+    display: block;
+    text-align: left;
+  }
+  
+  .navbar-menu a.active::after {
+    display: none;
+  }
+  
+  .navbar-menu a.active {
+    background: rgba(255, 215, 0, 0.15);
+    border-left: 3px solid var(--color-accent);
+  }
+}
+
+/* Body padding for fixed navbar */
+body {
+  padding-top: 64px;
+}
+

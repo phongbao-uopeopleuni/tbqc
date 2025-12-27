@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Soạn thảo bài đăng - Gia Phả Nguyễn Phước Tộc</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Quill Editor -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Serif TC', serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding-top: 70px;
+    }
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #111827;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+    }
+    .navbar-logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #FFD700;
+      text-decoration: none;
+    }
+    .navbar-menu {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+    .navbar-menu a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+    .navbar-menu a:hover, .navbar-menu a.active {
+      color: #FFD700;
+      background: rgba(255, 215, 0, 0.1);
+    }
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+    }
+    .user-name {
+      font-size: 14px;
+      color: #FFD700;
+    }
+    .btn-logout {
+      padding: 8px 16px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .btn-logout:hover {
+      background: #c82333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    .editor-header {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .editor-header h1 {
+      color: #8B0000;
+      font-size: 24px;
+    }
+    .editor-actions {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: #FFD700;
+    }
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .editor-panel {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 24px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 600;
+      font-size: 15px;
+    }
+    .form-group input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #DAA520;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: 'Noto Serif TC', serif;
+    }
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #DAA520;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: 'Noto Serif TC', serif;
+      min-height: 100px;
+      resize: vertical;
+    }
+    /* Quill Editor Styles */
+    .ql-container {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 16px;
+      min-height: 400px;
+    }
+    .ql-editor {
+      min-height: 400px;
+    }
+    /* Image Upload Section */
+    .images-section {
+      margin-top: 30px;
+      padding-top: 30px;
+      border-top: 2px solid #e0e0e0;
+    }
+    .images-section h3 {
+      color: #8B0000;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+    .image-upload-area {
+      border: 2px dashed #DAA520;
+      border-radius: 8px;
+      padding: 30px;
+      text-align: center;
+      background: #fffbf0;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .image-upload-area:hover {
+      border-color: #8B0000;
+      background: #fff8e1;
+    }
+    .image-upload-area.dragover {
+      border-color: #8B0000;
+      background: #ffe0e0;
+    }
+    .image-upload-area input {
+      display: none;
+    }
+    .image-upload-text {
+      color: #666;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    .images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    .image-item {
+      position: relative;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      aspect-ratio: 16/9;
+    }
+    .image-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .image-item .remove-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(220, 53, 69, 0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .image-item .remove-btn:hover {
+      background: #c82333;
+    }
+    .image-item .image-order {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #DAA520;
+      border-radius: 6px;
+      font-size: 15px;
+      font-family: 'Noto Serif TC', serif;
+    }
+    .message {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .message.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-left: 4px solid #4caf50;
+    }
+    .message.error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #c62828;
+    }
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #8B0000;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 10px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-left">
+      <a href="/" class="navbar-logo">Gia Phả Nguyễn Phước Tộc</a>
+      <ul class="navbar-menu">
+        <li><a href="/">Trang chủ</a></li>
+        <li><a href="/activities">Hoạt động</a></li>
+        <li><a href="/editor" class="active">Soạn thảo</a></li>
+      </ul>
+    </div>
+    <div class="navbar-right">
+      <div class="user-info" id="userInfo" style="display: none;">
+        <span class="user-name" id="userName"></span>
+        <button class="btn-logout" onclick="handleLogout()">Thoát</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="editor-header">
+      <h1>📝 Soạn thảo bài đăng</h1>
+      <div class="editor-actions">
+        <button class="btn btn-secondary" onclick="saveDraft()">Lưu nháp</button>
+        <button class="btn btn-primary" onclick="publishPost()">Đăng bài</button>
+      </div>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div class="editor-panel">
+      <form id="postForm">
+        <input type="hidden" id="postId" value="">
+        
+        <div class="form-group">
+          <label for="title">Tiêu đề bài viết *</label>
+          <input type="text" id="title" name="title" required placeholder="Nhập tiêu đề bài viết...">
+        </div>
+
+        <div class="form-group">
+          <label for="summary">Tóm tắt</label>
+          <textarea id="summary" name="summary" placeholder="Tóm tắt ngắn gọn về bài viết (150-300 ký tự)..."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="content">Nội dung bài viết *</label>
+          <div id="editor" style="height: 500px;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="status">Trạng thái</label>
+          <select id="status" name="status" class="status-select">
+            <option value="draft">Nháp</option>
+            <option value="published">Đã đăng</option>
+          </select>
+        </div>
+
+        <div class="images-section">
+          <h3>📷 Hình ảnh (có thể đính kèm nhiều ảnh)</h3>
+          <div class="image-upload-area" id="uploadArea" onclick="document.getElementById('imageFiles').click()">
+            <div style="font-size: 48px; color: #DAA520;">📤</div>
+            <div class="image-upload-text">Click hoặc kéo thả ảnh vào đây để upload</div>
+            <div style="font-size: 12px; color: #999; margin-top: 5px;">Có thể chọn nhiều ảnh cùng lúc (tối đa 20 ảnh)</div>
+            <input type="file" id="imageFiles" multiple accept="image/*" onchange="handleImageSelect(event)">
+          </div>
+          <div class="images-grid" id="imagesGrid"></div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Quill Editor -->
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+  <script>
+    // Initialize Quill Editor
+    const quill = new Quill('#editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: [
+          [{ 'header': [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ 'color': [] }, { 'background': [] }],
+          [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+          [{ 'align': [] }],
+          ['link', 'image'],
+          ['clean']
+        ]
+      },
+      placeholder: 'Viết nội dung bài viết của bạn ở đây...'
+    });
+
+    // User info
+    let currentUser = null;
+    let uploadedImages = [];
+
+    // Check authentication
+    async function checkAuth() {
+      try {
+        const response = await fetch('/api/current-user');
+        const result = await response.json();
+        if (result.success && result.user) {
+          currentUser = result.user;
+          document.getElementById('userName').textContent = currentUser.username || currentUser.full_name || 'Admin';
+          document.getElementById('userInfo').style.display = 'flex';
+          return true;
+        } else {
+          window.location.href = '/login';
+          return false;
+        }
+      } catch (e) {
+        window.location.href = '/login';
+        return false;
+      }
+    }
+
+    // Logout
+    async function handleLogout() {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+      } catch (e) {
+        window.location.href = '/login';
+      }
+    }
+
+    // Show message
+    function showMessage(msg, type = 'success') {
+      const msgEl = document.getElementById('message');
+      msgEl.textContent = msg;
+      msgEl.className = `message ${type}`;
+      msgEl.style.display = 'block';
+      setTimeout(() => {
+        msgEl.style.display = 'none';
+      }, 5000);
+    }
+
+    // Handle image select
+    async function handleImageSelect(event) {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+
+      // Limit to 20 images total
+      if (uploadedImages.length + files.length > 20) {
+        showMessage('Tối đa 20 ảnh. Vui lòng xóa một số ảnh trước khi thêm mới.', 'error');
+        return;
+      }
+
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          showMessage(`File ${file.name} không phải là ảnh`, 'error');
+          continue;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          showMessage(`Ảnh ${file.name} quá lớn (tối đa 5MB)`, 'error');
+          continue;
+        }
+        await uploadImage(file);
+      }
+      event.target.value = '';
+    }
+
+    // Upload image
+    async function uploadImage(file) {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      try {
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData
+        });
+        const result = await response.json();
+        
+        if (result.success && result.url) {
+          uploadedImages.push({
+            url: result.url,
+            filename: result.filename,
+            order: uploadedImages.length + 1
+          });
+          renderImages();
+          showMessage(`Đã upload ảnh: ${result.filename}`, 'success');
+        } else {
+          showMessage(result.error || 'Lỗi khi upload ảnh', 'error');
+        }
+      } catch (e) {
+        showMessage('Lỗi: ' + e.message, 'error');
+      }
+    }
+
+    // Render images
+    function renderImages() {
+      const grid = document.getElementById('imagesGrid');
+      grid.innerHTML = uploadedImages.map((img, index) => `
+        <div class="image-item">
+          <img src="${img.url}" alt="Image ${index + 1}">
+          <span class="image-order">${index + 1}</span>
+          <button class="remove-btn" onclick="removeImage(${index})" title="Xóa ảnh">×</button>
+        </div>
+      `).join('');
+    }
+
+    // Remove image
+    function removeImage(index) {
+      uploadedImages.splice(index, 1);
+      // Reorder
+      uploadedImages.forEach((img, i) => {
+        img.order = i + 1;
+      });
+      renderImages();
+    }
+
+    // Drag and drop
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length > 0) {
+        handleImageSelect({ target: { files: files } });
+      }
+    });
+
+    // Save draft
+    async function saveDraft() {
+      document.getElementById('status').value = 'draft';
+      await savePost();
+    }
+
+    // Publish post
+    async function publishPost() {
+      document.getElementById('status').value = 'published';
+      await savePost();
+    }
+
+    // Save post
+    async function savePost() {
+      const title = document.getElementById('title').value.trim();
+      const summary = document.getElementById('summary').value.trim();
+      const content = quill.root.innerHTML;
+      const status = document.getElementById('status').value;
+      const postId = document.getElementById('postId').value;
+
+      if (!title) {
+        showMessage('Vui lòng nhập tiêu đề', 'error');
+        return;
+      }
+      if (!content || content === '<p><br></p>') {
+        showMessage('Vui lòng nhập nội dung', 'error');
+        return;
+      }
+
+      // Get first image as thumbnail
+      const thumbnail = uploadedImages.length > 0 ? uploadedImages[0].url : null;
+
+      // Prepare data
+      const data = {
+        title,
+        summary,
+        content,
+        status,
+        thumbnail,
+        images: uploadedImages.map(img => img.url)
+      };
+
+      try {
+        let response;
+        if (postId) {
+          // Update
+          response = await fetch(`/api/activities/${postId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          // Create
+          response = await fetch('/api/activities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        }
+
+        const result = await response.json();
+        if (result.success || (result.data && result.data.id)) {
+          const newId = result.data?.id || result.id;
+          document.getElementById('postId').value = newId;
+          showMessage(status === 'published' ? 'Đã đăng bài thành công!' : 'Đã lưu nháp thành công!', 'success');
+          
+          if (status === 'published') {
+            setTimeout(() => {
+              window.location.href = `/activities?id=${newId}`;
+            }, 1500);
+          }
+        } else {
+          showMessage(result.error || 'Lỗi khi lưu bài viết', 'error');
+        }
+      } catch (e) {
+        showMessage('Lỗi: ' + e.message, 'error');
+      }
+    }
+
+    // Initialize
+    (async () => {
+      await checkAuth();
+    })();
+  </script>
+</body>
+</html>
+

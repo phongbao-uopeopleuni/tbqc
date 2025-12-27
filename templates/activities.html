@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    /* Page-specific styles */
+    .page-header {
+      text-align: center;
+      margin-bottom: var(--space-10);
+      padding-top: var(--space-8);
+    }
+    
+    .page-header h1 {
+      font-size: var(--font-size-4xl);
+      margin-bottom: var(--space-3);
+    }
+    
+    .page-subtitle {
+      font-size: var(--font-size-lg);
+      color: var(--color-text-muted);
+    }
+    
+    .activities-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: var(--space-6);
+      margin-top: var(--space-8);
+    }
+    
+    .activity-card {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    
+    .activity-card .card {
+      height: 100%;
+      padding: var(--space-6);
+    }
+    
+    .activity-card-title {
+      font-size: var(--font-size-xl);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-primary);
+      margin-bottom: var(--space-3);
+      line-height: var(--line-height-tight);
+      min-height: 3em;
+    }
+    
+    .activity-meta {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-3);
+    }
+    
+    .activity-summary {
+      font-size: var(--font-size-sm);
+      line-height: var(--line-height-relaxed);
+      color: var(--color-text);
+      margin-bottom: var(--space-4);
+    }
+    
+    .activity-link {
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+      font-size: var(--font-size-sm);
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công – Gia Phả Nguyễn Phước Tộc</a>
+    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/genealogy">Gia phả</a></li>
+      <li><a href="/activities" class="active">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/login">Đăng nhập</a></li>
+    </ul>
+  </nav>
+
+  <div class="container section">
+    <div class="page-header">
+      <h1>📰 Hoạt động</h1>
+      <p class="page-subtitle">Tin tức và sự kiện của dòng họ Nguyễn Phước Tộc</p>
+    </div>
+    
+    
+    <div id="message" class="loading">Đang tải dữ liệu...</div>
+    <div id="list" style="display:none;"></div>
+  </div>
+
+  <script src="/static/js/common.js"></script>
+  <script>
+    const messageEl = document.getElementById('message');
+    const listEl = document.getElementById('list');
+
+    function getQueryId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('id');
+    }
+
+    async function ensureLoggedIn() {
+      try {
+        const result = await fetchJson('/api/current-user');
+        if (result && result.success && result.user) {
+          return true;
+        }
+      } catch (e) {
+        console.error('Check login failed', e);
+      }
+      return false;
+    }
+
+
+    // fetchActivityDetail removed - using separate page route instead
+
+    function renderList(posts) {
+      listEl.style.display = 'block';
+      if (!posts || posts.length === 0) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-title">Chưa có bài viết nào</div><div class="empty-state-text">Vui lòng quay lại sau!</div></div>';
+        return;
+      }
+      const html = `
+        <div class="activities-grid">
+          ${posts.map(p => {
+            const date = p.created_at ? formatDate(p.created_at) : '';
+            const summary = p.summary || p.description || '';
+            return `
+              <a href="/activities/${p.id || p.activity_id || ''}" class="activity-card">
+                <div class="card">
+                  <h3 class="activity-card-title">${escapeHtml(p.title || 'Không có tiêu đề')}</h3>
+                  ${date ? `<div class="activity-meta">📅 ${date}</div>` : ''}
+                  <div class="activity-summary">${escapeHtml(summary).substring(0, 150)}${summary && summary.length > 150 ? '...' : ''}</div>
+                  <span class="activity-link">Đọc tiếp →</span>
+                </div>
+              </a>
+            `;
+          }).join('')}
+        </div>
+      `;
+      listEl.innerHTML = html;
+    }
+
+    // Removed renderDetail - now using separate page route
+
+    // Carousel functionality removed - no images needed
+
+    async function initPage() {
+      // Public page - no login required to view published posts
+      // If there's an ID in query, redirect to detail page
+      const id = getQueryId();
+      if (id) {
+        window.location.href = `/activities/${id}`;
+        return;
+      }
+      
+      try {
+        messageEl.style.display = 'none';
+        // Only load published posts for public view
+        const posts = await fetchJson('/api/activities?status=published&limit=20');
+        if (!Array.isArray(posts)) throw new Error('Không thể tải hoạt động');
+        
+        // Render list (no carousel, no images)
+        renderList(posts);
+      } catch (err) {
+        messageEl.className = 'alert alert-error';
+        messageEl.textContent = 'Lỗi: Không thể tải dữ liệu hoạt động, vui lòng thử lại sau.';
+        messageEl.style.display = 'block';
+        console.error('Error loading activities:', err);
+      }
+    }
+
+    initPage();
+  </script>
+</body>
+</html>

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Serif TC', serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding-top: 70px;
+    }
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #111827;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .navbar-logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #FFD700;
+      text-decoration: none;
+    }
+    .navbar-menu {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+    .navbar-menu a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 5px 10px;
+      border-radius: 4px;
+    }
+    .navbar-menu a:hover, .navbar-menu a.active {
+      color: #FFD700;
+      background: rgba(255, 215, 0, 0.1);
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    .page-header {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .page-header h1 {
+      color: #8B0000;
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 1200px) {
+      .main-content { grid-template-columns: 1fr; }
+    }
+    .panel {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .panel h2 {
+      color: #8B0000;
+      font-size: 20px;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #DAA520;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      color: #333;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #DAA520;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: 'Noto Serif TC', serif;
+    }
+    .form-group textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: #FFD700;
+    }
+    .btn-secondary {
+      background: #757575;
+      color: white;
+    }
+    .btn-danger {
+      background: #c62828;
+      color: white;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .posts-list {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .post-item {
+      padding: 16px;
+      border-bottom: 1px solid #e0e0e0;
+      transition: background 0.2s;
+    }
+    .post-item:hover {
+      background: #f9f9f9;
+    }
+    .post-item:last-child {
+      border-bottom: none;
+    }
+    .post-title {
+      font-weight: 600;
+      color: #8B0000;
+      margin-bottom: 6px;
+      font-size: 16px;
+    }
+    .post-meta {
+      font-size: 12px;
+      color: #777;
+      margin-bottom: 8px;
+    }
+    .post-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    .status-published {
+      background: #c8e6c9;
+      color: #2e7d32;
+    }
+    .status-draft {
+      background: #fff9c4;
+      color: #f57f17;
+    }
+    .post-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+    .error, .success {
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    .error {
+      background: #ffebee;
+      color: #c62828;
+      border-left: 4px solid #c62828;
+    }
+    .success {
+      background: #e8f5e9;
+      color: #2e7d32;
+      border-left: 4px solid #4caf50;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Gia Phả Nguyễn Phước Tộc</a>
+    <ul class="navbar-menu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/activities">Hoạt động</a></li>
+      <li><a href="/admin/dashboard">Dashboard</a></li>
+      <li><a href="/admin/activities" class="active">Quản lý Hoạt động</a></li>
+      <li><a href="/api/logout" onclick="event.preventDefault(); logout();">Đăng xuất</a></li>
+    </ul>
+  </nav>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>📝 Quản lý Hoạt động</h1>
+      <p>Tạo, chỉnh sửa và quản lý các bài viết hoạt động</p>
+    </div>
+
+    <div id="message"></div>
+
+    <div class="main-content">
+      <!-- Form tạo/sửa -->
+      <div class="panel">
+        <h2 id="formTitle">Tạo bài đăng mới</h2>
+        <form id="activityForm">
+          <input type="hidden" id="activityId" value="">
+          <div class="form-group">
+            <label for="title">Tiêu đề *</label>
+            <input type="text" id="title" name="title" required>
+          </div>
+          <div class="form-group">
+            <label for="summary">Tóm tắt</label>
+            <textarea id="summary" name="summary"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="content">Nội dung *</label>
+            <textarea id="content" name="content" required style="min-height: 200px;"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="thumbnail">Ảnh đại diện / Thumbnail (tùy chọn)</label>
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+              <input type="text" id="thumbnail" name="thumbnail" placeholder="https://example.com/image.jpg hoặc upload ảnh" style="flex: 1;">
+              <input type="file" id="thumbnailFile" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+              <button type="button" class="btn btn-secondary" onclick="document.getElementById('thumbnailFile').click()" style="white-space: nowrap;">📷 Upload</button>
+            </div>
+            <small style="display:block;margin-top:4px;color:#666;font-size:12px;">Có thể nhập URL hoặc upload ảnh từ máy tính</small>
+            <div id="thumbnailPreview" style="margin-top: 10px; display: none;">
+              <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #DAA520;">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="status">Trạng thái</label>
+            <select id="status" name="status">
+              <option value="draft">Nháp</option>
+              <option value="published">Đã đăng</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="submitBtn">Lưu nháp</button>
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">Hủy</button>
+            <button type="button" class="btn btn-primary" onclick="publishNow()" id="publishBtn" style="display:none;">Đăng bài</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Danh sách bài đăng -->
+      <div class="panel">
+        <h2>Danh sách bài đăng</h2>
+        <div id="postsList" class="posts-list">
+          <div class="loading">Đang tải...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Generic JSON fetch helper
+    async function fetchJson(url, options) {
+      const res = await fetch(url, options);
+      const contentType = res.headers.get('Content-Type') || '';
+      const text = await res.text();
+
+      if (!res.ok) {
+        console.error('HTTP error for', url, res.status, text);
+        throw new Error(`HTTP ${res.status} khi gọi ${url}`);
+      }
+
+      if (!contentType.includes('application/json')) {
+        console.error('Non‑JSON response for', url, 'contentType =', contentType, 'body =', text.slice(0, 200));
+        throw new Error(`Phản hồi không phải JSON. Server trả về HTML hoặc nội dung khác.`);
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        console.error('JSON parse error for', url, 'body =', text.slice(0, 200));
+        throw e;
+      }
+    }
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showMessage(msg, type = 'success') {
+      const msgEl = document.getElementById('message');
+      msgEl.className = type;
+      msgEl.textContent = msg;
+      msgEl.style.display = 'block';
+      setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+    }
+
+    async function checkAuth() {
+      try {
+        const result = await fetchJson('/api/current-user');
+        if (!result.success || !result.user || result.user.role !== 'admin') {
+          window.location.href = '/login';
+          return false;
+        }
+        return true;
+      } catch (e) {
+        window.location.href = '/login';
+        return false;
+      }
+    }
+
+    async function loadPosts() {
+      const listEl = document.getElementById('postsList');
+      try {
+        const posts = await fetchJson('/api/activities');
+        if (!Array.isArray(posts) || posts.length === 0) {
+          listEl.innerHTML = '<div class="loading">Chưa có bài viết nào</div>';
+          return;
+        }
+        listEl.innerHTML = posts.map(p => {
+          const date = p.created_at ? new Date(p.created_at).toLocaleDateString('vi-VN') : '';
+          const statusClass = p.status === 'published' ? 'status-published' : 'status-draft';
+          const statusText = p.status === 'published' ? 'Đã đăng' : 'Nháp';
+          const thumbnail = p.thumbnail ? `<img src="${escapeHtml(p.thumbnail)}" alt="Thumbnail" style="width:60px;height:40px;object-fit:cover;border-radius:4px;margin-right:12px;display:inline-block;vertical-align:middle;">` : '';
+          return `
+            <div class="post-item">
+              <div class="post-title" style="display:flex;align-items:center;">
+                ${thumbnail}
+                <span>${escapeHtml(p.title || 'Không có tiêu đề')}</span>
+              </div>
+              <div class="post-meta">
+                <span class="post-status ${statusClass}">${statusText}</span>
+                ${date ? '📅 ' + date : ''}
+              </div>
+              <div class="post-actions">
+                <button class="btn btn-sm btn-secondary" onclick="editPost(${p.id})">Sửa</button>
+                <button class="btn btn-sm btn-danger" onclick="deletePost(${p.id}, '${escapeHtml(p.title || '')}')">Xóa</button>
+                <a href="/activities/${p.id || p.activity_id}" target="_blank" class="btn btn-sm btn-primary" style="text-decoration:none;display:inline-block;">Xem</a>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        listEl.innerHTML = `<div class="error">Lỗi: ${err.message}</div>`;
+      }
+    }
+
+    async function editPost(id) {
+      try {
+        const post = await fetchJson(`/api/activities/${id}`);
+        document.getElementById('activityId').value = post.id;
+        document.getElementById('title').value = post.title || '';
+        document.getElementById('summary').value = post.summary || '';
+        document.getElementById('content').value = post.content || '';
+        document.getElementById('thumbnail').value = post.thumbnail || '';
+        document.getElementById('status').value = post.status || 'draft';
+        document.getElementById('formTitle').textContent = 'Chỉnh sửa bài đăng';
+        document.getElementById('submitBtn').textContent = 'Cập nhật';
+        document.getElementById('publishBtn').style.display = 'inline-block';
+        
+        // Show preview if thumbnail exists
+        if (post.thumbnail) {
+          const previewDiv = document.getElementById('thumbnailPreview');
+          const previewImg = document.getElementById('previewImg');
+          previewImg.src = post.thumbnail;
+          previewDiv.style.display = 'block';
+        }
+        
+        document.getElementById('activityForm').scrollIntoView({ behavior: 'smooth' });
+      } catch (err) {
+        showMessage('Lỗi: ' + err.message, 'error');
+      }
+    }
+
+    async function deletePost(id, title) {
+      if (!confirm(`Bạn có chắc muốn xóa bài "${title}"?`)) return;
+      try {
+        await fetchJson(`/api/activities/${id}`, { method: 'DELETE' });
+        showMessage('Đã xóa thành công');
+        loadPosts();
+        if (document.getElementById('activityId').value == id) {
+          resetForm();
+        }
+      } catch (err) {
+        showMessage('Lỗi: ' + err.message, 'error');
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('activityForm').reset();
+      document.getElementById('activityId').value = '';
+      document.getElementById('formTitle').textContent = 'Tạo bài đăng mới';
+      document.getElementById('submitBtn').textContent = 'Lưu nháp';
+      document.getElementById('publishBtn').style.display = 'none';
+      document.getElementById('thumbnailPreview').style.display = 'none';
+      document.getElementById('thumbnailFile').value = '';
+    }
+
+    async function publishNow() {
+      const form = document.getElementById('activityForm');
+      const id = document.getElementById('activityId').value;
+      if (!id) {
+        showMessage('Vui lòng lưu bài viết trước', 'error');
+        return;
+      }
+      document.getElementById('status').value = 'published';
+      form.dispatchEvent(new Event('submit'));
+    }
+
+    async function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showMessage('Vui lòng chọn file ảnh', 'error');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        showMessage('File ảnh quá lớn (tối đa 5MB)', 'error');
+        return;
+      }
+      
+      // Show preview
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const previewDiv = document.getElementById('thumbnailPreview');
+        const previewImg = document.getElementById('previewImg');
+        previewImg.src = e.target.result;
+        previewDiv.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+      
+      // Upload to server
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      try {
+        showMessage('Đang upload ảnh...', 'success');
+        const response = await fetch('/api/upload-image', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        if (result.success && result.url) {
+          document.getElementById('thumbnail').value = result.url;
+          showMessage('Upload ảnh thành công!', 'success');
+        } else {
+          showMessage(result.error || 'Lỗi khi upload ảnh', 'error');
+        }
+      } catch (err) {
+        showMessage('Lỗi: ' + err.message, 'error');
+      }
+    }
+
+    async function logout() {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+      } catch (e) {
+        window.location.href = '/login';
+      }
+    }
+
+    document.getElementById('activityForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('activityId').value;
+      const data = {
+        title: document.getElementById('title').value.trim(),
+        summary: document.getElementById('summary').value.trim(),
+        content: document.getElementById('content').value.trim(),
+        status: document.getElementById('status').value,
+        thumbnail: document.getElementById('thumbnail').value.trim()
+      };
+
+      if (!data.title || !data.content) {
+        showMessage('Vui lòng điền đầy đủ tiêu đề và nội dung', 'error');
+        return;
+      }
+
+      try {
+        if (id) {
+          await fetchJson(`/api/activities/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          showMessage('Đã cập nhật thành công');
+        } else {
+          await fetchJson('/api/activities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          showMessage('Đã tạo bài viết thành công');
+        }
+        resetForm();
+        loadPosts();
+      } catch (err) {
+        showMessage('Lỗi: ' + err.message, 'error');
+      }
+    });
+
+    // Initialize
+    (async () => {
+      if (await checkAuth()) {
+        loadPosts();
+      }
+    })();
+  </script>
+</body>
+</html>

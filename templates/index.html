@@ -127,8 +127,8 @@
       padding: 60px 20px;
     }
 
-    /* Override cho activities-tree section để mở rộng tối đa */
-    #activities-tree .section-container {
+    /* Section activities-tree đã di chuyển sang /genealogy */
+    /* #activities-tree .section-container {
       max-width: 100%;
       padding: 40px 20px;
     }
@@ -197,9 +197,11 @@
 
     .about-content {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 40px;
-      align-items: center;
+      align-items: start;
+      max-width: 1000px;
+      margin: 0 auto;
     }
 
     .about-text {
@@ -210,6 +212,78 @@
 
     .about-text p {
       margin-bottom: 20px;
+    }
+
+    .about-text h3 {
+      color: #8B0000;
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 30px;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #DAA520;
+      padding-bottom: 10px;
+    }
+
+    .about-text h3:first-of-type {
+      margin-top: 0;
+    }
+
+    .about-text blockquote {
+      border-left: 4px solid #8B0000;
+      padding-left: 20px;
+      margin: 20px 0;
+      font-style: italic;
+      color: #555;
+      background: #FFF8DC;
+      padding: 15px 20px;
+      border-radius: 4px;
+    }
+
+    .about-text ul {
+      margin: 15px 0;
+      padding-left: 30px;
+    }
+
+    .about-text ul li {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .about-text strong {
+      color: #8B0000;
+      font-weight: 700;
+    }
+
+    .about-text em {
+      color: #666;
+      font-style: italic;
+    }
+
+    .about-image {
+      text-align: center;
+      margin: 40px 0;
+    }
+
+    .about-image img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .about-image img:hover {
+      transform: scale(1.02);
+    }
+
+    @media (max-width: 768px) {
+      .about-image {
+        margin: 30px 0;
+      }
+      
+      .about-image img {
+        border-radius: 8px;
+      }
     }
 
     .about-image {
@@ -246,252 +320,12 @@
     }
 
     /* ============================================
-       GENEALOGY TREE SECTION (#activities-tree)
+       GENEALOGY TREE SECTION - Đã di chuyển sang /genealogy
        ============================================ */
-    #activities-tree {
-      background: linear-gradient(180deg, #FFF8DC 0%, #FFEBCD 100%);
-    }
 
-    #activities-tree .section-container {
-      max-width: 100%;
-      padding: 40px 20px;
-    }
 
-    /* ============================================
-       ACTIVITIES SECTION (#activities)
-       ============================================ */
-    #activities {
-      background: linear-gradient(180deg, #FFEBCD 0%, #FFF8DC 100%);
-    }
 
-    .activities-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 30px;
-      margin-top: 0;
-      padding-top: 20px;
-    }
-
-    .activity-card {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      border-left: 5px solid #DAA520;
-      transition: transform 0.3s;
-    }
-
-    .activity-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    .activity-card h3 {
-      color: #8B0000;
-      margin-bottom: 10px;
-      font-size: 20px;
-    }
-
-    .activity-date {
-      color: #666;
-      font-size: 14px;
-      margin-bottom: 10px;
-    }
-
-    .activity-location {
-      color: #888;
-      font-size: 14px;
-      margin-bottom: 15px;
-    }
-
-    .activity-description {
-      color: #333;
-      line-height: 1.6;
-    }
-
-    /* ============================================
-       STATS SECTION (#stats)
-       ============================================ */
-    #stats {
-      background: linear-gradient(180deg, #FFF8DC 0%, #FFEBCD 100%);
-      padding: 40px 0 60px 0;
-    }
-
-    #stats .section-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 20px;
-    }
-
-    .stats-subtitle {
-      text-align: center;
-      color: #555;
-      margin-bottom: 30px;
-      font-size: 16px;
-    }
-
-    .stats-layout {
-      display: grid;
-      grid-template-columns: 1.2fr 2fr;
-      gap: 30px;
-      align-items: stretch;
-    }
-
-    .stats-summary {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 15px;
-    }
-
-    .stats-card {
-      background: white;
-      border-radius: 12px;
-      padding: 16px 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      border-left: 5px solid #DAA520;
-    }
-
-    .stats-label {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 6px;
-    }
-
-    .stats-value {
-      font-size: 22px;
-      font-weight: 700;
-      color: #8B0000;
-    }
-
-    .stats-charts {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-
-    .stats-chart-card {
-      background: white;
-      border-radius: 12px;
-      padding: 16px 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-
-    .stats-chart-card h3 {
-      margin-bottom: 10px;
-      font-size: 16px;
-      color: #8B0000;
-      text-align: center;
-    }
-
-    @media (max-width: 900px) {
-      .stats-layout {
-        grid-template-columns: 1fr;
-      }
-      .stats-charts {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Family Tree trong Activities Section */
-    .activities-tree-section {
-      margin-top: 30px;
-      margin-bottom: 40px;
-      padding: 30px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 100%;
-    }
-
-    .tree-section-title {
-      color: #8B0000;
-      font-size: 24px;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    .activities-tree-container {
-      min-height: 600px;
-      height: auto;
-      max-height: 85vh;
-      position: relative;
-      overflow: auto;
-      background: #fafafa;
-      border-radius: 8px;
-      padding: 30px;
-      width: 100%;
-      max-width: 100%;
-      box-sizing: border-box;
-    }
-
-    .tree-loading {
-      text-align: center;
-      padding: 40px;
-      color: #666;
-      font-size: 16px;
-    }
-
-    .activities-tree-container .tree {
-      width: 100%;
-      min-width: 100%;
-      min-height: 600px;
-    }
-
-    .activities-tree-container .node {
-      background: white;
-      border: 2px solid #DAA520;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      min-width: 120px;
-      max-width: 150px;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .activities-tree-container .node:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .activities-tree-container .node.founder {
-      background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
-      border-color: #8B0000;
-      font-weight: 700;
-      font-size: 13px;
-    }
-
-    .activities-tree-container .connector {
-      stroke: #DAA520;
-      stroke-width: 2;
-      fill: none;
-    }
-
-    .activities-tree-container .horizontal-tree {
-      width: 100%;
-      min-width: 100%;
-      min-height: 600px;
-      max-width: 100%;
-    }
-
-    .activities-tree-container .horizontal-tree svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      min-width: 100%;
-      pointer-events: none;
-    }
-
-    .activities-tree-container .horizontal-tree svg line {
-      stroke: #DAA520;
-      stroke-width: 2;
-      fill: none;
-    }
+    /* Family Tree CSS - Đã di chuyển sang /genealogy */
 
     /* ============================================
        GENEALOGY SECTION (#genealogy)
@@ -942,75 +776,6 @@
     }
 
     /* ============================================
-       CONTACT SECTION (#contact)
-       ============================================ */
-    #contact {
-      background: linear-gradient(180deg, #FFEBCD 0%, #FFF8DC 100%);
-    }
-
-    .contact-form {
-      max-width: 600px;
-      margin: 0 auto;
-      background: white;
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 8px;
-      color: #8B0000;
-      font-weight: 600;
-    }
-
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 12px;
-      border: 2px solid #DAA520;
-      border-radius: 6px;
-      font-size: 16px;
-      font-family: 'Noto Serif TC', serif;
-    }
-
-    .form-group textarea {
-      min-height: 120px;
-      resize: vertical;
-    }
-
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-      outline: none;
-      border-color: #8B0000;
-      box-shadow: 0 0 8px rgba(218, 165, 32, 0.3);
-    }
-
-    .submit-button {
-      width: 100%;
-      padding: 15px;
-      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .submit-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(139, 0, 0, 0.4);
-    }
-
-    /* ============================================
        RESPONSIVE
        ============================================ */
     
@@ -1025,7 +790,8 @@
         min-width: 100%;
       }
       
-      section#activities-tree > div > div[style*="grid-template-columns"] {
+      /* section#activities-tree đã di chuyển sang /genealogy */
+      /* section#activities-tree > div > div[style*="grid-template-columns"] {
         grid-template-columns: 1fr !important;
       }
       
@@ -1075,13 +841,12 @@
     <a href="#home" class="navbar-logo">Phòng Tuy Biên Quận Công – Gia Phả Nguyễn Phước Tộc</a>
     <button class="navbar-toggle" onclick="toggleMenu()">☰</button>
     <ul class="navbar-menu" id="navbarMenu">
-      <li><a href="#home" onclick="setActive(this)">Trang chủ</a></li>
-      <li><a href="#about" onclick="setActive(this)">Giới thiệu</a></li>
+      <li><a href="/" onclick="setActive(this)">Trang chủ</a></li>
+      <li><a href="/genealogy" onclick="setActive(this)">Gia phả</a></li>
       <li><a href="/activities">Hoạt động</a></li>
-      <li><a href="#genealogy" onclick="setActive(this)">Gia phả</a></li>
       <li><a href="/members" onclick="setActive(this)">Thành viên</a></li>
+      <li><a href="/contact" onclick="setActive(this)">Liên hệ</a></li>
       <li><a href="/login">Đăng nhập</a></li>
-      <li><a href="#contact" onclick="setActive(this)">Liên hệ</a></li>
     </ul>
   </nav>
 
@@ -1101,181 +866,121 @@
       <h2 class="section-title">Giới Thiệu</h2>
       <div class="about-content">
         <div class="about-text">
+          <h3>TUY BIÊN QUẬN CÔNG – DÒNG CHẢY HUY HOÀNG TRONG LÒNG NGUYỄN PHƯỚC TỘC</h3>
+          
           <p>
-            <strong>Vua Minh Mạng</strong> (1791-1841), tên thật là Nguyễn Phúc Đảm, là vị hoàng đế thứ hai của triều Nguyễn. 
-            Ngài đã có công lớn trong việc mở rộng lãnh thổ, củng cố chính quyền và phát triển văn hóa nước nhà.
+            Trong dòng chảy hàng trăm năm của lịch sử Việt Nam, triều Nguyễn hiện lên như một chương sử rực rỡ, kết tinh những thành tựu lớn lao về văn hóa, thể chế và tư tưởng trị quốc. Triều đại này được khởi đầu bởi <strong>Vua Gia Long</strong> (1802–1820), vị hoàng đế đầu tiên của nhà Nguyễn, người đã thống nhất đất nước và đặt nền móng cho một triều đại kéo dài hơn 140 năm.
           </p>
+          
+          <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
+            <img src="/static/images/1. vua-gia-long.jpg" alt="Vua Gia Long" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          </div>
+          
           <p>
-            Dòng họ <strong>Nguyễn Phước Tộc - Tuy Biên Phòng</strong> là một nhánh quan trọng trong hoàng tộc, 
-            với nhiều thế hệ con cháu đã và đang đóng góp cho đất nước.
+            Giữa bức tranh ấy, triều đại <strong>vua Minh Mạng</strong> (trị vì 1820–1841) nổi bật như một giai đoạn đỉnh cao của sự củng cố và hoàn thiện quốc gia phong kiến trung ương tập quyền. Với tầm nhìn xa rộng và ý chí sắt đá, nhà vua không chỉ đặt nền móng cho một bộ máy hành chính chặt chẽ mà còn dành tâm huyết đặc biệt cho việc xây dựng, duy trì và phát triển bền vững dòng tộc hoàng gia – Nguyễn Phước Tộc.
           </p>
+          
+          <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
+            <img src="/static/images/2. vua-minh-mang.jpg" alt="Vua Minh Mạng" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          </div>
+          
           <p>
-            <strong>Mục tiêu của dự án:</strong> Xây dựng hệ thống tra cứu gia phả điện tử, giúp con cháu dễ dàng 
-            tìm hiểu về nguồn gốc, kết nối với các thành viên trong dòng họ, và lưu trữ thông tin một cách bền vững.
+            Chính trong tinh thần ấy, tư tưởng "gốc sâu thì cành lá mới bền vững" đã trở thành kim chỉ nam cho mọi cải cách của nhà vua, không chỉ ở bình diện quốc gia mà còn trong phạm vi huyết thống hoàng tộc.
           </p>
+
+          <h3>Từ Tầm Nhìn Của Vua Minh Mạng Đến Bài Thơ "Đế Hệ Thi"</h3>
+          
           <p>
-            <strong>Nguồn dữ liệu:</strong> Hệ thống được xây dựng dựa trên các tài liệu gia phả gốc, 
-            văn bản lịch sử, và dữ liệu được tổng hợp từ các nguồn đáng tin cậy.
+            Vua Minh Mạng không chỉ là một nhà chính trị quyết đoán mà còn là một học giả uyên thâm Nho học, thấu hiểu sâu sắc quy luật vận hành của xã hội và gia tộc. Với khát vọng để dòng dõi hoàng gia "trăm đời truyền nối, muôn năm không dứt", vào năm 1823, nhà vua đã ngự soạn bài thơ nổi tiếng mang tên <strong>Đế Hệ Thi</strong>.
           </p>
-        </div>
-        <div class="about-image">
-          <img src="/static/images/vua-minh-mang.jpg" alt="Vua Minh Mạng" title="Vua Minh Mạng (1791-1841)">
+          
+          <p>
+            Bài thơ không đơn thuần là một tác phẩm văn chương, mà là một hệ thống quy tắc đặt tên mang tính khoa học, chặt chẽ và lâu dài. Hai mươi chữ trong bài thơ được quy định làm chữ lót cho các thế hệ hậu duệ kể từ sau vua Minh Mạng, qua đó xác lập trật tự tôn ti, phân định rõ ràng thứ bậc trong nội tộc, tránh sự nhầm lẫn về vai vế, thân – sơ trong hoàng phái.
+          </p>
+          
+          <blockquote>
+            <strong>Bốn câu thơ ngũ ngôn tứ tuyệt:</strong><br><br>
+            <em>Miên Hồng Ưng Bửu Vĩnh</em><br>
+            <em>Bảo Quý Định Long Trường</em><br>
+            <em>Hiền Năng Khang Kế Thuật</em><br>
+            <em>Thế Thụy Quốc Gia Xương</em>
+          </blockquote>
+          
+          <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
+            <img src="/static/images/3. kim sach de he thi.jpg" alt="Kim sách Đế Hệ Thi" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          </div>
+          
+          <p>
+            Hệ thống này đã giúp Nguyễn Phước Tộc duy trì được sự mạch lạc, chuẩn mực trong suốt nhiều thế hệ, đúng như lời vua Minh Mạng từng kỳ vọng: <em>"Thế thứ rõ ràng mà không lẫn, thân sơ phân biệt mà ai cũng có thể biết."</em>
+          </p>
+          
+          <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
+            <img src="/static/images/4. kinh-thanh-hue.jpg" alt="Kinh thành Huế" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          </div>
+
+          <h3>Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</h3>
+          
+          <p>
+            Trong số 142 người con của vua Minh Mạng, <strong>Nguyễn Phúc Miên Sủng (1831–1865)</strong> – hoàng tử thứ 53 – là vị khai phong của <strong>Phòng Tuy Biên Quận Công</strong>, mở đầu cho một nhánh diệp chi riêng biệt trong đại gia đình Nguyễn Phước.
+          </p>
+          
+          <p>
+            Ngài sinh ngày 8 tháng 4 năm 1831, là trưởng nam của bà Lục giai Tiệp dư Nguyễn Thị Viên. Ngay từ thuở thiếu thời, hoàng tử Miên Sủng đã nổi tiếng là người đoan chính, hiếu học, hành xử chừng mực, giữ trọn lễ nghi và phong thái của bậc vương tôn. Những phẩm hạnh ấy khiến ngài được triều đình và tôn thất đặc biệt coi trọng.
+          </p>
+          
+          <p>
+            Năm 1840, ngài được sách phong làm <strong>Tuy Nhân Quận công</strong>. Tuy nhiên, đến năm 1842, dưới triều vua Thiệu Trị, do chữ "Nhân" trùng với thụy hiệu của vua Minh Mạng, tước hiệu của ngài được cải phong thành <strong>Tuy Biên Quận Công</strong> – danh xưng gắn liền với hậu duệ của ngài cho đến ngày nay.
+          </p>
+          
+          <p>
+            Sau khi ngài qua đời năm 1865, được ban thụy hiệu <strong>Cẩn Mục</strong>, tẩm mộ và phủ thờ của ngài trở thành chốn linh thiêng để con cháu các đời về chiêm bái, tưởng niệm một vị hoàng thân đức độ, mẫu mực. Để định danh riêng cho hậu duệ của Phòng Tuy Biên, vua Minh Mạng còn ban <strong>bộ chữ "Phong" (风 – nghĩa là gió)</strong> làm chữ đặt tên cho các công tử trong phòng, tạo nên một dấu ấn riêng, vừa thống nhất trong đại tộc, vừa đặc thù cho nhánh Tuy Biên Quận Công.
+          </p>
+
+          <h3>Số Hóa Gia Phả – Kết Nối Quá Khứ Đến Tương Lai</h3>
+          
+          <p>
+            Trải qua bao biến thiên của lịch sử, con cháu Phòng Tuy Biên Quận Công ngày nay đã tản cư, sinh sống và lập nghiệp ở nhiều vùng miền trong nước cũng như khắp năm châu. Trong bối cảnh ấy, việc bảo tồn những trang <strong>Ngọc phả</strong>, vốn được lưu giữ bằng kim sách hoặc bản in giấy truyền thống, đang đối mặt với thách thức lớn từ thời gian, môi trường và sự đứt gãy thế hệ.
+          </p>
+          
+          <p>
+            Xuất phát từ nhận thức đó, <strong>dự án xây dựng hệ thống tra cứu gia phả điện tử</strong> được hình thành như một nhịp cầu hiện đại, kết nối quá khứ hào hùng với tương lai bền vững. Dự án mang lại những giá trị cốt lõi:
+          </p>
+          
+          <ul>
+            <li><strong>Bảo tồn vĩnh cửu:</strong> Toàn bộ dữ liệu thế phả được chuyển đổi sang định dạng số, giảm thiểu tối đa nguy cơ mai một, thất lạc hay hư hỏng theo năm tháng.</li>
+            <li><strong>Tra cứu thuận tiện:</strong> Con cháu dù ở bất cứ nơi đâu cũng có thể dễ dàng tìm hiểu về nguồn gốc, vai thứ và hành trạng của tổ tiên; từ đó hiểu rõ ý nghĩa các chữ lót như <em>Miên, Hồng, Ưng, Bửu…</em> trong chính tên gọi của mình.</li>
+            <li><strong>Kết nối huyết thống:</strong> Hệ thống tạo ra một không gian chung để các thành viên trong dòng họ giao lưu, chia sẻ, hỗ trợ lẫn nhau, góp phần thắt chặt tình cốt nhục – giá trị nền tảng của Nguyễn Phước Tộc.</li>
+            <li><strong>Lưu trữ bền vững:</strong> Thông tin về các thế hệ mới được cập nhật liên tục, bảo đảm dòng chảy của Phòng Tuy Biên Quận Công luôn được ghi chép đầy đủ, liền mạch cho mai sau.</li>
+          </ul>
+
+          <h3>Kết Từ</h3>
+          
+          <p>
+            Sứ mệnh của con cháu hôm nay không chỉ dừng lại ở niềm tự hào về quá khứ, mà còn là trách nhiệm gìn giữ và tiếp nối niềm tự hào ấy trong kỷ nguyên số. Hệ thống gia phả điện tử chính là <strong>nén tâm nhang hiện đại</strong> mà thế hệ hôm nay kính dâng lên ngài Tuy Biên Quận Công và đức Thánh Tổ Minh Mạng – một lời khẳng định vững chắc rằng:
+          </p>
+          
+          <blockquote>
+            <strong>Gốc có sâu thì chí mới vững, chí có vững thì cành lá mới sum suê, xanh tốt muôn đời.</strong>
+          </blockquote>
+          
+          <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
+            <img src="/static/images/5. phu-tuy-bien.jpg" alt="Phủ Tuy Biên" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+          </div>
+          
+          <p style="margin-top: 30px; font-style: italic; color: #666; border-top: 1px solid #ddd; padding-top: 20px;">
+            <em>Thông tin trong bài viết được tổng hợp và đối chiếu từ các sử liệu triều Nguyễn và thế phả Nguyễn Phước Tộc.</em>
+          </p>
         </div>
       </div>
     </div>
   </section>
 
   <!-- Section: Interactive Genealogy Tree -->
-  <section id="activities-tree">
-    <div class="section-container">
-      <h2 class="section-title">Cây Gia Phả Tương Tác</h2>
-      
-      <!-- Controls -->
-      <div id="treeControls" style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);">
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: center;">
-          <label style="display: flex; align-items: center; gap: 10px;">
-            <span>Hiển thị đến đời:</span>
-            <select id="genFilter" style="padding: 8px 12px; border: 2px solid #DAA520; border-radius: 6px; font-size: 14px;">
-              <option value="5" selected>Đến đời 5</option>
-              <option value="6">Đến đời 6</option>
-              <option value="7">Đến đời 7</option>
-              <option value="8">Đến đời 8</option>
-            </select>
-          </label>
-          
-          <div style="display: flex; gap: 10px; flex: 1; min-width: 300px;">
-            <input id="searchInput" type="text" placeholder="Vui lòng nhập tên cần tìm kiếm" 
-                   style="flex: 1; padding: 8px 12px; border: 2px solid #DAA520; border-radius: 6px; font-size: 14px;">
-            <button id="searchBtn" style="padding: 8px 20px; background: #DAA520; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
-              Tìm kiếm
-            </button>
-          </div>
-        </div>
-        
-        <!-- Search Results -->
-        <div id="searchResults" style="margin-top: 15px; display: none;"></div>
-        
-        <!-- Breadcrumb - ĐÃ XÓA (Nâng cấp 1) -->
-        <!-- <div id="breadcrumb" style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 6px; display: none;"></div> -->
-      </div>
-      
-      <!-- Tree Container -->
-      <div style="display: grid; grid-template-columns: 1fr 350px; gap: 20px;">
-        <div id="treeContainer" style="width: 100%; height: 700px; background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%); border: 2px solid #DAA520; border-radius: 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); position: relative; overflow: hidden;">
-          <div class="tree-loading" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; color: #8B0000; font-weight: 600;">Đang tải cây gia phả...</div>
-        </div>
-        
-        <!-- Info Panel -->
-        <div id="infoPanel" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); max-height: 600px; overflow-y: auto;">
-          <h3 style="color: #8B0000; margin-bottom: 15px; font-size: 18px;">Thông tin chi tiết</h3>
-          <div id="infoContent" style="color: #333; line-height: 1.6;">
-            <p style="color: #666; font-style: italic;">Chọn một người trong cây để xem thông tin</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Section: Cây Gia Phả Tương Tác - Đã di chuyển sang /genealogy -->
 
-  <!-- Section: Activities -->
-  <section id="activities">
-    <div class="section-container">
-      <h2 class="section-title">Hoạt Động</h2>
-      
-      <!-- Mini Carousel for Activities -->
-      <div id="activitiesMiniSlider" style="display:none; max-width: 1000px; margin: 20px auto 30px; position: relative;">
-        <div class="mini-slider-container" style="position: relative; overflow: hidden; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); background: #fff;">
-          <div id="miniSliderSlides"></div>
-        </div>
-        <button class="mini-slider-prev" id="miniSliderPrev" style="position: absolute; top: 50%; left: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.5); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px; font-weight: bold; z-index: 10;">‹</button>
-        <button class="mini-slider-next" id="miniSliderNext" style="position: absolute; top: 50%; right: 10px; transform: translateY(-50%); background: rgba(0,0,0,0.5); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 20px; font-weight: bold; z-index: 10;">›</button>
-        <div class="mini-slider-dots" id="miniSliderDots" style="display: flex; justify-content: center; gap: 6px; margin-top: 10px;"></div>
-      </div>
-      
-      <div id="activitiesPreview" class="activities-grid">
-        <div class="tree-loading" style="grid-column: 1 / -1; text-align: center;">Đang tải hoạt động...</div>
-      </div>
-    </div>
-  </section>
 
-  <!-- Section: Genealogy -->
-  <section id="genealogy">
-    <div class="section-container">
-      <h2 class="section-title">Tra Cứu Gia Phả</h2>
-      <div class="genealogy-container">
-        <!-- Phần tra cứu chuỗi phả hệ -->
-        <div class="lineage-section">
-          <div class="lineage-header">
-            <h2>🔍 Tra cứu chuỗi phả hệ theo dòng cha</h2>
-            <p>Chỉ cần nhập tên (không cần đời) - Hệ thống sẽ tự động tìm và gợi ý</p>
-          </div>
-          
-          <div class="lineage-controls">
-            <div class="lineage-input-group" style="flex: 1; position: relative;">
-              <label for="lineageName">Tên (tìm kiếm thông minh):</label>
-              <input type="text" id="lineageName" placeholder="Ví dụ: Bảo Phong hoặc Bao Ph..." 
-                     autocomplete="off" oninput="handleLineageSearchInput()">
-              <div id="lineageSuggestions" class="suggestions-dropdown" style="display: none;">
-                <!-- Suggestions sẽ được điền bằng JavaScript -->
-              </div>
-            </div>
-            <button id="btnSearchLineage" onclick="searchLineage()" style="margin-top: 28px;">🔍 Tìm chuỗi phả hệ</button>
-          </div>
+  <!-- Section: Genealogy - Đã di chuyển sang /genealogy -->
 
-          <!-- Panel thông tin chi tiết và chỉnh sửa -->
-          <div class="lineage-detail-panel" id="lineageDetailPanel" style="display: none;">
-            <div class="detail-panel-header">
-              <h3>📋 Thông tin chi tiết</h3>
-              <button onclick="closeDetailPanel()" class="close-btn">&times;</button>
-            </div>
-            <div class="detail-panel-content" id="lineageDetailContent">
-              <!-- Nội dung sẽ được điền bằng JavaScript -->
-            </div>
-          </div>
-
-          <div class="lineage-result" id="lineageResult" style="display: none;">
-            <div class="lineage-result-header">
-              <h3 id="lineageResultTitle"></h3>
-            </div>
-            <div class="lineage-result-content" id="lineageResultContent">
-              <!-- Kết quả sẽ được điền bằng JavaScript -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section: Contact -->
-  <section id="contact">
-    <div class="section-container">
-      <h2 class="section-title">Liên Hệ</h2>
-      <div class="contact-form">
-        <form id="contactForm" onsubmit="handleContactSubmit(event)">
-          <div class="form-group">
-            <label for="contactName">Họ và tên *</label>
-            <input type="text" id="contactName" name="name" required>
-          </div>
-          <div class="form-group">
-            <label for="contactEmail">Email / Số điện thoại *</label>
-            <input type="text" id="contactEmail" name="contact" required>
-          </div>
-          <div class="form-group">
-            <label for="contactType">Loại yêu cầu</label>
-            <select id="contactType" name="type">
-              <option value="update">Cập nhật thông tin người</option>
-              <option value="document">Gửi tài liệu</option>
-              <option value="other">Liên hệ khác</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="contactMessage">Nội dung *</label>
-            <textarea id="contactMessage" name="message" required placeholder="Vui lòng mô tả chi tiết yêu cầu của bạn..."></textarea>
-          </div>
-          <button type="submit" class="submit-button">📧 Gửi Liên Hệ</button>
-        </form>
-      </div>
-    </div>
-  </section>
 
   <!-- Scripts -->
   <script>
@@ -1307,7 +1012,7 @@
 
     // Set active on scroll
     window.addEventListener('scroll', () => {
-      const sections = ['home', 'about', 'activities', 'genealogy', 'login', 'contact'];
+      const sections = ['home', 'about', 'genealogy', 'login'];
       const scrollPos = window.scrollY + 100;
 
       sections.forEach(sectionId => {
@@ -1329,17 +1034,6 @@
         }
       });
     });
-
-    // Contact form
-    function handleContactSubmit(event) {
-      event.preventDefault();
-      const formData = new FormData(event.target);
-      const data = Object.fromEntries(formData);
-      
-      console.log('Contact form submitted:', data);
-      alert('✅ Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.');
-      event.target.reset();
-    }
 
     // ============================================
     // LINEAGE SEARCH FUNCTIONALITY
@@ -3308,198 +3002,11 @@
     /**
      * Render family tree vào Activities section (Đời 1-5) - Horizontal Layout
      */
-    function renderActivitiesTree() {
-      const container = document.getElementById('activitiesTreeContainer');
-      if (!container) return;
-      
-      // Kiểm tra data đã load chưa
-      if (typeof personMap === 'undefined' || !personMap || personMap.size === 0) {
-        container.innerHTML = '<div class="tree-loading">Đang tải dữ liệu...</div>';
-        setTimeout(renderActivitiesTree, 1000);
-        return;
-      }
-      
-      if (typeof buildDefaultTree === 'undefined' || typeof createNodeElement === 'undefined') {
-        container.innerHTML = '<div class="tree-loading">Đang tải modules...</div>';
-        setTimeout(renderActivitiesTree, 1000);
-        return;
-      }
-      
-      container.innerHTML = '';
-      
-      if (!founderId) {
-        container.innerHTML = '<div class="tree-loading">Không tìm thấy Vua Minh Mạng</div>';
-        return;
-      }
-      
-      try {
-        // Build tree từ đời 1 đến đời 5
-        const treeRoot = buildDefaultTree(5);
-        if (!treeRoot) {
-          container.innerHTML = '<div class="tree-loading">Không thể xây dựng cây gia phả</div>';
-          return;
-        }
-        
-        // Render tree với horizontal layout
-        const treeDiv = document.createElement('div');
-        treeDiv.className = 'tree horizontal-tree';
-        treeDiv.style.position = 'relative';
-        
-        const levelPositions = {};
-        calculateHorizontalPositions(treeRoot, 0, 0, levelPositions);
-        
-        // Tạo SVG container cho connectors
-        const svgContainer = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svgContainer.style.position = 'absolute';
-        svgContainer.style.left = '0';
-        svgContainer.style.top = '0';
-        svgContainer.style.width = '100%';
-        svgContainer.style.height = '100%';
-        svgContainer.style.pointerEvents = 'none';
-        svgContainer.style.zIndex = '1';
-        treeDiv.appendChild(svgContainer);
-        
-        // Render nodes
-        function renderNode(node) {
-          if (!node) return;
-          
-          const person = personMap.get(node.id);
-          if (!person) return;
-          
-          const isFounder = node.id === founderId;
-          const nodeDiv = createNodeElement(person, false, isFounder);
-          nodeDiv.style.position = 'absolute';
-          nodeDiv.style.left = node.x + 'px';
-          nodeDiv.style.top = node.y + 'px';
-          nodeDiv.style.zIndex = '2';
-          
-          treeDiv.appendChild(nodeDiv);
-          
-          // Vẽ connectors (sử dụng svgContainer đã tạo)
-          if (node.parent) {
-            const parentX = node.parent.x + 80;
-            const parentY = node.parent.y + 30;
-            const childX = node.x + 80;
-            const childY = node.y + 30;
-
-            // Đường dọc từ parent xuống
-            const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line1.setAttribute('x1', parentX);
-            line1.setAttribute('y1', parentY);
-            line1.setAttribute('x2', parentX);
-            line1.setAttribute('y2', childY);
-            line1.setAttribute('stroke', '#DAA520');
-            line1.setAttribute('stroke-width', '2');
-            svgContainer.appendChild(line1);
-
-            // Đường ngang đến child
-            const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-            line2.setAttribute('x1', parentX);
-            line2.setAttribute('y1', childY);
-            line2.setAttribute('x2', childX);
-            line2.setAttribute('y2', childY);
-            line2.setAttribute('stroke', '#DAA520');
-            line2.setAttribute('stroke-width', '2');
-            svgContainer.appendChild(line2);
-          }
-          
-          // Render children
-          node.children.forEach(child => renderNode(child));
-        }
-        
-        renderNode(treeRoot);
-        
-        // Tính kích thước
-        let maxX = 0, maxY = 0;
-        function findMaxBounds(node) {
-          if (!node) return;
-          maxX = Math.max(maxX, node.x + 200);
-          maxY = Math.max(maxY, node.y + 100);
-          node.children.forEach(child => findMaxBounds(child));
-        }
-        findMaxBounds(treeRoot);
-        
-        treeDiv.style.width = Math.max(maxX, 1200) + 'px';
-        treeDiv.style.height = Math.max(maxY, 600) + 'px';
-        
-        container.appendChild(treeDiv);
-      } catch (error) {
-        console.error('Lỗi khi render activities tree:', error);
-        container.innerHTML = '<div class="tree-loading">Lỗi khi hiển thị cây gia phả</div>';
-      }
-    }
-    
-    // Render tree khi data đã load
-    // Sử dụng event hoặc polling để chờ data load
-    document.addEventListener('DOMContentLoaded', () => {
-      // Thử render ngay
-      setTimeout(renderActivitiesTree, 2000);
-      
-      // Hoặc lắng nghe event khi data load xong
-      const checkDataInterval = setInterval(() => {
-        if (typeof personMap !== 'undefined' && personMap && personMap.size > 0) {
-          clearInterval(checkDataInterval);
-          renderActivitiesTree();
-        }
-      }, 500);
-      
-      // Dừng sau 30 giây
-      setTimeout(() => clearInterval(checkDataInterval), 30000);
-    });
   </script>
 
-  <!-- Section: Member Stats -->
-  <section id="stats">
-    <div class="section-container">
-      <h2 class="section-title">Thống Kê Thành Viên</h2>
-      <p class="stats-subtitle">
-        Thống kê nhanh số lượng thành viên trong gia phả Tuy Biên Phòng – Nam, Nữ và các trường hợp chưa rõ.
-      </p>
-
-      <div class="stats-layout">
-        <div class="stats-summary">
-          <div class="stats-card">
-            <div class="stats-label">Tổng thành viên</div>
-            <div class="stats-value" id="statsTotalMembers">–</div>
-          </div>
-          <div class="stats-card">
-            <div class="stats-label">Số Nam</div>
-            <div class="stats-value" id="statsMaleCount">–</div>
-          </div>
-          <div class="stats-card">
-            <div class="stats-label">Số Nữ</div>
-            <div class="stats-value" id="statsFemaleCount">–</div>
-          </div>
-          <div class="stats-card">
-            <div class="stats-label">Không rõ / khác</div>
-            <div class="stats-value" id="statsUnknownCount">–</div>
-          </div>
-        </div>
-
-        <div class="stats-charts">
-          <div class="stats-chart-card">
-            <h3>Cơ cấu giới tính</h3>
-            <canvas id="genderPieChart"></canvas>
-          </div>
-          <div class="stats-chart-card">
-            <h3>Thành viên theo giới tính</h3>
-            <canvas id="genderBarChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <div id="statsErrorMessage" style="display:none; margin-top:20px; text-align:center; color:#b71c1c; font-weight:600;">
-        Lỗi: Không thể tải dữ liệu thống kê. Vui lòng thử lại sau.
-      </div>
-    </div>
-  </section>
-
-  <!-- Charts -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Load genealogy scripts -->
-  <script src="/static/js/family-tree-core.js"></script>
-  <script src="/static/js/family-tree-ui.js"></script>
+  <!-- Family tree scripts đã di chuyển sang /genealogy -->
   <script src="/static/js/genealogy-lineage.js"></script>
 
   <script>
@@ -3528,272 +3035,7 @@
     }
   </script>
   
-  <!-- Member statistics -->
   <script>
-    async function loadMemberStats() {
-      const errorEl = document.getElementById('statsErrorMessage');
-      try {
-        const data = await fetchJson('/api/stats/members');
-        const total = data.total_members || 0;
-        const male = data.male_count || 0;
-        const female = data.female_count || 0;
-        const unknown = data.unknown_gender_count || 0;
-
-        document.getElementById('statsTotalMembers').textContent = total.toLocaleString('vi-VN');
-        document.getElementById('statsMaleCount').textContent = male.toLocaleString('vi-VN');
-        document.getElementById('statsFemaleCount').textContent = female.toLocaleString('vi-VN');
-        document.getElementById('statsUnknownCount').textContent = unknown.toLocaleString('vi-VN');
-
-        renderGenderCharts({ male, female, unknown });
-      } catch (err) {
-        console.error('Error loading stats:', err);
-        if (errorEl) errorEl.style.display = 'block';
-      }
-    }
-
-    function renderGenderCharts({ male, female, unknown }) {
-      const pieCtx = document.getElementById('genderPieChart')?.getContext('2d');
-      const barCtx = document.getElementById('genderBarChart')?.getContext('2d');
-      if (!pieCtx || !barCtx || typeof Chart === 'undefined') return;
-
-      const labels = ['Nam', 'Nữ', 'Không rõ / khác'];
-      const values = [male, female, unknown];
-
-      new Chart(pieCtx, {
-        type: 'doughnut',
-        data: {
-          labels,
-          datasets: [{
-            data: values,
-            backgroundColor: ['#1976d2', '#e91e63', '#9e9e9e'],
-            borderWidth: 1
-          }]
-        },
-        options: {
-          plugins: {
-            legend: { position: 'bottom' }
-          }
-        }
-      });
-
-      new Chart(barCtx, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label: 'Số lượng',
-            data: values,
-            backgroundColor: ['#1976d2', '#e91e63', '#9e9e9e']
-          }]
-        },
-        options: {
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { precision: 0 }
-            }
-          }
-        }
-      });
-    }
-  </script>
-  
-  <!-- Load activities and stats (tree is loaded separately by initGenealogyTree) -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Load activities preview (public)
-      loadActivitiesPreview(4);
-
-      // Load member statistics
-      loadMemberStats();
-    });
-  </script>
-
-  <script>
-    // Mini Carousel for homepage
-    let miniCarouselActivities = [];
-    let currentMiniSlideIndex = 0;
-    let miniAutoPlayInterval = null;
-    let miniAutoPlayPaused = false;
-
-    function initMiniCarousel(activities) {
-      // Filter activities with images, limit to 5
-      miniCarouselActivities = activities.filter(a => {
-        const img = a.thumbnail || a.image_url;
-        return img && img.trim() !== '';
-      }).slice(0, 5);
-
-      if (miniCarouselActivities.length === 0) {
-        const sliderEl = document.getElementById('activitiesMiniSlider');
-        if (sliderEl) {
-          sliderEl.style.display = 'none';
-        }
-        return;
-      }
-
-      const sliderEl = document.getElementById('activitiesMiniSlider');
-      const slidesContainer = document.getElementById('miniSliderSlides');
-      const dotsContainer = document.getElementById('miniSliderDots');
-
-      // Null checks
-      if (!sliderEl || !slidesContainer || !dotsContainer) {
-        console.warn('[MiniCarousel] Required elements not found');
-        return;
-      }
-
-      sliderEl.style.display = 'block';
-
-      // Build slides
-      slidesContainer.innerHTML = miniCarouselActivities.map((activity, index) => {
-        const img = activity.thumbnail || activity.image_url;
-        const date = activity.created_at ? new Date(activity.created_at).toLocaleDateString('vi-VN') : '';
-        return `
-          <div class="mini-slider-slide ${index === 0 ? 'active' : ''}" data-index="${index}" style="display: none; position: relative;">
-            <a href="/activities?id=${activity.id || ''}" style="display:block;text-decoration:none;">
-              <img src="${escapeHtml(img)}" alt="${escapeHtml(activity.title || '')}" style="width:100%;height:240px;object-fit:cover;display:block;" loading="lazy">
-              <div style="position:absolute;left:0;bottom:0;right:0;padding:12px 16px;background:linear-gradient(to top, rgba(0,0,0,0.7), transparent);color:#fff;">
-                <h3 style="color:#fff;font-size:18px;margin:0 0 4px 0;text-shadow:0 2px 4px rgba(0,0,0,0.5);">${escapeHtml(activity.title || 'Không có tiêu đề')}</h3>
-                <p style="color:rgba(255,255,255,0.95);font-size:12px;margin:0;text-shadow:0 1px 2px rgba(0,0,0,0.5);">${date ? '📅 ' + date : ''}</p>
-              </div>
-            </a>
-          </div>
-        `;
-      }).join('');
-
-      // Show first slide
-      document.querySelectorAll('.mini-slider-slide').forEach((slide, i) => {
-        slide.style.display = i === 0 ? 'block' : 'none';
-      });
-
-      // Build dots
-      dotsContainer.innerHTML = miniCarouselActivities.map((_, index) => 
-        `<span class="mini-slider-dot ${index === 0 ? 'active' : ''}" data-index="${index}" style="width:10px;height:10px;border-radius:50%;background:${index === 0 ? '#DAA520' : '#ddd'};cursor:pointer;transition:background 0.3s;"></span>`
-      ).join('');
-
-      // Event listeners (with null checks)
-      const miniSliderPrev = document.getElementById('miniSliderPrev');
-      const miniSliderNext = document.getElementById('miniSliderNext');
-      if (miniSliderPrev) {
-        miniSliderPrev.addEventListener('click', () => {
-          pauseMiniAutoPlay();
-          prevMiniSlide();
-        });
-      }
-      if (miniSliderNext) {
-        miniSliderNext.addEventListener('click', () => {
-          pauseMiniAutoPlay();
-          nextMiniSlide();
-        });
-      }
-
-      if (dotsContainer) {
-        dotsContainer.querySelectorAll('.mini-slider-dot').forEach(dot => {
-          if (dot) {
-            dot.addEventListener('click', () => {
-              pauseMiniAutoPlay();
-              const index = parseInt(dot.getAttribute('data-index'));
-              showMiniSlide(index);
-            });
-          }
-        });
-      }
-
-      // Start auto-play
-      startMiniAutoPlay();
-    }
-
-    function showMiniSlide(index) {
-      if (miniCarouselActivities.length === 0) return;
-      
-      currentMiniSlideIndex = index;
-      if (currentMiniSlideIndex < 0) currentMiniSlideIndex = miniCarouselActivities.length - 1;
-      if (currentMiniSlideIndex >= miniCarouselActivities.length) currentMiniSlideIndex = 0;
-
-      // Update slides
-      document.querySelectorAll('.mini-slider-slide').forEach((slide, i) => {
-        slide.style.display = i === currentMiniSlideIndex ? 'block' : 'none';
-      });
-
-      // Update dots
-      document.querySelectorAll('.mini-slider-dot').forEach((dot, i) => {
-        dot.style.background = i === currentMiniSlideIndex ? '#DAA520' : '#ddd';
-      });
-    }
-
-    function nextMiniSlide() {
-      showMiniSlide(currentMiniSlideIndex + 1);
-    }
-
-    function prevMiniSlide() {
-      showMiniSlide(currentMiniSlideIndex - 1);
-    }
-
-    function startMiniAutoPlay() {
-      if (miniAutoPlayInterval) clearInterval(miniAutoPlayInterval);
-      miniAutoPlayInterval = setInterval(() => {
-        if (!miniAutoPlayPaused) {
-          nextMiniSlide();
-        }
-      }, 5000); // 5 seconds
-    }
-
-    function pauseMiniAutoPlay() {
-      miniAutoPlayPaused = true;
-      setTimeout(() => {
-        miniAutoPlayPaused = false;
-      }, 8000); // Resume after 8 seconds
-    }
-
-    // Load activities preview into homepage
-    async function loadActivitiesPreview(limit = 4) {
-      const container = document.getElementById('activitiesPreview');
-      if (!container) return;
-      container.innerHTML = '<div class="tree-loading" style="grid-column:1/-1;text-align:center;">Đang tải hoạt động...</div>';
-      try {
-        const data = await fetchJson(`/api/activities?status=published&limit=10`);
-        if (!data || !Array.isArray(data)) {
-          throw new Error('Không thể tải hoạt động');
-        }
-        if (data.length === 0) {
-          container.innerHTML = '<div class="tree-loading" style="grid-column:1/-1;text-align:center;">Chưa có bài viết</div>';
-          return;
-        }
-        
-        // Initialize mini carousel
-        initMiniCarousel(data);
-        
-        // Render preview cards
-        const cards = data.slice(0, limit).map(post => {
-          const date = post.created_at ? new Date(post.created_at).toLocaleDateString('vi-VN') : '';
-          const summary = post.summary || post.description || '';
-          return `
-            <div class="activity-card">
-              <h3>${escapeHtml(post.title || 'Không có tiêu đề')}</h3>
-              <div class="activity-date">${date ? '📅 ' + date : ''}</div>
-              <div class="activity-description">
-                ${escapeHtml(summary).substring(0, 180)}${summary && summary.length > 180 ? '...' : ''}
-              </div>
-              <div style="margin-top:12px;">
-                <a href="/activities?id=${post.id || ''}" style="color:#8B0000;font-weight:600;text-decoration:none;">Đọc tiếp →</a>
-              </div>
-            </div>
-          `;
-        }).join('');
-        container.innerHTML = cards;
-      } catch (err) {
-        console.error('Lỗi khi tải hoạt động:', err);
-        container.innerHTML = `<div class="tree-loading" style="grid-column:1/-1;text-align:center;color:#856404;background:#fff3cd;border:1px solid #ffeeba;border-radius:8px;padding:12px;">Lỗi: Không thể tải dữ liệu hoạt động, vui lòng thử lại sau.</div>`;
-      }
-    }
-
-    // Simple escape helper
-    function escapeHtml(text) {
-      if (text === null || text === undefined) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
     // ============================================
     // INTERACTIVE GENEALOGY TREE
     // ============================================
@@ -3804,7 +3046,7 @@
     visScript.onload = () => {
       console.log('[Tree] vis-network loaded, initializing tree...');
       try {
-        initGenealogyTree();
+        // initGenealogyTree(); // Đã di chuyển sang /genealogy
       } catch (err) {
         console.error('[Tree] Error initializing tree:', err);
         const container = document.getElementById('treeContainer');
@@ -4361,7 +3603,121 @@
         }
       }
     }
+    */
   </script>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>Phòng Tuy Biên Quận Công</h3>
+          <p>Gia Phả Nguyễn Phước Tộc</p>
+        </div>
+        
+        <div class="footer-section">
+          <h3>Liên Hệ</h3>
+          <ul>
+            <li>
+              <a href="https://www.facebook.com/PhongTuyBienQuanCong" target="_blank" rel="noopener noreferrer">
+                📘 Facebook: Phòng Tuy Biên Quận Công
+              </a>
+            </li>
+            <li>
+              <a href="/contact">
+                📝 Yêu cầu cập nhật thông tin
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>Thông Tin</h3>
+          <ul>
+            <li><a href="/">Trang chủ</a></li>
+            <li><a href="/genealogy">Gia phả</a></li>
+            <li><a href="/activities">Hoạt động</a></li>
+            <li><a href="/members">Thành viên</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2025 Phòng Tuy Biên Quận Công - Gia Phả Nguyễn Phước Tộc. Tất cả quyền được bảo lưu.</p>
+      </div>
+    </div>
+  </footer>
+
+  <style>
+    /* Footer Styles */
+    .footer {
+      background: #111827;
+      color: #E5E7EB;
+      padding: 60px 0 40px;
+      margin-top: 80px;
+    }
+
+    .footer .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .footer-content {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+
+    .footer-section h3 {
+      color: #F59E0B;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .footer-section p,
+    .footer-section ul {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #CBD5E1;
+    }
+
+    .footer-section ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .footer-section ul li {
+      margin-bottom: 12px;
+    }
+
+    .footer-section a {
+      color: #CBD5E1;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .footer-section a:hover {
+      color: #F59E0B;
+    }
+
+    .footer-bottom {
+      padding-top: 30px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+      font-size: 14px;
+      color: #94A3B8;
+    }
+
+    @media (max-width: 767px) {
+      .footer-content {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+    }
+  </style>
 
 </body>
 </html>

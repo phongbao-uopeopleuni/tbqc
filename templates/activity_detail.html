@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if activity %}{{ activity.title }} - {% endif %}Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    .article-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-6);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      text-decoration: none;
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+      transition: all var(--transition-base);
+    }
+    
+    .back-link:hover {
+      background: var(--color-bg);
+      transform: translateX(-4px);
+    }
+    
+    .article-card {
+      margin-bottom: var(--space-10);
+    }
+    
+    .article-header {
+      padding: var(--space-8);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .article-meta {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-4);
+    }
+    
+    .article-title {
+      font-size: var(--font-size-3xl);
+      color: var(--color-primary);
+      margin-bottom: 0;
+      line-height: var(--line-height-tight);
+    }
+    
+    .article-content {
+      padding: var(--space-8);
+      font-size: var(--font-size-lg);
+      line-height: var(--line-height-relaxed);
+      color: var(--color-text);
+      white-space: pre-wrap;
+      max-width: 720px;
+    }
+    
+    .related-section {
+      margin-top: var(--space-10);
+      padding-top: var(--space-8);
+      border-top: 2px solid var(--color-border);
+    }
+    
+    .related-title {
+      color: var(--color-primary);
+      margin-bottom: var(--space-6);
+      font-size: var(--font-size-2xl);
+    }
+    
+    .related-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-5);
+    }
+    
+    .related-card {
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    
+    .related-card h3 {
+      color: var(--color-primary);
+      font-size: var(--font-size-lg);
+      margin-bottom: var(--space-2);
+      line-height: var(--line-height-tight);
+    }
+    
+    .related-card .meta {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+    
+    .related-card .summary {
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+      line-height: var(--line-height-relaxed);
+    }
+    
+    @media (max-width: 767px) {
+      .article-title {
+        font-size: var(--font-size-2xl);
+      }
+      .article-header, .article-content {
+        padding: var(--space-6);
+      }
+      .related-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công – Gia Phả Nguyễn Phước Tộc</a>
+    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/genealogy">Gia phả</a></li>
+      <li><a href="/activities" class="active">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/login">Đăng nhập</a></li>
+    </ul>
+  </nav>
+
+  <div class="container section">
+    <div class="article-container">
+      {% if error %}
+        <div class="card">
+          <div class="empty-state">
+            <div class="empty-state-icon">⚠️</div>
+            <h2 class="empty-state-title">Lỗi</h2>
+            <p class="empty-state-text">{{ error }}</p>
+            <a href="/activities" class="btn btn-primary mt-6">← Quay lại danh sách</a>
+          </div>
+        </div>
+      {% elif activity %}
+        <a href="/activities" class="back-link">← Quay lại danh sách</a>
+        
+        <article class="card article-card">
+          <div class="article-header">
+            <div class="article-meta">
+              {% if activity.created_at %}
+                📅 {% if activity.created_at is string %}{{ activity.created_at[:16] }}{% else %}{{ activity.created_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+              {% endif %}
+            </div>
+            <h1 class="article-title">{{ activity.title or 'Không có tiêu đề' }}</h1>
+          </div>
+          <div class="article-content">
+            {{ (activity.content or activity.summary or '') | replace('\n', '<br>') | safe }}
+          </div>
+        </article>
+
+        {% if related_activities and related_activities|length > 0 %}
+          <div class="related-section">
+            <h2 class="related-title">Tin liên quan</h2>
+            <div class="related-grid">
+              {% for related in related_activities %}
+                <a href="/activities/{{ related.activity_id }}" class="related-card">
+                  <div class="card">
+                    <h3>{{ related.title or 'Không có tiêu đề' }}</h3>
+                    <div class="meta">
+                      {% if related.created_at %}
+                        📅 {% if related.created_at is string %}{{ related.created_at[:10] }}{% else %}{{ related.created_at.strftime('%d/%m/%Y') }}{% endif %}
+                      {% endif %}
+                    </div>
+                    <div class="summary">
+                      {{ (related.summary or '')[:120] }}{% if related.summary and related.summary|length > 120 %}...{% endif %}
+                    </div>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="card">
+          <div class="empty-state">
+            <div class="empty-state-icon">📭</div>
+            <h2 class="empty-state-title">Không tìm thấy bài viết</h2>
+            <p class="empty-state-text">Bài viết bạn đang tìm có thể đã bị xóa hoặc chưa được xuất bản.</p>
+            <a href="/activities" class="btn btn-primary mt-6">← Quay lại danh sách</a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  
+  <script src="/static/js/common.js"></script>
+</body>
+</html>
+

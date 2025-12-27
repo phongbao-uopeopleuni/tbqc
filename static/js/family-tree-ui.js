@@ -125,13 +125,14 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   let maxX = 0, maxY = 0;
   function findMaxBounds(node) {
     if (!node) return;
-    maxX = Math.max(maxX, node.x + 200);
-    maxY = Math.max(maxY, node.y + 140);
+    maxX = Math.max(maxX, node.x + 220); // Tăng để đảm bảo không bị cắt
+    maxY = Math.max(maxY, node.y + 160); // Tăng để đảm bảo không bị cắt
     node.children.forEach(child => findMaxBounds(child));
   }
   findMaxBounds(treeRoot);
   
-  treeDiv.style.width = Math.max(maxX, 1200) + "px";
+  // Tăng chiều ngang để có scroll ngang
+  treeDiv.style.width = Math.max(maxX, 3000) + "px";
   treeDiv.style.height = Math.max(maxY, 600) + "px";
   treeDiv.style.transform = `scale(${currentZoom}) translate(${currentOffsetX}px, ${currentOffsetY}px)`;
   treeDiv.style.transformOrigin = "top left";
@@ -176,8 +177,10 @@ function renderFocusTree(targetId) {
   // Hiển thị chuỗi phả hệ
   const genealogyStr = getGenealogyString(targetId);
   const genealogyDiv = document.getElementById("genealogyString");
-  genealogyDiv.textContent = genealogyStr;
-  genealogyDiv.style.display = "block";
+  if (genealogyDiv) {
+    genealogyDiv.textContent = genealogyStr;
+    genealogyDiv.style.display = "block";
+  }
 
   // Render tree với hierarchical layout (đời cao ở trên, con cháu phía dưới)
   const treeDiv = document.createElement("div");
@@ -248,13 +251,14 @@ function renderFocusTree(targetId) {
   let maxX = 0, maxY = 0;
   function findMaxBounds(node) {
     if (!node) return;
-    maxX = Math.max(maxX, node.x + 200);
-    maxY = Math.max(maxY, node.y + 140);
+    maxX = Math.max(maxX, node.x + 220); // Tăng để đảm bảo không bị cắt
+    maxY = Math.max(maxY, node.y + 160); // Tăng để đảm bảo không bị cắt
     node.children.forEach(child => findMaxBounds(child));
   }
   findMaxBounds(focusTree);
   
-  treeDiv.style.width = Math.max(maxX, 1200) + "px";
+  // Tăng chiều ngang để có scroll ngang
+  treeDiv.style.width = Math.max(maxX, 3000) + "px";
   treeDiv.style.height = Math.max(maxY, 600) + "px";
   treeDiv.style.transform = `scale(${currentZoom}) translate(${currentOffsetX}px, ${currentOffsetY}px)`;
   treeDiv.style.transformOrigin = "top left";
@@ -313,7 +317,7 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
 function drawConnectorToSiblings(parentNode, siblings, container) {
   if (!parentNode || !siblings || siblings.length === 0) return;
 
-  const nodeWidth = 160;
+  const nodeWidth = 180;
   const nodeHeight = 140;
   const parentCenterX = parentNode.x + nodeWidth / 2;
   const parentBottomY = parentNode.y + nodeHeight;
@@ -332,11 +336,12 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
   if (verticalHeight > 0) {
     const connectorV = document.createElement("div");
     connectorV.className = "connector vertical";
-    connectorV.style.left = (siblingsMidX - 1) + "px";
+    connectorV.style.left = (siblingsMidX - 1.5) + "px";
     connectorV.style.top = verticalStartY + "px";
     connectorV.style.height = verticalHeight + "px";
-    connectorV.style.width = "2px";
-    connectorV.style.backgroundColor = "#333";
+    connectorV.style.width = "3px";
+    connectorV.style.backgroundColor = "var(--color-primary, #8B0000)";
+    connectorV.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
     connectorV.style.zIndex = "1";
     container.appendChild(connectorV);
   }
@@ -348,8 +353,9 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     connectorH.style.left = minSiblingX + "px";
     connectorH.style.top = (firstChildTopY - 20) + "px";
     connectorH.style.width = (maxSiblingX - minSiblingX) + "px";
-    connectorH.style.height = "2px";
-    connectorH.style.backgroundColor = "#333";
+    connectorH.style.height = "3px";
+    connectorH.style.backgroundColor = "var(--color-primary, #8B0000)";
+    connectorH.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
     connectorH.style.zIndex = "1";
     container.appendChild(connectorH);
   }
@@ -362,11 +368,12 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     // Đường dọc từ đường ngang xuống child
     const connectorV2 = document.createElement("div");
     connectorV2.className = "connector vertical";
-    connectorV2.style.left = (childCenterX - 1) + "px";
+    connectorV2.style.left = (childCenterX - 1.5) + "px";
     connectorV2.style.top = (childTopY - 20) + "px";
     connectorV2.style.height = "20px";
-    connectorV2.style.width = "2px";
-    connectorV2.style.backgroundColor = "#333";
+    connectorV2.style.width = "3px";
+    connectorV2.style.backgroundColor = "var(--color-primary, #8B0000)";
+    connectorV2.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
     connectorV2.style.zIndex = "1";
     container.appendChild(connectorV2);
   });
@@ -419,18 +426,18 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
   }
 
   // Y = generation (dọc) - đời cao ở trên
-  const verticalGap = 200; // Tăng khoảng cách giữa các đời để rõ ràng hơn
+  const verticalGap = 220; // Tăng khoảng cách giữa các đời để rõ ràng hơn
   const normalizedGeneration = generation - minGeneration;
   node.y = normalizedGeneration * verticalGap + 50;
 
   // Tính vị trí cho children trước (bottom-up approach)
   if (node.children.length === 0) {
     // Leaf node: đặt ở vị trí tiếp theo trong generation
-    const horizontalSpacing = 180; // Giảm spacing để compact hơn
+    const horizontalSpacing = 200; // Tăng spacing để đẹp hơn
     const currentCount = levelPositions[generation].length;
     node.x = currentCount * horizontalSpacing + 100;
     levelPositions[generation].push(node);
-    return { x: node.x, width: 160 }; // Giả sử node width ~160px
+    return { x: node.x, width: 180 }; // Tăng node width
   }
 
   // Có children: tính toán subtree width
@@ -445,24 +452,24 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
     subtreeRight = Math.max(subtreeRight, result.x + result.width);
   });
 
-  // Đảm bảo siblings có khoảng cách đều
-  if (node.children.length > 1) {
-    const minSpacing = 180; // Khoảng cách tối thiểu giữa siblings
-    let currentX = subtreeLeft;
-    node.children.forEach((child, index) => {
-      if (index > 0) {
-        currentX += minSpacing;
-      }
-      child.x = currentX;
-      currentX += 160; // node width
-    });
-    // Cập nhật lại subtree bounds
-    subtreeRight = currentX;
-  }
+    // Đảm bảo siblings có khoảng cách đều
+    if (node.children.length > 1) {
+      const minSpacing = 220; // Tăng khoảng cách tối thiểu giữa siblings
+      let currentX = subtreeLeft;
+      node.children.forEach((child, index) => {
+        if (index > 0) {
+          currentX += minSpacing;
+        }
+        child.x = currentX;
+        currentX += 200; // Tăng node width + spacing để đẹp hơn
+      });
+      // Cập nhật lại subtree bounds
+      subtreeRight = currentX;
+    }
 
   // Đặt parent ở giữa children để giảm giao cắt
   const subtreeWidth = subtreeRight - subtreeLeft;
-  const nodeWidth = 160; // Giả sử node width
+  const nodeWidth = 180; // Tăng node width
   node.x = (subtreeLeft + subtreeRight) / 2 - nodeWidth / 2;
 
   // Lưu node vào levelPositions
@@ -504,8 +511,8 @@ function adjustHorizontalPositions(node, levelPositions = {}) {
 function redistributeNodesByGeneration(levelPositions) {
   const minGen = levelPositions._minGeneration || 1;
   const maxGen = levelPositions._maxGeneration || 1;
-  const nodeWidth = 160;
-  const minSpacing = 50;
+  const nodeWidth = 180;
+  const minSpacing = 60;
   
   for (let gen = minGen; gen <= maxGen; gen++) {
     const nodes = levelPositions[gen] || [];
@@ -698,18 +705,17 @@ function showPersonInfo(personId) {
   const person = personMap.get(personId);
   if (!person) return;
   
-  const modal = document.getElementById("personModal");
-  const modalName = document.getElementById("modalName");
-  const modalBody = document.getElementById("modalBody");
+  const infoPanel = document.getElementById("infoPanel");
+  const infoContent = document.getElementById("infoContent");
   
-  if (!modal || !modalName || !modalBody) {
-    console.warn('[Tree] Modal elements not found');
+  if (!infoPanel || !infoContent) {
+    console.warn('[Tree] Info panel elements not found');
     return;
   }
   
-  modalName.textContent = person.name;
-  modalBody.innerHTML = '<div class="loading">Đang tải thông tin...</div>';
-  modal.style.display = "block";
+  // Hiển thị loading
+  infoContent.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--color-text-muted);">Đang tải thông tin...</div>';
+  infoPanel.style.display = "block";
   
   // Gọi API để lấy thông tin chi tiết
   fetch(`${API_BASE_URL}/person/${personId}`)
@@ -719,39 +725,131 @@ function showPersonInfo(personId) {
     })
     .catch(err => {
       console.error(err);
-      modalBody.innerHTML = '<div class="error">Không thể tải thông tin</div>';
+      infoContent.innerHTML = '<div style="padding: 20px; color: var(--color-error);">Không thể tải thông tin</div>';
     });
 }
 
 function displayPersonInfo(personData) {
-  const modalBody = document.getElementById("modalBody");
-  if (!modalBody) {
-    console.warn('[Tree] modalBody not found');
+  const infoContent = document.getElementById("infoContent");
+  if (!infoContent) {
+    console.warn('[Tree] infoContent not found');
     return;
   }
+  
+  // Escape HTML để tránh XSS
+  function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
   let html = '';
   
-  const fields = [
-    { label: 'Tên', key: 'full_name' },
+  // Tên người
+  const fullName = personData.full_name || personData.name || 'Chưa có thông tin';
+  const alias = personData.alias ? ` (${escapeHtml(personData.alias)})` : '';
+  html += `<div style="margin-bottom: var(--space-4); padding-bottom: var(--space-3); border-bottom: 2px solid var(--color-primary);">`;
+  html += `<h4 style="color: var(--color-primary); font-size: var(--font-size-lg); margin: 0;">${escapeHtml(fullName)}${alias}</h4>`;
+  html += `</div>`;
+  
+  // Thông tin cơ bản
+  const basicFields = [
+    { label: 'Đời', key: 'generation_number', fallback: 'generation_level' },
     { label: 'Giới tính', key: 'gender' },
-    { label: 'Đời', key: 'generation_number' },
-    { label: 'Nhánh', key: 'branch_name' },
-    { label: 'Trạng thái', key: 'status' }
+    { label: 'Trạng thái', key: 'status' },
+    { label: 'Nguyên quán', key: 'hometown', fallback: 'birth_place' }
   ];
   
-  fields.forEach(field => {
-    const value = personData[field.key];
+  html += `<div style="margin-bottom: var(--space-4);">`;
+  basicFields.forEach(field => {
+    const value = personData[field.key] || (field.fallback ? personData[field.fallback] : null);
     if (value) {
       html += `
-        <div class="info-row">
-          <div class="info-label">${field.label}:</div>
-          <div class="info-value">${value}</div>
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 100px; color: var(--color-text-muted);">${field.label}:</strong>
+          <span style="color: var(--color-text);">${escapeHtml(value)}</span>
         </div>
       `;
     }
   });
+  html += `</div>`;
   
-  modalBody.innerHTML = html || '<div class="info-row"><div class="info-value">Không có thông tin chi tiết</div></div>';
+  // Tổ tiên (Ancestors) - Sắp xếp theo đời tăng dần (đời 1, đời 2, đời 3...)
+  if (personData.ancestors && personData.ancestors.length > 0) {
+    // Sắp xếp ancestors theo generation_level tăng dần (đời 1 trước, đời 2 sau...)
+    const sortedAncestors = [...personData.ancestors].sort((a, b) => {
+      const genA = parseInt(a.generation_number || a.generation_level || 0);
+      const genB = parseInt(b.generation_number || b.generation_level || 0);
+      return genA - genB; // Tăng dần: đời 1, đời 2, đời 3...
+    });
+    
+    html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
+    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Tổ tiên</h5>`;
+    html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
+    sortedAncestors.forEach((ancestor, index) => {
+      const gen = ancestor.generation_number || ancestor.generation_level || '';
+      const genText = gen ? ` (Đời ${gen})` : '';
+      html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(ancestor.full_name || ancestor.name || '')}${genText}</li>`;
+    });
+    html += `</ul></div>`;
+  }
+  
+  // Con cháu (Descendants)
+  let childrenList = [];
+  if (personData.children) {
+    if (Array.isArray(personData.children) && personData.children.length > 0) {
+      childrenList = personData.children;
+    } else if (typeof personData.children === 'string' && personData.children.trim() !== '') {
+      // Nếu là string, tách thành array
+      childrenList = personData.children.split(';').map(c => ({ full_name: c.trim() })).filter(c => c.full_name);
+    }
+  }
+  
+  if (childrenList.length > 0) {
+    html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
+    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Con cháu</h5>`;
+    html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
+    childrenList.forEach((child, index) => {
+      const gen = child.generation_number || child.generation_level || '';
+      const genText = gen ? ` (Đời ${gen})` : '';
+      const childName = child.full_name || child.name || child.child_name || '';
+      html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(childName)}${genText}</li>`;
+    });
+    html += `</ul></div>`;
+  }
+  
+  // Hôn phối
+  if (personData.marriages && personData.marriages.length > 0) {
+    html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
+    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Hôn phối</h5>`;
+    html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
+    personData.marriages.forEach((marriage, index) => {
+      const spouseName = marriage.spouse_name || 'Chưa rõ tên';
+      const date = marriage.marriage_date_solar ? ` (${escapeHtml(marriage.marriage_date_solar)})` : '';
+      const place = marriage.marriage_place ? ` - ${escapeHtml(marriage.marriage_place)}` : '';
+      html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(spouseName)}${date}${place}</li>`;
+    });
+    html += `</ul></div>`;
+  }
+  
+  // Anh chị em
+  if (personData.siblings) {
+    const siblings = typeof personData.siblings === 'string' 
+      ? personData.siblings.split(';').map(s => s.trim()).filter(s => s)
+      : [];
+    if (siblings.length > 0) {
+      html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
+      html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Anh chị em</h5>`;
+      html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
+      siblings.forEach(sibling => {
+        html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(sibling)}</li>`;
+      });
+      html += `</ul></div>`;
+    }
+  }
+  
+  infoContent.innerHTML = html || '<div style="padding: 20px; color: var(--color-text-muted);">Không có thông tin chi tiết</div>';
 }
 
 function closeModal() {
