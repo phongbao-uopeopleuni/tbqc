@@ -2293,19 +2293,39 @@
       
       const passwordInput = document.getElementById('passwordInput');
       const password = passwordInput ? passwordInput.value.trim() : '';
-      const correctPassword = '2026';
       
-      if (password === correctPassword) {
-        // Đóng modal
-        closePasswordModal();
-        // Cho phép chỉnh sửa
-        enableEditMode();
-      } else {
-        alert('❌ Mật khẩu không đúng! Vui lòng thử lại.');
+      if (!password) {
+        alert('❌ Vui lòng nhập mật khẩu!');
         if (passwordInput) {
-          passwordInput.value = '';
           passwordInput.focus();
         }
+        return;
+      }
+      
+      // Verify password via API instead of hardcoding
+      try {
+        const verifyResponse = await fetch('/api/admin/verify-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: password, action: 'edit_person' })
+        });
+        const verifyResult = await verifyResponse.json();
+        
+        if (verifyResult.success) {
+          // Đóng modal
+          closePasswordModal();
+          // Cho phép chỉnh sửa
+          enableEditMode();
+        } else {
+          alert('❌ Mật khẩu không đúng! Vui lòng thử lại.');
+          if (passwordInput) {
+            passwordInput.value = '';
+            passwordInput.focus();
+          }
+        }
+      } catch (error) {
+        console.error('Error verifying password:', error);
+        alert('❌ Lỗi xác thực mật khẩu. Vui lòng thử lại.');
       }
     }
     
@@ -2396,14 +2416,36 @@
       
       const passwordInput = document.getElementById('deletePasswordInput');
       const password = passwordInput ? passwordInput.value.trim() : '';
-      const correctPassword = 'tbqc2026';
       
-      if (password !== correctPassword) {
-        alert('❌ Mật khẩu không đúng! Vui lòng thử lại.');
+      // Verify password via API instead of hardcoding
+      if (!password) {
+        alert('❌ Vui lòng nhập mật khẩu!');
         if (passwordInput) {
-          passwordInput.value = '';
           passwordInput.focus();
         }
+        return;
+      }
+      
+      // Verify password via API
+      try {
+        const verifyResponse = await fetch('/api/admin/verify-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: password, action: 'delete_person' })
+        });
+        const verifyResult = await verifyResponse.json();
+        
+        if (!verifyResult.success) {
+          alert('❌ Mật khẩu không đúng! Vui lòng thử lại.');
+          if (passwordInput) {
+            passwordInput.value = '';
+            passwordInput.focus();
+          }
+          return;
+        }
+      } catch (error) {
+        console.error('Error verifying password:', error);
+        alert('❌ Lỗi xác thực mật khẩu. Vui lòng thử lại.');
         return;
       }
       

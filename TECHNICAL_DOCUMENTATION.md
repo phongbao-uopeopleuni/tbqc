@@ -837,10 +837,11 @@ SECRET_KEY=random-hex-string
 ```env
 DB_HOST=localhost
 DB_PORT=3306
-DB_USER=tbqc_admin
-DB_PASSWORD=tbqc2025
-DB_NAME=railway
+DB_USER=your_database_user
+DB_PASSWORD=your_database_password
+DB_NAME=your_database_name
 ```
+⚠️ **Lưu ý:** Thay thế bằng thông tin thực tế của bạn. Không commit file `tbqc_db.env` lên Git!
 
 ### Application Configuration
 

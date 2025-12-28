@@ -38,7 +38,12 @@ backups/
 
 # Sensitive information
 # Domain/DNS configuration files (actual config files, not documentation)
-# Note: Documentation files in folder_md/ are allowed
+# Note: Documentation files in folder_md/ are allowed (but should use placeholders)
+
+# IDE config files (may contain database connection info)
+.idea/dataSources.xml
+.idea/dataSources.local.xml
+.idea/data_source_mapping.xml
 
 # OS
 .DS_Store

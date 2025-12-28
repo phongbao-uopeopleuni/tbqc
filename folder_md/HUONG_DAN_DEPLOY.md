@@ -45,9 +45,9 @@ Dự án này là một ứng dụng Flask (Python) với MySQL database. Có th
    ```python
    DB_CONFIG = {
        'host': os.environ.get('DB_HOST', 'localhost'),
-       'database': os.environ.get('DB_NAME', 'tbqc2025'),
-       'user': os.environ.get('DB_USER', 'tbqc_admin'),
-       'password': os.environ.get('DB_PASSWORD', 'tbqc2025'),
+       'database': os.environ.get('DB_NAME', 'your_database_name'),
+       'user': os.environ.get('DB_USER', 'your_database_user'),
+       'password': os.environ.get('DB_PASSWORD', 'your_database_password'),
        'charset': 'utf8mb4',
        'collation': 'utf8mb4_unicode_ci'
    }
@@ -80,7 +80,7 @@ Dự án này là một ứng dụng Flask (Python) với MySQL database. Có th
 1. **Tạo PostgreSQL Database (Render không có MySQL free, dùng PostgreSQL):**
    - Vào Dashboard → New → PostgreSQL
    - Name: `tbqc-db`
-   - Database: `tbqc2025`
+   - Database: `your_database_name` (thay bằng tên database thực tế)
    - User: `tbqc_admin`
    - Plan: **Free**
    - Region: Chọn gần nhất (Singapore hoặc Oregon)
@@ -109,8 +109,8 @@ Dự án này là một ứng dụng Flask (Python) với MySQL database. Có th
      ```
      SECRET_KEY=<tạo random string>
      DB_HOST=<từ database service>
-     DB_NAME=tbqc2025
-     DB_USER=tbqc_admin
+     DB_NAME=your_database_name
+     DB_USER=your_database_user
      DB_PASSWORD=<từ database service>
      DB_PORT=5432
      ```
@@ -137,7 +137,7 @@ Dự án này là một ứng dụng Flask (Python) với MySQL database. Có th
 
 1. **Export database từ local MySQL:**
    ```bash
-   mysqldump -u tbqc_admin -p tbqc2025 > database_backup.sql
+   mysqldump -u your_db_user -p your_database_name > database_backup.sql
    ```
 
 2. **Convert sang PostgreSQL format** (dùng tool online hoặc script)
@@ -173,8 +173,8 @@ Railway.app hỗ trợ MySQL tốt hơn và có free tier $5/tháng.
 2. Cập nhật Environment Variables:
    ```
    DB_HOST=<từ MySQL service>
-   DB_NAME=tbqc2025
-   DB_USER=root
+   DB_NAME=your_database_name
+   DB_USER=your_database_user
    DB_PASSWORD=<từ MySQL service>
    DB_PORT=3306
    ```

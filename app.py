@@ -377,7 +377,9 @@ def api_activity_detail(activity_id):
 @app.route('/members')
 def members():
     """Trang danh sách thành viên"""
-    return render_template('members.html')
+    # Lấy password từ environment variable để inject vào template (không hardcode)
+    members_password = os.environ.get('MEMBERS_PASSWORD', os.environ.get('ADMIN_PASSWORD', ''))
+    return render_template('members.html', members_password=members_password)
 
 # Route /gia-pha đã được thay thế bằng /genealogy
 
@@ -2310,7 +2312,12 @@ def delete_person(person_id):
         # Lấy mật khẩu từ request
         data = request.get_json() or {}
         password = data.get('password', '').strip()
-        correct_password = 'tbqc2026'
+        # Lấy mật khẩu từ environment variable, fallback để bảo mật
+        correct_password = os.environ.get('BACKUP_PASSWORD', os.environ.get('ADMIN_PASSWORD', ''))
+        
+        if not correct_password:
+            logger.error("BACKUP_PASSWORD hoặc ADMIN_PASSWORD chưa được cấu hình")
+            return jsonify({'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
         
         # Kiểm tra mật khẩu
         if password != correct_password:
@@ -3140,9 +3147,9 @@ def update_person_members(person_id):
             has_csv_id = cursor.fetchone()
             
             if has_csv_id:
-                cursor.execute("SELECT person_id FROM persons WHERE csv_id = %s AND person_id != %s", (data['csv_id'], person_id))
-                if cursor.fetchone():
-                    return jsonify({'success': False, 'error': f'ID {data["csv_id"]} đã tồn tại'}), 400
+            cursor.execute("SELECT person_id FROM persons WHERE csv_id = %s AND person_id != %s", (data['csv_id'], person_id))
+            if cursor.fetchone():
+                return jsonify({'success': False, 'error': f'ID {data["csv_id"]} đã tồn tại'}), 400
             else:
                 # Schema mới không có csv_id, kiểm tra person_id trùng thay vào đó
                 # (person_id đã là unique nên không cần kiểm tra)
@@ -3424,6 +3431,33 @@ def delete_persons_batch():
         if connection.is_connected():
             cursor.close()
             connection.close()
+
+@app.route('/api/admin/verify-password', methods=['POST'])
+@login_required
+def verify_password_api():
+    """API để verify password cho các action (delete, edit, backup, etc.)"""
+    try:
+        data = request.get_json() or {}
+        password = data.get('password', '').strip()
+        action = data.get('action', '')
+        
+        if not password:
+            return jsonify({'success': False, 'error': 'Mật khẩu không được để trống'}), 400
+        
+        # Lấy mật khẩu từ environment variable
+        correct_password = os.environ.get('ADMIN_PASSWORD', os.environ.get('BACKUP_PASSWORD', ''))
+        
+        if not correct_password:
+            logger.error("ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình")
+            return jsonify({'success': False, 'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
+        
+        if password != correct_password:
+            return jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 403
+        
+        return jsonify({'success': True, 'message': 'Mật khẩu đúng'}), 200
+    except Exception as e:
+        logger.error(f"Error verifying password: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': f'Lỗi server: {str(e)}'}), 500
 
 @app.route('/api/admin/backup', methods=['POST'])
 def create_backup_api():

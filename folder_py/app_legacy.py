@@ -1440,7 +1440,12 @@ def delete_person(person_id):
         # Lấy mật khẩu từ request
         data = request.get_json() or {}
         password = data.get('password', '').strip()
-        correct_password = 'tbqc2026'
+        # Lấy mật khẩu từ environment variable, fallback để bảo mật
+        correct_password = os.environ.get('BACKUP_PASSWORD', os.environ.get('ADMIN_PASSWORD', ''))
+        
+        if not correct_password:
+            logger.error("BACKUP_PASSWORD hoặc ADMIN_PASSWORD chưa được cấu hình")
+            return jsonify({'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
         
         # Kiểm tra mật khẩu
         if password != correct_password:

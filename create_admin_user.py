@@ -163,10 +163,18 @@ def main():
     print("TAO TAI KHOAN ADMIN")
     print("="*60 + "\n")
     
-    # Thông tin user
-    username = "admin_tbqc"
-    password = "tbqc@2025"
-    full_name = "TBQC Administrator"
+    # Thông tin user - Lấy từ environment variable hoặc yêu cầu nhập
+    username = os.environ.get('ADMIN_USERNAME', 'admin_tbqc')
+    password = os.environ.get('ADMIN_PASSWORD', '')
+    full_name = os.environ.get('ADMIN_FULL_NAME', 'TBQC Administrator')
+    
+    if not password:
+        print("⚠️  ADMIN_PASSWORD chưa được cấu hình trong environment variable.")
+        print("   Vui lòng set ADMIN_PASSWORD hoặc nhập mật khẩu khi chạy script.")
+        password = input("Nhập mật khẩu cho admin user (hoặc Enter để bỏ qua): ").strip()
+        if not password:
+            print("❌ Không thể tạo admin user mà không có mật khẩu.")
+            sys.exit(1)
     email = "admin@tbqc.local"
     
     # Show config

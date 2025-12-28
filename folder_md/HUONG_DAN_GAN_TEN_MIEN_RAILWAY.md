@@ -1,12 +1,13 @@
 # Hướng Dẫn Gắn Tên Miền Lên Railway
 
 ## 📋 Thông tin tên miền
-- **Tên miền:** `phongtuybienquancong.info`
-- **Nhà đăng ký:** GMO-Z.com Runsystem
+- **Tên miền:** `your-domain.com` (thay bằng tên miền thực tế của bạn)
+- **Nhà đăng ký:** [Nhà đăng ký domain của bạn]
 - **Name Servers (NS):** 
-  - `ns-a1.tenten.vn` (137.59.104.65)
-  - `ns-a2.tenten.vn` (137.59.104.66)
-  - `ns-a3.tenten.vn` (150.95.111.47)
+  - `ns-a1.tenten.vn` (IP: xxx.xxx.xxx.xxx)
+  - `ns-a2.tenten.vn` (IP: xxx.xxx.xxx.xxx)
+  - `ns-a3.tenten.vn` (IP: xxx.xxx.xxx.xxx)
+  - ⚠️ **Lưu ý:** Thay thế bằng thông tin thực tế của bạn, không commit thông tin thực vào Git
 
 ### ⚠️ Lưu ý về Name Servers (NS)
 **Name Servers (NS) là gì?**
@@ -64,7 +65,7 @@
    - Vào tab **Settings** của service
    - Scroll xuống phần **Domains**
    - Click **Generate Domain** (nếu chưa có) hoặc **Add Domain**
-   - Nhập tên miền: `phongtuybienquancong.info`
+   - Nhập tên miền: `your-domain.com` (thay bằng tên miền thực tế)
    - Railway sẽ hiển thị thông tin DNS cần cấu hình
 
 4. **Lấy thông tin DNS từ Railway**
@@ -83,7 +84,7 @@
 
 2. **Vào quản lý DNS**
    - Tìm phần **Quản lý DNS** hoặc **DNS Management**
-   - Chọn tên miền `phongtuybienquancong.info`
+   - Chọn tên miền `your-domain.com` (thay bằng tên miền thực tế)
 
 3. **Thêm DNS Records**
 
@@ -96,8 +97,8 @@
    ```
    
    **Lưu ý:** 
-   - Name: `@` có nghĩa là root domain (phongtuybienquancong.info)
-   - Nếu không nhập được `@`, có thể để trống hoặc nhập `phongtuybienquancong.info`
+   - Name: `@` có nghĩa là root domain (your-domain.com)
+   - Nếu không nhập được `@`, có thể để trống hoặc nhập `your-domain.com`
 
    **Option 2: Dùng A Record (nếu Railway cung cấp IP)**
    ```
@@ -140,15 +141,15 @@
 1. **Test DNS propagation**
    ```bash
    # Kiểm tra DNS record
-   nslookup phongtuybienquancong.info
+   nslookup your-domain.com
    
    # Hoặc dùng dig
-   dig phongtuybienquancong.info
+   dig your-domain.com
    ```
 
 2. **Test website**
    - Mở trình duyệt
-   - Truy cập: `https://phongtuybienquancong.info`
+   - Truy cập: `https://your-domain.com`
    - Kiểm tra xem website có load được không
    - Kiểm tra SSL certificate (ổ khóa xanh)
 
@@ -158,10 +159,10 @@
 
 ### Redirect www về non-www (hoặc ngược lại)
 
-Nếu muốn redirect `www.phongtuybienquancong.info` → `phongtuybienquancong.info`:
+Nếu muốn redirect `www.your-domain.com` → `your-domain.com`:
 
 1. **Trên Railway:**
-   - Thêm cả 2 domains: `phongtuybienquancong.info` và `www.phongtuybienquancong.info`
+   - Thêm cả 2 domains: `your-domain.com` và `www.your-domain.com`
    - Cấu hình redirect trong code (Flask)
 
 2. **Trong app.py:**
@@ -223,7 +224,7 @@ Nếu muốn redirect `www.phongtuybienquancong.info` → `phongtuybienquancong.
 - [ ] Đã đợi DNS propagate (có thể mất 5-30 phút)
 - [ ] Railway đã verify domain thành công
 - [ ] SSL certificate đã được cấp
-- [ ] Website có thể truy cập qua `https://phongtuybienquancong.info`
+- [ ] Website có thể truy cập qua `https://your-domain.com`
 - [ ] Đã test cả www và non-www (nếu cấu hình)
 
 ---

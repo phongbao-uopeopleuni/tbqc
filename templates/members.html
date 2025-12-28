@@ -654,8 +654,8 @@
   </div>
 
   <script>
-    // Password protection
-    const REQUIRED_PASSWORD = 'tbqc@2025';
+    // Password protection - Lấy từ server để tránh hardcode
+    const REQUIRED_PASSWORD = {{ members_password|tojson|safe if members_password else 'null' }};
     let isAuthenticated = false;
     let pendingAction = null; // Lưu hành động đang chờ xác thực
 
@@ -688,6 +688,13 @@
     function verifyPassword() {
       const password = document.getElementById('passwordInput').value.trim();
       const errorDiv = document.getElementById('passwordError');
+      
+      // Kiểm tra nếu password chưa được load từ server
+      if (!REQUIRED_PASSWORD) {
+        errorDiv.textContent = 'Lỗi: Mật khẩu chưa được cấu hình. Vui lòng liên hệ admin.';
+        errorDiv.style.display = 'block';
+        return;
+      }
       
       if (password === REQUIRED_PASSWORD) {
         // Xác thực thành công
