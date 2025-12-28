@@ -948,9 +948,7 @@ def get_person(person_id):
                     sp.full_name AS spouse_name,
                     sp.gender AS spouse_gender,
                     m.status AS marriage_status,
-                    m.note AS marriage_note,
-                    m.marriage_date_solar,
-                    m.marriage_place
+                    m.note AS marriage_note
                 FROM marriages m
                 LEFT JOIN persons sp ON (
                     CASE 
@@ -1788,9 +1786,7 @@ def get_ancestors(person_id):
                             sp.full_name AS spouse_name,
                             sp.gender AS spouse_gender,
                             m.status AS marriage_status,
-                            m.note AS marriage_note,
-                            m.marriage_date_solar,
-                            m.marriage_place
+                            m.note AS marriage_note
                         FROM marriages m
                         JOIN persons sp ON (
                             CASE 
@@ -1937,9 +1933,7 @@ def get_ancestors(person_id):
                         sp.full_name AS spouse_name,
                         sp.gender AS spouse_gender,
                         m.status AS marriage_status,
-                        m.note AS marriage_note,
-                        m.marriage_date_solar,
-                        m.marriage_place
+                        m.note AS marriage_note
                     FROM marriages m
                     JOIN persons sp ON (
                         CASE 
