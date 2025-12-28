@@ -186,6 +186,22 @@
       transform: translateY(-2px);
     }
 
+    .btn-backup {
+      background: #9C27B0;
+      color: white;
+    }
+
+    .btn-backup:hover:not(:disabled) {
+      background: #7B1FA2;
+      transform: translateY(-2px);
+    }
+
+    .btn-backup:disabled {
+      background: #9E9E9E;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
 
     /* Password modal */
     .password-modal {
@@ -540,6 +556,7 @@
       </div>
       <button class="btn btn-search" onclick="filterMembers()">Tìm kiếm</button>
       <button class="btn btn-refresh" onclick="loadMembers()">🔄 Làm mới</button>
+      <button class="btn btn-backup" onclick="checkAuthAndBackup()" id="btnBackup" title="Tạo backup database">💾 Backup</button>
       <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">➕ Thêm</button>
       <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">✏️ Cập nhật</button>
       <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">🗑️ Xóa</button>
@@ -731,6 +748,50 @@
         deleteSelected();
       } else {
         showPasswordModal(deleteSelected);
+      }
+    }
+
+    // Check auth before backup
+    function checkAuthAndBackup() {
+      if (isAuthenticated) {
+        createBackup();
+      } else {
+        showPasswordModal(createBackup);
+      }
+    }
+
+    // Create backup
+    async function createBackup() {
+      const backupBtn = document.getElementById('btnBackup');
+      const originalText = backupBtn.textContent;
+      
+      try {
+        // Disable button và hiển thị loading
+        backupBtn.disabled = true;
+        backupBtn.textContent = '⏳ Đang backup...';
+        
+        const response = await fetch('/api/admin/backup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          const fileSize = result.file_size ? (result.file_size / 1024 / 1024).toFixed(2) : 'N/A';
+          alert(`✅ Backup thành công!\n\nFile: ${result.backup_file}\nKích thước: ${fileSize} MB`);
+        } else {
+          alert(`❌ Backup thất bại: ${result.error || 'Lỗi không xác định'}`);
+        }
+      } catch (error) {
+        console.error('[Members] Error creating backup:', error);
+        alert('Lỗi kết nối: ' + error.message);
+      } finally {
+        // Restore button
+        backupBtn.disabled = false;
+        backupBtn.textContent = originalText;
       }
     }
 
@@ -1057,7 +1118,16 @@
         const result = await response.json();
         
         if (result.success) {
-          alert('Xóa thành công!');
+          let message = `✅ Xóa thành công ${checkboxes.length} thành viên!`;
+          
+          // Hiển thị thông tin backup nếu có
+          if (result.backup_created) {
+            message += `\n\n💾 Backup đã được tạo tự động:\nFile: ${result.backup_file}`;
+          } else if (result.backup_warning) {
+            message += `\n\n⚠️ Cảnh báo: ${result.backup_warning}`;
+          }
+          
+          alert(message);
           selectedMembers.clear();
           loadMembers();
         } else {

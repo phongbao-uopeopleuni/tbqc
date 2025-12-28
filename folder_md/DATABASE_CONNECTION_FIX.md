@@ -40,7 +40,8 @@ Script này sẽ kiểm tra:
 **Hoặc chạy từ command line:**
 
 ```bash
-mysql -h tramway.proxy.rlwy.net -P 16930 -u root -p railway < folder_sql/reset_schema_tbqc.sql
+# Thay thế bằng thông tin database thực tế của bạn
+mysql -h <DB_HOST> -P <DB_PORT> -u <DB_USER> -p <DB_NAME> < folder_sql/reset_schema_tbqc.sql
 ```
 
 ### Bước 4: Import Dữ Liệu

@@ -289,8 +289,24 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
             p.blood_type,
             p.genetic_disease,
             p.note,
-            p.father_mother_id
+            p.father_mother_id,
+            -- Cha từ relationships
+            father.full_name AS father_name,
+            -- Mẹ từ relationships
+            mother.full_name AS mother_name
         FROM persons p
+        -- Cha từ relationships (relation_type = 'father')
+        LEFT JOIN relationships rel_father
+            ON rel_father.child_id = p.person_id 
+            AND rel_father.relation_type = 'father'
+        LEFT JOIN persons father
+            ON rel_father.parent_id = father.person_id
+        -- Mẹ từ relationships (relation_type = 'mother')
+        LEFT JOIN relationships rel_mother
+            ON rel_mother.child_id = p.person_id 
+            AND rel_mother.relation_type = 'mother'
+        LEFT JOIN persons mother
+            ON rel_mother.parent_id = mother.person_id
     """)
     
     persons_by_id = {}
@@ -325,7 +341,9 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
                 'blood_type': row[21],
                 'genetic_disease': row[22],
                 'note': row[23],
-                'father_mother_id': row[24]
+                'father_mother_id': row[24],
+                'father_name': row[25] if len(row) > 25 else None,
+                'mother_name': row[26] if len(row) > 26 else None
             }
     
     logger.info(f"Loaded {len(persons_by_id)} persons")

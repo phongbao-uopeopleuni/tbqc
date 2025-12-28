@@ -131,11 +131,13 @@ function convertTreeToGraph(treeData) {
     const person = {
       id: node.person_id,
       name: node.full_name || node.common_name || '',
-      generation: node.generation_number || 0,
+      generation: node.generation_number || node.generation_level || 0,
       gender: node.gender || '',
       branch: node.branch_name || '',
       status: node.status || '',
-      commonName: node.common_name || ''
+      commonName: node.common_name || '',
+      father_name: node.father_name || null,
+      mother_name: node.mother_name || null
     };
     
     personMap.set(person.id, person);
@@ -225,7 +227,9 @@ function buildGraph(persons, relations) {
       gender: p.gender,
       branch: p.branch_name,
       status: p.status,
-      commonName: p.common_name
+      commonName: p.common_name,
+      father_name: p.father_name || null,
+      mother_name: p.mother_name || null
     };
     
     personMap.set(person.id, person);
@@ -427,15 +431,51 @@ function buildTreeNode(personId, depth = 0, parentNode = null, maxGeneration = n
 
   // Thêm các con (chỉ nếu chưa vượt quá maxGeneration)
   const childrenIds = childrenMap.get(personId) || [];
+  const childNodes = [];
+  
   childrenIds.forEach(childId => {
     const child = personMap.get(childId);
     if (child && (maxGeneration === null || child.generation <= maxGeneration)) {
       const childNode = buildTreeNode(childId, depth + 1, node, maxGeneration);
       if (childNode) {
-        node.children.push(childNode);
+        childNodes.push(childNode);
       }
     }
   });
+  
+  // Sắp xếp children theo tên bố (father_name) để hiển thị theo nhánh
+  // Nếu không có father_name, sắp xếp theo tên
+  childNodes.sort((a, b) => {
+    const personA = personMap.get(a.id);
+    const personB = personMap.get(b.id);
+    
+    // Lấy tên bố từ parentMap
+    const parentsA = parentMap.get(a.id) || [];
+    const parentsB = parentMap.get(b.id) || [];
+    
+    // Tìm father_id (thường là phần tử đầu tiên trong parents)
+    const fatherAId = parentsA.length > 0 ? parentsA[0] : null;
+    const fatherBId = parentsB.length > 0 ? parentsB[0] : null;
+    
+    // Lấy tên bố
+    const fatherA = fatherAId ? personMap.get(fatherAId) : null;
+    const fatherB = fatherBId ? personMap.get(fatherBId) : null;
+    
+    const fatherNameA = fatherA ? fatherA.name : '';
+    const fatherNameB = fatherB ? fatherB.name : '';
+    
+    // Sắp xếp theo tên bố trước, sau đó theo tên
+    if (fatherNameA && fatherNameB) {
+      const nameCompare = fatherNameA.localeCompare(fatherNameB, 'vi');
+      if (nameCompare !== 0) return nameCompare;
+    } else if (fatherNameA) return -1;
+    else if (fatherNameB) return 1;
+    
+    // Nếu cùng bố hoặc không có bố, sắp xếp theo tên
+    return (personA?.name || '').localeCompare(personB?.name || '', 'vi');
+  });
+  
+  node.children = childNodes;
 
   return node;
 }

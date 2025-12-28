@@ -137,8 +137,8 @@ DB_NAME=railway
 
 Hoặc file `tbqc_db.env` ở root:
 ```
-DB_HOST=tramway.proxy.rlwy.net
-DB_PORT=16930
+DB_HOST=<your_db_host>
+DB_PORT=<your_db_port>
 DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=railway
@@ -183,8 +183,8 @@ grep "NOT FOUND" reset_import.log
 
 1. Mở MySQL Workbench
 2. Tạo connection mới:
-   - **Hostname**: `tramway.proxy.rlwy.net` (hoặc từ env)
-   - **Port**: `16930` (hoặc từ env)
+   - **Hostname**: Từ biến môi trường `DB_HOST`
+   - **Port**: Từ biến môi trường `DB_PORT`
    - **Username**: `root` (hoặc từ env)
    - **Password**: (từ env)
    - **Default Schema**: `railway`

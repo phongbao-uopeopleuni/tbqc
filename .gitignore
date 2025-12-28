@@ -15,9 +15,14 @@ ENV/
 *.swp
 *.swo
 
-# Environment
+# Environment & Config files with sensitive data
 .env
+*.env
+!*.env.example
+tbqc_db.env
 .smtp_config
+*.config
+*_config
 
 # Logs
 *.log
@@ -25,6 +30,15 @@ ENV/
 # Database
 *.db
 *.sqlite
+
+# Backups
+backups/
+*.sql
+!folder_sql/*.sql
+
+# Sensitive information
+# Domain/DNS configuration files (actual config files, not documentation)
+# Note: Documentation files in folder_md/ are allowed
 
 # OS
 .DS_Store

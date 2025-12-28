@@ -8,7 +8,7 @@ $env:SMTP_SERVER="smtp.gmail.com"
 $env:SMTP_PORT="587"
 $env:SMTP_USER="your-email@gmail.com"
 $env:SMTP_PASSWORD="your-app-password"
-$env:SMTP_TO="baophongcmu@gmail.com"
+$env:SMTP_TO="your-email@example.com"
 ```
 
 ### Windows (CMD):
@@ -17,7 +17,7 @@ set SMTP_SERVER=smtp.gmail.com
 set SMTP_PORT=587
 set SMTP_USER=your-email@gmail.com
 set SMTP_PASSWORD=your-app-password
-set SMTP_TO=baophongcmu@gmail.com
+set SMTP_TO=your-email@example.com
 ```
 
 ### Linux/Mac:
@@ -26,7 +26,7 @@ export SMTP_SERVER="smtp.gmail.com"
 export SMTP_PORT="587"
 export SMTP_USER="your-email@gmail.com"
 export SMTP_PASSWORD="your-app-password"
-export SMTP_TO="baophongcmu@gmail.com"
+export SMTP_TO="your-email@example.com"
 ```
 
 ## Cách 2: Tạo file .smtp_config
@@ -38,7 +38,7 @@ SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
-SMTP_TO=baophongcmu@gmail.com
+SMTP_TO=your-email@example.com
 ```
 
 **Lưu ý:** File này chứa mật khẩu, nên thêm vào `.gitignore` để không commit lên git.

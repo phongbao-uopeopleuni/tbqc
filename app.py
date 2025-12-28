@@ -3363,7 +3363,7 @@ def fix_p1_1_parents():
 
 @app.route('/api/persons/batch', methods=['DELETE'])
 def delete_persons_batch():
-    """API xóa nhiều thành viên"""
+    """API xóa nhiều thành viên - Tự động backup trước khi xóa"""
     connection = get_db_connection()
     if not connection:
         return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
@@ -3371,9 +3371,25 @@ def delete_persons_batch():
     try:
         data = request.get_json()
         person_ids = data.get('person_ids', [])
+        skip_backup = data.get('skip_backup', False)  # Cho phép skip backup nếu cần
         
         if not person_ids:
             return jsonify({'success': False, 'error': 'Không có ID nào được chọn'}), 400
+        
+        # Tự động backup trước khi xóa (trừ khi skip_backup=True)
+        backup_result = None
+        if not skip_backup and len(person_ids) > 0:
+            try:
+                from backup_database import create_backup
+                logger.info(f"Tạo backup tự động trước khi xóa {len(person_ids)} thành viên...")
+                backup_result = create_backup()
+                if backup_result['success']:
+                    logger.info(f"✅ Backup thành công: {backup_result['backup_filename']}")
+                else:
+                    logger.warning(f"⚠️ Backup thất bại: {backup_result.get('error')}")
+            except Exception as backup_error:
+                logger.warning(f"⚠️ Không thể tạo backup: {backup_error}")
+                # Không dừng quá trình xóa nếu backup thất bại
         
         cursor = connection.cursor()
         
@@ -3384,7 +3400,19 @@ def delete_persons_batch():
         deleted_count = cursor.rowcount
         connection.commit()
         
-        return jsonify({'success': True, 'message': f'Đã xóa {deleted_count} thành viên'})
+        response = {
+            'success': True,
+            'message': f'Đã xóa {deleted_count} thành viên'
+        }
+        
+        # Thêm thông tin backup vào response nếu có
+        if backup_result and backup_result['success']:
+            response['backup_created'] = True
+            response['backup_file'] = backup_result['backup_filename']
+        elif backup_result:
+            response['backup_warning'] = f"Backup thất bại: {backup_result.get('error')}"
+        
+        return jsonify(response)
         
     except Error as e:
         connection.rollback()
@@ -3396,6 +3424,110 @@ def delete_persons_batch():
         if connection.is_connected():
             cursor.close()
             connection.close()
+
+@app.route('/api/admin/backup', methods=['POST'])
+def create_backup_api():
+    """API tạo backup database"""
+    try:
+        # Import backup module
+        try:
+            from backup_database import create_backup, list_backups
+        except ImportError:
+            return jsonify({
+                'success': False,
+                'error': 'Backup module not found'
+            }), 500
+        
+        # Tạo backup
+        result = create_backup()
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': 'Backup thành công',
+                'backup_file': result['backup_filename'],
+                'file_size': result['file_size'],
+                'timestamp': result['timestamp']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Backup failed')
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error creating backup: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi: {str(e)}'
+        }), 500
+
+@app.route('/api/admin/backups', methods=['GET'])
+def list_backups_api():
+    """API liệt kê các backup có sẵn"""
+    try:
+        from backup_database import list_backups
+        
+        backups = list_backups()
+        
+        # Format response
+        backup_list = []
+        for backup in backups:
+            backup_list.append({
+                'filename': backup['filename'],
+                'size': backup['size'],
+                'size_mb': round(backup['size'] / 1024 / 1024, 2),
+                'created_at': backup['created_at']
+            })
+        
+        return jsonify({
+            'success': True,
+            'backups': backup_list,
+            'count': len(backup_list)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error listing backups: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi: {str(e)}'
+        }), 500
+
+@app.route('/api/admin/backup/<filename>', methods=['GET'])
+def download_backup(filename):
+    """API download file backup"""
+    try:
+        from pathlib import Path
+        
+        # Security: chỉ cho phép download file backup
+        if not filename.startswith('tbqc_backup_') or not filename.endswith('.sql'):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid backup filename'
+            }), 400
+        
+        backup_dir = Path('backups')
+        backup_file = backup_dir / filename
+        
+        if not backup_file.exists():
+            return jsonify({
+                'success': False,
+                'error': 'Backup file not found'
+            }), 404
+        
+        return send_from_directory(
+            str(backup_dir),
+            filename,
+            as_attachment=True,
+            mimetype='application/sql'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error downloading backup: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi: {str(e)}'
+        }), 500
 
 @app.route('/api/send-edit-request-email', methods=['POST'])
 def send_edit_request_email():
