@@ -3147,9 +3147,9 @@ def update_person_members(person_id):
             has_csv_id = cursor.fetchone()
             
             if has_csv_id:
-            cursor.execute("SELECT person_id FROM persons WHERE csv_id = %s AND person_id != %s", (data['csv_id'], person_id))
-            if cursor.fetchone():
-                return jsonify({'success': False, 'error': f'ID {data["csv_id"]} đã tồn tại'}), 400
+                cursor.execute("SELECT person_id FROM persons WHERE csv_id = %s AND person_id != %s", (data['csv_id'], person_id))
+                if cursor.fetchone():
+                    return jsonify({'success': False, 'error': f'ID {data["csv_id"]} đã tồn tại'}), 400
             else:
                 # Schema mới không có csv_id, kiểm tra person_id trùng thay vào đó
                 # (person_id đã là unique nên không cần kiểm tra)
