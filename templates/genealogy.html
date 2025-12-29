@@ -957,7 +957,11 @@
   <!-- Geoapify Maps API (Free: 3,000 requests/day) -->
   <script>
     // Geoapify API key - lấy từ server để tránh hardcode
-    const GEOAPIFY_API_KEY = {{ geoapify_api_key|tojson|safe if geoapify_api_key else 'null' }};
+    {% if geoapify_api_key %}
+    const GEOAPIFY_API_KEY = {{ geoapify_api_key|tojson|safe }};
+    {% else %}
+    const GEOAPIFY_API_KEY = null;
+    {% endif %}
     
     // Debug log để kiểm tra API key
     console.log('GEOAPIFY_API_KEY loaded:', {
