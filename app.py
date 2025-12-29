@@ -177,23 +177,52 @@ def login_page():
     return render_template('login.html')
 
 @app.route('/genealogy')
-def genealogy_page():
-    """Trang gia phả (gộp tree + tra cứu)"""
-    # Lấy Geoapify API key từ environment variable (Free: 3,000 requests/day)
-    geoapify_api_key = os.environ.get('GEOAPIFY_API_KEY', '')
+def get_geoapify_api_key():
+    """
+    Lấy Geoapify API key từ environment variable hoặc tbqc_db.env
+    Priority: Environment variable > tbqc_db.env
+    """
+    # Kiểm tra environment variables trước (ưu tiên cho production)
+    api_key = os.environ.get('GEOAPIFY_API_KEY', '')
     
-    # Nếu chưa có trong environment, thử load từ tbqc_db.env
-    if not geoapify_api_key:
+    # Nếu chưa có trong environment variables, thử load từ tbqc_db.env (chỉ cho local dev)
+    if not api_key:
         try:
             env_file = os.path.join(BASE_DIR, 'tbqc_db.env')
             if os.path.exists(env_file):
-                from folder_py.db_config import load_env_file
                 env_vars = load_env_file(env_file)
-                geoapify_api_key = env_vars.get('GEOAPIFY_API_KEY', '')
+                file_api_key = env_vars.get('GEOAPIFY_API_KEY', '')
+                if file_api_key:
+                    api_key = file_api_key
+                    # Set vào environment để các lần sau không cần load lại
+                    os.environ['GEOAPIFY_API_KEY'] = api_key
+                    logger.info("GEOAPIFY_API_KEY loaded from tbqc_db.env (local dev)")
+            else:
+                # Trên production, file này không tồn tại - chỉ dùng environment variables
+                logger.debug(f"File tbqc_db.env không tồn tại (production mode), sử dụng environment variables")
         except Exception as e:
-            logger.debug(f"Could not load GEOAPIFY_API_KEY from tbqc_db.env: {e}")
+            logger.error(f"Could not load GEOAPIFY_API_KEY from tbqc_db.env: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
-    return render_template('genealogy.html', geoapify_api_key=geoapify_api_key)
+    if not api_key:
+        logger.warning("GEOAPIFY_API_KEY chưa được cấu hình trong environment variables hoặc tbqc_db.env")
+    
+    return api_key
+
+@app.route('/genealogy')
+def genealogy_page():
+    """Trang gia phả (gộp tree + tra cứu)"""
+    # Lấy Geoapify API key từ helper function (tự động load từ env file nếu cần)
+    geoapify_api_key = get_geoapify_api_key()
+    
+    # Debug log để kiểm tra
+    if not geoapify_api_key:
+        logger.warning("GEOAPIFY_API_KEY không được load từ environment hoặc tbqc_db.env")
+    else:
+        logger.debug(f"Geoapify API key loaded: {geoapify_api_key[:10]}...")
+    
+    return render_template('genealogy.html', geoapify_api_key=geoapify_api_key or '')
 
 @app.route('/api/grave/update-location', methods=['POST'])
 def update_grave_location():

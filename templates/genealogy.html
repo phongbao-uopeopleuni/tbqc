@@ -958,6 +958,15 @@
   <script>
     // Geoapify API key - lấy từ server để tránh hardcode
     const GEOAPIFY_API_KEY = {{ geoapify_api_key|tojson|safe if geoapify_api_key else 'null' }};
+    
+    // Debug log để kiểm tra API key
+    console.log('GEOAPIFY_API_KEY loaded:', {
+      value: GEOAPIFY_API_KEY ? GEOAPIFY_API_KEY.substring(0, 10) + '...' : '(empty)',
+      type: typeof GEOAPIFY_API_KEY,
+      length: GEOAPIFY_API_KEY ? GEOAPIFY_API_KEY.length : 0,
+      isNull: GEOAPIFY_API_KEY === 'null' || GEOAPIFY_API_KEY === null,
+      isEmpty: GEOAPIFY_API_KEY === '' || !GEOAPIFY_API_KEY
+    });
   </script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -2458,9 +2467,17 @@
         return;
       }
       
-      if (!GEOAPIFY_API_KEY || GEOAPIFY_API_KEY === 'null' || GEOAPIFY_API_KEY === '') {
+      const hasApiKey = GEOAPIFY_API_KEY && 
+                       GEOAPIFY_API_KEY !== 'null' && 
+                       GEOAPIFY_API_KEY !== null && 
+                       GEOAPIFY_API_KEY !== '' &&
+                       typeof GEOAPIFY_API_KEY === 'string' &&
+                       GEOAPIFY_API_KEY.length > 0;
+      
+      if (!hasApiKey) {
         statusEl.textContent = 'Geoapify API key chưa được cấu hình';
         statusEl.style.color = '#ff0000';
+        console.error('GEOAPIFY_API_KEY not configured for update:', GEOAPIFY_API_KEY);
         return;
       }
       
