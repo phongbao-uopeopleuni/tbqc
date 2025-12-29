@@ -39,6 +39,13 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   }
   container.innerHTML = "";
   
+  // Check if family graph is available and use family renderer
+  if (typeof familyGraph !== 'undefined' && familyGraph && typeof renderFamilyDefaultTree === 'function') {
+    console.log('[Tree] Using family-node renderer');
+    renderFamilyDefaultTree(familyGraph, maxGeneration);
+    return;
+  }
+  
   if (!graph || !personMap || personMap.size === 0) {
     container.innerHTML = '<div class="error">Chưa có dữ liệu</div>';
     return;
@@ -49,7 +56,7 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
     return;
   }
 
-  // Build tree từ founder đến maxGeneration
+  // Build tree từ founder đến maxGeneration (legacy person-node mode)
   const treeRoot = buildDefaultTree(maxGeneration);
   if (!treeRoot) {
     container.innerHTML = '<div class="error">Không thể xây dựng cây gia phả</div>';

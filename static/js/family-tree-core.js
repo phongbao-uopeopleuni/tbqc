@@ -23,9 +23,11 @@ const FOUNDER_NAME = "Vua Minh Mạng";
 let personMap = new Map(); // id -> Person
 let parentMap = new Map(); // childId -> [fatherId, motherId]
 let childrenMap = new Map(); // parentId -> [childId1, childId2, ...]
+let marriagesMap = new Map(); // personId -> [marriages] (NEW)
 let nameToIdMap = new Map(); // name -> id (for search)
 let founderId = null;
 let graph = null; // Graph object
+let familyGraph = null; // Family-node graph (NEW)
 
 // ============================================
 // DATA LAYER: Load và build graph structure
@@ -94,7 +96,37 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
     if (treeData && treeData.person_id) {
       // Tree structure from /api/tree
       graph = convertTreeToGraph(treeData);
-      return { treeData, graph };
+      
+      // Build family-node graph if buildRenderGraph is available
+      if (typeof buildRenderGraph === 'function') {
+        try {
+          // Extract persons array from tree
+          const persons = extractPersonsFromTree(treeData);
+          
+          // Build family graph
+          familyGraph = buildRenderGraph(
+            persons,
+            {
+              childrenMap: childrenMap,
+              parentMap: parentMap
+            },
+            {
+              marriagesMap: marriagesMap
+            }
+          );
+          
+          console.log('[Tree] Built family graph:', {
+            personNodes: familyGraph.personNodes.length,
+            familyNodes: familyGraph.familyNodes.length,
+            links: familyGraph.links.length
+          });
+        } catch (error) {
+          console.warn('[Tree] Error building family graph:', error);
+          familyGraph = null;
+        }
+      }
+      
+      return { treeData, graph, familyGraph };
     } else {
       throw new Error('Dữ liệu cây không hợp lệ');
     }
@@ -115,6 +147,7 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
 
 /**
  * Convert tree data từ /api/tree thành graph structure
+ * ENHANCED: Extract marriages data for family-node graph
  */
 function convertTreeToGraph(treeData) {
   // Reset maps
@@ -122,6 +155,7 @@ function convertTreeToGraph(treeData) {
   parentMap = new Map();
   childrenMap = new Map();
   nameToIdMap = new Map();
+  marriagesMap = new Map(); // NEW: Map personId -> [marriages]
   founderId = null;
 
   // Traverse tree to build maps
@@ -137,10 +171,18 @@ function convertTreeToGraph(treeData) {
       status: node.status || '',
       commonName: node.common_name || '',
       father_name: node.father_name || null,
-      mother_name: node.mother_name || null
+      mother_name: node.mother_name || null,
+      father_id: node.father_id || null,
+      mother_id: node.mother_id || null,
+      marriages: node.marriages || [] // Extract marriages
     };
     
     personMap.set(person.id, person);
+    
+    // Store marriages
+    if (person.marriages && person.marriages.length > 0) {
+      marriagesMap.set(person.id, person.marriages);
+    }
     
     const normalizedName = normalize(person.name);
     if (!nameToIdMap.has(normalizedName)) {
@@ -164,9 +206,25 @@ function convertTreeToGraph(treeData) {
           if (!parentMap.has(child.person_id)) {
             parentMap.set(child.person_id, []);
           }
-          // Add parent to child's parent list
+          // Add parent to child's parent list (distinguish father/mother by gender)
           if (node.person_id) {
-            parentMap.get(child.person_id).push(node.person_id);
+            const parents = parentMap.get(child.person_id);
+            // Try to identify father vs mother
+            if (node.gender === 'Nam' && !parents.includes(node.person_id)) {
+              parents.push(node.person_id);
+              // Set father_id if not set
+              if (child.father_id !== node.person_id) {
+                child.father_id = node.person_id;
+              }
+            } else if (node.gender === 'Nữ' && !parents.includes(node.person_id)) {
+              parents.push(node.person_id);
+              // Set mother_id if not set
+              if (child.mother_id !== node.person_id) {
+                child.mother_id = node.person_id;
+              }
+            } else if (!parents.includes(node.person_id)) {
+              parents.push(node.person_id);
+            }
           }
         }
       });
@@ -188,9 +246,51 @@ function convertTreeToGraph(treeData) {
     personMap,
     parentMap,
     childrenMap,
+    marriagesMap, // NEW
     nameToIdMap,
     founderId
   };
+}
+
+/**
+ * Extract flat persons array from tree structure
+ * @param {Object} treeNode - Tree node
+ * @returns {Array} Flat array of persons
+ */
+function extractPersonsFromTree(treeNode) {
+  const persons = [];
+  
+  function traverse(node) {
+    if (!node) return;
+    
+    const person = {
+      person_id: node.person_id,
+      id: node.person_id,
+      full_name: node.full_name || node.common_name || '',
+      name: node.full_name || node.common_name || '',
+      gender: node.gender || '',
+      generation_number: node.generation_number || node.generation_level || 0,
+      generation_level: node.generation_number || node.generation_level || 0,
+      branch_name: node.branch_name || '',
+      branch: node.branch_name || '',
+      status: node.status || '',
+      father_name: node.father_name || null,
+      mother_name: node.mother_name || null,
+      father_id: node.father_id || null,
+      mother_id: node.mother_id || null,
+      marriages: node.marriages || []
+    };
+    
+    persons.push(person);
+    
+    // Traverse children
+    if (node.children && Array.isArray(node.children)) {
+      node.children.forEach(child => traverse(child));
+    }
+  }
+  
+  traverse(treeNode);
+  return persons;
 }
 
 /**
