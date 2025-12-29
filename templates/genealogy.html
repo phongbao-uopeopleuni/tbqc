@@ -957,20 +957,22 @@
   <!-- Geoapify Maps API (Free: 3,000 requests/day) -->
   <script>
     // Geoapify API key - lấy từ server để tránh hardcode
-    {% if geoapify_api_key %}
+    {% if geoapify_api_key and geoapify_api_key.strip() %}
     const GEOAPIFY_API_KEY = {{ geoapify_api_key|tojson|safe }};
     {% else %}
     const GEOAPIFY_API_KEY = null;
     {% endif %}
     
-    // Debug log để kiểm tra API key
-    console.log('GEOAPIFY_API_KEY loaded:', {
-      value: GEOAPIFY_API_KEY ? GEOAPIFY_API_KEY.substring(0, 10) + '...' : '(empty)',
-      type: typeof GEOAPIFY_API_KEY,
-      length: GEOAPIFY_API_KEY ? GEOAPIFY_API_KEY.length : 0,
-      isNull: GEOAPIFY_API_KEY === 'null' || GEOAPIFY_API_KEY === null,
-      isEmpty: GEOAPIFY_API_KEY === '' || !GEOAPIFY_API_KEY
-    });
+    // Debug log để kiểm tra API key (chỉ log nếu không null để tránh lỗi)
+    if (typeof GEOAPIFY_API_KEY !== 'undefined') {
+      console.log('GEOAPIFY_API_KEY loaded:', {
+        value: GEOAPIFY_API_KEY ? (GEOAPIFY_API_KEY.substring ? GEOAPIFY_API_KEY.substring(0, 10) + '...' : '(not a string)') : '(empty)',
+        type: typeof GEOAPIFY_API_KEY,
+        length: GEOAPIFY_API_KEY ? (GEOAPIFY_API_KEY.length || 0) : 0,
+        isNull: GEOAPIFY_API_KEY === 'null' || GEOAPIFY_API_KEY === null,
+        isEmpty: GEOAPIFY_API_KEY === '' || !GEOAPIFY_API_KEY
+      });
+    }
   </script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
