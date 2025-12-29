@@ -1357,26 +1357,38 @@ def get_person(person_id):
                 spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
                 spouse_data_from_csv = relationship_data['spouse_data_from_csv']
                 
-                # Ưu tiên từ spouse_sibling_children table
-                if person_id in spouse_data_from_table:
-                    spouse_names = spouse_data_from_table[person_id]
-                    spouse_string = '; '.join(spouse_names) if spouse_names else None
-                    person['spouse'] = spouse_string
-                    person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
-                # Fallback từ marriages (đã load trong helper)
-                elif person_id in spouse_data_from_marriages:
-                    spouse_names = spouse_data_from_marriages[person_id]
-                    spouse_string = '; '.join(spouse_names) if spouse_names else None
-                    person['spouse'] = spouse_string
-                    person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
-                # Fallback từ CSV
-                elif person_id in spouse_data_from_csv:
-                    spouse_names = spouse_data_from_csv[person_id]
-                    spouse_string = '; '.join(spouse_names) if spouse_names else None
-                    person['spouse'] = spouse_string
-                    person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
+                # Nếu chưa có spouse từ marriages table, lấy từ helper
+                if not person.get('spouse') or person.get('spouse') == '':
+                    # Ưu tiên từ spouse_sibling_children table
+                    if person_id in spouse_data_from_table:
+                        spouse_names = spouse_data_from_table[person_id]
+                        spouse_string = '; '.join(spouse_names) if spouse_names else None
+                        person['spouse'] = spouse_string
+                        person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
+                        logger.info(f"[API /api/person/{person_id}] Loaded spouse from spouse_sibling_children table: {spouse_string}")
+                    # Fallback từ marriages (đã load trong helper)
+                    elif person_id in spouse_data_from_marriages:
+                        spouse_names = spouse_data_from_marriages[person_id]
+                        spouse_string = '; '.join(spouse_names) if spouse_names else None
+                        person['spouse'] = spouse_string
+                        person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
+                        logger.info(f"[API /api/person/{person_id}] Loaded spouse from helper marriages: {spouse_string}")
+                    # Fallback từ CSV
+                    elif person_id in spouse_data_from_csv:
+                        spouse_names = spouse_data_from_csv[person_id]
+                        spouse_string = '; '.join(spouse_names) if spouse_names else None
+                        person['spouse'] = spouse_string
+                        person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
+                        logger.info(f"[API /api/person/{person_id}] Loaded spouse from CSV: {spouse_string}")
+                else:
+                    # Đã có spouse từ marriages table, chỉ đảm bảo spouse_name được set
+                    if not person.get('spouse_name'):
+                        person['spouse_name'] = person.get('spouse')
+                        logger.info(f"[API /api/person/{person_id}] Set spouse_name from spouse: {person.get('spouse')}")
             except Exception as e:
                 logger.debug(f"Could not load spouse from helper for {person_id}: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
         
         # Đảm bảo children_string được set nếu có children array nhưng chưa có children_string
         if person.get('children') and isinstance(person.get('children'), list) and not person.get('children_string'):
