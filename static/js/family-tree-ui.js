@@ -442,15 +442,16 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
   const siblingsMidX = (minSiblingX + maxSiblingX) / 2;
   const firstChildTopY = siblings[0].y;
 
-  // Đường dọc chính từ parent xuống đến level của children
+  // Đường dọc chính từ cặp bố mẹ xuống đến level của children
   const verticalStartY = parentBottomY;
   const verticalEndY = firstChildTopY - 20; // 20px trước khi đến children
   const verticalHeight = verticalEndY - verticalStartY;
   
   if (verticalHeight > 0) {
+    // Đường dọc từ cặp bố mẹ xuống đến điểm giữa của siblings
     const connectorV = document.createElement("div");
     connectorV.className = "connector vertical";
-    connectorV.style.left = (siblingsMidX - 1.5) + "px";
+    connectorV.style.left = (parentStartX - 1.5) + "px";
     connectorV.style.top = verticalStartY + "px";
     connectorV.style.height = verticalHeight + "px";
     connectorV.style.width = "3px";
@@ -458,9 +459,23 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     connectorV.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
     connectorV.style.zIndex = "1";
     container.appendChild(connectorV);
+    
+    // Đường ngang từ đường dọc chính đến điểm giữa của siblings (nếu cần)
+    if (Math.abs(parentStartX - siblingsMidX) > 5) {
+      const connectorH1 = document.createElement("div");
+      connectorH1.className = "connector horizontal";
+      connectorH1.style.left = Math.min(parentStartX, siblingsMidX) + "px";
+      connectorH1.style.top = (firstChildTopY - 20) + "px";
+      connectorH1.style.width = Math.abs(parentStartX - siblingsMidX) + "px";
+      connectorH1.style.height = "3px";
+      connectorH1.style.backgroundColor = "var(--color-primary, #8B0000)";
+      connectorH1.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
+      connectorH1.style.zIndex = "1";
+      container.appendChild(connectorH1);
+    }
   }
 
-  // Đường ngang từ đường dọc chính đến tất cả siblings
+  // Đường ngang từ điểm giữa của siblings đến tất cả siblings
   if (siblings.length > 1) {
     const connectorH = document.createElement("div");
     connectorH.className = "connector horizontal";
