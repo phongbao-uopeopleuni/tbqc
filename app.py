@@ -1284,14 +1284,16 @@ def get_person(person_id):
                     person['children'] = children_list if children_list else []
                     # Giữ lại string format cho backward compatibility
                     person['children_string'] = '; '.join(children_names) if children_names else None
+                    logger.info(f"[API /api/person/{person_id}] Loaded {len(children_list)} children: {person['children_string']}")
                 else:
                     # Nếu query không tìm thấy nhưng có children_names từ helper, vẫn set children_string
                     person['children'] = []
                     person['children_string'] = '; '.join(children_names) if children_names else None
-                    logger.debug(f"Children names from helper: {children_names}, but query returned no records for {person_id}")
+                    logger.info(f"[API /api/person/{person_id}] Children names from helper: {children_names}, query returned no records, set children_string: {person['children_string']}")
             else:
                 person['children'] = []
                 person['children_string'] = None
+                logger.debug(f"[API /api/person/{person_id}] No children found in helper")
         except Exception as e:
             logger.warning(f"Error fetching children for {person_id}: {e}")
             import traceback
