@@ -7,10 +7,12 @@ Trên production (Railway/Render), bạn **PHẢI** set các environment variabl
 ### Các Biến Cần Set:
 
 ```
-MEMBERS_PASSWORD=tbqc@2026
-ADMIN_PASSWORD=tbqc@2026
-BACKUP_PASSWORD=tbqc@2026
+MEMBERS_PASSWORD=<your_password_here>
+ADMIN_PASSWORD=<your_password_here>
+BACKUP_PASSWORD=<your_password_here>
 ```
+
+**⚠️ Lưu ý:** Thay `<your_password_here>` bằng mật khẩu thực tế của bạn (ví dụ: `tbqc@2026`)
 
 ## Cách Set Environment Variables
 
@@ -22,9 +24,9 @@ BACKUP_PASSWORD=tbqc@2026
 4. Vào tab **Variables**
 5. Click **+ New Variable**
 6. Thêm từng biến:
-   - Key: `MEMBERS_PASSWORD`, Value: `tbqc@2026`
-   - Key: `ADMIN_PASSWORD`, Value: `tbqc@2026`
-   - Key: `BACKUP_PASSWORD`, Value: `tbqc@2026`
+   - Key: `MEMBERS_PASSWORD`, Value: `<your_password_here>` (ví dụ: `tbqc@2026`)
+   - Key: `ADMIN_PASSWORD`, Value: `<your_password_here>` (ví dụ: `tbqc@2026`)
+   - Key: `BACKUP_PASSWORD`, Value: `<your_password_here>` (ví dụ: `tbqc@2026`)
 7. Click **Add** cho mỗi biến
 8. Railway sẽ tự động redeploy
 
@@ -35,9 +37,9 @@ BACKUP_PASSWORD=tbqc@2026
 3. Vào tab **Environment**
 4. Click **Add Environment Variable**
 5. Thêm từng biến:
-   - Key: `MEMBERS_PASSWORD`, Value: `tbqc@2026`
-   - Key: `ADMIN_PASSWORD`, Value: `tbqc@2026`
-   - Key: `BACKUP_PASSWORD`, Value: `tbqc@2026`
+   - Key: `MEMBERS_PASSWORD`, Value: `<your_password_here>` (ví dụ: `tbqc@2026`)
+   - Key: `ADMIN_PASSWORD`, Value: `<your_password_here>` (ví dụ: `tbqc@2026`)
+   - Key: `BACKUP_PASSWORD`, Value: `<your_password_here>` (ví dụ: `tbqc@2026`)
 6. Click **Save Changes**
 7. Render sẽ tự động redeploy
 
@@ -49,9 +51,9 @@ BACKUP_PASSWORD=tbqc@2026
 4. Scroll xuống phần **Environment variables**
 5. Thêm các biến:
    ```
-   MEMBERS_PASSWORD=tbqc@2026
-   ADMIN_PASSWORD=tbqc@2026
-   BACKUP_PASSWORD=tbqc@2026
+   MEMBERS_PASSWORD=<your_password_here>
+   ADMIN_PASSWORD=<your_password_here>
+   BACKUP_PASSWORD=<your_password_here>
    ```
 6. Click **Reload** web app
 
@@ -59,7 +61,7 @@ BACKUP_PASSWORD=tbqc@2026
 
 1. Vào trang `/members` trên production
 2. Click một trong các nút: Backup, Thêm, Cập nhật, Xóa
-3. Nhập password: `tbqc@2026`
+3. Nhập password đã set trong environment variables
 4. Nếu vẫn báo lỗi "Mật khẩu chưa được cấu hình":
    - Kiểm tra lại environment variables đã được set chưa
    - Kiểm tra logs trên hosting platform để xem có lỗi gì không
@@ -89,7 +91,7 @@ BACKUP_PASSWORD=tbqc@2026
 **Nguyên nhân:** Password đã được load nhưng không khớp
 
 **Giải pháp:**
-1. Kiểm tra password trong environment variables có đúng `tbqc@2026` không
+1. Kiểm tra password trong environment variables có đúng không
 2. Kiểm tra có khoảng trắng thừa không (trim password)
 3. Thử reload trang và nhập lại password
 
