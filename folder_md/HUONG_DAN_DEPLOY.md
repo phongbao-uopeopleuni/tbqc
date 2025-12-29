@@ -184,6 +184,7 @@ Railway.app hỗ trợ MySQL tốt hơn và có free tier $5/tháng.
    DB_PORT=3306
    
    # ⚠️ QUAN TRỌNG: Thêm các biến sau cho Members page password protection
+   # Thay <your_password_here> bằng mật khẩu thực tế của bạn (ví dụ: tbqc@2026)
    MEMBERS_PASSWORD=<your_password_here>
    ADMIN_PASSWORD=<your_password_here>
    BACKUP_PASSWORD=<your_password_here>
