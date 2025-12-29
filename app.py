@@ -2581,6 +2581,7 @@ def search_persons():
         search_pattern = f"%{q}%"
         
         # Schema mới: search theo full_name, alias, generation_level, person_id
+        # Sử dụng cùng logic query như /api/members để đảm bảo consistency
         if generation_level:
             cursor.execute("""
                 SELECT
@@ -2591,7 +2592,9 @@ def search_persons():
                     p.generation_level,
                     p.home_town,
                     p.gender,
-                    p.father_mother_id,
+                    p.father_mother_id AS fm_id,
+                    p.birth_date_solar,
+                    p.death_date_solar,
                     -- Cha từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
                     (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
                      FROM relationships r 
@@ -2620,7 +2623,9 @@ def search_persons():
                     p.generation_level,
                     p.home_town,
                     p.gender,
-                    p.father_mother_id,
+                    p.father_mother_id AS fm_id,
+                    p.birth_date_solar,
+                    p.death_date_solar,
                     -- Cha từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
                     (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
                      FROM relationships r 
@@ -2641,13 +2646,99 @@ def search_persons():
         
         results = cursor.fetchall()
         
-        # Remove duplicates by person_id (LEFT JOIN với relationships có thể tạo duplicate nếu có nhiều relationships)
+        # Load spouse data từ nhiều nguồn (giống như /api/members) để đảm bảo consistency
+        spouse_data_from_table = {}
+        spouse_data_from_marriages = {}
+        spouse_data_from_csv = {}
+        
+        # Load từ spouse_sibling_children table
+        try:
+            cursor.execute("""
+                SELECT person_id, spouse_name 
+                FROM spouse_sibling_children 
+                WHERE spouse_name IS NOT NULL AND spouse_name != ''
+            """)
+            for row in cursor.fetchall():
+                person_id_key = row.get('person_id')
+                spouse_name_str = row.get('spouse_name', '').strip()
+                if person_id_key and spouse_name_str:
+                    spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
+                    spouse_data_from_table[person_id_key] = spouse_names
+        except Exception as e:
+            logger.debug(f"Could not load spouse data from table: {e}")
+        
+        # Load từ marriages table
+        try:
+            cursor.execute("""
+                SELECT 
+                    m.person_id,
+                    m.spouse_person_id,
+                    sp_spouse.full_name AS spouse_name
+                FROM marriages m
+                LEFT JOIN persons sp_spouse ON sp_spouse.person_id = m.spouse_person_id
+                WHERE sp_spouse.full_name IS NOT NULL
+                
+                UNION
+                
+                SELECT 
+                    m.spouse_person_id AS person_id,
+                    m.person_id AS spouse_person_id,
+                    sp_person.full_name AS spouse_name
+                FROM marriages m
+                LEFT JOIN persons sp_person ON sp_person.person_id = m.person_id
+                WHERE sp_person.full_name IS NOT NULL
+            """)
+            for row in cursor.fetchall():
+                person_id_key = row.get('person_id')
+                spouse_name = row.get('spouse_name')
+                if person_id_key and spouse_name:
+                    if person_id_key not in spouse_data_from_marriages:
+                        spouse_data_from_marriages[person_id_key] = []
+                    if spouse_name not in spouse_data_from_marriages[person_id_key]:
+                        spouse_data_from_marriages[person_id_key].append(spouse_name)
+        except Exception as e:
+            logger.debug(f"Could not load spouse data from marriages: {e}")
+        
+        # Load từ CSV (fallback)
+        try:
+            import csv
+            import os
+            csv_file = 'spouse_sibling_children.csv'
+            if os.path.exists(csv_file):
+                with open(csv_file, 'r', encoding='utf-8-sig') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        person_id_key = row.get('person_id', '').strip()
+                        spouse_name_str = row.get('spouse_name', '').strip()
+                        if person_id_key and spouse_name_str:
+                            spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
+                            spouse_data_from_csv[person_id_key] = spouse_names
+        except Exception as e:
+            logger.debug(f"Could not load spouse data from CSV: {e}")
+        
+        # Remove duplicates by person_id và thêm spouse data
         seen_ids = set()
         unique_results = []
         for row in results:
             person_id = row.get('person_id')
             if person_id and person_id not in seen_ids:
                 seen_ids.add(person_id)
+                
+                # Thêm spouse data (giống như /api/members) - ƯU TIÊN từ spouse_sibling_children table
+                spouse_names = []
+                if person_id in spouse_data_from_table:
+                    spouse_names = spouse_data_from_table[person_id]
+                elif person_id in spouse_data_from_marriages:
+                    spouse_names = spouse_data_from_marriages[person_id]
+                elif person_id in spouse_data_from_csv:
+                    spouse_names = spouse_data_from_csv[person_id]
+                
+                # Thêm các field để đồng nhất với /api/members
+                row['generation_number'] = row.get('generation_level')
+                row['spouses'] = '; '.join(spouse_names) if spouse_names else None
+                row['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                row['fm_id'] = row.get('father_mother_id')  # Alias cho consistency
+                
                 unique_results.append(row)
             elif person_id in seen_ids:
                 # Log duplicate for debugging
