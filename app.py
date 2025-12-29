@@ -1735,9 +1735,20 @@ def get_person(person_id):
                     elif isinstance(value, (date, datetime)):
                         clean_person[key] = value.strftime('%Y-%m-%d')
                     elif isinstance(value, list):
-                        # Recursively clean nested lists (đặc biệt cho ancestors_chain)
+                        # Recursively clean nested lists (đặc biệt cho ancestors_chain, marriages, children)
                         if key == 'ancestors_chain' or key == 'ancestors':
                             # Đảm bảo ancestors_chain được serialize đúng
+                            clean_person[key] = []
+                            for item in value:
+                                if isinstance(item, dict):
+                                    clean_item = {}
+                                    for k, v in item.items():
+                                        clean_item[k] = clean_value(v)
+                                    clean_person[key].append(clean_item)
+                                else:
+                                    clean_person[key].append(clean_value(item))
+                        elif key == 'marriages' or key == 'children':
+                            # Đảm bảo marriages và children được serialize đúng
                             clean_person[key] = []
                             for item in value:
                                 if isinstance(item, dict):

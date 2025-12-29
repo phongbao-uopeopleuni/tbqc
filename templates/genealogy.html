@@ -1353,14 +1353,22 @@
               marriages: person.marriages || [],
               children: person.children || [],
               spouse: person.spouse || person.spouse_name || null,
+              spouse_name: person.spouse_name || person.spouse || null,  // Đảm bảo cả 2 field
+              children_string: person.children_string || (person.children && Array.isArray(person.children) ? person.children.map(c => c.full_name || c.name).join('; ') : null) || null,
               siblings: person.siblings || null
             };
             
             console.log('[Lineage] Full person data loaded:', {
               person_id: selectedPerson.person_id,
               has_marriages: Array.isArray(selectedPerson.marriages) && selectedPerson.marriages.length > 0,
+              marriages_count: selectedPerson.marriages ? selectedPerson.marriages.length : 0,
               has_children: Array.isArray(selectedPerson.children) && selectedPerson.children.length > 0,
+              children_count: selectedPerson.children ? selectedPerson.children.length : 0,
+              children_string: selectedPerson.children_string,
               has_spouse: !!selectedPerson.spouse,
+              spouse_value: selectedPerson.spouse,
+              has_spouse_name: !!selectedPerson.spouse_name,
+              spouse_name_value: selectedPerson.spouse_name,
               has_siblings: !!selectedPerson.siblings
             });
             
@@ -1616,6 +1624,26 @@
           if (!selectedPerson.generation_number && selectedPerson.generation_level) {
             selectedPerson.generation_number = selectedPerson.generation_level;
           }
+          
+          // Đảm bảo các field quan trọng được giữ lại sau khi Object.assign
+          if (!selectedPerson.spouse && selectedPerson.spouse_name) {
+            selectedPerson.spouse = selectedPerson.spouse_name;
+          }
+          if (!selectedPerson.spouse_name && selectedPerson.spouse) {
+            selectedPerson.spouse_name = selectedPerson.spouse;
+          }
+          if (!selectedPerson.children_string && selectedPerson.children && Array.isArray(selectedPerson.children)) {
+            selectedPerson.children_string = selectedPerson.children.map(c => c.full_name || c.name).filter(n => n).join('; ');
+          }
+          
+          console.log('[Lineage] After Object.assign:', {
+            person_id: selectedPerson.person_id,
+            spouse: selectedPerson.spouse,
+            spouse_name: selectedPerson.spouse_name,
+            children: selectedPerson.children,
+            children_string: selectedPerson.children_string,
+            marriages: selectedPerson.marriages
+          });
           
           renderDetailPanel(selectedPerson);
         })
