@@ -680,10 +680,7 @@
               <label>
                 <span>Hiển thị đến đời:</span>
                 <select id="genFilter" class="select">
-                  <option value="5" selected>Đến đời 5</option>
-                  <option value="6">Đến đời 6</option>
-                  <option value="7">Đến đời 7</option>
-                  <option value="8">Đến đời 8</option>
+                  <!-- Options will be populated dynamically by JavaScript -->
                 </select>
               </label>
               
@@ -1837,6 +1834,77 @@
       }
     }
 
+    /**
+     * Sort generation options numerically
+     * Extracts number from "Đời X" format and sorts ascending
+     */
+    function sortGenerationOptions(options) {
+      return options.sort((a, b) => {
+        // Extract numeric value from option text (e.g., "Đời 5" -> 5)
+        const extractNumber = (text) => {
+          const match = text.match(/\d+/);
+          return match ? parseInt(match[0], 10) : Infinity; // Put non-numeric at end
+        };
+        
+        const numA = extractNumber(a.text);
+        const numB = extractNumber(b.text);
+        
+        return numA - numB;
+      });
+    }
+
+    /**
+     * Populate generation filter dropdown with available generations
+     * Sorts numerically and removes duplicates
+     */
+    function populateGenerationFilter(generationCounts) {
+      const genFilter = document.getElementById('genFilter');
+      if (!genFilter) return;
+      
+      // Extract unique generation levels from data
+      const availableGenerations = new Set();
+      if (generationCounts && Array.isArray(generationCounts)) {
+        generationCounts.forEach(gen => {
+          if (gen.generation_level && gen.generation_level >= 1) {
+            availableGenerations.add(gen.generation_level);
+          }
+        });
+      }
+      
+      // If no data, use default range 1-8
+      if (availableGenerations.size === 0) {
+        for (let i = 1; i <= 8; i++) {
+          availableGenerations.add(i);
+        }
+      }
+      
+      // Create options array
+      const options = Array.from(availableGenerations).map(genLevel => ({
+        value: genLevel,
+        text: `Đến đời ${genLevel}`
+      }));
+      
+      // Sort numerically
+      const sortedOptions = sortGenerationOptions(options);
+      
+      // Clear existing options
+      genFilter.innerHTML = '';
+      
+      // Add sorted options
+      sortedOptions.forEach((opt, index) => {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.text;
+        // Select the last option (highest generation) by default, or option 5 if exists
+        if (index === sortedOptions.length - 1 || opt.value === 5) {
+          option.selected = true;
+        }
+        genFilter.appendChild(option);
+      });
+      
+      console.log('[Genealogy] Populated generation filter:', sortedOptions.map(o => o.text));
+    }
+
     async function loadMemberStats() {
       const errorEl = document.getElementById('statsErrorMessage');
       try {
@@ -1857,6 +1925,9 @@
         if (data.generation_counts && Array.isArray(data.generation_counts)) {
           const generationCounts = data.generation_counts;
           
+          // Populate generation filter dropdown
+          populateGenerationFilter(generationCounts);
+          
           // Cập nhật số liệu cho từng đời
           for (let i = 1; i <= 8; i++) {
             const genElement = document.getElementById(`gen${i}Count`);
@@ -1869,10 +1940,15 @@
           
           // Vẽ biểu đồ
           renderGenerationChart(generationCounts);
+        } else {
+          // If no generation_counts, still populate dropdown with default range
+          populateGenerationFilter([]);
         }
       } catch (err) {
         console.error('Error loading stats:', err);
         if (errorEl) errorEl.style.display = 'block';
+        // On error, populate dropdown with default range
+        populateGenerationFilter([]);
       }
     }
 
