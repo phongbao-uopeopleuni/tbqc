@@ -259,10 +259,15 @@ def build_parent_map(cursor) -> Dict[str, Dict[str, Optional[str]]]:
 def load_persons_data(cursor) -> Dict[str, Dict]:
     """
     Load all persons data from new schema.
+    Tối ưu: Tách thành 2 queries để tránh lỗi "Out of sort memory" với GROUP BY lớn.
+    
+    Đảm bảo consistency với /api/members: sử dụng cùng logic query để đảm bảo
+    database của trang Thành viên là source of truth chuẩn nhất.
     
     Returns:
         Dictionary mapping person_id -> person data
     """
+    # Query 1: Load tất cả persons (không có GROUP BY) - cùng schema như /api/members
     cursor.execute("""
         SELECT 
             p.person_id,
@@ -289,31 +294,19 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
             p.blood_type,
             p.genetic_disease,
             p.note,
-            p.father_mother_id,
-            -- Cha từ relationships
-            father.full_name AS father_name,
-            -- Mẹ từ relationships
-            mother.full_name AS mother_name
+            p.father_mother_id
         FROM persons p
-        -- Cha từ relationships (relation_type = 'father')
-        LEFT JOIN relationships rel_father
-            ON rel_father.child_id = p.person_id 
-            AND rel_father.relation_type = 'father'
-        LEFT JOIN persons father
-            ON rel_father.parent_id = father.person_id
-        -- Mẹ từ relationships (relation_type = 'mother')
-        LEFT JOIN relationships rel_mother
-            ON rel_mother.child_id = p.person_id 
-            AND rel_mother.relation_type = 'mother'
-        LEFT JOIN persons mother
-            ON rel_mother.parent_id = mother.person_id
     """)
     
     persons_by_id = {}
     for row in cursor.fetchall():
         # Handle both dict and tuple results
         if isinstance(row, dict):
-            persons_by_id[row['person_id']] = dict(row)
+            person_data = dict(row)
+            # Initialize father_name and mother_name as None
+            person_data['father_name'] = None
+            person_data['mother_name'] = None
+            persons_by_id[person_data['person_id']] = person_data
         else:
             # Tuple format
             persons_by_id[row[0]] = {
@@ -342,9 +335,44 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
                 'genetic_disease': row[22],
                 'note': row[23],
                 'father_mother_id': row[24],
-                'father_name': row[25] if len(row) > 25 else None,
-                'mother_name': row[26] if len(row) > 26 else None
+                'father_name': None,
+                'mother_name': None
             }
+    
+    # Query 2: Load relationships và map vào persons (GROUP_CONCAT chỉ cho từng child_id)
+    # Đảm bảo consistency với /api/members: sử dụng cùng logic query
+    # Database của trang Thành viên là source of truth chuẩn nhất
+    cursor.execute("""
+        SELECT 
+            r.child_id,
+            COALESCE(GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' AND parent.full_name IS NOT NULL THEN parent.full_name END SEPARATOR ', '), '') AS father_name,
+            COALESCE(GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' AND parent.full_name IS NOT NULL THEN parent.full_name END SEPARATOR ', '), '') AS mother_name
+        FROM relationships r
+        LEFT JOIN persons parent ON r.parent_id = parent.person_id
+        WHERE r.relation_type IN ('father', 'mother')
+        GROUP BY r.child_id
+    """)
+    
+    # Map relationships vào persons - đảm bảo format giống /api/members
+    for row in cursor.fetchall():
+        if isinstance(row, dict):
+            child_id = row.get('child_id')
+            father_name = row.get('father_name', '') or None
+            mother_name = row.get('mother_name', '') or None
+        else:
+            child_id = row[0]
+            father_name = (row[1] or '').strip() or None if len(row) > 1 else None
+            mother_name = (row[2] or '').strip() or None if len(row) > 2 else None
+        
+        # Convert empty string to None (đảm bảo consistency)
+        if father_name == '':
+            father_name = None
+        if mother_name == '':
+            mother_name = None
+        
+        if child_id and child_id in persons_by_id:
+            persons_by_id[child_id]['father_name'] = father_name
+            persons_by_id[child_id]['mother_name'] = mother_name
     
     logger.info(f"Loaded {len(persons_by_id)} persons")
     return persons_by_id

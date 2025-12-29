@@ -258,13 +258,22 @@
             <label for="thumbnail">Ảnh đại diện / Thumbnail (tùy chọn)</label>
             <div style="display: flex; gap: 10px; align-items: flex-start;">
               <input type="text" id="thumbnail" name="thumbnail" placeholder="https://example.com/image.jpg hoặc upload ảnh" style="flex: 1;">
-              <input type="file" id="thumbnailFile" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+              <input type="file" id="thumbnailFile" accept="image/*" style="display: none;" onchange="handleThumbnailUpload(event)">
               <button type="button" class="btn btn-secondary" onclick="document.getElementById('thumbnailFile').click()" style="white-space: nowrap;">📷 Upload</button>
             </div>
             <small style="display:block;margin-top:4px;color:#666;font-size:12px;">Có thể nhập URL hoặc upload ảnh từ máy tính</small>
             <div id="thumbnailPreview" style="margin-top: 10px; display: none;">
               <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 2px solid #DAA520;">
             </div>
+          </div>
+          <div class="form-group">
+            <label>Hình ảnh bài viết (tối đa 10 ảnh)</label>
+            <input type="file" id="imagesFile" accept="image/*" multiple style="display: none;" onchange="handleImagesUpload(event)">
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+              <button type="button" class="btn btn-secondary" onclick="document.getElementById('imagesFile').click()" style="white-space: nowrap;">📷 Chọn ảnh (tối đa 10)</button>
+              <span id="imagesCount" style="color: #666; font-size: 14px;">Đã chọn: 0/10</span>
+            </div>
+            <div id="imagesPreview" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 10px;"></div>
           </div>
           <div class="form-group">
             <label for="status">Trạng thái</label>
@@ -394,6 +403,11 @@
         document.getElementById('submitBtn').textContent = 'Cập nhật';
         document.getElementById('publishBtn').style.display = 'inline-block';
         
+        // Load danh sách ảnh
+        uploadedImages = post.images || [];
+        updateImagesPreview();
+        updateImagesCount();
+        
         // Show preview if thumbnail exists
         if (post.thumbnail) {
           const previewDiv = document.getElementById('thumbnailPreview');
@@ -430,6 +444,9 @@
       document.getElementById('publishBtn').style.display = 'none';
       document.getElementById('thumbnailPreview').style.display = 'none';
       document.getElementById('thumbnailFile').value = '';
+      uploadedImages = [];
+      updateImagesPreview();
+      updateImagesCount();
     }
 
     async function publishNow() {
@@ -443,7 +460,10 @@
       form.dispatchEvent(new Event('submit'));
     }
 
-    async function handleImageUpload(event) {
+    // Danh sách ảnh đã upload
+    let uploadedImages = [];
+
+    async function handleThumbnailUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
       
@@ -492,6 +512,113 @@
       }
     }
 
+    async function handleImagesUpload(event) {
+      const files = Array.from(event.target.files);
+      if (files.length === 0) return;
+
+      // Kiểm tra số lượng ảnh (tối đa 10)
+      const currentCount = uploadedImages.length;
+      const remainingSlots = 10 - currentCount;
+      
+      if (files.length > remainingSlots) {
+        showMessage(`Chỉ có thể upload tối đa 10 ảnh. Bạn đã có ${currentCount} ảnh, chỉ có thể thêm ${remainingSlots} ảnh nữa.`, 'error');
+        event.target.value = ''; // Reset input
+        return;
+      }
+
+      // Validate từng file
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) {
+          showMessage(`File "${file.name}" không phải là ảnh`, 'error');
+          continue;
+        }
+        
+        if (file.size > 5 * 1024 * 1024) {
+          showMessage(`File "${file.name}" quá lớn (tối đa 5MB)`, 'error');
+          continue;
+        }
+
+        // Upload từng file
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        try {
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          if (result.success && result.url) {
+            uploadedImages.push(result.url);
+            updateImagesPreview();
+          } else {
+            showMessage(`Lỗi upload "${file.name}": ${result.error || 'Lỗi không xác định'}`, 'error');
+          }
+        } catch (err) {
+          showMessage(`Lỗi upload "${file.name}": ${err.message}`, 'error');
+        }
+      }
+
+      // Reset input
+      event.target.value = '';
+      updateImagesCount();
+    }
+
+    function updateImagesPreview() {
+      const previewDiv = document.getElementById('imagesPreview');
+      previewDiv.innerHTML = '';
+      
+      uploadedImages.forEach((url, index) => {
+        const imgContainer = document.createElement('div');
+        imgContainer.style.position = 'relative';
+        imgContainer.style.border = '2px solid #DAA520';
+        imgContainer.style.borderRadius = '8px';
+        imgContainer.style.overflow = 'hidden';
+        
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.width = '100%';
+        img.style.height = '120px';
+        img.style.objectFit = 'cover';
+        img.style.display = 'block';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.textContent = '×';
+        removeBtn.style.position = 'absolute';
+        removeBtn.style.top = '5px';
+        removeBtn.style.right = '5px';
+        removeBtn.style.background = '#c62828';
+        removeBtn.style.color = 'white';
+        removeBtn.style.border = 'none';
+        removeBtn.style.borderRadius = '50%';
+        removeBtn.style.width = '24px';
+        removeBtn.style.height = '24px';
+        removeBtn.style.cursor = 'pointer';
+        removeBtn.style.fontSize = '18px';
+        removeBtn.style.lineHeight = '1';
+        removeBtn.onclick = () => {
+          uploadedImages.splice(index, 1);
+          updateImagesPreview();
+          updateImagesCount();
+        };
+        
+        imgContainer.appendChild(img);
+        imgContainer.appendChild(removeBtn);
+        previewDiv.appendChild(imgContainer);
+      });
+      
+      if (uploadedImages.length > 0) {
+        previewDiv.style.display = 'grid';
+      } else {
+        previewDiv.style.display = 'none';
+      }
+    }
+
+    function updateImagesCount() {
+      document.getElementById('imagesCount').textContent = `Đã chọn: ${uploadedImages.length}/10`;
+    }
+
     async function logout() {
       try {
         await fetch('/api/logout', { method: 'POST' });
@@ -509,7 +636,8 @@
         summary: document.getElementById('summary').value.trim(),
         content: document.getElementById('content').value.trim(),
         status: document.getElementById('status').value,
-        thumbnail: document.getElementById('thumbnail').value.trim()
+        thumbnail: document.getElementById('thumbnail').value.trim(),
+        images: uploadedImages
       };
 
       if (!data.title || !data.content) {

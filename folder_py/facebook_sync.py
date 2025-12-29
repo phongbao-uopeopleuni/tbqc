@@ -37,9 +37,9 @@ class FacebookSync:
             page_id: Facebook page ID hoặc username (e.g., "PhongTuyBienQuanCong")
             access_token: Facebook Page Access Token (từ Facebook Graph API)
         """
-        self.page_id = page_id or os.environ.get('FB_PAGE_ID', 'PhongTuyBienQuanCong')
+        self.page_id = page_id or os.environ.get('FB_PAGE_ID', '350336648378946')
         self.access_token = access_token or os.environ.get('FB_ACCESS_TOKEN')
-        self.base_url = "https://graph.facebook.com/v18.0"
+        self.base_url = "https://graph.facebook.com/v24.0"
         self.images_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images', 'facebook')
         
         # Tạo thư mục images nếu chưa có
@@ -114,11 +114,22 @@ class FacebookSync:
         except requests.exceptions.RequestException as e:
             logger.error(f"Lỗi khi fetch posts từ Facebook: {e}")
             if hasattr(e, 'response') and e.response is not None:
-                logger.error(f"Response: {e.response.text}")
-            return []
+                try:
+                    error_data = e.response.json()
+                    error_msg = error_data.get('error', {}).get('message', str(e))
+                    error_type = error_data.get('error', {}).get('type', 'Unknown')
+                    logger.error(f"Facebook API Error: {error_type} - {error_msg}")
+                    logger.error(f"Full Response: {e.response.text}")
+                    # Raise với thông báo rõ ràng hơn
+                    raise Exception(f"Facebook API Error ({error_type}): {error_msg}")
+                except (ValueError, KeyError):
+                    logger.error(f"Response: {e.response.text}")
+                    raise Exception(f"Lỗi kết nối Facebook API: {str(e)}")
+            else:
+                raise Exception(f"Lỗi kết nối Facebook API: {str(e)}")
         except Exception as e:
             logger.error(f"Lỗi không xác định: {e}")
-            return []
+            raise
     
     def extract_images_from_post(self, post: Dict) -> List[str]:
         """
@@ -391,28 +402,39 @@ class FacebookSync:
         """
         logger.info(f"Bắt đầu sync Facebook posts (limit: {limit})")
         
-        # Fetch posts
-        posts = self.fetch_posts(limit=limit)
-        if not posts:
-            return {'success': False, 'error': 'Không lấy được posts từ Facebook'}
-        
-        # Process posts
-        processed_posts = []
-        for post in posts:
-            try:
-                processed = self.process_post(post)
-                processed_posts.append(processed)
-            except Exception as e:
-                logger.error(f"Lỗi khi process post {post.get('id')}: {e}")
-        
-        # Sync to database
-        stats = self.sync_to_database(processed_posts, status=status)
-        
-        return {
-            'success': True,
-            'stats': stats,
-            'message': f"Đã sync {stats['new']} bài mới, {stats['updated']} bài cập nhật"
-        }
+        try:
+            # Fetch posts
+            posts = self.fetch_posts(limit=limit)
+            if not posts:
+                return {'success': False, 'error': 'Không lấy được posts từ Facebook. Vui lòng kiểm tra lại Page ID và Access Token.'}
+            
+            # Process posts
+            processed_posts = []
+            for post in posts:
+                try:
+                    processed = self.process_post(post)
+                    processed_posts.append(processed)
+                except Exception as e:
+                    logger.error(f"Lỗi khi process post {post.get('id')}: {e}")
+            
+            if not processed_posts:
+                return {'success': False, 'error': 'Không có posts nào được xử lý thành công'}
+            
+            # Sync to database
+            stats = self.sync_to_database(processed_posts, status=status)
+            
+            return {
+                'success': True,
+                'stats': stats,
+                'message': f"Đã sync {stats['new']} bài mới, {stats['updated']} bài cập nhật"
+            }
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Lỗi trong quá trình sync: {error_msg}")
+            return {
+                'success': False,
+                'error': error_msg
+            }
 
 
 def main():

@@ -657,14 +657,31 @@
     // Password protection - Lấy từ server để tránh hardcode
     const REQUIRED_PASSWORD = {{ members_password|tojson|safe if members_password else 'null' }};
     let isAuthenticated = false;
+    let authenticatedPassword = ''; // Lưu password đã xác thực để gửi trong API requests
     let pendingAction = null; // Lưu hành động đang chờ xác thực
 
     // Check authentication state on page load
     function checkAuthState() {
       const authState = sessionStorage.getItem('membersAuth');
-      if (authState === 'true') {
+      const savedPassword = sessionStorage.getItem('membersPassword');
+      if (authState === 'true' && savedPassword) {
         isAuthenticated = true;
+        authenticatedPassword = savedPassword;
       }
+    }
+    
+    // Get authenticated password for API requests
+    function getAuthPassword() {
+      if (isAuthenticated && authenticatedPassword) {
+        return authenticatedPassword;
+      }
+      // Fallback: thử lấy từ sessionStorage
+      const savedPassword = sessionStorage.getItem('membersPassword');
+      if (savedPassword) {
+        authenticatedPassword = savedPassword;
+        return savedPassword;
+      }
+      return null;
     }
 
     // Show password modal
@@ -699,7 +716,9 @@
       if (password === REQUIRED_PASSWORD) {
         // Xác thực thành công
         isAuthenticated = true;
+        authenticatedPassword = password; // Lưu password để gửi trong API requests
         sessionStorage.setItem('membersAuth', 'true');
+        sessionStorage.setItem('membersPassword', password); // Lưu tạm thời (sẽ xóa khi logout)
         closePasswordModal();
         
         // Thực hiện hành động đã lưu
@@ -777,11 +796,20 @@
         backupBtn.disabled = true;
         backupBtn.textContent = '⏳ Đang backup...';
         
+        // Lấy password đã xác thực
+        const authPassword = getAuthPassword();
+        if (!authPassword) {
+          alert('Phiên đăng nhập đã hết hạn. Vui lòng nhập lại mật khẩu.');
+          showPasswordModal(createBackup);
+          return;
+        }
+        
         const response = await fetch('/api/admin/backup', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-          }
+          },
+          body: JSON.stringify({ password: authPassword })
         });
 
         const result = await response.json();
@@ -790,6 +818,16 @@
           const fileSize = result.file_size ? (result.file_size / 1024 / 1024).toFixed(2) : 'N/A';
           alert(`✅ Backup thành công!\n\nFile: ${result.backup_file}\nKích thước: ${fileSize} MB`);
         } else {
+          // Xử lý lỗi 403 (unauthorized)
+          if (response.status === 403) {
+            alert('Mật khẩu không đúng hoặc phiên đăng nhập đã hết hạn. Vui lòng nhập lại mật khẩu.');
+            isAuthenticated = false;
+            authenticatedPassword = '';
+            sessionStorage.removeItem('membersAuth');
+            sessionStorage.removeItem('membersPassword');
+            showPasswordModal(createBackup);
+            return;
+          }
           alert(`❌ Backup thất bại: ${result.error || 'Lỗi không xác định'}`);
         }
       } catch (error) {
@@ -1064,6 +1102,17 @@
       const personId = data.person_id;
       const isUpdate = personId && personId !== '';
 
+      // Lấy password đã xác thực
+      const authPassword = getAuthPassword();
+      if (!authPassword) {
+        alert('Phiên đăng nhập đã hết hạn. Vui lòng nhập lại mật khẩu.');
+        showPasswordModal(() => saveMember(event));
+        return;
+      }
+      
+      // Thêm password vào request
+      data.password = authPassword;
+      
       try {
         const url = isUpdate ? `/api/persons/${personId}` : '/api/persons';
         const method = isUpdate ? 'PUT' : 'POST';
@@ -1083,6 +1132,17 @@
           closeModal();
           loadMembers();
         } else {
+          // Xử lý lỗi 403 (unauthorized) - yêu cầu nhập lại password
+          if (response.status === 403) {
+            alert('Mật khẩu không đúng hoặc phiên đăng nhập đã hết hạn. Vui lòng nhập lại mật khẩu.');
+            isAuthenticated = false;
+            authenticatedPassword = '';
+            sessionStorage.removeItem('membersAuth');
+            sessionStorage.removeItem('membersPassword');
+            showPasswordModal(() => saveMember(event));
+            return;
+          }
+          
           // Hiển thị message từ server hoặc message mặc định
           const errorMsg = result.error || result.message || 'Không thể lưu dữ liệu';
           if (response.status === 404) {
@@ -1113,13 +1173,24 @@
 
       const personIds = Array.from(checkboxes).map(cb => cb.value);
       
+      // Lấy password đã xác thực
+      const authPassword = getAuthPassword();
+      if (!authPassword) {
+        alert('Phiên đăng nhập đã hết hạn. Vui lòng nhập lại mật khẩu.');
+        showPasswordModal(deleteSelected);
+        return;
+      }
+      
       try {
         const response = await fetch('/api/persons/batch', {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ person_ids: personIds })
+          body: JSON.stringify({ 
+            person_ids: personIds,
+            password: authPassword
+          })
         });
 
         const result = await response.json();
@@ -1138,6 +1209,16 @@
           selectedMembers.clear();
           loadMembers();
         } else {
+          // Xử lý lỗi 403 (unauthorized)
+          if (response.status === 403) {
+            alert('Mật khẩu không đúng hoặc phiên đăng nhập đã hết hạn. Vui lòng nhập lại mật khẩu.');
+            isAuthenticated = false;
+            authenticatedPassword = '';
+            sessionStorage.removeItem('membersAuth');
+            sessionStorage.removeItem('membersPassword');
+            showPasswordModal(deleteSelected);
+            return;
+          }
           alert('Lỗi: ' + (result.error || 'Không thể xóa dữ liệu'));
         }
       } catch (error) {
