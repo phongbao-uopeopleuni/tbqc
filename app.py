@@ -2156,7 +2156,18 @@ def get_ancestors(person_id):
                         'level': row[4] if len(row) > 4 else 0
                     })
         
-        # Enrich với father_name, mother_name, spouse, siblings, children
+        # Sử dụng hàm helper chung để load tất cả relationship data (giống như /api/members - source of truth)
+        logger.debug(f"Loading relationship data for ancestors chain using shared helper...")
+        relationship_data = load_relationship_data(cursor)
+        
+        spouse_data_from_table = relationship_data['spouse_data_from_table']
+        spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
+        spouse_data_from_csv = relationship_data['spouse_data_from_csv']
+        parent_data = relationship_data['parent_data']
+        children_map = relationship_data['children_map']
+        siblings_map = relationship_data['siblings_map']
+        
+        # Enrich với father_name, mother_name, spouse, siblings, children từ helper
         enriched_chain = []
         for ancestor in ancestors_chain:
             ancestor_id = ancestor.get('person_id')
@@ -2166,86 +2177,32 @@ def get_ancestors(person_id):
                 continue
             
             try:
-                # Lấy thông tin cha mẹ từ relationships - với error handling
-                try:
-                    cursor.execute("""
-                        SELECT 
-                            GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END SEPARATOR ', ') AS father_name,
-                            GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END SEPARATOR ', ') AS mother_name
-                        FROM persons p
-                        LEFT JOIN relationships r ON r.child_id = p.person_id
-                        LEFT JOIN persons parent ON r.parent_id = parent.person_id
-                        WHERE p.person_id = %s
-                        GROUP BY p.person_id
-                    """, (ancestor_id,))
-                    parent_info = cursor.fetchone()
-                    if parent_info:
-                        ancestor['father_name'] = parent_info.get('father_name') or None
-                        ancestor['mother_name'] = parent_info.get('mother_name') or None
-                    else:
-                        ancestor['father_name'] = None
-                        ancestor['mother_name'] = None
-                except Exception as e:
-                    logger.warning(f"Error fetching parent info for {ancestor_id}: {e}")
-                    ancestor['father_name'] = None
-                    ancestor['mother_name'] = None
+                # Lấy thông tin cha mẹ từ parent_data (đã load sẵn từ helper)
+                rel = parent_data.get(ancestor_id, {'father_name': None, 'mother_name': None})
+                ancestor['father_name'] = rel.get('father_name')
+                ancestor['mother_name'] = rel.get('mother_name')
                 
-                # Lấy thông tin hôn phối (marriages) - thống nhất với API /api/person - với error handling
-                try:
-                    cursor.execute("""
-                        SELECT 
-                            m.id AS marriage_id,
-                            CASE 
-                                WHEN m.person_id = %s THEN m.spouse_person_id
-                                ELSE m.person_id
-                            END AS spouse_id,
-                            sp.full_name AS spouse_name,
-                            sp.gender AS spouse_gender,
-                            m.status AS marriage_status,
-                            m.note AS marriage_note
-                        FROM marriages m
-                        JOIN persons sp ON (
-                            CASE 
-                                WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id
-                                ELSE sp.person_id = m.person_id
-                            END
-                        )
-                        WHERE (m.person_id = %s OR m.spouse_person_id = %s)
-                        ORDER BY m.created_at
-                    """, (ancestor_id, ancestor_id, ancestor_id, ancestor_id))
-                    marriages = cursor.fetchall()
-                    
-                    if marriages:
-                        ancestor['marriages'] = marriages
-                        spouse_names = [m['spouse_name'] for m in marriages if m.get('spouse_name')]
-                        ancestor['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
-                        ancestor['spouse'] = '; '.join(spouse_names) if spouse_names else None
-                    else:
-                        ancestor['marriages'] = []
-                        ancestor['spouse_name'] = None
-                        ancestor['spouse'] = None
-                except Exception as e:
-                    logger.warning(f"Error fetching marriages for {ancestor_id}: {e}")
-                    ancestor['marriages'] = []
-                    ancestor['spouse_name'] = None
-                    ancestor['spouse'] = None
+                # Lấy thông tin hôn phối từ helper (giống như /api/members)
+                spouse_names = []
+                if ancestor_id in spouse_data_from_table:
+                    spouse_names = spouse_data_from_table[ancestor_id]
+                elif ancestor_id in spouse_data_from_marriages:
+                    spouse_names = spouse_data_from_marriages[ancestor_id]
+                elif ancestor_id in spouse_data_from_csv:
+                    spouse_names = spouse_data_from_csv[ancestor_id]
                 
-                # Lấy thông tin anh/chị/em (siblings) - cùng cha mẹ - với error handling
-                try:
-                    cursor.execute("""
-                        SELECT GROUP_CONCAT(DISTINCT sibling.full_name SEPARATOR '; ') AS sibling_names
-                        FROM relationships r1
-                        INNER JOIN relationships r2 ON r1.parent_id = r2.parent_id AND r1.relation_type = r2.relation_type
-                        INNER JOIN persons sibling ON r2.child_id = sibling.person_id
-                        WHERE r1.child_id = %s
-                            AND r2.child_id != %s
-                            AND r1.relation_type IN ('father', 'mother')
-                    """, (ancestor_id, ancestor_id))
-                    sibling_info = cursor.fetchone()
-                    ancestor['siblings_infor'] = sibling_info.get('sibling_names') if sibling_info and sibling_info.get('sibling_names') else None
-                except Exception as e:
-                    logger.warning(f"Error fetching siblings for {ancestor_id}: {e}")
-                    ancestor['siblings_infor'] = None
+                ancestor['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                ancestor['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                
+                # Lấy thông tin con cái từ children_map (đã load sẵn từ helper)
+                children = children_map.get(ancestor_id, [])
+                ancestor['children'] = '; '.join(children) if children else None
+                ancestor['children_string'] = '; '.join(children) if children else None
+                
+                # Lấy thông tin anh/chị/em từ siblings_map (đã load sẵn từ helper)
+                siblings = siblings_map.get(ancestor_id, [])
+                ancestor['siblings'] = '; '.join(siblings) if siblings else None
+                ancestor['siblings_infor'] = '; '.join(siblings) if siblings else None
                 
                 # Lấy thông tin con cái (children) - với error handling
                 try:
@@ -2311,103 +2268,34 @@ def get_ancestors(person_id):
             logger.error(traceback.format_exc())
             person_info = None
         
-        # Enrich person_info với father_name, mother_name, spouse, siblings, children
+        # Enrich person_info với father_name, mother_name, spouse, siblings, children từ helper
         if person_info:
-            # Lấy thông tin cha mẹ - với error handling
-            try:
-                cursor.execute("""
-                    SELECT 
-                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' THEN parent.full_name END SEPARATOR ', ') AS father_name,
-                        GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' THEN parent.full_name END SEPARATOR ', ') AS mother_name
-                    FROM persons p
-                    LEFT JOIN relationships r ON r.child_id = p.person_id
-                    LEFT JOIN persons parent ON r.parent_id = parent.person_id
-                    WHERE p.person_id = %s
-                    GROUP BY p.person_id
-                """, (person_id,))
-                parent_info = cursor.fetchone()
-                if parent_info:
-                    person_info['father_name'] = parent_info.get('father_name') or None
-                    person_info['mother_name'] = parent_info.get('mother_name') or None
-                else:
-                    person_info['father_name'] = None
-                    person_info['mother_name'] = None
-            except Exception as e:
-                logger.warning(f"Error fetching parent info for person {person_id}: {e}")
-                person_info['father_name'] = None
-                person_info['mother_name'] = None
+            # Lấy thông tin cha mẹ từ parent_data (đã load sẵn từ helper)
+            rel = parent_data.get(person_id, {'father_name': None, 'mother_name': None})
+            person_info['father_name'] = rel.get('father_name')
+            person_info['mother_name'] = rel.get('mother_name')
             
-            # Lấy thông tin hôn phối (marriages) - thống nhất với API /api/person - với error handling
-            try:
-                cursor.execute("""
-                    SELECT 
-                        m.id AS marriage_id,
-                        CASE 
-                            WHEN m.person_id = %s THEN m.spouse_person_id
-                            ELSE m.person_id
-                        END AS spouse_id,
-                        sp.full_name AS spouse_name,
-                        sp.gender AS spouse_gender,
-                        m.status AS marriage_status,
-                        m.note AS marriage_note
-                    FROM marriages m
-                    JOIN persons sp ON (
-                        CASE 
-                            WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id
-                            ELSE sp.person_id = m.person_id
-                        END
-                    )
-                    WHERE (m.person_id = %s OR m.spouse_person_id = %s)
-                    ORDER BY m.created_at
-                """, (person_id, person_id, person_id, person_id))
-                marriages = cursor.fetchall()
-                
-                if marriages:
-                    person_info['marriages'] = marriages
-                    spouse_names = [m['spouse_name'] for m in marriages if m.get('spouse_name')]
-                    person_info['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
-                    person_info['spouse'] = '; '.join(spouse_names) if spouse_names else None
-                else:
-                    person_info['marriages'] = []
-                    person_info['spouse_name'] = None
-                    person_info['spouse'] = None
-            except Exception as e:
-                logger.warning(f"Error fetching marriages for person {person_id}: {e}")
-                person_info['marriages'] = []
-                person_info['spouse_name'] = None
-                person_info['spouse'] = None
+            # Lấy thông tin hôn phối từ helper (giống như /api/members)
+            spouse_names = []
+            if person_id in spouse_data_from_table:
+                spouse_names = spouse_data_from_table[person_id]
+            elif person_id in spouse_data_from_marriages:
+                spouse_names = spouse_data_from_marriages[person_id]
+            elif person_id in spouse_data_from_csv:
+                spouse_names = spouse_data_from_csv[person_id]
             
-            # Lấy thông tin anh/chị/em - với error handling
-            try:
-                cursor.execute("""
-                    SELECT GROUP_CONCAT(DISTINCT sibling.full_name SEPARATOR '; ') AS sibling_names
-                    FROM relationships r1
-                    INNER JOIN relationships r2 ON r1.parent_id = r2.parent_id AND r1.relation_type = r2.relation_type
-                    INNER JOIN persons sibling ON r2.child_id = sibling.person_id
-                    WHERE r1.child_id = %s
-                        AND r2.child_id != %s
-                        AND r1.relation_type IN ('father', 'mother')
-                """, (person_id, person_id))
-                sibling_info = cursor.fetchone()
-                person_info['siblings_infor'] = sibling_info.get('sibling_names') if sibling_info and sibling_info.get('sibling_names') else None
-            except Exception as e:
-                logger.warning(f"Error fetching siblings for person {person_id}: {e}")
-                person_info['siblings_infor'] = None
+            person_info['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+            person_info['spouse'] = '; '.join(spouse_names) if spouse_names else None
             
-            # Lấy thông tin con cái - với error handling
-            try:
-                cursor.execute("""
-                    SELECT GROUP_CONCAT(DISTINCT child.full_name SEPARATOR '; ') AS children_names
-                    FROM relationships r
-                    INNER JOIN persons child ON r.child_id = child.person_id
-                    WHERE r.parent_id = %s
-                        AND r.relation_type IN ('father', 'mother')
-                """, (person_id,))
-                children_info = cursor.fetchone()
-                person_info['children_infor'] = children_info.get('children_names') if children_info and children_info.get('children_names') else None
-            except Exception as e:
-                logger.warning(f"Error fetching children for person {person_id}: {e}")
-                person_info['children_infor'] = None
+            # Lấy thông tin con cái từ children_map (đã load sẵn từ helper)
+            children = children_map.get(person_id, [])
+            person_info['children'] = '; '.join(children) if children else None
+            person_info['children_string'] = '; '.join(children) if children else None
+            
+            # Lấy thông tin anh/chị/em từ siblings_map (đã load sẵn từ helper)
+            siblings = siblings_map.get(person_id, [])
+            person_info['siblings'] = '; '.join(siblings) if siblings else None
+            person_info['siblings_infor'] = '; '.join(siblings) if siblings else None
             
             person_info['generation_number'] = person_info.get('generation_level')  # Alias for frontend compatibility
             
@@ -2503,7 +2391,15 @@ def get_descendants(person_id):
 
 @app.route('/api/search', methods=['GET'])
 def search_persons():
-    """Search persons by name, alias, generation_level, or person_id (schema mới)"""
+    """
+    Search persons by name, alias, generation_level, or person_id (schema mới)
+    
+    Hỗ trợ:
+    - Case-insensitive search (MySQL COLLATE utf8mb4_unicode_ci)
+    - Person_ID variants: P-7-654, p-7-654, 7-654, 654
+    - Trim khoảng trắng tự động
+    - Đồng bộ với /api/members (dùng cùng helper load_relationship_data)
+    """
     q = request.args.get('q', '').strip() or request.args.get('query', '').strip()
     if not q:
         return jsonify([])
@@ -2526,71 +2422,67 @@ def search_persons():
     try:
         cursor = connection.cursor(dictionary=True)
         
-        search_pattern = f"%{q}%"
+        # Normalize search query và tạo Person_ID patterns
+        normalized_query, person_id_patterns = normalize_search_query(q)
+        search_pattern = f"%{normalized_query}%"
         
         # Schema mới: search theo full_name, alias, generation_level, person_id
         # Sử dụng cùng logic query như /api/members để đảm bảo consistency
-        if generation_level:
-            cursor.execute("""
-                SELECT
-                    p.person_id,
-                    p.full_name,
-                    p.alias,
-                    p.status,
-                    p.generation_level,
-                    p.home_town,
-                    p.gender,
-                    p.father_mother_id AS fm_id,
-                    p.birth_date_solar,
-                    p.death_date_solar,
-                    -- Cha từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
-                    (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
-                     FROM relationships r 
-                     JOIN persons parent ON r.parent_id = parent.person_id 
-                     WHERE r.child_id = p.person_id AND r.relation_type = 'father') AS father_name,
-                    -- Mẹ từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
-                    (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
-                     FROM relationships r 
-                     JOIN persons parent ON r.parent_id = parent.person_id 
-                     WHERE r.child_id = p.person_id AND r.relation_type = 'mother') AS mother_name
-                FROM persons p
-                WHERE (p.full_name LIKE %s 
-                       OR p.alias LIKE %s 
-                       OR p.person_id LIKE %s)
-                  AND p.generation_level = %s
-                ORDER BY p.generation_level, p.full_name
-                LIMIT %s
-            """, (search_pattern, search_pattern, search_pattern, generation_level, limit))
+        # Hỗ trợ Person_ID variants và case-insensitive search
+        
+        # Build WHERE clause với Person_ID patterns
+        where_conditions = [
+            "p.full_name LIKE %s COLLATE utf8mb4_unicode_ci",
+            "p.alias LIKE %s COLLATE utf8mb4_unicode_ci"
+        ]
+        where_params = [search_pattern, search_pattern]
+        
+        # Thêm Person_ID patterns nếu có
+        if person_id_patterns:
+            person_id_conditions = " OR ".join(["p.person_id LIKE %s COLLATE utf8mb4_unicode_ci"] * len(person_id_patterns))
+            where_conditions.append(f"({person_id_conditions})")
+            where_params.extend(person_id_patterns)
         else:
-            cursor.execute("""
-                SELECT
-                    p.person_id,
-                    p.full_name,
-                    p.alias,
-                    p.status,
-                    p.generation_level,
-                    p.home_town,
-                    p.gender,
-                    p.father_mother_id AS fm_id,
-                    p.birth_date_solar,
-                    p.death_date_solar,
-                    -- Cha từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
-                    (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
-                     FROM relationships r 
-                     JOIN persons parent ON r.parent_id = parent.person_id 
-                     WHERE r.child_id = p.person_id AND r.relation_type = 'father') AS father_name,
-                    -- Mẹ từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
-                    (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
-                     FROM relationships r 
-                     JOIN persons parent ON r.parent_id = parent.person_id 
-                     WHERE r.child_id = p.person_id AND r.relation_type = 'mother') AS mother_name
-                FROM persons p
-                WHERE (p.full_name LIKE %s 
-                       OR p.alias LIKE %s 
-                       OR p.person_id LIKE %s)
-                ORDER BY p.generation_level, p.full_name
-                LIMIT %s
-            """, (search_pattern, search_pattern, search_pattern, limit))
+            # Fallback: search Person_ID với pattern chuẩn
+            where_conditions.append("p.person_id LIKE %s COLLATE utf8mb4_unicode_ci")
+            where_params.append(search_pattern)
+        
+        where_clause = "(" + " OR ".join(where_conditions) + ")"
+        
+        if generation_level:
+            where_clause += " AND p.generation_level = %s"
+            where_params.append(generation_level)
+        
+        query_sql = f"""
+            SELECT
+                p.person_id,
+                p.full_name,
+                p.alias,
+                p.status,
+                p.generation_level,
+                p.home_town,
+                p.gender,
+                p.father_mother_id AS fm_id,
+                p.birth_date_solar,
+                p.death_date_solar,
+                -- Cha từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
+                (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
+                 FROM relationships r 
+                 JOIN persons parent ON r.parent_id = parent.person_id 
+                 WHERE r.child_id = p.person_id AND r.relation_type = 'father') AS father_name,
+                -- Mẹ từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
+                (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
+                 FROM relationships r 
+                 JOIN persons parent ON r.parent_id = parent.person_id 
+                 WHERE r.child_id = p.person_id AND r.relation_type = 'mother') AS mother_name
+            FROM persons p
+            WHERE {where_clause}
+            ORDER BY p.generation_level, p.full_name
+            LIMIT %s
+        """
+        where_params.append(limit)
+        
+        cursor.execute(query_sql, tuple(where_params))
         
         results = cursor.fetchall()
         
@@ -3193,6 +3085,53 @@ def sync_person(person_id):
         if connection.is_connected():
             cursor.close()
             connection.close()
+
+def normalize_search_query(q):
+    """
+    Normalize search query để hỗ trợ tìm kiếm tốt hơn:
+    - Trim khoảng trắng
+    - Hỗ trợ Person_ID variants (P-7-654, p-7-654, 7-654, 654)
+    - Chuẩn bị cho case-insensitive search (MySQL COLLATE đã hỗ trợ)
+    
+    Returns:
+        tuple: (normalized_query, person_id_patterns)
+        - normalized_query: query đã normalize
+        - person_id_patterns: list các pattern để search Person_ID
+    """
+    if not q:
+        return '', []
+    
+    q = str(q).strip()
+    
+    # Tạo các Person_ID patterns nếu query có thể là Person_ID
+    person_id_patterns = []
+    
+    # Pattern 1: Full Person_ID (P-7-654, p-7-654)
+    if q.upper().startswith('P-') or q.lower().startswith('p-'):
+        person_id_patterns.append(f"%{q}%")
+        person_id_patterns.append(f"%{q.upper()}%")
+        person_id_patterns.append(f"%{q.lower()}%")
+    
+    # Pattern 2: Chỉ số (7-654, 654)
+    # Nếu query chỉ chứa số và dấu gạch ngang
+    if q.replace('-', '').replace(' ', '').isdigit():
+        # Thử các variants: 7-654 -> P-7-654, p-7-654
+        if '-' in q:
+            parts = q.split('-')
+            if len(parts) == 2:
+                gen, num = parts[0].strip(), parts[1].strip()
+                person_id_patterns.append(f"%P-{gen}-{num}%")
+                person_id_patterns.append(f"%p-{gen}-{num}%")
+                person_id_patterns.append(f"%{gen}-{num}%")
+        else:
+            # Chỉ số (654) -> tìm trong Person_ID
+            person_id_patterns.append(f"%-{q}%")
+            person_id_patterns.append(f"%{q}%")
+    
+    # Normalized query cho tên (giữ nguyên để MySQL COLLATE xử lý case-insensitive)
+    normalized_query = q
+    
+    return normalized_query, person_id_patterns
 
 def load_relationship_data(cursor):
     """
