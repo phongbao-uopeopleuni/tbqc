@@ -113,6 +113,11 @@ Dự án này là một ứng dụng Flask (Python) với MySQL database. Có th
      DB_USER=your_database_user
      DB_PASSWORD=<từ database service>
      DB_PORT=5432
+     
+     # ⚠️ QUAN TRỌNG: Thêm các biến sau cho Members page password protection
+     MEMBERS_PASSWORD=tbqc@2026
+     ADMIN_PASSWORD=tbqc@2026
+     BACKUP_PASSWORD=tbqc@2026
      ```
    - **Lưu ý:** Render dùng PostgreSQL, cần cập nhật code để dùng `psycopg2` thay vì `mysql-connector-python`
 
@@ -177,6 +182,11 @@ Railway.app hỗ trợ MySQL tốt hơn và có free tier $5/tháng.
    DB_USER=your_database_user
    DB_PASSWORD=<từ MySQL service>
    DB_PORT=3306
+   
+   # ⚠️ QUAN TRỌNG: Thêm các biến sau cho Members page password protection
+   MEMBERS_PASSWORD=tbqc@2026
+   ADMIN_PASSWORD=tbqc@2026
+   BACKUP_PASSWORD=tbqc@2026
    ```
 
 3. Deploy tự động!

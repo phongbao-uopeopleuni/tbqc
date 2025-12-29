@@ -27,6 +27,14 @@ services:
         fromDatabase:
           name: tbqc-db
           property: port
+      # Application Passwords (for Members page actions: Add, Update, Delete, Backup)
+      # ⚠️ Set these in Render Dashboard > Environment Variables (do not hardcode here)
+      - key: MEMBERS_PASSWORD
+        sync: false  # Must be set manually in Render Dashboard
+      - key: ADMIN_PASSWORD
+        sync: false  # Must be set manually in Render Dashboard
+      - key: BACKUP_PASSWORD
+        sync: false  # Must be set manually in Render Dashboard
 
 databases:
   - name: tbqc-db

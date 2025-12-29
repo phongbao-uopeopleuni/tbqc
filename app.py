@@ -132,27 +132,34 @@ def get_members_password():
     """
     Lấy mật khẩu cho các thao tác trên trang Members (Add, Update, Delete, Backup)
     Priority: MEMBERS_PASSWORD > ADMIN_PASSWORD > BACKUP_PASSWORD
-    Tự động load từ tbqc_db.env nếu không có trong environment variables
+    Tự động load từ tbqc_db.env nếu không có trong environment variables (local dev)
+    Trên production: chỉ dùng environment variables
     """
-    # Kiểm tra environment variables trước
+    # Kiểm tra environment variables trước (ưu tiên cho production)
     password = os.environ.get('MEMBERS_PASSWORD') or os.environ.get('ADMIN_PASSWORD') or os.environ.get('BACKUP_PASSWORD', '')
     
-    # Luôn thử load từ tbqc_db.env để đảm bảo có giá trị mới nhất
-    try:
-        env_file = os.path.join(BASE_DIR, 'tbqc_db.env')
-        if os.path.exists(env_file):
-            env_vars = load_env_file(env_file)
-            file_password = env_vars.get('MEMBERS_PASSWORD') or env_vars.get('ADMIN_PASSWORD') or env_vars.get('BACKUP_PASSWORD', '')
-            if file_password:
-                password = file_password
-                # Set vào environment để các lần sau không cần load lại
-                os.environ['MEMBERS_PASSWORD'] = password
-        else:
-            logger.warning(f"File tbqc_db.env không tồn tại tại: {env_file}")
-    except Exception as e:
-        logger.error(f"Could not load password from tbqc_db.env: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
+    # Nếu chưa có trong environment variables, thử load từ tbqc_db.env (chỉ cho local dev)
+    if not password:
+        try:
+            env_file = os.path.join(BASE_DIR, 'tbqc_db.env')
+            if os.path.exists(env_file):
+                env_vars = load_env_file(env_file)
+                file_password = env_vars.get('MEMBERS_PASSWORD') or env_vars.get('ADMIN_PASSWORD') or env_vars.get('BACKUP_PASSWORD', '')
+                if file_password:
+                    password = file_password
+                    # Set vào environment để các lần sau không cần load lại
+                    os.environ['MEMBERS_PASSWORD'] = password
+                    logger.info("Password loaded from tbqc_db.env (local dev)")
+            else:
+                # Trên production, file này không tồn tại - chỉ dùng environment variables
+                logger.debug(f"File tbqc_db.env không tồn tại (production mode), sử dụng environment variables")
+        except Exception as e:
+            logger.error(f"Could not load password from tbqc_db.env: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+    
+    if not password:
+        logger.warning("MEMBERS_PASSWORD, ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình trong environment variables")
     
     return password
 
