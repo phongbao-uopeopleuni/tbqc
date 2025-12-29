@@ -66,20 +66,50 @@ function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
   // Render nodes và connectors
   renderFamilyTreeNodes(familyTree, treeDiv, familyGraph);
   
-  // Calculate container size
-  let maxX = 0, maxY = 0;
+  // Calculate container size với padding
+  let maxX = 0, maxY = 0, minX = Infinity, minY = Infinity;
   function findMaxBounds(node) {
     if (!node) return;
-    maxX = Math.max(maxX, (node.x || 0) + 300);
-    maxY = Math.max(maxY, (node.y || 0) + 200);
-    if (node.children) {
+    if (collapsedFamilies.has(node.id)) return; // Skip collapsed nodes
+    
+    const nodeWidth = node.type === 'family' ? 280 : 140;
+    const nodeHeight = node.type === 'family' ? 120 : 100;
+    const right = (node.x || 0) + nodeWidth;
+    const bottom = (node.y || 0) + nodeHeight;
+    const left = node.x || 0;
+    const top = node.y || 0;
+    
+    maxX = Math.max(maxX, right);
+    maxY = Math.max(maxY, bottom);
+    minX = Math.min(minX, left);
+    minY = Math.min(minY, top);
+    
+    if (node.children && node.children.length > 0) {
       node.children.forEach(child => findMaxBounds(child));
     }
   }
   findMaxBounds(familyTree);
   
-  treeDiv.style.width = Math.max(maxX, 3000) + "px";
-  treeDiv.style.height = Math.max(maxY, 600) + "px";
+  // Add padding và đảm bảo minimum size
+  const padding = 100;
+  const width = Math.max((maxX - minX) + padding * 2, 3000);
+  const height = Math.max((maxY - minY) + padding * 2, 600);
+  
+  // Adjust all positions to account for padding (shift to positive coordinates)
+  function adjustPositions(node) {
+    if (!node) return;
+    node.x = (node.x || 0) - minX + padding;
+    node.y = (node.y || 0) - minY + padding;
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => adjustPositions(child));
+    }
+  }
+  adjustPositions(familyTree);
+  
+  treeDiv.style.width = width + "px";
+  treeDiv.style.height = height + "px";
+  
+  console.log('[FamilyTree] Container size:', width, 'x', height, 'nodes rendered');
   treeDiv.style.transform = `scale(${currentZoom}) translate(${currentOffsetX}px, ${currentOffsetY}px)`;
   treeDiv.style.transformOrigin = "top left";
   
@@ -386,8 +416,9 @@ function renderFamilyTreeNodes(node, container, familyGraph) {
             collapsedFamilies.add(familyId);
           }
           // Re-render tree
+          const maxGen = typeof MAX_DEFAULT_GENERATION !== 'undefined' ? MAX_DEFAULT_GENERATION : 5;
           if (familyGraph) {
-            renderFamilyDefaultTree(familyGraph, MAX_DEFAULT_GENERATION);
+            renderFamilyDefaultTree(familyGraph, maxGen);
           }
         }
       }
@@ -409,8 +440,8 @@ function renderFamilyTreeNodes(node, container, familyGraph) {
     drawFamilyConnector(node.parent, node, container);
   }
   
-  // Render children
-  if (node.children && !collapsedFamilies.has(node.id)) {
+  // Render children recursively (only if not collapsed)
+  if (node.children && node.children.length > 0 && !collapsedFamilies.has(node.id)) {
     node.children.forEach(child => renderFamilyTreeNodes(child, container, familyGraph));
   }
 }
