@@ -636,6 +636,16 @@
             <input type="number" id="generation_number" name="generation_number" min="1">
           </div>
           <div class="form-group">
+            <label for="birth_date_solar">Năm sinh</label>
+            <input type="text" id="birth_date_solar" name="birth_date_solar" placeholder="YYYY-MM-DD hoặc YYYY" pattern="^\d{4}(-\d{2}(-\d{2})?)?$">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="death_date_solar">Năm mất</label>
+            <input type="text" id="death_date_solar" name="death_date_solar" placeholder="YYYY-MM-DD hoặc YYYY" pattern="^\d{4}(-\d{2}(-\d{2})?)?$">
+          </div>
+          <div class="form-group">
             <label for="father_name">Tên bố</label>
             <input type="text" id="father_name" name="father_name">
           </div>
@@ -907,6 +917,8 @@
       html += '<th style="min-width: 120px; text-align: center;">Giới tính</th>';
       html += '<th style="min-width: 140px; text-align: center;">Trạng thái</th>';
       html += '<th style="min-width: 100px; text-align: center;">Đời</th>';
+      html += '<th style="min-width: 100px; text-align: center;">Năm sinh</th>';
+      html += '<th style="min-width: 100px; text-align: center;">Năm mất</th>';
       html += '<th style="min-width: 150px; text-align: center;">Father_Mother_ID</th>';
       html += '<th style="min-width: 200px;">Tên bố</th>';
       html += '<th style="min-width: 200px;">Tên mẹ</th>';
@@ -923,6 +935,8 @@
         html += `<td style="text-align: center;">${escapeHtml(member.gender || '-')}</td>`;
         html += `<td style="text-align: center;">${escapeHtml(member.status || '-')}</td>`;
         html += `<td style="text-align: center; font-weight: 600;">${member.generation_number || '-'}</td>`;
+        html += `<td style="text-align: center;">${getYearFromDate(member.birth_date_solar) || '-'}</td>`;
+        html += `<td style="text-align: center;">${getYearFromDate(member.death_date_solar) || '-'}</td>`;
         html += `<td style="text-align: center; font-family: monospace; color: #666;">${escapeHtml(member.fm_id || '-')}</td>`;
         html += `<td>${escapeHtml(member.father_name || '-')}</td>`;
         html += `<td>${escapeHtml(member.mother_name || '-')}</td>`;
@@ -948,6 +962,28 @@
         return date.toLocaleDateString('vi-VN');
       } catch {
         return dateStr.split(' ')[0] || dateStr;
+      }
+    }
+
+    // Get year from date string
+    function getYearFromDate(dateStr) {
+      if (!dateStr || dateStr === 'None' || dateStr === 'null' || dateStr === '') return null;
+      try {
+        // Nếu là string có format YYYY-MM-DD hoặc YYYY-MM-DD HH:MM:SS
+        if (typeof dateStr === 'string') {
+          const year = dateStr.split('-')[0];
+          if (year && year.length === 4 && /^\d{4}$/.test(year)) {
+            return year;
+          }
+        }
+        // Nếu là Date object
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          return date.getFullYear().toString();
+        }
+        return null;
+      } catch {
+        return null;
       }
     }
 
@@ -1087,6 +1123,8 @@
       document.getElementById('gender').value = member.gender || '';
       document.getElementById('status').value = member.status || '';
       document.getElementById('generation_number').value = member.generation_number || '';
+      document.getElementById('birth_date_solar').value = member.birth_date_solar || '';
+      document.getElementById('death_date_solar').value = member.death_date_solar || '';
       document.getElementById('father_name').value = member.father_name || '';
       document.getElementById('mother_name').value = member.mother_name || '';
       document.getElementById('memberModal').style.display = 'block';

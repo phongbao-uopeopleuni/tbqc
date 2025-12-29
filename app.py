@@ -3629,6 +3629,22 @@ def create_person():
             insert_fields.append('fm_id')
             insert_values.append(data.get('fm_id'))
         
+        if 'birth_date_solar' in columns and data.get('birth_date_solar'):
+            insert_fields.append('birth_date_solar')
+            # Xử lý format date: nếu chỉ có năm (YYYY), thêm -01-01
+            birth_date = data.get('birth_date_solar').strip()
+            if birth_date and len(birth_date) == 4 and birth_date.isdigit():
+                birth_date = f'{birth_date}-01-01'
+            insert_values.append(birth_date if birth_date else None)
+        
+        if 'death_date_solar' in columns and data.get('death_date_solar'):
+            insert_fields.append('death_date_solar')
+            # Xử lý format date: nếu chỉ có năm (YYYY), thêm -01-01
+            death_date = data.get('death_date_solar').strip()
+            if death_date and len(death_date) == 4 and death_date.isdigit():
+                death_date = f'{death_date}-01-01'
+            insert_values.append(death_date if death_date else None)
+        
         # Thêm person
         placeholders = ','.join(['%s'] * len(insert_values))
         insert_query = f"INSERT INTO persons ({', '.join(insert_fields)}) VALUES ({placeholders})"
