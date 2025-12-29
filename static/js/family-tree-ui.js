@@ -62,7 +62,7 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
     genealogyString.style.display = "none";
   }
 
-  // Render tree với hierarchical layout (đời cao ở trên, con cháu phía dưới)
+  // Render tree với hierarchical layout (đời 1 ở trên, đời 8 ở dưới)
   const treeDiv = document.createElement("div");
   treeDiv.className = "tree";
   treeDiv.style.position = "relative";
@@ -182,7 +182,7 @@ function renderFocusTree(targetId) {
     genealogyDiv.style.display = "block";
   }
 
-  // Render tree với hierarchical layout (đời cao ở trên, con cháu phía dưới)
+  // Render tree với hierarchical layout (đời 1 ở trên, đời 8 ở dưới)
   const treeDiv = document.createElement("div");
   treeDiv.className = "tree";
   treeDiv.style.position = "relative";
@@ -402,8 +402,8 @@ function drawConnector(parentNode, childNode, container) {
 }
 
 /**
- * Tính toán vị trí các nodes (hierarchical layout: đời cao ở trên, con cháu phía dưới)
- * Y = generation (dọc) - đời 1 ở trên, đời 2 ở dưới
+ * Tính toán vị trí các nodes (hierarchical layout: đời 1 ở trên, đời 8 ở dưới)
+ * Y = generation (dọc) - đời 1 ở trên cùng, đời 8 ở dưới cùng
  * X = vị trí ngang trong cùng generation, được phân bổ để giảm giao cắt
  */
 function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
@@ -440,15 +440,16 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
     levelPositions[generation] = [];
   }
 
-  // Y = generation (dọc) - đời cao ở trên
-  const verticalGap = 160; // Khoảng cách giữa các đời
+  // Y = generation (dọc) - đời 1 ở trên, đời 8 ở dưới
+  const verticalGap = 200; // Tăng khoảng cách giữa các đời để tránh chồng lên nhau
   const normalizedGeneration = generation - minGeneration;
+  // Đảm bảo đời thấp nhất (minGeneration) ở trên cùng
   node.y = normalizedGeneration * verticalGap + 40;
 
   // Tính vị trí cho children trước (bottom-up approach)
   if (node.children.length === 0) {
     // Leaf node: đặt ở vị trí tiếp theo trong generation
-    const horizontalSpacing = 160; // Spacing giữa các nodes
+    const horizontalSpacing = 200; // Tăng spacing giữa các nodes để tránh chồng lên nhau
     const currentCount = levelPositions[generation].length;
     node.x = currentCount * horizontalSpacing + 80;
     levelPositions[generation].push(node);
@@ -469,14 +470,14 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
 
     // Đảm bảo siblings có khoảng cách đều
     if (node.children.length > 1) {
-      const minSpacing = 160; // Khoảng cách tối thiểu giữa siblings
+      const minSpacing = 200; // Tăng khoảng cách tối thiểu giữa siblings để tránh chồng lên nhau
       let currentX = subtreeLeft;
       node.children.forEach((child, index) => {
         if (index > 0) {
           currentX += minSpacing;
         }
         child.x = currentX;
-        currentX += 150; // Node width + spacing
+        currentX += 180; // Tăng node width + spacing
       });
       // Cập nhật lại subtree bounds
       subtreeRight = currentX;
@@ -527,7 +528,7 @@ function redistributeNodesByGeneration(levelPositions) {
   const minGen = levelPositions._minGeneration || 1;
   const maxGen = levelPositions._maxGeneration || 1;
   const nodeWidth = 140;
-  const minSpacing = 50;
+  const minSpacing = 80; // Tăng khoảng cách tối thiểu để tránh chồng lên nhau
   
   for (let gen = minGen; gen <= maxGen; gen++) {
     const nodes = levelPositions[gen] || [];
