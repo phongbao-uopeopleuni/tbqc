@@ -1346,9 +1346,10 @@ def get_person(person_id):
             person['spouse'] = None
             person['spouse_name'] = None
         
-        # Nếu không có spouse từ marriages, sử dụng helper để lấy từ các nguồn khác (giống /api/members)
+        # LUÔN sử dụng helper để lấy spouse từ các nguồn khác (giống /api/members)
+        # Điều này đảm bảo nếu marriages table không có hoặc có lỗi thì vẫn lấy được từ helper
         # Sử dụng relationship_data đã load ở trên (nếu có)
-        if (not person.get('spouse') or person.get('spouse') == '') and relationship_data:
+        if relationship_data:
             try:
                 spouse_data_from_table = relationship_data['spouse_data_from_table']
                 spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
