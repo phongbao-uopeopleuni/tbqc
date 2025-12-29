@@ -220,9 +220,12 @@ def genealogy_page():
     if not geoapify_api_key:
         logger.warning("GEOAPIFY_API_KEY không được load từ environment hoặc tbqc_db.env")
     else:
-        logger.debug(f"Geoapify API key loaded: {geoapify_api_key[:10]}...")
+        logger.debug(f"Geoapify API key loaded: {geoapify_api_key[:10] if len(geoapify_api_key) > 10 else '***'}...")
     
-    return render_template('genealogy.html', geoapify_api_key=geoapify_api_key or '')
+    # Đảm bảo API key là string hoặc None (không phải empty string)
+    api_key_for_template = geoapify_api_key if geoapify_api_key and geoapify_api_key.strip() else None
+    
+    return render_template('genealogy.html', geoapify_api_key=api_key_for_template)
 
 @app.route('/api/grave/update-location', methods=['POST'])
 def update_grave_location():
