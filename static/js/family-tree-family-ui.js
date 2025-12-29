@@ -100,21 +100,41 @@ function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
 function buildFamilyTree(familyGraph, maxGeneration) {
   const { familyNodes, personNodes, links, familyNodeMap, personNodeMap, childrenToFamilyMap } = familyGraph;
   
+  console.log('[FamilyTree] Building tree from', familyNodes.length, 'family nodes, maxGeneration:', maxGeneration);
+  
   // Find root family (generation 1 hoặc founder's family)
   let rootFamily = null;
+  
+  // Ưu tiên tìm family có generation = 1
   for (const family of familyNodes) {
-    if (family.generation === 1 || !rootFamily) {
+    if (family.generation === 1) {
       rootFamily = family;
-      if (family.generation === 1) break;
+      break;
     }
   }
   
+  // Nếu không có generation 1, tìm generation nhỏ nhất
   if (!rootFamily) {
-    // Fallback: use first family
+    let minGeneration = Infinity;
+    for (const family of familyNodes) {
+      if (family.generation < minGeneration) {
+        minGeneration = family.generation;
+        rootFamily = family;
+      }
+    }
+  }
+  
+  // Fallback: use first family
+  if (!rootFamily && familyNodes.length > 0) {
     rootFamily = familyNodes[0];
   }
   
-  if (!rootFamily) return null;
+  if (!rootFamily) {
+    console.error('[FamilyTree] No root family found');
+    return null;
+  }
+  
+  console.log('[FamilyTree] Root family:', rootFamily.id, 'generation:', rootFamily.generation);
   
   // Build tree recursively
   const familyTreeMap = new Map(); // familyId -> tree node
@@ -182,19 +202,25 @@ function calculateFamilyPositions(node, startX, startY, levelPositions) {
   if (!node) return;
   
   const level = node.family ? node.family.generation : (node.person ? node.person.generation : 0);
+  
+  // Initialize level if not exists
   if (!levelPositions[level]) {
-    levelPositions[level] = { nodes: [], y: startY + level * 250 }; // 250px spacing between generations
+    levelPositions[level] = { nodes: [], y: startY + (level - 1) * 300 }; // 300px spacing between generations
   }
   
+  // Set initial position (will be adjusted later)
   node.x = startX;
   node.y = levelPositions[level].y;
   levelPositions[level].nodes.push(node);
   
-  // Calculate children positions
-  if (node.children && node.children.length > 0) {
-    const childStartX = startX;
+  // Calculate children positions recursively
+  if (node.children && node.children.length > 0 && !collapsedFamilies.has(node.id)) {
+    const childSpacing = 350; // Spacing between children
+    const totalWidth = (node.children.length - 1) * childSpacing;
+    const childStartX = startX - totalWidth / 2; // Center children around parent
+    
     node.children.forEach((child, index) => {
-      calculateFamilyPositions(child, childStartX + index * 320, startY, levelPositions);
+      calculateFamilyPositions(child, childStartX + index * childSpacing, startY, levelPositions);
     });
   }
 }
@@ -224,31 +250,55 @@ function adjustFamilyHorizontalPositions(node, levelPositions) {
  * Redistribute family nodes by generation
  */
 function redistributeFamilyNodesByGeneration(levelPositions) {
-  // Similar to redistributeNodesByGeneration but for family nodes
-  // Implementation tương tự như function cũ
+  // Redistribute nodes within same generation to prevent overlap
+  Object.keys(levelPositions).forEach(level => {
+    const levelData = levelPositions[level];
+    const nodes = levelData.nodes;
+    const minSpacing = 350; // Minimum spacing between nodes
+    
+    if (nodes.length > 1) {
+      // Sort nodes by x position
+      nodes.sort((a, b) => (a.x || 0) - (b.x || 0));
+      
+      // Redistribute evenly
+      const totalWidth = (nodes.length - 1) * minSpacing;
+      const startX = -totalWidth / 2;
+      
+      nodes.forEach((node, index) => {
+        node.x = startX + index * minSpacing;
+      });
+    } else if (nodes.length === 1) {
+      // Center single node
+      nodes[0].x = 0;
+    }
+  });
 }
 
 /**
  * Center family nodes above children clusters
  */
 function centerFamiliesAboveChildren(node) {
-  if (!node || !node.children || node.children.length === 0) return;
+  if (!node) return;
   
-  // Calculate children cluster center
-  const childrenX = node.children.map(c => c.x || 0).filter(x => x !== 0);
-  if (childrenX.length > 0) {
-    const minChildX = Math.min(...childrenX);
-    const maxChildX = Math.max(...childrenX);
-    const centerX = (minChildX + maxChildX) / 2;
+  // Recursively adjust children first (bottom-up)
+  if (node.children && node.children.length > 0) {
+    node.children.forEach(child => centerFamiliesAboveChildren(child));
     
-    // Center family node above children
-    if (node.type === 'family') {
-      node.x = centerX - 140; // Half of family node width (280px)
+    // Then center this node above its children
+    const childrenX = node.children.map(c => c.x || 0).filter(x => x !== 0);
+    if (childrenX.length > 0) {
+      const minChildX = Math.min(...childrenX);
+      const maxChildX = Math.max(...childrenX);
+      const centerX = (minChildX + maxChildX) / 2;
+      
+      // Center family node above children
+      if (node.type === 'family') {
+        node.x = centerX - 140; // Half of family node width (280px)
+      } else if (node.type === 'person') {
+        node.x = centerX - 70; // Half of person node width (140px)
+      }
     }
   }
-  
-  // Recursively adjust children
-  node.children.forEach(child => centerFamiliesAboveChildren(child));
 }
 
 /**

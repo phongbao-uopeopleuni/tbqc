@@ -40,10 +40,21 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   container.innerHTML = "";
   
   // Check if family graph is available and use family renderer
-  if (typeof familyGraph !== 'undefined' && familyGraph && typeof renderFamilyDefaultTree === 'function') {
-    console.log('[Tree] Using family-node renderer');
-    renderFamilyDefaultTree(familyGraph, maxGeneration);
-    return;
+  // Check both window.familyGraph (global) and local familyGraph variable
+  const availableFamilyGraph = window.familyGraph || (typeof familyGraph !== 'undefined' ? familyGraph : null);
+  
+  if (availableFamilyGraph && typeof renderFamilyDefaultTree === 'function') {
+    console.log('[Tree] Using family-node renderer, familyNodes:', availableFamilyGraph.familyNodes?.length || 0);
+    try {
+      renderFamilyDefaultTree(availableFamilyGraph, maxGeneration);
+      return;
+    } catch (error) {
+      console.error('[Tree] Error rendering family tree:', error);
+      console.error(error.stack);
+      // Fallback to person-node renderer
+    }
+  } else {
+    console.log('[Tree] Using person-node renderer (familyGraph not available or renderFamilyDefaultTree not found)');
   }
   
   if (!graph || !personMap || personMap.size === 0) {

@@ -174,10 +174,14 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
             links: familyGraph.links.length,
             marriagesLoaded: marriagesDataMap.size
           });
+          
+          // Set as global variable để renderDefaultTree có thể access
+          window.familyGraph = familyGraph;
         } catch (error) {
           console.error('[Tree] Error building family graph:', error);
           console.error(error.stack);
           familyGraph = null;
+          window.familyGraph = null;
         }
       }
       
