@@ -135,41 +135,59 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
     });
   });
   
-  // Step 4: Handle multiple marriages
-  // Nếu một người có nhiều marriages, tạo family nodes riêng cho mỗi marriage
+  // Step 4: Handle marriages (single or multiple)
+  // Tạo family nodes cho các marriages
   personNodes.forEach(person => {
-    if (person.marriages && person.marriages.length > 1) {
-      person.marriages.forEach((marriage, index) => {
-        const spouseId = marriage.spouse_id || null;
-        const spouseName = marriage.spouse_name || '';
+    const personMarriages = marriagesMap.get(person.id) || person.marriages || [];
+    
+    if (personMarriages.length > 0) {
+      personMarriages.forEach((marriage, index) => {
+        // Marriage có thể là object {spouse_name, spouse_id} hoặc chỉ là string (spouse_name)
+        const spouseName = typeof marriage === 'string' ? marriage : (marriage.spouse_name || '');
+        const spouseId = typeof marriage === 'object' ? (marriage.spouse_id || null) : null;
         
-        if (!spouseId) return; // Skip nếu không có spouse_id
+        // Tìm spouse ID từ name nếu không có spouse_id
+        let actualSpouseId = spouseId;
+        if (!actualSpouseId && spouseName) {
+          // Tìm trong personNodeMap theo name
+          for (const [pid, pnode] of personNodeMap.entries()) {
+            if (pnode.name === spouseName || pnode.full_name === spouseName) {
+              actualSpouseId = pid;
+              break;
+            }
+          }
+        }
+        
+        if (!actualSpouseId && !spouseName) return; // Skip nếu không có cả ID và name
         
         // Tạo family node cho marriage này
-        const spouse1Id = person.gender === 'Nam' ? person.id : spouseId;
-        const spouse2Id = person.gender === 'Nam' ? spouseId : person.id;
+        const spouse1Id = person.gender === 'Nam' ? person.id : actualSpouseId;
+        const spouse2Id = person.gender === 'Nam' ? actualSpouseId : person.id;
         
-        const marriageFamilyId = generateFamilyId(spouse1Id, spouse2Id, index);
+        // Nếu chỉ có 1 spouse (single parent), vẫn tạo family node với Unknown
+        const marriageFamilyId = generateFamilyId(spouse1Id || person.id, spouse2Id || null, index);
         
         // Kiểm tra duplicate
         if (familyNodeMap.has(marriageFamilyId)) {
           return;
         }
         
-        const spouse1 = personNodeMap.get(spouse1Id);
-        const spouse2 = personNodeMap.get(spouse2Id);
+        const spouse1 = spouse1Id ? personNodeMap.get(spouse1Id) : person;
+        const spouse2 = spouse2Id ? personNodeMap.get(spouse2Id) : null;
         
         // Tìm children của marriage này (nếu có)
-        const marriageChildren = findMarriageChildren(spouse1Id, spouse2Id, childrenMap, parentMap);
+        const marriageChildren = actualSpouseId 
+          ? findMarriageChildren(spouse1Id || person.id, spouse2Id, childrenMap, parentMap)
+          : (childrenMap.get(person.id) || []);
         
         const marriageFamilyNode = {
           id: marriageFamilyId,
-          spouse1Id: spouse1Id,
+          spouse1Id: spouse1Id || person.id,
           spouse2Id: spouse2Id,
-          spouse1Name: spouse1 ? spouse1.name : '',
-          spouse2Name: spouse2 ? spouse2.name : '',
-          spouse1Gender: spouse1 ? spouse1.gender : '',
-          spouse2Gender: spouse2 ? spouse2.gender : '',
+          spouse1Name: spouse1 ? spouse1.name : person.name,
+          spouse2Name: spouse2 ? spouse2.name : (spouseName || 'Unknown'),
+          spouse1Gender: spouse1 ? spouse1.gender : person.gender,
+          spouse2Gender: spouse2 ? spouse2.gender : null,
           marriageOrder: index,
           generation: person.generation,
           children: marriageChildren,
@@ -178,6 +196,11 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
         
         familyNodes.push(marriageFamilyNode);
         familyNodeMap.set(marriageFamilyId, marriageFamilyNode);
+        
+        // Map children to this family
+        marriageChildren.forEach(childId => {
+          childrenToFamilyMap.set(childId, marriageFamilyId);
+        });
         
         // Create links: Marriage Family -> Children
         marriageChildren.forEach(childId => {

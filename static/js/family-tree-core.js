@@ -103,7 +103,60 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
           // Extract persons array from tree
           const persons = extractPersonsFromTree(treeData);
           
-          // Build family graph
+          // Load marriages data từ API (sử dụng cùng database như /api/members)
+          let marriagesDataMap = new Map();
+          try {
+            const marriagesResponse = await fetch(`${API_BASE_URL}/members`);
+            if (marriagesResponse.ok) {
+              const membersData = await marriagesResponse.json();
+              if (membersData.success && membersData.data) {
+                // Extract marriages từ members data
+                membersData.data.forEach(member => {
+                  if (member.spouses) {
+                    const spouseNames = member.spouses.split(';').map(s => s.trim()).filter(s => s);
+                    if (spouseNames.length > 0) {
+                      // Tạo marriages array từ spouse names (có thể là string hoặc object)
+                      const marriages = spouseNames.map((spouseName, index) => {
+                        // Nếu spouseName là object, giữ nguyên; nếu là string, convert thành object
+                        if (typeof spouseName === 'string') {
+                          return {
+                            spouse_name: spouseName,
+                            marriage_order: index,
+                            marriage_type: index === 0 ? 'primary' : 'secondary'
+                          };
+                        }
+                        return spouseName;
+                      });
+                      marriagesDataMap.set(member.person_id, marriages);
+                    }
+                  }
+                });
+                console.log('[Tree] Loaded marriages data from /api/members:', marriagesDataMap.size, 'persons with marriages');
+              }
+            }
+          } catch (err) {
+            console.warn('[Tree] Could not load marriages from /api/members:', err);
+          }
+          
+          // Merge với marriages từ tree data và personMap
+          persons.forEach(person => {
+            const personId = person.person_id || person.id;
+            // Ưu tiên marriages từ /api/members, sau đó từ tree data, cuối cùng từ personMap
+            if (!marriagesDataMap.has(personId)) {
+              if (person.marriages && person.marriages.length > 0) {
+                marriagesDataMap.set(personId, person.marriages);
+              } else {
+                const personFromMap = personMap.get(personId);
+                if (personFromMap && personFromMap.marriages && personFromMap.marriages.length > 0) {
+                  marriagesDataMap.set(personId, personFromMap.marriages);
+                }
+              }
+            }
+          });
+          
+          console.log('[Tree] Total marriages loaded:', marriagesDataMap.size);
+          
+          // Build family graph với đầy đủ data
           familyGraph = buildRenderGraph(
             persons,
             {
@@ -111,17 +164,19 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
               parentMap: parentMap
             },
             {
-              marriagesMap: marriagesMap
+              marriagesMap: marriagesDataMap
             }
           );
           
           console.log('[Tree] Built family graph:', {
             personNodes: familyGraph.personNodes.length,
             familyNodes: familyGraph.familyNodes.length,
-            links: familyGraph.links.length
+            links: familyGraph.links.length,
+            marriagesLoaded: marriagesDataMap.size
           });
         } catch (error) {
-          console.warn('[Tree] Error building family graph:', error);
+          console.error('[Tree] Error building family graph:', error);
+          console.error(error.stack);
           familyGraph = null;
         }
       }
@@ -259,26 +314,34 @@ function convertTreeToGraph(treeData) {
  */
 function extractPersonsFromTree(treeNode) {
   const persons = [];
+  const personIdsSeen = new Set(); // Avoid duplicates
   
   function traverse(node) {
-    if (!node) return;
+    if (!node || !node.person_id) return;
+    
+    // Skip if already processed
+    if (personIdsSeen.has(node.person_id)) return;
+    personIdsSeen.add(node.person_id);
+    
+    // Get person data từ personMap nếu có (đã được build trong convertTreeToGraph)
+    const personFromMap = personMap.get(node.person_id);
     
     const person = {
       person_id: node.person_id,
       id: node.person_id,
-      full_name: node.full_name || node.common_name || '',
-      name: node.full_name || node.common_name || '',
-      gender: node.gender || '',
-      generation_number: node.generation_number || node.generation_level || 0,
-      generation_level: node.generation_number || node.generation_level || 0,
-      branch_name: node.branch_name || '',
-      branch: node.branch_name || '',
-      status: node.status || '',
-      father_name: node.father_name || null,
-      mother_name: node.mother_name || null,
-      father_id: node.father_id || null,
-      mother_id: node.mother_id || null,
-      marriages: node.marriages || []
+      full_name: node.full_name || node.common_name || personFromMap?.name || '',
+      name: node.full_name || node.common_name || personFromMap?.name || '',
+      gender: node.gender || personFromMap?.gender || '',
+      generation_number: node.generation_number || node.generation_level || personFromMap?.generation || 0,
+      generation_level: node.generation_number || node.generation_level || personFromMap?.generation || 0,
+      branch_name: node.branch_name || personFromMap?.branch || '',
+      branch: node.branch_name || personFromMap?.branch || '',
+      status: node.status || personFromMap?.status || '',
+      father_name: node.father_name || personFromMap?.father_name || null,
+      mother_name: node.mother_name || personFromMap?.mother_name || null,
+      father_id: node.father_id || personFromMap?.father_id || null,
+      mother_id: node.mother_id || personFromMap?.mother_id || null,
+      marriages: node.marriages || personFromMap?.marriages || marriagesMap.get(node.person_id) || []
     };
     
     persons.push(person);
