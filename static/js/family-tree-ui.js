@@ -406,7 +406,10 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
     nodeDiv.appendChild(genBadge);
   }
   
-  // Thêm data attributes để group siblings
+  // Thêm data attributes để group siblings bằng fm_id (từ database trang Thành viên)
+  if (person.fm_id) {
+    nodeDiv.setAttribute('data-fm-id', person.fm_id);
+  }
   if (person.father_id || person.mother_id) {
     nodeDiv.setAttribute('data-father-id', person.father_id || '');
     nodeDiv.setAttribute('data-mother-id', person.mother_id || '');
