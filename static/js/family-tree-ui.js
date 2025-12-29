@@ -188,7 +188,8 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
 }
 
 /**
- * Render tree với chế độ focus (ancestors + target + descendants)
+ * Render tree với chế độ focus (chỉ ancestors + target + descendants)
+ * Chỉ hiển thị các node liên quan đến người được tìm kiếm
  * @param {string|number} targetId - ID của người được focus
  */
 function renderFocusTree(targetId) {
@@ -205,12 +206,14 @@ function renderFocusTree(targetId) {
     return;
   }
 
-  // Build focus tree
+  // Build focus tree (chỉ bao gồm các node liên quan)
   const focusTree = buildFocusTree(targetId);
   if (!focusTree) {
     container.innerHTML = '<div class="error">Không thể xây dựng cây gia phả</div>';
     return;
   }
+  
+  console.log('[Tree] Rendering focus tree for:', target.name, 'Related nodes only');
 
   // Hiển thị chuỗi phả hệ
   const genealogyStr = getGenealogyString(targetId);

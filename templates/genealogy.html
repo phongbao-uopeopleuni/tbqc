@@ -1061,21 +1061,22 @@
                     showPersonInfo(personId);
                   }
                   
-                  // Reload tree với maxGen và focus vào person này
+                  // Reload tree và focus vào person này (chỉ hiển thị các node liên quan)
                   try {
                     const container = document.getElementById('treeContainer');
                     if (container) {
-                      container.innerHTML = '<div class="tree-loading">Đang tải cây gia phả...</div>';
+                      container.innerHTML = '<div class="tree-loading">Đang tải cây gia phả (chỉ hiển thị các node liên quan)...</div>';
                     }
                     
                     // Load lại tree data với maxGeneration
                     if (typeof loadTreeData === 'function') {
                       const { graph: newGraph } = await loadTreeData(maxGen, 'P-1-1');
+                      // Luôn dùng renderFocusTree để chỉ hiển thị các node liên quan
                       if (newGraph && typeof renderFocusTree === 'function') {
                         renderFocusTree(personId);
                       } else if (newGraph && typeof renderDefaultTree === 'function') {
+                        // Fallback: render default tree và highlight
                         renderDefaultTree(newGraph, maxGen);
-                        // Highlight person sau khi render
                         setTimeout(() => {
                           const node = document.querySelector(`[data-person-id="${personId}"]`);
                           if (node) {

@@ -792,7 +792,8 @@ function buildDefaultTree(maxGeneration) {
 }
 
 /**
- * Build sub-tree cho focus mode (ancestors + target + descendants)
+ * Build sub-tree cho focus mode (chỉ ancestors + target + descendants)
+ * Chỉ hiển thị các node liên quan đến target, loại bỏ các nhánh không liên quan
  * @param {string|number} targetId 
  * @returns {TreeNode}
  */
@@ -803,6 +804,20 @@ function buildFocusTree(targetId) {
   // Lấy ancestors và descendants
   const ancestors = getAncestors(graph, targetId);
   const descendants = getDescendants(graph, targetId);
+  
+  // Tạo Set để track các node liên quan (nhanh hơn khi check)
+  const relatedNodeIds = new Set();
+  relatedNodeIds.add(targetId); // Target luôn được bao gồm
+  
+  // Thêm tất cả ancestors
+  ancestors.forEach(ancestor => {
+    relatedNodeIds.add(ancestor.id);
+  });
+  
+  // Thêm tất cả descendants
+  descendants.forEach(descendant => {
+    relatedNodeIds.add(descendant.id);
+  });
   
   // Tìm root (founder hoặc ancestor xa nhất)
   let rootId = founderId;
@@ -822,11 +837,46 @@ function buildFocusTree(targetId) {
     rootId = targetId;
   }
   
-  // Build tree từ root, không giới hạn generation
+  // Build tree từ root, sau đó filter để chỉ giữ lại các node liên quan
   const rootNode = buildTreeNode(rootId, 0, null, null);
+  
+  // Filter tree: chỉ giữ lại các node liên quan
+  function filterRelatedNodes(node) {
+    if (!node) return null;
+    
+    // Nếu node này không liên quan, loại bỏ nó
+    if (!relatedNodeIds.has(node.id)) {
+      return null;
+    }
+    
+    // Filter children: chỉ giữ lại children liên quan
+    const filteredChildren = [];
+    node.children.forEach(child => {
+      const filteredChild = filterRelatedNodes(child);
+      if (filteredChild) {
+        filteredChildren.push(filteredChild);
+      }
+    });
+    
+    // Tạo node mới với children đã được filter
+    const filteredNode = {
+      ...node,
+      children: filteredChildren
+    };
+    
+    // Cập nhật parent reference cho children
+    filteredChildren.forEach(child => {
+      child.parent = filteredNode;
+    });
+    
+    return filteredNode;
+  }
+  
+  const filteredTree = filterRelatedNodes(rootNode);
   
   // Đảm bảo target có trong tree
   function findNode(node, targetId) {
+    if (!node) return null;
     if (node.id === targetId) return node;
     for (const child of node.children) {
       const found = findNode(child, targetId);
@@ -835,13 +885,13 @@ function buildFocusTree(targetId) {
     return null;
   }
 
-  const targetNode = findNode(rootNode, targetId);
+  const targetNode = findNode(filteredTree, targetId);
   if (!targetNode) {
-    // Nếu target không có trong tree, build lại từ target
+    // Nếu target không có trong tree sau khi filter, build lại từ target
     return buildTreeNode(targetId, 0, null, null);
   }
 
-  return rootNode;
+  return filteredTree;
 }
 
 /**
