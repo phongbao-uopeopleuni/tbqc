@@ -706,15 +706,19 @@
       const password = document.getElementById('passwordInput').value.trim();
       const errorDiv = document.getElementById('passwordError');
       
-      // Kiểm tra nếu password chưa được load từ server
-      if (!REQUIRED_PASSWORD || REQUIRED_PASSWORD === 'null' || REQUIRED_PASSWORD === '') {
-        errorDiv.textContent = 'Lỗi: Mật khẩu chưa được cấu hình. Vui lòng liên hệ admin hoặc reload trang.';
-        errorDiv.style.display = 'block';
-        console.error('REQUIRED_PASSWORD:', REQUIRED_PASSWORD, 'Type:', typeof REQUIRED_PASSWORD);
-        return;
-      }
+      // Fallback password nếu server không trả về
+      const fallbackPassword = 'tbqc@2026';
+      const serverPassword = REQUIRED_PASSWORD && REQUIRED_PASSWORD !== 'null' && REQUIRED_PASSWORD !== '' ? REQUIRED_PASSWORD : fallbackPassword;
       
-      if (password === REQUIRED_PASSWORD) {
+      // Debug log
+      console.log('Password verification:', {
+        input: password ? '***' : '(empty)',
+        serverPassword: serverPassword ? '***' : '(empty)',
+        requiredPassword: REQUIRED_PASSWORD,
+        usingFallback: REQUIRED_PASSWORD === 'null' || REQUIRED_PASSWORD === '' || !REQUIRED_PASSWORD
+      });
+      
+      if (password === serverPassword) {
         // Xác thực thành công
         isAuthenticated = true;
         authenticatedPassword = password; // Lưu password để gửi trong API requests

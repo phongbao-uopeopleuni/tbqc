@@ -131,9 +131,10 @@ DB_CONFIG = get_db_config()
 def get_members_password():
     """
     Lấy mật khẩu cho các thao tác trên trang Members (Add, Update, Delete, Backup)
-    Priority: MEMBERS_PASSWORD > ADMIN_PASSWORD > BACKUP_PASSWORD
+    Priority: MEMBERS_PASSWORD > ADMIN_PASSWORD > BACKUP_PASSWORD > Default (tbqc@2026)
     Tự động load từ tbqc_db.env nếu không có trong environment variables (local dev)
     Trên production: chỉ dùng environment variables
+    Fallback: tbqc@2026 nếu không có environment variable nào được set
     """
     # Kiểm tra environment variables trước (ưu tiên cho production)
     password = os.environ.get('MEMBERS_PASSWORD') or os.environ.get('ADMIN_PASSWORD') or os.environ.get('BACKUP_PASSWORD', '')
@@ -158,8 +159,10 @@ def get_members_password():
             import traceback
             logger.error(traceback.format_exc())
     
+    # Fallback: sử dụng password mặc định nếu không có environment variable nào được set
     if not password:
-        logger.warning("MEMBERS_PASSWORD, ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình trong environment variables")
+        password = 'tbqc@2026'  # Password mặc định
+        logger.info("Using default password (tbqc@2026) - no environment variables set")
     
     return password
 
