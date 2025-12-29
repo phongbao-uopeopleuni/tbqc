@@ -35,6 +35,11 @@ services:
         sync: false  # Must be set manually in Render Dashboard
       - key: BACKUP_PASSWORD
         sync: false  # Must be set manually in Render Dashboard
+      # Geoapify API Key (for grave search map on /genealogy page)
+      # ⚠️ Set this in Render Dashboard > Environment Variables (do not hardcode here)
+      # Get free API key from: https://www.geoapify.com/ (3,000 requests/day)
+      - key: GEOAPIFY_API_KEY
+        sync: false  # Must be set manually in Render Dashboard
 
 databases:
   - name: tbqc-db
