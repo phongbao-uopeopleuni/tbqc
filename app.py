@@ -1238,87 +1238,66 @@ def get_person(person_id):
             person['mother_id'] = None
             person['mother_name'] = None
         
-        # Lấy siblings (cùng cha hoặc cùng mẹ)
+        # Sử dụng hàm helper chung để load siblings (giống như /api/members - source of truth)
         try:
-            if father_id or mother_id:
-                conditions = []
-                params = [person_id]
-                
-                if father_id:
-                    conditions.append("(r.parent_id = %s AND r.relation_type = 'father')")
-                    params.append(father_id)
-                if mother_id:
-                    conditions.append("(r.parent_id = %s AND r.relation_type = 'mother')")
-                    params.append(mother_id)
-                
-                if conditions:
-                    sibling_query = f"""
-                        SELECT DISTINCT s.person_id, s.full_name
-                        FROM persons s
-                        JOIN relationships r ON s.person_id = r.child_id
-                        WHERE s.person_id <> %s
-                          AND ({' OR '.join(conditions)})
-                        ORDER BY s.full_name
-                    """
-                    cursor.execute(sibling_query, params)
-                    siblings = cursor.fetchall()
-                    if siblings:
-                        sibling_names = [s.get('full_name') for s in siblings if s and s.get('full_name')]
-                        person['siblings'] = '; '.join(sibling_names) if sibling_names else None
-                    else:
-                        person['siblings'] = None
-                else:
-                    person['siblings'] = None
-            else:
-                person['siblings'] = None
+            relationship_data = load_relationship_data(cursor)
+            siblings_map = relationship_data['siblings_map']
+            siblings_list = siblings_map.get(person_id, [])
+            person['siblings'] = '; '.join(siblings_list) if siblings_list else None
         except Exception as e:
             logger.warning(f"Error fetching siblings for {person_id}: {e}")
-            import traceback
-            logger.debug(traceback.format_exc())
             person['siblings'] = None
         
-        # Lấy con từ relationships (luôn chạy, không phụ thuộc vào father_id/mother_id)
+        # Lấy con từ relationships - sử dụng helper nhưng vẫn giữ format array đầy đủ
         try:
-            cursor.execute("""
-                SELECT 
-                    r.child_id,
-                    child.full_name AS child_name,
-                    child.generation_level,
-                    child.gender
-                FROM relationships r
-                JOIN persons child ON r.child_id = child.person_id
-                WHERE r.parent_id = %s AND r.relation_type IN ('father', 'mother')
-                ORDER BY child.full_name
-            """, (person_id,))
-            children_records = cursor.fetchall()
-            if children_records:
-                # Trả về dưới dạng array với thông tin đầy đủ
-                children_list = []
-                for c in children_records:
-                    if c and c.get('child_name'):
-                        children_list.append({
-                            'person_id': c.get('child_id'),
-                            'full_name': c.get('child_name'),
-                            'name': c.get('child_name'),
-                            'generation_level': c.get('generation_level'),
-                            'generation_number': c.get('generation_level'),
-                            'gender': c.get('gender')
-                        })
-                person['children'] = children_list if children_list else []
-                # Giữ lại string format cho backward compatibility
-                child_names = [c.get('child_name') for c in children_records if c and c.get('child_name')]
-                person['children_string'] = '; '.join(child_names) if child_names else None
+            # Sử dụng helper để lấy children names
+            relationship_data = load_relationship_data(cursor)
+            children_map = relationship_data['children_map']
+            children_names = children_map.get(person_id, [])
+            
+            # Nếu có children names, load thông tin đầy đủ từ database
+            if children_names:
+                placeholders = ','.join(['%s'] * len(children_names))
+                cursor.execute(f"""
+                    SELECT 
+                        p.person_id,
+                        p.full_name AS child_name,
+                        p.generation_level,
+                        p.gender
+                    FROM persons p
+                    WHERE p.full_name IN ({placeholders})
+                    ORDER BY p.full_name
+                """, children_names)
+                children_records = cursor.fetchall()
+                
+                if children_records:
+                    # Trả về dưới dạng array với thông tin đầy đủ
+                    children_list = []
+                    for c in children_records:
+                        if c and c.get('child_name'):
+                            children_list.append({
+                                'person_id': c.get('person_id'),
+                                'full_name': c.get('child_name'),
+                                'name': c.get('child_name'),
+                                'generation_level': c.get('generation_level'),
+                                'generation_number': c.get('generation_level'),
+                                'gender': c.get('gender')
+                            })
+                    person['children'] = children_list if children_list else []
+                    # Giữ lại string format cho backward compatibility
+                    person['children_string'] = '; '.join(children_names) if children_names else None
+                else:
+                    person['children'] = []
+                    person['children_string'] = '; '.join(children_names) if children_names else None
             else:
                 person['children'] = []
                 person['children_string'] = None
         except Exception as e:
             logger.warning(f"Error fetching children for {person_id}: {e}")
-            import traceback
-            logger.debug(traceback.format_exc())
             person['children'] = []
             person['children_string'] = None
             
-        # Lấy spouses từ marriages
+        # Lấy spouses từ marriages (giữ lại format đầy đủ cho marriages)
         try:
             cursor.execute("""
                 SELECT 
@@ -1352,52 +1331,31 @@ def get_person(person_id):
                 person['spouse'] = None
         except Exception as e:
             logger.warning(f"Error fetching marriages for {person_id}: {e}")
-            import traceback
-            logger.debug(traceback.format_exc())
             person['marriages'] = []
             person['spouse'] = None
-            
-        # Nếu không có spouse từ marriages, thử lấy từ bảng spouse_sibling_children
+        
+        # Nếu không có spouse từ marriages, sử dụng helper để lấy từ các nguồn khác (giống /api/members)
         if not person.get('spouse') or person.get('spouse') == '':
             try:
-                # Kiểm tra xem bảng có tồn tại không
-                cursor.execute("""
-                    SELECT TABLE_NAME 
-                    FROM information_schema.TABLES 
-                    WHERE TABLE_SCHEMA = DATABASE() 
-                    AND TABLE_NAME = 'spouse_sibling_children'
-                """)
-                table_exists = cursor.fetchone()
+                relationship_data = load_relationship_data(cursor)
+                spouse_data_from_table = relationship_data['spouse_data_from_table']
+                spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
+                spouse_data_from_csv = relationship_data['spouse_data_from_csv']
                 
-                if table_exists:
-                    cursor.execute("""
-                        SELECT spouse_name 
-                        FROM spouse_sibling_children 
-                        WHERE person_id = %s AND spouse_name IS NOT NULL AND spouse_name != ''
-                    """, (person_id,))
-                    ssc_row = cursor.fetchone()
-                    if ssc_row and ssc_row.get('spouse_name'):
-                        person['spouse'] = ssc_row['spouse_name'].strip()
-                        logger.info(f"Found spouse_name from spouse_sibling_children table for {person_id}: {person['spouse']}")
+                # Ưu tiên từ spouse_sibling_children table
+                if person_id in spouse_data_from_table:
+                    spouse_names = spouse_data_from_table[person_id]
+                    person['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                # Fallback từ marriages (đã load trong helper)
+                elif person_id in spouse_data_from_marriages:
+                    spouse_names = spouse_data_from_marriages[person_id]
+                    person['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                # Fallback từ CSV
+                elif person_id in spouse_data_from_csv:
+                    spouse_names = spouse_data_from_csv[person_id]
+                    person['spouse'] = '; '.join(spouse_names) if spouse_names else None
             except Exception as e:
-                logger.debug(f"Could not read spouse from spouse_sibling_children table for {person_id}: {e}")
-                # Fallback: thử đọc từ CSV file trực tiếp
-                try:
-                    import csv
-                    import os
-                    csv_file = 'spouse_sibling_children.csv'
-                    if os.path.exists(csv_file):
-                        with open(csv_file, 'r', encoding='utf-8-sig') as f:
-                            reader = csv.DictReader(f)
-                            for row in reader:
-                                if row.get('person_id', '').strip() == person_id:
-                                    spouse_name = row.get('spouse_name', '').strip()
-                                    if spouse_name:
-                                        person['spouse'] = spouse_name
-                                        logger.info(f"Found spouse_name from CSV for {person_id}: {spouse_name}")
-                                        break
-                except Exception as e2:
-                    logger.debug(f"Could not read spouse from CSV for {person_id}: {e2}")
+                logger.debug(f"Could not load spouse from helper for {person_id}: {e}")
         
             # =====================================================
             # LẤY THÔNG TIN TỔ TIÊN (ANCESTORS) - ĐỆ QUY
@@ -2636,182 +2594,15 @@ def search_persons():
         
         results = cursor.fetchall()
         
-        # Load spouse data từ nhiều nguồn (giống như /api/members) để đảm bảo consistency
-        spouse_data_from_table = {}
-        spouse_data_from_marriages = {}
-        spouse_data_from_csv = {}
+        # Sử dụng hàm helper chung để load tất cả relationship data (giống như /api/members - source of truth)
+        logger.debug("Loading all relationship data using shared helper for /api/search...")
+        relationship_data = load_relationship_data(cursor)
         
-        # Load từ spouse_sibling_children table
-        try:
-            cursor.execute("""
-                SELECT person_id, spouse_name 
-                FROM spouse_sibling_children 
-                WHERE spouse_name IS NOT NULL AND spouse_name != ''
-            """)
-            for row in cursor.fetchall():
-                person_id_key = row.get('person_id')
-                spouse_name_str = row.get('spouse_name', '').strip()
-                if person_id_key and spouse_name_str:
-                    spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
-                    spouse_data_from_table[person_id_key] = spouse_names
-        except Exception as e:
-            logger.debug(f"Could not load spouse data from table: {e}")
-        
-        # Load từ marriages table
-        try:
-            cursor.execute("""
-                SELECT 
-                    m.person_id,
-                    m.spouse_person_id,
-                    sp_spouse.full_name AS spouse_name
-                FROM marriages m
-                LEFT JOIN persons sp_spouse ON sp_spouse.person_id = m.spouse_person_id
-                WHERE sp_spouse.full_name IS NOT NULL
-                
-                UNION
-                
-                SELECT 
-                    m.spouse_person_id AS person_id,
-                    m.person_id AS spouse_person_id,
-                    sp_person.full_name AS spouse_name
-                FROM marriages m
-                LEFT JOIN persons sp_person ON sp_person.person_id = m.person_id
-                WHERE sp_person.full_name IS NOT NULL
-            """)
-            for row in cursor.fetchall():
-                person_id_key = row.get('person_id')
-                spouse_name = row.get('spouse_name')
-                if person_id_key and spouse_name:
-                    if person_id_key not in spouse_data_from_marriages:
-                        spouse_data_from_marriages[person_id_key] = []
-                    if spouse_name not in spouse_data_from_marriages[person_id_key]:
-                        spouse_data_from_marriages[person_id_key].append(spouse_name)
-        except Exception as e:
-            logger.debug(f"Could not load spouse data from marriages: {e}")
-        
-        # Load từ CSV (fallback)
-        try:
-            import csv
-            import os
-            csv_file = 'spouse_sibling_children.csv'
-            if os.path.exists(csv_file):
-                with open(csv_file, 'r', encoding='utf-8-sig') as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        person_id_key = row.get('person_id', '').strip()
-                        spouse_name_str = row.get('spouse_name', '').strip()
-                        if person_id_key and spouse_name_str:
-                            spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
-                            spouse_data_from_csv[person_id_key] = spouse_names
-        except Exception as e:
-            logger.debug(f"Could not load spouse data from CSV: {e}")
-        
-        # Load children và siblings data cho các person trong kết quả search
-        children_map = {}  # {parent_id: [child_name1, child_name2, ...]}
-        siblings_map = {}  # {person_id: [sibling_name1, sibling_name2, ...]}
-        parent_ids_map = {}  # {child_id: [parent_id1, parent_id2, ...]}
-        
-        if results:
-            # Lấy danh sách person_ids từ kết quả
-            result_person_ids = [r['person_id'] for r in results if r.get('person_id')]
-            
-            if result_person_ids:
-                try:
-                    # Load relationships chỉ cho các person trong kết quả
-                    placeholders = ','.join(['%s'] * len(result_person_ids))
-                    cursor.execute(f"""
-                        SELECT 
-                            r.child_id,
-                            r.parent_id,
-                            r.relation_type,
-                            parent.full_name AS parent_name,
-                            child.full_name AS child_name
-                        FROM relationships r
-                        LEFT JOIN persons parent ON r.parent_id = parent.person_id
-                        LEFT JOIN persons child ON r.child_id = child.person_id
-                        WHERE (r.child_id IN ({placeholders}) OR r.parent_id IN ({placeholders}))
-                          AND parent.full_name IS NOT NULL 
-                          AND child.full_name IS NOT NULL
-                    """, result_person_ids + result_person_ids)
-                    relationships = cursor.fetchall()
-                    
-                    for rel in relationships:
-                        child_id = rel['child_id']
-                        parent_id = rel['parent_id']
-                        child_name = rel['child_name']
-                        
-                        # Build parent_ids_map (cho các person trong kết quả)
-                        if child_id in result_person_ids:
-                            if child_id not in parent_ids_map:
-                                parent_ids_map[child_id] = []
-                            if parent_id and parent_id not in parent_ids_map[child_id]:
-                                parent_ids_map[child_id].append(parent_id)
-                        
-                        # Build children_map (cho các person trong kết quả)
-                        if parent_id in result_person_ids:
-                            if parent_id not in children_map:
-                                children_map[parent_id] = []
-                            if child_name and child_name not in children_map[parent_id]:
-                                children_map[parent_id].append(child_name)
-                    
-                    # Build siblings_map cho các person trong kết quả
-                    # Cần load thêm relationships để tìm siblings (các child khác có cùng parent)
-                    if result_person_ids:
-                        # Load tất cả children của parents của các person trong kết quả
-                        parent_ids_for_siblings = set()
-                        for person_id in result_person_ids:
-                            if person_id in parent_ids_map:
-                                parent_ids_for_siblings.update(parent_ids_map[person_id])
-                        
-                        if parent_ids_for_siblings:
-                            parent_placeholders = ','.join(['%s'] * len(parent_ids_for_siblings))
-                            cursor.execute(f"""
-                                SELECT 
-                                    r.child_id,
-                                    r.parent_id,
-                                    child.full_name AS child_name
-                                FROM relationships r
-                                LEFT JOIN persons child ON r.child_id = child.person_id
-                                WHERE r.parent_id IN ({parent_placeholders})
-                                  AND child.full_name IS NOT NULL
-                            """, list(parent_ids_for_siblings))
-                            sibling_relationships = cursor.fetchall()
-                            
-                            # Build parent_to_children map (map parent_id -> list of child_ids)
-                            parent_to_children = {}
-                            # Build child_id -> child_name map để tránh query lại
-                            child_id_to_name = {}
-                            for rel in sibling_relationships:
-                                parent_id = rel['parent_id']
-                                child_id = rel['child_id']
-                                child_name = rel['child_name']
-                                
-                                if parent_id not in parent_to_children:
-                                    parent_to_children[parent_id] = []
-                                if child_id not in parent_to_children[parent_id]:
-                                    parent_to_children[parent_id].append(child_id)
-                                
-                                if child_id not in child_id_to_name:
-                                    child_id_to_name[child_id] = child_name
-                            
-                            # Build siblings_map cho từng person trong kết quả
-                            for person_id in result_person_ids:
-                                person_parent_ids = parent_ids_map.get(person_id, [])
-                                if person_parent_ids:
-                                    sibling_names = set()
-                                    for parent_id in person_parent_ids:
-                                        children_of_parent = parent_to_children.get(parent_id, [])
-                                        for child_id in children_of_parent:
-                                            if child_id != person_id:
-                                                # Lấy tên từ map đã load sẵn
-                                                sibling_name = child_id_to_name.get(child_id)
-                                                if sibling_name:
-                                                    sibling_names.add(sibling_name)
-                                    
-                                    if sibling_names:
-                                        siblings_map[person_id] = sorted(list(sibling_names))
-                except Exception as e:
-                    logger.debug(f"Could not load children/siblings data: {e}")
+        spouse_data_from_table = relationship_data['spouse_data_from_table']
+        spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
+        spouse_data_from_csv = relationship_data['spouse_data_from_csv']
+        children_map = relationship_data['children_map']
+        siblings_map = relationship_data['siblings_map']
         
         # Remove duplicates by person_id và thêm đầy đủ data
         seen_ids = set()
@@ -3403,6 +3194,204 @@ def sync_person(person_id):
             cursor.close()
             connection.close()
 
+def load_relationship_data(cursor):
+    """
+    Helper function để load tất cả relationship data (spouse, children, siblings, parents)
+    theo cùng logic như /api/members - đây là source of truth.
+    
+    Returns:
+        dict với các keys:
+        - spouse_data_from_table: {person_id: [spouse_name1, spouse_name2, ...]}
+        - spouse_data_from_marriages: {person_id: [spouse_name1, ...]}
+        - spouse_data_from_csv: {person_id: [spouse_name1, ...]}
+        - parent_data: {child_id: {'father_name': ..., 'mother_name': ...}}
+        - parent_ids_map: {child_id: [parent_id1, parent_id2, ...]}
+        - children_map: {parent_id: [child_name1, child_name2, ...]}
+        - siblings_map: {person_id: [sibling_name1, sibling_name2, ...]}
+        - person_name_map: {person_id: full_name}
+    """
+    result = {
+        'spouse_data_from_table': {},
+        'spouse_data_from_marriages': {},
+        'spouse_data_from_csv': {},
+        'parent_data': {},
+        'parent_ids_map': {},
+        'children_map': {},
+        'siblings_map': {},
+        'person_name_map': {}
+    }
+    
+    # 1. Load spouse data từ spouse_sibling_children table
+    try:
+        cursor.execute("""
+            SELECT TABLE_NAME 
+            FROM information_schema.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'spouse_sibling_children'
+        """)
+        spouse_table_exists = cursor.fetchone() is not None
+        
+        if spouse_table_exists:
+            cursor.execute("""
+                SELECT person_id, spouse_name 
+                FROM spouse_sibling_children 
+                WHERE spouse_name IS NOT NULL AND spouse_name != ''
+            """)
+            for row in cursor.fetchall():
+                person_id_key = row.get('person_id')
+                spouse_name_str = row.get('spouse_name', '').strip()
+                if person_id_key and spouse_name_str:
+                    spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
+                    result['spouse_data_from_table'][person_id_key] = spouse_names
+    except Exception as e:
+        logger.debug(f"Could not load spouse data from table: {e}")
+    
+    # 2. Load spouse data từ marriages table
+    try:
+        cursor.execute("""
+            SELECT 
+                m.person_id,
+                m.spouse_person_id,
+                sp_spouse.full_name AS spouse_name
+            FROM marriages m
+            LEFT JOIN persons sp_spouse ON sp_spouse.person_id = m.spouse_person_id
+            WHERE sp_spouse.full_name IS NOT NULL
+            
+            UNION
+            
+            SELECT 
+                m.spouse_person_id AS person_id,
+                m.person_id AS spouse_person_id,
+                sp_person.full_name AS spouse_name
+            FROM marriages m
+            LEFT JOIN persons sp_person ON sp_person.person_id = m.person_id
+            WHERE sp_person.full_name IS NOT NULL
+        """)
+        for row in cursor.fetchall():
+            person_id_key = row.get('person_id')
+            spouse_name = row.get('spouse_name')
+            if person_id_key and spouse_name:
+                if person_id_key not in result['spouse_data_from_marriages']:
+                    result['spouse_data_from_marriages'][person_id_key] = []
+                if spouse_name not in result['spouse_data_from_marriages'][person_id_key]:
+                    result['spouse_data_from_marriages'][person_id_key].append(spouse_name)
+    except Exception as e:
+        logger.debug(f"Could not load spouse data from marriages: {e}")
+    
+    # 3. Load spouse data từ CSV (fallback)
+    try:
+        import csv
+        import os
+        csv_file = 'spouse_sibling_children.csv'
+        if os.path.exists(csv_file):
+            with open(csv_file, 'r', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    person_id_key = row.get('person_id', '').strip()
+                    spouse_name_str = row.get('spouse_name', '').strip()
+                    if person_id_key and spouse_name_str:
+                        spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
+                        result['spouse_data_from_csv'][person_id_key] = spouse_names
+    except Exception as e:
+        logger.debug(f"Could not load spouse data from CSV: {e}")
+    
+    # 4. Load tất cả relationships và build maps
+    try:
+        cursor.execute("""
+            SELECT 
+                r.child_id,
+                r.parent_id,
+                r.relation_type,
+                parent.full_name AS parent_name,
+                child.full_name AS child_name
+            FROM relationships r
+            LEFT JOIN persons parent ON r.parent_id = parent.person_id
+            LEFT JOIN persons child ON r.child_id = child.person_id
+            WHERE parent.full_name IS NOT NULL AND child.full_name IS NOT NULL
+        """)
+        relationships = cursor.fetchall()
+        
+        for rel in relationships:
+            child_id = rel['child_id']
+            parent_id = rel['parent_id']
+            relation_type = rel['relation_type']
+            parent_name = rel['parent_name']
+            child_name = rel['child_name']
+            
+            # Build parent_data
+            if child_id not in result['parent_data']:
+                result['parent_data'][child_id] = {'father_name': None, 'mother_name': None}
+            
+            if relation_type == 'father' and parent_name:
+                if result['parent_data'][child_id]['father_name']:
+                    result['parent_data'][child_id]['father_name'] += ', ' + parent_name
+                else:
+                    result['parent_data'][child_id]['father_name'] = parent_name
+            elif relation_type == 'mother' and parent_name:
+                if result['parent_data'][child_id]['mother_name']:
+                    result['parent_data'][child_id]['mother_name'] += ', ' + parent_name
+                else:
+                    result['parent_data'][child_id]['mother_name'] = parent_name
+            
+            # Build parent_ids_map
+            if child_id not in result['parent_ids_map']:
+                result['parent_ids_map'][child_id] = []
+            if parent_id and parent_id not in result['parent_ids_map'][child_id]:
+                result['parent_ids_map'][child_id].append(parent_id)
+            
+            # Build children_map
+            if parent_id not in result['children_map']:
+                result['children_map'][parent_id] = []
+            if child_name and child_name not in result['children_map'][parent_id]:
+                result['children_map'][parent_id].append(child_name)
+        
+        logger.debug(f"Loaded {len(relationships)} relationships")
+    except Exception as e:
+        logger.warning(f"Error loading relationships: {e}")
+    
+    # 5. Load person_name_map để lookup nhanh
+    try:
+        cursor.execute("SELECT person_id, full_name FROM persons WHERE full_name IS NOT NULL")
+        for row in cursor.fetchall():
+            result['person_name_map'][row['person_id']] = row['full_name']
+    except Exception as e:
+        logger.debug(f"Could not load person_name_map: {e}")
+    
+    # 6. Build siblings_map
+    try:
+        # Build parent_to_children map
+        parent_to_children = {}
+        for child_id, parent_ids in result['parent_ids_map'].items():
+            for parent_id in parent_ids:
+                if parent_id not in parent_to_children:
+                    parent_to_children[parent_id] = []
+                if child_id not in parent_to_children[parent_id]:
+                    parent_to_children[parent_id].append(child_id)
+        
+        # Build siblings_map cho tất cả persons
+        for person_id in result['person_name_map'].keys():
+            person_parent_ids = result['parent_ids_map'].get(person_id, [])
+            if not person_parent_ids:
+                continue
+            
+            sibling_names = set()
+            for parent_id in person_parent_ids:
+                children_of_parent = parent_to_children.get(parent_id, [])
+                for child_id in children_of_parent:
+                    if child_id != person_id:
+                        child_name = result['person_name_map'].get(child_id)
+                        if child_name:
+                            sibling_names.add(child_name)
+            
+            if sibling_names:
+                result['siblings_map'][person_id] = sorted(list(sibling_names))
+        
+        logger.debug(f"Loaded siblings for {len(result['siblings_map'])} persons")
+    except Exception as e:
+        logger.warning(f"Error loading siblings: {e}")
+    
+    return result
+
 @app.route('/api/members')
 def get_members():
     """
@@ -3456,195 +3445,18 @@ def get_members():
         
         persons = cursor.fetchall()
         
-        # TỐI ƯU: Kiểm tra table tồn tại MỘT LẦN trước vòng lặp
-        spouse_table_exists = False
-        try:
-            cursor.execute("""
-                SELECT TABLE_NAME 
-                FROM information_schema.TABLES 
-                WHERE TABLE_SCHEMA = DATABASE() 
-                AND TABLE_NAME = 'spouse_sibling_children'
-            """)
-            spouse_table_exists = cursor.fetchone() is not None
-        except Exception as e:
-            logger.debug(f"Could not check spouse_sibling_children table: {e}")
+        # Sử dụng hàm helper chung để load tất cả relationship data (source of truth)
+        logger.debug("Loading all relationship data using shared helper...")
+        relationship_data = load_relationship_data(cursor)
         
-        # TỐI ƯU: Load tất cả spouse data từ table MỘT LẦN (nếu table tồn tại)
-        spouse_data_from_table = {}
-        if spouse_table_exists:
-            try:
-                cursor.execute("""
-                    SELECT person_id, spouse_name 
-                    FROM spouse_sibling_children 
-                    WHERE spouse_name IS NOT NULL AND spouse_name != ''
-                """)
-                for row in cursor.fetchall():
-                    person_id_key = row.get('person_id')
-                    spouse_name_str = row.get('spouse_name', '').strip()
-                    if person_id_key and spouse_name_str:
-                        # Parse nhiều spouse (phân cách bằng ;)
-                        spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
-                        spouse_data_from_table[person_id_key] = spouse_names
-                logger.debug(f"Loaded {len(spouse_data_from_table)} spouse records from table")
-            except Exception as e:
-                logger.warning(f"Error loading spouse data from table: {e}")
-        
-        # TỐI ƯU: Load CSV vào memory MỘT LẦN (nếu cần fallback)
-        spouse_data_from_csv = {}
-        try:
-            import csv
-            import os
-            csv_file = 'spouse_sibling_children.csv'
-            if os.path.exists(csv_file):
-                with open(csv_file, 'r', encoding='utf-8-sig') as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        person_id_key = row.get('person_id', '').strip()
-                        spouse_name_str = row.get('spouse_name', '').strip()
-                        if person_id_key and spouse_name_str:
-                            # Parse nhiều spouse (phân cách bằng ;)
-                            spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
-                            spouse_data_from_csv[person_id_key] = spouse_names
-                logger.debug(f"Loaded {len(spouse_data_from_csv)} spouse records from CSV")
-        except Exception as e:
-            logger.debug(f"Could not load spouse data from CSV: {e}")
-        
-        # TỐI ƯU: Load tất cả marriages data MỘT LẦN
-        spouse_data_from_marriages = {}
-        try:
-            cursor.execute("""
-                SELECT 
-                    m.person_id,
-                    m.spouse_person_id,
-                    sp_spouse.full_name AS spouse_name
-                FROM marriages m
-                LEFT JOIN persons sp_spouse ON sp_spouse.person_id = m.spouse_person_id
-                WHERE sp_spouse.full_name IS NOT NULL
-                
-                UNION
-                
-                SELECT 
-                    m.spouse_person_id AS person_id,
-                    m.person_id AS spouse_person_id,
-                    sp_person.full_name AS spouse_name
-                FROM marriages m
-                LEFT JOIN persons sp_person ON sp_person.person_id = m.person_id
-                WHERE sp_person.full_name IS NOT NULL
-            """)
-            for row in cursor.fetchall():
-                person_id_key = row.get('person_id')
-                spouse_name = row.get('spouse_name')
-                
-                if person_id_key and spouse_name:
-                    if person_id_key not in spouse_data_from_marriages:
-                        spouse_data_from_marriages[person_id_key] = []
-                    if spouse_name not in spouse_data_from_marriages[person_id_key]:
-                        spouse_data_from_marriages[person_id_key].append(spouse_name)
-            
-            logger.debug(f"Loaded {len(spouse_data_from_marriages)} spouse records from marriages")
-        except Exception as e:
-            logger.warning(f"Error loading spouse data from marriages: {e}")
-        
-        # TỐI ƯU: Load tất cả relationships MỘT LẦN thay vì query từng person
-        logger.debug("Loading all relationships...")
-        parent_data = {}  # {child_id: {'father_name': ..., 'mother_name': ...}}
-        parent_ids_map = {}  # {child_id: [parent_id1, parent_id2, ...]}
-        children_map = {}  # {parent_id: [child_name1, child_name2, ...]}
-        
-        try:
-            # Load tất cả parent-child relationships
-            cursor.execute("""
-                SELECT 
-                    r.child_id,
-                    r.parent_id,
-                    r.relation_type,
-                    parent.full_name AS parent_name,
-                    child.full_name AS child_name
-                FROM relationships r
-                LEFT JOIN persons parent ON r.parent_id = parent.person_id
-                LEFT JOIN persons child ON r.child_id = child.person_id
-                WHERE parent.full_name IS NOT NULL AND child.full_name IS NOT NULL
-            """)
-            relationships = cursor.fetchall()
-            
-            for rel in relationships:
-                child_id = rel['child_id']
-                parent_id = rel['parent_id']
-                relation_type = rel['relation_type']
-                parent_name = rel['parent_name']
-                child_name = rel['child_name']
-                
-                # Build parent_data (father_name, mother_name)
-                if child_id not in parent_data:
-                    parent_data[child_id] = {'father_name': None, 'mother_name': None}
-                
-                if relation_type == 'father' and parent_name:
-                    if parent_data[child_id]['father_name']:
-                        parent_data[child_id]['father_name'] += ', ' + parent_name
-                    else:
-                        parent_data[child_id]['father_name'] = parent_name
-                elif relation_type == 'mother' and parent_name:
-                    if parent_data[child_id]['mother_name']:
-                        parent_data[child_id]['mother_name'] += ', ' + parent_name
-                    else:
-                        parent_data[child_id]['mother_name'] = parent_name
-                
-                # Build parent_ids_map
-                if child_id not in parent_ids_map:
-                    parent_ids_map[child_id] = []
-                if parent_id and parent_id not in parent_ids_map[child_id]:
-                    parent_ids_map[child_id].append(parent_id)
-                
-                # Build children_map - FIX: dùng child_name thay vì parent_name
-                if parent_id not in children_map:
-                    children_map[parent_id] = []
-                if child_name and child_name not in children_map[parent_id]:
-                    children_map[parent_id].append(child_name)
-            
-            logger.debug(f"Loaded {len(relationships)} relationships")
-        except Exception as e:
-            logger.warning(f"Error loading relationships: {e}")
-        
-        # TỐI ƯU: Load tất cả siblings MỘT LẦN bằng cách group theo parents
-        logger.debug("Loading all siblings...")
-        siblings_map = {}  # {person_id: [sibling_name1, sibling_name2, ...]}
-        
-        try:
-            # Build a map of parent_id -> [all children with that parent]
-            parent_to_children = {}
-            for child_id, parent_ids in parent_ids_map.items():
-                for parent_id in parent_ids:
-                    if parent_id not in parent_to_children:
-                        parent_to_children[parent_id] = []
-                    if child_id not in parent_to_children[parent_id]:
-                        parent_to_children[parent_id].append(child_id)
-            
-            # Build person_id -> full_name map for quick lookup
-            person_name_map = {p['person_id']: p.get('full_name') for p in persons if p.get('full_name')}
-            
-            # For each person, find siblings (other children with same parents)
-            for person_id in [p['person_id'] for p in persons]:
-                person_parent_ids = parent_ids_map.get(person_id, [])
-                if not person_parent_ids:
-                    continue
-                
-                sibling_names = set()
-                # For each parent, get all other children
-                for parent_id in person_parent_ids:
-                    children_of_parent = parent_to_children.get(parent_id, [])
-                    for child_id in children_of_parent:
-                        if child_id != person_id:
-                            # Get child's name from map (O(1) lookup)
-                            child_name = person_name_map.get(child_id)
-                            if child_name:
-                                sibling_names.add(child_name)
-                
-                if sibling_names:
-                    siblings_map[person_id] = sorted(list(sibling_names))
-            
-            logger.debug(f"Loaded siblings for {len(siblings_map)} persons")
-        except Exception as e:
-            logger.warning(f"Error loading siblings: {e}")
+        spouse_data_from_table = relationship_data['spouse_data_from_table']
+        spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
+        spouse_data_from_csv = relationship_data['spouse_data_from_csv']
+        parent_data = relationship_data['parent_data']
+        parent_ids_map = relationship_data['parent_ids_map']
+        children_map = relationship_data['children_map']
+        siblings_map = relationship_data['siblings_map']
+        person_name_map = relationship_data['person_name_map']
         
         # TỐI ƯU: Build members list từ data đã load
         logger.debug("Building members list...")
