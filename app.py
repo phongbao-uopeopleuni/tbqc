@@ -220,7 +220,7 @@ def genealogy_page():
 def update_grave_location():
     """
     API để cập nhật tọa độ mộ phần.
-    Yêu cầu password để bảo mật.
+    Không yêu cầu password - cho phép công khai cập nhật vị trí mộ phần.
     """
     connection = None
     cursor = None
@@ -229,22 +229,12 @@ def update_grave_location():
         person_id = data.get('person_id', '').strip()
         latitude = data.get('latitude')
         longitude = data.get('longitude')
-        password = data.get('password', '').strip()
         
         if not person_id:
             return jsonify({'success': False, 'error': 'Thiếu person_id'}), 400
         
         if latitude is None or longitude is None:
             return jsonify({'success': False, 'error': 'Thiếu tọa độ (latitude, longitude)'}), 400
-        
-        # Kiểm tra mật khẩu
-        correct_password = os.environ.get('MEMBERS_PASSWORD') or os.environ.get('ADMIN_PASSWORD') or os.environ.get('BACKUP_PASSWORD', '')
-        if not correct_password:
-            logger.error("MEMBERS_PASSWORD, ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình")
-            return jsonify({'success': False, 'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
-        
-        if not password or password != correct_password:
-            return jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 403
         
         # Validate coordinates
         try:

@@ -819,11 +819,28 @@
               </div>
               <div id="graveMapControls" style="display: none; margin-top: var(--space-3); padding: var(--space-4); background: var(--color-bg); border-radius: var(--radius-md);">
                 <p style="color: var(--color-text-muted); margin-bottom: var(--space-3);">
-                  💡 Nhấp vào bản đồ để đặt marker tại vị trí mộ phần. Sau đó nhấn "Lưu" để cập nhật.
+                  💡 Tìm kiếm địa chỉ hoặc nhấp vào bản đồ để đặt marker tại vị trí mộ phần. Sau đó nhấn "Lưu" để cập nhật.
                 </p>
+                
+                <!-- Thanh tìm kiếm địa chỉ -->
+                <div style="margin-bottom: var(--space-3);">
+                  <label for="graveAddressSearch" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); color: var(--color-primary); font-size: var(--font-size-sm);">
+                    🔍 Tìm kiếm địa chỉ:
+                  </label>
+                  <div style="display: flex; gap: var(--space-2);">
+                    <input type="text" id="graveAddressSearch" placeholder="Ví dụ: Phú Thượng, Phú Vang, Thừa Thiên Huế" 
+                           class="input" style="flex: 1;" 
+                           onkeypress="if(event.key==='Enter') searchGraveAddress()">
+                    <button onclick="searchGraveAddress()" class="btn btn-primary" style="white-space: nowrap;">
+                      Tìm kiếm
+                    </button>
+                  </div>
+                  <div id="graveAddressSuggestions" style="display: none; margin-top: var(--space-2); max-height: 200px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface);">
+                    <!-- Suggestions sẽ được điền bằng JavaScript -->
+                  </div>
+                </div>
+                
                 <div style="display: flex; gap: var(--space-3); align-items: center;">
-                  <input type="password" id="graveUpdatePassword" placeholder="Nhập mật khẩu để cập nhật" 
-                         class="input" style="flex: 1;">
                   <button id="btnSaveGraveLocation" onclick="saveGraveLocation()" class="btn btn-primary">
                     💾 Lưu vị trí
                   </button>
@@ -1326,8 +1343,27 @@
         try {
           const personRes = await fetch(`/api/person/${personId}`);
           if (personRes.ok) {
-            const person = await personRes.json();
-            selectedPerson = person.person || person;
+            const data = await personRes.json();
+            const person = data.person || data;
+            
+            // Đảm bảo gán đầy đủ dữ liệu vào selectedPerson
+            selectedPerson = {
+              ...person,
+              // Đảm bảo các field quan trọng được giữ lại
+              marriages: person.marriages || [],
+              children: person.children || [],
+              spouse: person.spouse || person.spouse_name || null,
+              siblings: person.siblings || null
+            };
+            
+            console.log('[Lineage] Full person data loaded:', {
+              person_id: selectedPerson.person_id,
+              has_marriages: Array.isArray(selectedPerson.marriages) && selectedPerson.marriages.length > 0,
+              has_children: Array.isArray(selectedPerson.children) && selectedPerson.children.length > 0,
+              has_spouse: !!selectedPerson.spouse,
+              has_siblings: !!selectedPerson.siblings
+            });
+            
             showDetailPanel(selectedPerson);
           }
         } catch (err) {
@@ -1655,6 +1691,12 @@
         }).join('<br>');
       }
       
+      // Fallback: children_string
+      if (person.children_string) {
+        const children = person.children_string.split(';').map(c => c.trim()).filter(c => c);
+        return children.length > 0 ? children.join('<br>') : 'Chưa có thông tin';
+      }
+      
       // Fallback: children (string)
       if (person.children && typeof person.children === 'string') {
         const children = person.children.split(';').map(c => c.trim()).filter(c => c);
@@ -1671,6 +1713,19 @@
       const content = document.getElementById('lineageDetailContent');
       const panel = document.getElementById('lineageDetailPanel');
       if (!content || !panel) return;
+      
+      // Debug: Log dữ liệu trước khi render
+      console.log('[Lineage] Rendering detail panel:', {
+        person_id: person.person_id,
+        has_marriages: Array.isArray(person.marriages) && person.marriages.length > 0,
+        marriages_count: person.marriages ? person.marriages.length : 0,
+        has_children: Array.isArray(person.children) && person.children.length > 0,
+        children_count: person.children ? person.children.length : 0,
+        has_spouse: !!person.spouse,
+        spouse_value: person.spouse,
+        has_spouse_name: !!person.spouse_name,
+        spouse_name_value: person.spouse_name
+      });
       
       content.innerHTML = `
         <div style="line-height: 1.6;">
@@ -2345,19 +2400,147 @@
     }
 
     /**
+     * Search address using Nominatim (OpenStreetMap)
+     */
+    let addressSearchTimeout = null;
+    async function searchGraveAddress() {
+      const searchInput = document.getElementById('graveAddressSearch');
+      const suggestionsDiv = document.getElementById('graveAddressSuggestions');
+      
+      if (!searchInput || !graveMap) {
+        return;
+      }
+      
+      const query = searchInput.value.trim();
+      if (!query || query.length < 3) {
+        if (suggestionsDiv) {
+          suggestionsDiv.style.display = 'none';
+        }
+        return;
+      }
+      
+      // Clear previous timeout
+      if (addressSearchTimeout) {
+        clearTimeout(addressSearchTimeout);
+      }
+      
+      // Show loading
+      if (suggestionsDiv) {
+        suggestionsDiv.innerHTML = '<div style="padding: var(--space-3); color: var(--color-text-muted); text-align: center;">Đang tìm kiếm...</div>';
+        suggestionsDiv.style.display = 'block';
+      }
+      
+      addressSearchTimeout = setTimeout(async () => {
+        try {
+          // Sử dụng Nominatim API (OpenStreetMap) - miễn phí
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=vn&addressdetails=1`;
+          
+          const response = await fetch(url, {
+            headers: {
+              'User-Agent': 'TBQC-Genealogy-System/1.0'
+            }
+          });
+          
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          
+          const results = await response.json();
+          
+          if (!results || results.length === 0) {
+            if (suggestionsDiv) {
+              suggestionsDiv.innerHTML = '<div style="padding: var(--space-3); color: var(--color-text-muted); text-align: center;">Không tìm thấy địa chỉ</div>';
+            }
+            return;
+          }
+          
+          // Hiển thị suggestions
+          if (suggestionsDiv) {
+            suggestionsDiv.innerHTML = results.map((result, index) => {
+              const displayName = result.display_name || result.name || 'Không rõ địa chỉ';
+              const lat = parseFloat(result.lat);
+              const lng = parseFloat(result.lon);
+              
+              // Escape HTML và quotes để tránh XSS và lỗi JavaScript
+              const escapedName = displayName.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, ' ');
+              const escapedShortName = displayName.substring(0, 80).replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+              
+              return `
+                <div class="suggestion-item" onclick="selectGraveAddress(${lat}, ${lng}, '${escapedName}')" 
+                     style="padding: var(--space-3); cursor: pointer; border-bottom: 1px solid var(--color-border); transition: background var(--transition-fast);">
+                  <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                    ${escapedShortName}${displayName.length > 80 ? '...' : ''}
+                  </div>
+                  <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">
+                    📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+        } catch (err) {
+          console.error('Error searching address:', err);
+          if (suggestionsDiv) {
+            suggestionsDiv.innerHTML = `<div style="padding: var(--space-3); color: var(--color-error); text-align: center;">Lỗi khi tìm kiếm: ${err.message}</div>`;
+          }
+        }
+      }, 500);
+    }
+    
+    /**
+     * Select address from suggestions
+     */
+    function selectGraveAddress(lat, lng, addressName) {
+      const suggestionsDiv = document.getElementById('graveAddressSuggestions');
+      const searchInput = document.getElementById('graveAddressSearch');
+      
+      if (suggestionsDiv) {
+        suggestionsDiv.style.display = 'none';
+      }
+      
+      if (searchInput) {
+        searchInput.value = addressName;
+      }
+      
+      // Di chuyển map đến vị trí và đặt marker
+      if (graveMap) {
+        graveMap.setView([lat, lng], 16);
+        
+        // Remove old marker
+        if (graveMarker) {
+          graveMap.removeLayer(graveMarker);
+        }
+        
+        // Add new marker
+        graveMarker = L.marker([lat, lng], {
+          draggable: true
+        }).addTo(graveMap);
+        
+        // Escape HTML để tránh XSS (sử dụng escapeHtml từ common.js nếu có)
+        const escapedAddressName = typeof escapeHtml !== 'undefined' ? escapeHtml(addressName) : addressName.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        graveMarker.bindPopup(`
+          <strong>${escapedAddressName}</strong><br>
+          ${lat.toFixed(6)}, ${lng.toFixed(6)}
+        `).openPopup();
+        
+        graveMarker.on('dragend', onGraveMarkerDrag);
+        
+        // Update coordinates display
+        const coordinatesDiv = document.getElementById('graveCoordinates');
+        if (coordinatesDiv) {
+          coordinatesDiv.innerHTML = `📍 Tọa độ mới: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          coordinatesDiv.style.color = 'var(--color-primary)';
+          coordinatesDiv.style.fontWeight = 'bold';
+        }
+      }
+    }
+
+    /**
      * Save grave location
      */
     async function saveGraveLocation() {
       if (!currentGravePerson || !graveMarker) {
         alert('Vui lòng đặt marker trên bản đồ trước');
-        return;
-      }
-      
-      const passwordInput = document.getElementById('graveUpdatePassword');
-      const password = passwordInput?.value.trim();
-      
-      if (!password) {
-        alert('Vui lòng nhập mật khẩu');
         return;
       }
       
@@ -2374,8 +2557,7 @@
           body: JSON.stringify({
             person_id: currentGravePerson.person_id,
             latitude: lat,
-            longitude: lng,
-            password: password
+            longitude: lng
           })
         });
         
@@ -2393,11 +2575,6 @@
         // Exit edit mode
         cancelGraveLocationEdit();
         
-        // Clear password
-        if (passwordInput) {
-          passwordInput.value = '';
-        }
-        
       } catch (err) {
         console.error('Error saving grave location:', err);
         alert(`Lỗi khi lưu vị trí: ${err.message}`);
@@ -2411,6 +2588,8 @@
       graveEditMode = false;
       const controlsDiv = document.getElementById('graveMapControls');
       const updateBtn = document.getElementById('btnUpdateGraveLocation');
+      const searchInput = document.getElementById('graveAddressSearch');
+      const suggestionsDiv = document.getElementById('graveAddressSuggestions');
       
       if (controlsDiv) {
         controlsDiv.style.display = 'none';
@@ -2418,6 +2597,14 @@
       
       if (updateBtn) {
         updateBtn.style.display = 'block';
+      }
+      
+      // Clear search
+      if (searchInput) {
+        searchInput.value = '';
+      }
+      if (suggestionsDiv) {
+        suggestionsDiv.style.display = 'none';
       }
       
       // Remove click handler
@@ -2433,7 +2620,7 @@
       }
     }
 
-    // Handle Enter key in search input
+    // Handle Enter key in search inputs
     document.addEventListener('DOMContentLoaded', () => {
       const graveSearchInput = document.getElementById('graveSearchInput');
       if (graveSearchInput) {
@@ -2443,7 +2630,32 @@
           }
         });
       }
+      
     });
+    
+    // Add event listener for address search when edit mode is enabled
+    // Wrap original function to add event listener
+    const originalEnableGraveLocationEdit = enableGraveLocationEdit;
+    enableGraveLocationEdit = function() {
+      originalEnableGraveLocationEdit();
+      
+      // Add Enter key handler for address search after element is created
+      setTimeout(() => {
+        const graveAddressSearch = document.getElementById('graveAddressSearch');
+        if (graveAddressSearch) {
+          // Remove old listener if exists
+          graveAddressSearch.removeEventListener('keypress', handleAddressSearchEnter);
+          // Add new listener
+          graveAddressSearch.addEventListener('keypress', handleAddressSearchEnter);
+        }
+      }, 100);
+    };
+    
+    function handleAddressSearchEnter(e) {
+      if (e.key === 'Enter') {
+        searchGraveAddress();
+      }
+    }
   </script>
 </body>
 </html>
