@@ -213,19 +213,8 @@ def get_geoapify_api_key():
 @app.route('/genealogy')
 def genealogy_page():
     """Trang gia phả (gộp tree + tra cứu)"""
-    # Lấy Geoapify API key từ helper function (tự động load từ env file nếu cần)
-    geoapify_api_key = get_geoapify_api_key()
-    
-    # Debug log để kiểm tra
-    if not geoapify_api_key:
-        logger.warning("GEOAPIFY_API_KEY không được load từ environment hoặc tbqc_db.env")
-    else:
-        logger.debug(f"Geoapify API key loaded: {geoapify_api_key[:10] if len(geoapify_api_key) > 10 else '***'}...")
-    
-    # Đảm bảo API key là string hoặc None (không phải empty string)
-    api_key_for_template = geoapify_api_key if geoapify_api_key and geoapify_api_key.strip() else None
-    
-    return render_template('genealogy.html', geoapify_api_key=api_key_for_template)
+    # Geoapify API key đã được xóa - sẽ nâng cấp sau
+    return render_template('genealogy.html')
 
 @app.route('/api/grave/update-location', methods=['POST'])
 def update_grave_location():
