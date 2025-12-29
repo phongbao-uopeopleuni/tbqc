@@ -23,6 +23,8 @@ const FOUNDER_NAME = "Vua Minh Mạng";
 let personMap = new Map(); // id -> Person
 let parentMap = new Map(); // childId -> [fatherId, motherId]
 let childrenMap = new Map(); // parentId -> [childId1, childId2, ...]
+let fmIdMap = new Map(); // fm_id -> [childIds] (NEW: group siblings by fm_id)
+let fmIdToPersonMap = new Map(); // personId -> fm_id (NEW)
 let marriagesMap = new Map(); // personId -> [marriages] (NEW)
 let nameToIdMap = new Map(); // name -> id (for search)
 let founderId = null;
@@ -92,10 +94,36 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
       throw new Error('API trả về dữ liệu rỗng');
     }
 
+    // Load fm_id data từ /api/members để group siblings chính xác
+    let membersDataMap = new Map(); // personId -> {fm_id, ...}
+    try {
+      const membersResponse = await fetch(`${API_BASE_URL}/members`);
+      if (membersResponse.ok) {
+        const membersData = await membersResponse.json();
+        if (membersData.success && membersData.data) {
+          membersData.data.forEach(member => {
+            if (member.person_id && member.fm_id) {
+              membersDataMap.set(member.person_id, {
+                fm_id: member.fm_id,
+                father_name: member.father_name,
+                mother_name: member.mother_name,
+                spouses: member.spouses,
+                siblings: member.siblings,
+                children: member.children
+              });
+            }
+          });
+          console.log('[Tree] Loaded fm_id data from /api/members:', membersDataMap.size, 'persons');
+        }
+      }
+    } catch (err) {
+      console.warn('[Tree] Could not load fm_id from /api/members:', err);
+    }
+
     // Convert tree data to graph structure for backward compatibility
     if (treeData && treeData.person_id) {
       // Tree structure from /api/tree
-      graph = convertTreeToGraph(treeData);
+      graph = convertTreeToGraph(treeData, membersDataMap);
       
       // Build family-node graph if buildRenderGraph is available
       if (typeof buildRenderGraph === 'function') {
@@ -211,13 +239,17 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
 
 /**
  * Convert tree data từ /api/tree thành graph structure
- * ENHANCED: Extract marriages data for family-node graph
+ * ENHANCED: Extract marriages data và fm_id for family-node graph
+ * @param {Object} treeData - Tree data from API
+ * @param {Map} membersDataMap - Map personId -> {fm_id, ...} from /api/members
  */
-function convertTreeToGraph(treeData) {
+function convertTreeToGraph(treeData, membersDataMap = new Map()) {
   // Reset maps
   personMap = new Map();
   parentMap = new Map();
   childrenMap = new Map();
+  fmIdMap = new Map(); // NEW: Group siblings by fm_id
+  fmIdToPersonMap = new Map(); // NEW: Map personId -> fm_id
   nameToIdMap = new Map();
   marriagesMap = new Map(); // NEW: Map personId -> [marriages]
   founderId = null;
@@ -225,6 +257,10 @@ function convertTreeToGraph(treeData) {
   // Traverse tree to build maps
   function traverseNode(node) {
     if (!node) return;
+    
+    // Get fm_id từ membersDataMap (source of truth từ trang Thành viên)
+    const memberData = membersDataMap.get(node.person_id);
+    const fm_id = memberData?.fm_id || node.fm_id || node.father_mother_id || null;
     
     const person = {
       id: node.person_id,
@@ -234,10 +270,11 @@ function convertTreeToGraph(treeData) {
       branch: node.branch_name || '',
       status: node.status || '',
       commonName: node.common_name || '',
-      father_name: node.father_name || null,
-      mother_name: node.mother_name || null,
+      father_name: memberData?.father_name || node.father_name || null,
+      mother_name: memberData?.mother_name || node.mother_name || null,
       father_id: node.father_id || null,
       mother_id: node.mother_id || null,
+      fm_id: fm_id, // NEW: father_mother_id để group siblings
       marriages: node.marriages || [] // Extract marriages
     };
     
@@ -262,6 +299,15 @@ function convertTreeToGraph(treeData) {
     }
     
     personMap.set(person.id, person);
+    
+    // Group siblings by fm_id (cùng cha mẹ)
+    if (fm_id) {
+      fmIdToPersonMap.set(person.id, fm_id);
+      if (!fmIdMap.has(fm_id)) {
+        fmIdMap.set(fm_id, []);
+      }
+      fmIdMap.get(fm_id).push(person.id);
+    }
     
     // Store marriages
     if (person.marriages && person.marriages.length > 0) {
@@ -326,10 +372,19 @@ function convertTreeToGraph(treeData) {
     founderId = treeData.person_id;
   }
 
+  console.log('[Tree] Built graph with fm_id grouping:', {
+    totalPersons: personMap.size,
+    fmIdGroups: fmIdMap.size,
+    avgSiblingsPerGroup: fmIdMap.size > 0 ? 
+      Array.from(fmIdMap.values()).reduce((sum, siblings) => sum + siblings.length, 0) / fmIdMap.size : 0
+  });
+
   return {
     personMap,
     parentMap,
     childrenMap,
+    fmIdMap, // NEW: Group siblings by fm_id
+    fmIdToPersonMap, // NEW: Map personId -> fm_id
     marriagesMap, // NEW
     nameToIdMap,
     founderId
