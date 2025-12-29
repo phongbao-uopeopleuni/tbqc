@@ -112,13 +112,14 @@ Dự án này là một ứng dụng Flask (Python) với MySQL database. Có th
      DB_NAME=your_database_name
      DB_USER=your_database_user
      DB_PASSWORD=<từ database service>
-     DB_PORT=5432
-     
-     # ⚠️ QUAN TRỌNG: Thêm các biến sau cho Members page password protection
-     MEMBERS_PASSWORD=tbqc@2026
-     ADMIN_PASSWORD=tbqc@2026
-     BACKUP_PASSWORD=tbqc@2026
-     ```
+    DB_PORT=5432
+    
+    # ⚠️ QUAN TRỌNG: Thêm các biến sau cho Members page password protection
+    # Thay <your_password_here> bằng mật khẩu thực tế của bạn (ví dụ: tbqc@2026)
+    MEMBERS_PASSWORD=<your_password_here>
+    ADMIN_PASSWORD=<your_password_here>
+    BACKUP_PASSWORD=<your_password_here>
+    ```
    - **Lưu ý:** Render dùng PostgreSQL, cần cập nhật code để dùng `psycopg2` thay vì `mysql-connector-python`
 
 ### Bước 6: Cập Nhật Code Cho PostgreSQL
