@@ -137,18 +137,22 @@ def get_members_password():
     # Kiểm tra environment variables trước
     password = os.environ.get('MEMBERS_PASSWORD') or os.environ.get('ADMIN_PASSWORD') or os.environ.get('BACKUP_PASSWORD', '')
     
-    # Nếu chưa có, thử load từ tbqc_db.env
-    if not password:
-        try:
-            env_file = os.path.join(BASE_DIR, 'tbqc_db.env')
-            if os.path.exists(env_file):
-                env_vars = load_env_file(env_file)
-                password = env_vars.get('MEMBERS_PASSWORD') or env_vars.get('ADMIN_PASSWORD') or env_vars.get('BACKUP_PASSWORD', '')
+    # Luôn thử load từ tbqc_db.env để đảm bảo có giá trị mới nhất
+    try:
+        env_file = os.path.join(BASE_DIR, 'tbqc_db.env')
+        if os.path.exists(env_file):
+            env_vars = load_env_file(env_file)
+            file_password = env_vars.get('MEMBERS_PASSWORD') or env_vars.get('ADMIN_PASSWORD') or env_vars.get('BACKUP_PASSWORD', '')
+            if file_password:
+                password = file_password
                 # Set vào environment để các lần sau không cần load lại
-                if password:
-                    os.environ.setdefault('MEMBERS_PASSWORD', password)
-        except Exception as e:
-            logger.debug(f"Could not load password from tbqc_db.env: {e}")
+                os.environ['MEMBERS_PASSWORD'] = password
+        else:
+            logger.warning(f"File tbqc_db.env không tồn tại tại: {env_file}")
+    except Exception as e:
+        logger.error(f"Could not load password from tbqc_db.env: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
     
     return password
 
@@ -696,7 +700,13 @@ def members():
     # Lấy password từ helper function (tự động load từ env file nếu cần)
     members_password = get_members_password()
     
-    return render_template('members.html', members_password=members_password)
+    # Debug log để kiểm tra
+    if not members_password:
+        logger.warning("MEMBERS_PASSWORD không được load từ environment hoặc tbqc_db.env")
+    else:
+        logger.debug(f"Members password loaded: {'*' * len(members_password)}")
+    
+    return render_template('members.html', members_password=members_password or '')
 
 # Route /gia-pha đã được thay thế bằng /genealogy
 

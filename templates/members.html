@@ -707,9 +707,10 @@
       const errorDiv = document.getElementById('passwordError');
       
       // Kiểm tra nếu password chưa được load từ server
-      if (!REQUIRED_PASSWORD) {
-        errorDiv.textContent = 'Lỗi: Mật khẩu chưa được cấu hình. Vui lòng liên hệ admin.';
+      if (!REQUIRED_PASSWORD || REQUIRED_PASSWORD === 'null' || REQUIRED_PASSWORD === '') {
+        errorDiv.textContent = 'Lỗi: Mật khẩu chưa được cấu hình. Vui lòng liên hệ admin hoặc reload trang.';
         errorDiv.style.display = 'block';
+        console.error('REQUIRED_PASSWORD:', REQUIRED_PASSWORD, 'Type:', typeof REQUIRED_PASSWORD);
         return;
       }
       
