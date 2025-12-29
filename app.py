@@ -3785,7 +3785,24 @@ def update_person_members(person_id):
         if 'generation_level' in columns and data.get('generation_number'):
             update_fields.append('generation_level = %s')
             update_values.append(data.get('generation_number'))
-        elif 'generation_id' in columns and data.get('generation_number'):
+        
+        if 'birth_date_solar' in columns:
+            update_fields.append('birth_date_solar = %s')
+            # Xử lý format date: nếu chỉ có năm (YYYY), thêm -01-01
+            birth_date = data.get('birth_date_solar', '').strip() if data.get('birth_date_solar') else ''
+            if birth_date and len(birth_date) == 4 and birth_date.isdigit():
+                birth_date = f'{birth_date}-01-01'
+            update_values.append(birth_date if birth_date else None)
+        
+        if 'death_date_solar' in columns:
+            update_fields.append('death_date_solar = %s')
+            # Xử lý format date: nếu chỉ có năm (YYYY), thêm -01-01
+            death_date = data.get('death_date_solar', '').strip() if data.get('death_date_solar') else ''
+            if death_date and len(death_date) == 4 and death_date.isdigit():
+                death_date = f'{death_date}-01-01'
+            update_values.append(death_date if death_date else None)
+        
+        if 'generation_id' in columns and data.get('generation_number'):
             # Fallback: nếu có generation_id, tìm hoặc tạo
             cursor.execute("SELECT generation_id FROM generations WHERE generation_number = %s", (data['generation_number'],))
             gen = cursor.fetchone()
