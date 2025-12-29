@@ -2,12 +2,11 @@
 
 ## Mật khẩu cho các nút Thêm, Cập nhật, Xóa, Backup
 
-Mật khẩu mặc định: `tbqc@2026`
-
 ⚠️ **LƯU Ý BẢO MẬT:**
 - Mật khẩu này **KHÔNG được commit lên Git**
-- Chỉ lưu ở local hoặc environment variables trên server
+- Chỉ lưu ở local (`tbqc_db.env`) hoặc environment variables trên server
 - Không hardcode trong code
+- **Ví dụ mật khẩu:** `tbqc@2026` (thay bằng mật khẩu của bạn)
 
 ---
 
@@ -24,8 +23,9 @@ Mật khẩu mặc định: `tbqc@2026`
 
 2. Mở file `tbqc_db.env` và thêm dòng:
    ```env
-   MEMBERS_PASSWORD=tbqc@2026
+   MEMBERS_PASSWORD=<your_password_here>
    ```
+   (Thay `<your_password_here>` bằng mật khẩu thực tế của bạn)
 
 3. Đảm bảo file `tbqc_db.env` đã được thêm vào `.gitignore` (đã có sẵn)
 
@@ -33,20 +33,20 @@ Mật khẩu mặc định: `tbqc@2026`
 
 ```powershell
 # Set cho session hiện tại
-$env:MEMBERS_PASSWORD = "tbqc@2026"
+$env:MEMBERS_PASSWORD = "<your_password_here>"
 
 # Hoặc set vĩnh viễn (User level)
-[System.Environment]::SetEnvironmentVariable("MEMBERS_PASSWORD", "tbqc@2026", "User")
+[System.Environment]::SetEnvironmentVariable("MEMBERS_PASSWORD", "<your_password_here>", "User")
 ```
 
 **Cách 3: Sử dụng Environment Variables (Command Prompt)**
 
 ```cmd
 # Set cho session hiện tại
-set MEMBERS_PASSWORD=tbqc@2026
+set MEMBERS_PASSWORD=<your_password_here>
 
 # Hoặc set vĩnh viễn (User level)
-setx MEMBERS_PASSWORD "tbqc@2026"
+setx MEMBERS_PASSWORD "<your_password_here>"
 ```
 
 ### 2. Production (Railway)
@@ -54,7 +54,7 @@ setx MEMBERS_PASSWORD "tbqc@2026"
 1. Vào Railway Dashboard → Project → Service → Variables
 2. Thêm environment variable:
    - **Name**: `MEMBERS_PASSWORD`
-   - **Value**: `tbqc@2026`
+   - **Value**: `<your_password_here>` (ví dụ: `tbqc@2026`)
 3. Click "Add" và deploy lại service
 
 ---
@@ -80,7 +80,7 @@ Sau khi set environment variable, restart server và kiểm tra:
 
 2. **Test trên trang Members:**
    - Click nút "Thêm", "Cập nhật", "Xóa", hoặc "Backup"
-   - Nhập mật khẩu: `tbqc@2026`
+   - Nhập mật khẩu đã set trong environment variable
    - Nếu đúng, modal sẽ đóng và thực hiện action
 
 ---
@@ -113,7 +113,7 @@ Sau khi set environment variable, restart server và kiểm tra:
 
 4. Kiểm tra file `tbqc_db.env` có đúng format không:
    ```env
-   MEMBERS_PASSWORD=tbqc@2026
+   MEMBERS_PASSWORD=<your_password_here>
    ```
    (Không có dấu ngoặc kép, không có khoảng trắng thừa)
 
