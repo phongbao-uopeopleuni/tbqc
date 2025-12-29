@@ -678,9 +678,49 @@ function buildTreeNode(personId, depth = 0, parentNode = null, maxGeneration = n
 
   // Thêm các con (chỉ nếu chưa vượt quá maxGeneration)
   const childrenIds = childrenMap.get(personId) || [];
-  const childNodes = [];
+  
+  // Group children by fm_id (siblings cùng cha mẹ)
+  const childrenByFmId = new Map(); // fm_id -> [childIds]
+  const childrenWithoutFmId = [];
   
   childrenIds.forEach(childId => {
+    const childFmId = fmIdToPersonMap.get(childId);
+    if (childFmId) {
+      if (!childrenByFmId.has(childFmId)) {
+        childrenByFmId.set(childFmId, []);
+      }
+      childrenByFmId.get(childFmId).push(childId);
+    } else {
+      childrenWithoutFmId.push(childId);
+    }
+  });
+  
+  const childNodes = [];
+  
+  // Build nodes cho children có fm_id (group siblings)
+  childrenByFmId.forEach((siblingIds, fmId) => {
+    // Sắp xếp siblings theo tên
+    siblingIds.sort((a, b) => {
+      const personA = personMap.get(a);
+      const personB = personMap.get(b);
+      return (personA?.name || '').localeCompare(personB?.name || '', 'vi');
+    });
+    
+    // Build nodes cho từng sibling
+    siblingIds.forEach(childId => {
+      const child = personMap.get(childId);
+      if (child && (maxGeneration === null || child.generation <= maxGeneration)) {
+        const childNode = buildTreeNode(childId, depth + 1, node, maxGeneration);
+        if (childNode) {
+          childNode.fm_id = fmId; // Mark với fm_id để group trong layout
+          childNodes.push(childNode);
+        }
+      }
+    });
+  });
+  
+  // Build nodes cho children không có fm_id
+  childrenWithoutFmId.forEach(childId => {
     const child = personMap.get(childId);
     if (child && (maxGeneration === null || child.generation <= maxGeneration)) {
       const childNode = buildTreeNode(childId, depth + 1, node, maxGeneration);
@@ -690,35 +730,45 @@ function buildTreeNode(personId, depth = 0, parentNode = null, maxGeneration = n
     }
   });
   
-  // Sắp xếp children theo tên bố (father_name) để hiển thị theo nhánh
-  // Nếu không có father_name, sắp xếp theo tên
+  // Sắp xếp children: group theo fm_id trước, sau đó theo tên bố, cuối cùng theo tên
   childNodes.sort((a, b) => {
     const personA = personMap.get(a.id);
     const personB = personMap.get(b.id);
     
-    // Lấy tên bố từ parentMap
+    // Ưu tiên 1: Group theo fm_id (siblings cùng cha mẹ ở gần nhau)
+    if (a.fm_id && b.fm_id) {
+      if (a.fm_id !== b.fm_id) {
+        return a.fm_id.localeCompare(b.fm_id);
+      }
+    } else if (a.fm_id) return -1;
+    else if (b.fm_id) return 1;
+    
+    // Ưu tiên 2: Sắp xếp theo tên bố
     const parentsA = parentMap.get(a.id) || [];
     const parentsB = parentMap.get(b.id) || [];
     
-    // Tìm father_id (thường là phần tử đầu tiên trong parents)
-    const fatherAId = parentsA.length > 0 ? parentsA[0] : null;
-    const fatherBId = parentsB.length > 0 ? parentsB[0] : null;
+    const fatherAId = parentsA.find(pId => {
+      const p = personMap.get(pId);
+      return p && p.gender === 'Nam';
+    });
+    const fatherBId = parentsB.find(pId => {
+      const p = personMap.get(pId);
+      return p && p.gender === 'Nam';
+    });
     
-    // Lấy tên bố
     const fatherA = fatherAId ? personMap.get(fatherAId) : null;
     const fatherB = fatherBId ? personMap.get(fatherBId) : null;
     
     const fatherNameA = fatherA ? fatherA.name : '';
     const fatherNameB = fatherB ? fatherB.name : '';
     
-    // Sắp xếp theo tên bố trước, sau đó theo tên
     if (fatherNameA && fatherNameB) {
       const nameCompare = fatherNameA.localeCompare(fatherNameB, 'vi');
       if (nameCompare !== 0) return nameCompare;
     } else if (fatherNameA) return -1;
     else if (fatherNameB) return 1;
     
-    // Nếu cùng bố hoặc không có bố, sắp xếp theo tên
+    // Ưu tiên 3: Sắp xếp theo tên
     return (personA?.name || '').localeCompare(personB?.name || '', 'vi');
   });
   

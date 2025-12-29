@@ -123,15 +123,33 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
     
     treeDiv.appendChild(nodeDiv);
 
-    // Vẽ connectors
-    // Chỉ vẽ connector từ parent nếu đây là child đầu tiên hoặc không có siblings trước đó
+    // Vẽ connectors - group siblings theo fm_id (cùng cha mẹ)
     if (node.parent) {
       const siblings = node.parent.children || [];
-      const isFirstSibling = siblings[0] && siblings[0].id === node.id;
-      // Vẽ connector cho tất cả siblings cùng lúc từ parent
-      if (isFirstSibling && siblings.length > 0) {
-        // Vẽ connector từ parent đến tất cả siblings
-        drawConnectorToSiblings(node.parent, siblings, treeDiv);
+      const currentNodeFmId = node.fm_id;
+      
+      // Tìm siblings cùng fm_id (cùng cha mẹ)
+      const sameFmIdSiblings = currentNodeFmId 
+        ? siblings.filter(s => s.fm_id === currentNodeFmId)
+        : [];
+      
+      // Nếu có siblings cùng fm_id và đây là sibling đầu tiên trong group
+      if (sameFmIdSiblings.length > 0) {
+        const isFirstInGroup = sameFmIdSiblings[0].id === node.id;
+        if (isFirstInGroup) {
+          // Vẽ connector từ parent đến tất cả siblings cùng fm_id
+          drawConnectorToSiblings(node.parent, sameFmIdSiblings, treeDiv);
+        }
+      } else {
+        // Nếu không có fm_id, vẽ connector riêng cho node này
+        const isFirstSibling = siblings[0] && siblings[0].id === node.id;
+        if (isFirstSibling && siblings.length > 0) {
+          // Chỉ vẽ connector cho siblings không có fm_id hoặc fm_id khác nhau
+          const siblingsWithoutFmId = siblings.filter(s => !s.fm_id || s.fm_id !== currentNodeFmId);
+          if (siblingsWithoutFmId.length > 0 && siblingsWithoutFmId[0].id === node.id) {
+            drawConnectorToSiblings(node.parent, siblingsWithoutFmId, treeDiv);
+          }
+        }
       }
     }
 
@@ -249,15 +267,33 @@ function renderFocusTree(targetId) {
     
     treeDiv.appendChild(nodeDiv);
 
-    // Vẽ connectors
-    // Chỉ vẽ connector từ parent nếu đây là child đầu tiên hoặc không có siblings trước đó
+    // Vẽ connectors - group siblings theo fm_id (cùng cha mẹ)
     if (node.parent) {
       const siblings = node.parent.children || [];
-      const isFirstSibling = siblings[0] && siblings[0].id === node.id;
-      // Vẽ connector cho tất cả siblings cùng lúc từ parent
-      if (isFirstSibling && siblings.length > 0) {
-        // Vẽ connector từ parent đến tất cả siblings
-        drawConnectorToSiblings(node.parent, siblings, treeDiv);
+      const currentNodeFmId = node.fm_id;
+      
+      // Tìm siblings cùng fm_id (cùng cha mẹ)
+      const sameFmIdSiblings = currentNodeFmId 
+        ? siblings.filter(s => s.fm_id === currentNodeFmId)
+        : [];
+      
+      // Nếu có siblings cùng fm_id và đây là sibling đầu tiên trong group
+      if (sameFmIdSiblings.length > 0) {
+        const isFirstInGroup = sameFmIdSiblings[0].id === node.id;
+        if (isFirstInGroup) {
+          // Vẽ connector từ parent đến tất cả siblings cùng fm_id
+          drawConnectorToSiblings(node.parent, sameFmIdSiblings, treeDiv);
+        }
+      } else {
+        // Nếu không có fm_id, vẽ connector riêng cho node này
+        const isFirstSibling = siblings[0] && siblings[0].id === node.id;
+        if (isFirstSibling && siblings.length > 0) {
+          // Chỉ vẽ connector cho siblings không có fm_id hoặc fm_id khác nhau
+          const siblingsWithoutFmId = siblings.filter(s => !s.fm_id || s.fm_id !== currentNodeFmId);
+          if (siblingsWithoutFmId.length > 0 && siblingsWithoutFmId[0].id === node.id) {
+            drawConnectorToSiblings(node.parent, siblingsWithoutFmId, treeDiv);
+          }
+        }
       }
     }
 
