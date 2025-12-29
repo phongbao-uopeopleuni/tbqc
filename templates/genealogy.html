@@ -2080,9 +2080,22 @@
       if (!mapDiv) return;
 
       // Check if Geoapify API key is available
-      console.log('GEOAPIFY_API_KEY:', GEOAPIFY_API_KEY ? 'Set' : 'Not set');
+      // Check if Geoapify API key is available
+      const hasApiKey = GEOAPIFY_API_KEY && 
+                       GEOAPIFY_API_KEY !== 'null' && 
+                       GEOAPIFY_API_KEY !== null && 
+                       GEOAPIFY_API_KEY !== '' &&
+                       typeof GEOAPIFY_API_KEY === 'string' &&
+                       GEOAPIFY_API_KEY.length > 0;
       
-      if (!GEOAPIFY_API_KEY || GEOAPIFY_API_KEY === 'null' || GEOAPIFY_API_KEY === '') {
+      console.log('GEOAPIFY_API_KEY check:', {
+        hasApiKey: hasApiKey,
+        value: GEOAPIFY_API_KEY ? GEOAPIFY_API_KEY.substring(0, 10) + '...' : '(empty)',
+        type: typeof GEOAPIFY_API_KEY,
+        length: GEOAPIFY_API_KEY ? GEOAPIFY_API_KEY.length : 0
+      });
+      
+      if (!hasApiKey) {
         mapDiv.innerHTML = `
           <div style="padding: 40px; text-align: center; color: #666;">
             <p>⚠️ Geoapify API key chưa được cấu hình.</p>
@@ -2092,7 +2105,7 @@
             </p>
           </div>
         `;
-        console.warn('GEOAPIFY_API_KEY not configured');
+        console.warn('GEOAPIFY_API_KEY not configured:', GEOAPIFY_API_KEY);
         return;
       }
 
