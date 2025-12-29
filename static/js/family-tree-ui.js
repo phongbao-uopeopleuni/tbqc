@@ -425,22 +425,81 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
 }
 
 /**
- * Vẽ đường nối từ parent đến tất cả siblings (hierarchical layout: giống hình mẫu)
- * Đường dọc từ giữa cha mẹ xuống, sau đó phân nhánh đến từng child
+ * Vẽ đường nối từ cặp bố mẹ đến tất cả siblings (hierarchical layout)
+ * Đường dọc từ giữa cặp bố mẹ xuống, sau đó phân nhánh đến từng child
+ * Cải thiện để thể hiện rẽ nhánh hợp lý hơn với siblings cùng fm_id
  */
 function drawConnectorToSiblings(parentNode, siblings, container) {
   if (!parentNode || !siblings || siblings.length === 0) return;
 
   const nodeWidth = 140;
   const nodeHeight = 100;
-  const parentCenterX = parentNode.x + nodeWidth / 2;
-  const parentBottomY = parentNode.y + nodeHeight;
+  const firstChildTopY = siblings[0].y;
+  
+  // Tìm cặp bố mẹ từ siblings (cùng fm_id)
+  let fatherNode = null;
+  let motherNode = null;
+  let parentStartX = parentNode.x + nodeWidth / 2; // Fallback: dùng parentNode nếu không tìm thấy cặp bố mẹ
+  let parentBottomY = parentNode.y + nodeHeight;
+  
+  if (siblings.length > 0 && siblings[0].fm_id) {
+    // Tìm father_id và mother_id từ parentMap hoặc từ person data
+    const firstSibling = siblings[0];
+    
+    // Tìm person data từ personMap (global từ family-tree-core.js)
+    const firstSiblingPerson = typeof personMap !== 'undefined' && personMap ? personMap.get(firstSibling.id) : null;
+    
+    if (firstSiblingPerson) {
+      const fatherId = firstSiblingPerson.father_id;
+      const motherId = firstSiblingPerson.mother_id;
+      
+      // Tìm father và mother nodes trong tree
+      function findNodeById(node, targetId) {
+        if (!node) return null;
+        if (node.id === targetId) return node;
+        for (const child of (node.children || [])) {
+          const found = findNodeById(child, targetId);
+          if (found) return found;
+        }
+        return null;
+      }
+      
+      // Tìm root để traverse
+      let rootNode = parentNode;
+      while (rootNode.parent) {
+        rootNode = rootNode.parent;
+      }
+      
+      if (fatherId) {
+        fatherNode = findNodeById(rootNode, fatherId);
+      }
+      if (motherId) {
+        motherNode = findNodeById(rootNode, motherId);
+      }
+      
+      // Tính toán vị trí giữa cặp bố mẹ
+      if (fatherNode && motherNode) {
+        // Có cả bố và mẹ: vẽ từ giữa cặp
+        const fatherCenterX = fatherNode.x + nodeWidth / 2;
+        const motherCenterX = motherNode.x + nodeWidth / 2;
+        parentStartX = (fatherCenterX + motherCenterX) / 2;
+        parentBottomY = Math.max(fatherNode.y + nodeHeight, motherNode.y + nodeHeight);
+      } else if (fatherNode) {
+        // Chỉ có bố
+        parentStartX = fatherNode.x + nodeWidth / 2;
+        parentBottomY = fatherNode.y + nodeHeight;
+      } else if (motherNode) {
+        // Chỉ có mẹ
+        parentStartX = motherNode.x + nodeWidth / 2;
+        parentBottomY = motherNode.y + nodeHeight;
+      }
+    }
+  }
 
   // Tính điểm giữa của tất cả siblings
   const minSiblingX = Math.min(...siblings.map(s => s.x + nodeWidth / 2));
   const maxSiblingX = Math.max(...siblings.map(s => s.x + nodeWidth / 2));
   const siblingsMidX = (minSiblingX + maxSiblingX) / 2;
-  const firstChildTopY = siblings[0].y;
 
   // Đường dọc chính từ cặp bố mẹ xuống đến level của children
   const verticalStartY = parentBottomY;
