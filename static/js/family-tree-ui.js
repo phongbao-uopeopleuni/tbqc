@@ -540,7 +540,7 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
   }
 
   // Y = generation (dọc) - đời 1 ở trên, đời 8 ở dưới
-  const verticalGap = 200; // Tăng khoảng cách giữa các đời để tránh chồng lên nhau
+  const verticalGap = 220; // Tăng khoảng cách giữa các đời để tránh chồng lên nhau và thể hiện rẽ nhánh rõ hơn
   const normalizedGeneration = generation - minGeneration;
   // Đảm bảo đời thấp nhất (minGeneration) ở trên cùng
   node.y = normalizedGeneration * verticalGap + 40;
@@ -548,39 +548,130 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
   // Tính vị trí cho children trước (bottom-up approach)
   if (node.children.length === 0) {
     // Leaf node: đặt ở vị trí tiếp theo trong generation
-    const horizontalSpacing = 200; // Tăng spacing giữa các nodes để tránh chồng lên nhau
+    const horizontalSpacing = 220; // Tăng spacing giữa các nodes để tránh chồng lên nhau và thể hiện rẽ nhánh rõ hơn
     const currentCount = levelPositions[generation].length;
     node.x = currentCount * horizontalSpacing + 80;
     levelPositions[generation].push(node);
     return { x: node.x, width: 140 }; // Node width
   }
 
-  // Có children: tính toán subtree width
+  // Group children by fm_id để thể hiện rẽ nhánh hợp lý hơn
+  const childrenByFmId = new Map(); // fm_id -> [children]
+  const childrenWithoutFmId = [];
+  
+  node.children.forEach(child => {
+    const childFmId = child.fm_id;
+    if (childFmId) {
+      if (!childrenByFmId.has(childFmId)) {
+        childrenByFmId.set(childFmId, []);
+      }
+      childrenByFmId.get(childFmId).push(child);
+    } else {
+      childrenWithoutFmId.push(child);
+    }
+  });
+
+  // Tính toán subtree width cho từng nhánh (group theo fm_id)
   let subtreeLeft = Infinity;
   let subtreeRight = -Infinity;
-  const childResults = [];
+  const branchResults = []; // Mỗi branch là một group siblings cùng fm_id
 
-  node.children.forEach(child => {
+  // Xử lý từng nhánh (group siblings cùng fm_id)
+  childrenByFmId.forEach((siblings, fmId) => {
+    let branchLeft = Infinity;
+    let branchRight = -Infinity;
+    const siblingResults = [];
+    
+    siblings.forEach(child => {
+      const result = calculatePositions(child, 0, 0, levelPositions);
+      siblingResults.push(result);
+      branchLeft = Math.min(branchLeft, result.x);
+      branchRight = Math.max(branchRight, result.x + result.width);
+    });
+    
+    branchResults.push({
+      fmId: fmId,
+      left: branchLeft,
+      right: branchRight,
+      width: branchRight - branchLeft,
+      children: siblings,
+      results: siblingResults
+    });
+    
+    subtreeLeft = Math.min(subtreeLeft, branchLeft);
+    subtreeRight = Math.max(subtreeRight, branchRight);
+  });
+
+  // Xử lý children không có fm_id
+  childrenWithoutFmId.forEach(child => {
     const result = calculatePositions(child, 0, 0, levelPositions);
-    childResults.push(result);
+    branchResults.push({
+      fmId: null,
+      left: result.x,
+      right: result.x + result.width,
+      width: result.width,
+      children: [child],
+      results: [result]
+    });
     subtreeLeft = Math.min(subtreeLeft, result.x);
     subtreeRight = Math.max(subtreeRight, result.x + result.width);
   });
 
-    // Đảm bảo siblings có khoảng cách đều
-    if (node.children.length > 1) {
-      const minSpacing = 200; // Tăng khoảng cách tối thiểu giữa siblings để tránh chồng lên nhau
-      let currentX = subtreeLeft;
-      node.children.forEach((child, index) => {
-        if (index > 0) {
-          currentX += minSpacing;
+  // Sắp xếp các nhánh theo vị trí left để phân bổ lại
+  branchResults.sort((a, b) => a.left - b.left);
+
+  // Phân bổ lại các nhánh với khoảng cách hợp lý giữa các nhánh
+  if (branchResults.length > 1) {
+    const branchSpacing = 280; // Khoảng cách giữa các nhánh (siblings cùng fm_id là một nhánh)
+    const siblingSpacing = 200; // Khoảng cách giữa siblings trong cùng một nhánh
+    
+    let currentX = subtreeLeft;
+    
+    branchResults.forEach((branch, branchIndex) => {
+      const branchWidth = branch.right - branch.left;
+      const siblingCount = branch.children.length;
+      
+      // Tính toán lại vị trí cho từng sibling trong nhánh
+      branch.children.forEach((sibling, siblingIndex) => {
+        const offsetX = currentX - branch.left;
+        sibling.x = sibling.x + offsetX;
+        
+        // Cập nhật lại results
+        branch.results[siblingIndex].x = sibling.x;
+        
+        // Đệ quy cập nhật vị trí cho children của sibling
+        function updateChildPositions(childNode, offset) {
+          if (childNode.children) {
+            childNode.children.forEach(grandchild => {
+              grandchild.x = grandchild.x + offset;
+              updateChildPositions(grandchild, offset);
+            });
+          }
         }
-        child.x = currentX;
-        currentX += 180; // Tăng node width + spacing
+        updateChildPositions(sibling, offsetX);
       });
-      // Cập nhật lại subtree bounds
-      subtreeRight = currentX;
-    }
+      
+      // Di chuyển currentX cho nhánh tiếp theo với khoảng cách hợp lý
+      currentX = branch.right + branchSpacing;
+    });
+    
+    // Cập nhật lại subtreeLeft và subtreeRight sau khi phân bổ lại
+    subtreeLeft = branchResults[0].left;
+    subtreeRight = branchResults[branchResults.length - 1].right;
+  } else if (node.children.length > 1) {
+    // Nếu không có fm_id grouping, đảm bảo siblings có khoảng cách đều
+    const minSpacing = 200; // Tăng khoảng cách tối thiểu giữa siblings để tránh chồng lên nhau
+    let currentX = subtreeLeft;
+    node.children.forEach((child, index) => {
+      if (index > 0) {
+        currentX += minSpacing;
+      }
+      child.x = currentX;
+      currentX += 180; // Tăng node width + spacing
+    });
+    // Cập nhật lại subtree bounds
+    subtreeRight = currentX;
+  }
 
   // Đặt parent ở giữa children để giảm giao cắt
   const subtreeWidth = subtreeRight - subtreeLeft;
@@ -627,7 +718,7 @@ function redistributeNodesByGeneration(levelPositions) {
   const minGen = levelPositions._minGeneration || 1;
   const maxGen = levelPositions._maxGeneration || 1;
   const nodeWidth = 140;
-  const minSpacing = 80; // Tăng khoảng cách tối thiểu để tránh chồng lên nhau
+  const minSpacing = 120; // Tăng khoảng cách tối thiểu để tránh chồng lên nhau và thể hiện rẽ nhánh rõ hơn
   
   for (let gen = minGen; gen <= maxGen; gen++) {
     const nodes = levelPositions[gen] || [];
