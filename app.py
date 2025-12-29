@@ -1238,20 +1238,18 @@ def get_person(person_id):
             person['mother_id'] = None
             person['mother_name'] = None
         
-        # Sử dụng hàm helper chung để load siblings (giống như /api/members - source of truth)
+        # Sử dụng hàm helper chung để load tất cả relationship data (giống như /api/members - source of truth)
+        # Chỉ gọi MỘT LẦN để tối ưu
+        relationship_data = None
         try:
             relationship_data = load_relationship_data(cursor)
+            
+            # Load siblings
             siblings_map = relationship_data['siblings_map']
             siblings_list = siblings_map.get(person_id, [])
             person['siblings'] = '; '.join(siblings_list) if siblings_list else None
-        except Exception as e:
-            logger.warning(f"Error fetching siblings for {person_id}: {e}")
-            person['siblings'] = None
-        
-        # Lấy con từ relationships - sử dụng helper nhưng vẫn giữ format array đầy đủ
-        try:
-            # Sử dụng helper để lấy children names
-            relationship_data = load_relationship_data(cursor)
+            
+            # Load children names từ helper
             children_map = relationship_data['children_map']
             children_names = children_map.get(person_id, [])
             
@@ -1325,19 +1323,23 @@ def get_person(person_id):
             if marriages:
                 person['marriages'] = marriages
                 spouse_names = [m['spouse_name'] for m in marriages if m.get('spouse_name')]
-                person['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                spouse_string = '; '.join(spouse_names) if spouse_names else None
+                person['spouse'] = spouse_string
+                person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
             else:
                 person['marriages'] = []
                 person['spouse'] = None
+                person['spouse_name'] = None
         except Exception as e:
             logger.warning(f"Error fetching marriages for {person_id}: {e}")
             person['marriages'] = []
             person['spouse'] = None
+            person['spouse_name'] = None
         
         # Nếu không có spouse từ marriages, sử dụng helper để lấy từ các nguồn khác (giống /api/members)
-        if not person.get('spouse') or person.get('spouse') == '':
+        # Sử dụng relationship_data đã load ở trên (nếu có)
+        if (not person.get('spouse') or person.get('spouse') == '') and relationship_data:
             try:
-                relationship_data = load_relationship_data(cursor)
                 spouse_data_from_table = relationship_data['spouse_data_from_table']
                 spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
                 spouse_data_from_csv = relationship_data['spouse_data_from_csv']
@@ -1345,17 +1347,34 @@ def get_person(person_id):
                 # Ưu tiên từ spouse_sibling_children table
                 if person_id in spouse_data_from_table:
                     spouse_names = spouse_data_from_table[person_id]
-                    person['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                    spouse_string = '; '.join(spouse_names) if spouse_names else None
+                    person['spouse'] = spouse_string
+                    person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
                 # Fallback từ marriages (đã load trong helper)
                 elif person_id in spouse_data_from_marriages:
                     spouse_names = spouse_data_from_marriages[person_id]
-                    person['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                    spouse_string = '; '.join(spouse_names) if spouse_names else None
+                    person['spouse'] = spouse_string
+                    person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
                 # Fallback từ CSV
                 elif person_id in spouse_data_from_csv:
                     spouse_names = spouse_data_from_csv[person_id]
-                    person['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                    spouse_string = '; '.join(spouse_names) if spouse_names else None
+                    person['spouse'] = spouse_string
+                    person['spouse_name'] = spouse_string  # Đảm bảo cả 2 field đều có
             except Exception as e:
                 logger.debug(f"Could not load spouse from helper for {person_id}: {e}")
+        
+        # Đảm bảo children_string được set nếu có children array nhưng chưa có children_string
+        if person.get('children') and isinstance(person.get('children'), list) and not person.get('children_string'):
+            children_names = []
+            for c in person['children']:
+                if isinstance(c, dict):
+                    child_name = c.get('full_name') or c.get('name')
+                    if child_name:
+                        children_names.append(child_name)
+            if children_names:
+                person['children_string'] = '; '.join(children_names)
         
             # =====================================================
             # LẤY THÔNG TIN TỔ TIÊN (ANCESTORS) - ĐỆ QUY
