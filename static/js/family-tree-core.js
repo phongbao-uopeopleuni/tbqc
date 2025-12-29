@@ -241,6 +241,26 @@ function convertTreeToGraph(treeData) {
       marriages: node.marriages || [] // Extract marriages
     };
     
+    // Tìm father_id và mother_id từ parentMap nếu chưa có
+    if ((!person.father_id || !person.mother_id) && parentMap.has(person.id)) {
+      const parents = parentMap.get(person.id);
+      if (parents && parents.length > 0) {
+        // Tìm father và mother từ personMap bằng gender
+        parents.forEach(parentId => {
+          const parent = personMap.get(parentId);
+          if (parent) {
+            if (parent.gender === 'Nam' && !person.father_id) {
+              person.father_id = parentId;
+              if (!person.father_name) person.father_name = parent.name;
+            } else if (parent.gender === 'Nữ' && !person.mother_id) {
+              person.mother_id = parentId;
+              if (!person.mother_name) person.mother_name = parent.name;
+            }
+          }
+        });
+      }
+    }
+    
     personMap.set(person.id, person);
     
     // Store marriages

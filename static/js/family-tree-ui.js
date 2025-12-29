@@ -39,23 +39,25 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   }
   container.innerHTML = "";
   
+  // DISABLED: Quay lại person-node renderer để hiển thị rõ con của ai
   // Check if family graph is available and use family renderer
-  // Check both window.familyGraph (global) and local familyGraph variable
-  const availableFamilyGraph = window.familyGraph || (typeof familyGraph !== 'undefined' ? familyGraph : null);
+  // const availableFamilyGraph = window.familyGraph || (typeof familyGraph !== 'undefined' ? familyGraph : null);
+  // 
+  // if (availableFamilyGraph && typeof renderFamilyDefaultTree === 'function') {
+  //   console.log('[Tree] Using family-node renderer, familyNodes:', availableFamilyGraph.familyNodes?.length || 0);
+  //   try {
+  //     renderFamilyDefaultTree(availableFamilyGraph, maxGeneration);
+  //     return;
+  //   } catch (error) {
+  //     console.error('[Tree] Error rendering family tree:', error);
+  //     console.error(error.stack);
+  //     // Fallback to person-node renderer
+  //   }
+  // } else {
+  //   console.log('[Tree] Using person-node renderer (familyGraph not available or renderFamilyDefaultTree not found)');
+  // }
   
-  if (availableFamilyGraph && typeof renderFamilyDefaultTree === 'function') {
-    console.log('[Tree] Using family-node renderer, familyNodes:', availableFamilyGraph.familyNodes?.length || 0);
-    try {
-      renderFamilyDefaultTree(availableFamilyGraph, maxGeneration);
-      return;
-    } catch (error) {
-      console.error('[Tree] Error rendering family tree:', error);
-      console.error(error.stack);
-      // Fallback to person-node renderer
-    }
-  } else {
-    console.log('[Tree] Using person-node renderer (familyGraph not available or renderFamilyDefaultTree not found)');
-  }
+  console.log('[Tree] Using person-node renderer with family grouping');
   
   if (!graph || !personMap || personMap.size === 0) {
     container.innerHTML = '<div class="error">Chưa có dữ liệu</div>';
@@ -307,31 +309,71 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
   if (person.status === "Đã mất") nodeDiv.classList.add("dead");
   if (isHighlighted) nodeDiv.classList.add("highlighted");
 
+  // Tên người - nổi bật
   const nameDiv = document.createElement("div");
   nameDiv.className = "node-name";
+  nameDiv.style.fontWeight = "600";
+  nameDiv.style.fontSize = "14px";
+  nameDiv.style.marginBottom = "6px";
+  nameDiv.style.color = "#333";
   nameDiv.textContent = person.name;
   nodeDiv.appendChild(nameDiv);
 
-  // Hiển thị tên bố mẹ
+  // Hiển thị CON CỦA AI - rõ ràng và dễ đọc
   if (person.father_name || person.mother_name) {
     const parentsDiv = document.createElement("div");
     parentsDiv.className = "node-parents";
-    const parentNames = [];
-    if (person.father_name) {
-      parentNames.push(`Bố: ${person.father_name}`);
+    parentsDiv.style.fontSize = "11px";
+    parentsDiv.style.color = "#666";
+    parentsDiv.style.marginBottom = "6px";
+    parentsDiv.style.lineHeight = "1.5";
+    parentsDiv.style.padding = "4px 8px";
+    parentsDiv.style.backgroundColor = "#f5f5f5";
+    parentsDiv.style.borderRadius = "4px";
+    
+    let parentText = "";
+    if (person.father_name && person.mother_name) {
+      parentText = `Con của: Ông ${person.father_name} và Bà ${person.mother_name}`;
+    } else if (person.father_name) {
+      parentText = `Con của: Ông ${person.father_name}`;
+    } else if (person.mother_name) {
+      parentText = `Con của: Bà ${person.mother_name}`;
     }
-    if (person.mother_name) {
-      parentNames.push(`Mẹ: ${person.mother_name}`);
-    }
-    parentsDiv.textContent = parentNames.join(' | ');
+    
+    parentsDiv.textContent = parentText;
     nodeDiv.appendChild(parentsDiv);
+  } else {
+    // Nếu không có thông tin cha mẹ
+    const noParentsDiv = document.createElement("div");
+    noParentsDiv.className = "node-parents";
+    noParentsDiv.style.fontSize = "11px";
+    noParentsDiv.style.color = "#999";
+    noParentsDiv.style.fontStyle = "italic";
+    noParentsDiv.style.marginBottom = "6px";
+    noParentsDiv.textContent = "Chưa có thông tin cha mẹ";
+    nodeDiv.appendChild(noParentsDiv);
   }
 
+  // Badge Đời - đẹp hơn
   if (person.generation) {
     const genBadge = document.createElement("span");
     genBadge.className = "node-generation";
+    genBadge.style.display = "inline-block";
+    genBadge.style.backgroundColor = "#1976d2";
+    genBadge.style.color = "#fff";
+    genBadge.style.padding = "3px 10px";
+    genBadge.style.borderRadius = "12px";
+    genBadge.style.fontSize = "10px";
+    genBadge.style.fontWeight = "600";
+    genBadge.style.marginTop = "4px";
     genBadge.textContent = `Đời ${person.generation}`;
     nodeDiv.appendChild(genBadge);
+  }
+  
+  // Thêm data attributes để group siblings
+  if (person.father_id || person.mother_id) {
+    nodeDiv.setAttribute('data-father-id', person.father_id || '');
+    nodeDiv.setAttribute('data-mother-id', person.mother_id || '');
   }
 
   // Click event
