@@ -177,6 +177,11 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
           
           // Set as global variable để renderDefaultTree có thể access
           window.familyGraph = familyGraph;
+          
+          // Also set founderId as global
+          if (founderId) {
+            window.founderId = founderId;
+          }
         } catch (error) {
           console.error('[Tree] Error building family graph:', error);
           console.error(error.stack);

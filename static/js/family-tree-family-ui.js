@@ -51,10 +51,16 @@ function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
   // Calculate positions
   const levelPositions = {};
   calculateFamilyPositions(familyTree, 0, 0, levelPositions);
+  
+  console.log('[FamilyTree] Calculated positions for', Object.keys(levelPositions).length, 'generations');
+  Object.keys(levelPositions).forEach(level => {
+    console.log(`  Generation ${level}: ${levelPositions[level].nodes.length} nodes`);
+  });
+  
   adjustFamilyHorizontalPositions(familyTree, levelPositions);
   redistributeFamilyNodesByGeneration(levelPositions);
   
-  // Center family nodes above children clusters
+  // Center family nodes above children clusters (bottom-up)
   centerFamiliesAboveChildren(familyTree);
   
   // Render nodes và connectors
@@ -105,15 +111,42 @@ function buildFamilyTree(familyGraph, maxGeneration) {
   // Find root family (generation 1 hoặc founder's family)
   let rootFamily = null;
   
-  // Ưu tiên tìm family có generation = 1
-  for (const family of familyNodes) {
-    if (family.generation === 1) {
-      rootFamily = family;
-      break;
+  // Ưu tiên 1: Tìm family có chứa founderId (P-1-1)
+  const founderId = typeof window !== 'undefined' && window.founderId ? window.founderId : null;
+  if (founderId) {
+    for (const family of familyNodes) {
+      if (family.spouse1Id === founderId || family.spouse2Id === founderId) {
+        rootFamily = family;
+        console.log('[FamilyTree] Found root family by founderId:', rootFamily.id);
+        break;
+      }
     }
   }
   
-  // Nếu không có generation 1, tìm generation nhỏ nhất
+  // Ưu tiên 2: Tìm family có generation = 1 và có cả 2 spouses (không phải unknown)
+  if (!rootFamily) {
+    for (const family of familyNodes) {
+      if (family.generation === 1 && family.spouse1Id && family.spouse2Id && 
+          !family.spouse1Id.includes('unknown') && !family.spouse2Id.includes('unknown')) {
+        rootFamily = family;
+        console.log('[FamilyTree] Found root family by generation 1:', rootFamily.id);
+        break;
+      }
+    }
+  }
+  
+  // Ưu tiên 3: Tìm family có generation = 1 (bất kỳ)
+  if (!rootFamily) {
+    for (const family of familyNodes) {
+      if (family.generation === 1) {
+        rootFamily = family;
+        console.log('[FamilyTree] Found root family by generation 1 (any):', rootFamily.id);
+        break;
+      }
+    }
+  }
+  
+  // Ưu tiên 4: Tìm generation nhỏ nhất
   if (!rootFamily) {
     let minGeneration = Infinity;
     for (const family of familyNodes) {
@@ -122,11 +155,15 @@ function buildFamilyTree(familyGraph, maxGeneration) {
         rootFamily = family;
       }
     }
+    if (rootFamily) {
+      console.log('[FamilyTree] Found root family by min generation:', rootFamily.id, 'generation:', minGeneration);
+    }
   }
   
   // Fallback: use first family
   if (!rootFamily && familyNodes.length > 0) {
     rootFamily = familyNodes[0];
+    console.log('[FamilyTree] Using first family as root:', rootFamily.id);
   }
   
   if (!rootFamily) {
@@ -134,7 +171,8 @@ function buildFamilyTree(familyGraph, maxGeneration) {
     return null;
   }
   
-  console.log('[FamilyTree] Root family:', rootFamily.id, 'generation:', rootFamily.generation);
+  console.log('[FamilyTree] Root family:', rootFamily.id, 'generation:', rootFamily.generation, 
+              'spouse1:', rootFamily.spouse1Name, 'spouse2:', rootFamily.spouse2Name);
   
   // Build tree recursively
   const familyTreeMap = new Map(); // familyId -> tree node
@@ -164,21 +202,41 @@ function buildFamilyTree(familyGraph, maxGeneration) {
     
     // Find children families (children who have their own families)
     if (family.children && family.children.length > 0) {
+      // Group children by their family (siblings cùng family)
+      const childrenByFamily = new Map(); // familyId -> [childIds]
+      const childrenWithoutFamily = [];
+      
       family.children.forEach(childId => {
-        // Check if child has own family
         const childFamilyId = childrenToFamilyMap.get(childId);
         if (childFamilyId && childFamilyId !== familyId) {
-          const childNode = buildNode(childFamilyId, depth + 1);
-          if (childNode) {
-            node.children.push(childNode);
-            childNode.parent = node;
+          // Child belongs to another family
+          if (!childrenByFamily.has(childFamilyId)) {
+            childrenByFamily.set(childFamilyId, []);
           }
+          childrenByFamily.get(childFamilyId).push(childId);
         } else {
-          // Child is a person node (no family yet)
+          // Child doesn't have own family yet (person node)
+          childrenWithoutFamily.push(childId);
+        }
+      });
+      
+      // Add family nodes (siblings groups)
+      childrenByFamily.forEach((childIds, childFamilyId) => {
+        const childNode = buildNode(childFamilyId, depth + 1);
+        if (childNode) {
+          node.children.push(childNode);
+          childNode.parent = node;
+        }
+      });
+      
+      // Add person nodes (children without families)
+      childrenWithoutFamily.forEach(childId => {
+        const person = personNodeMap.get(childId);
+        if (person) {
           const personNode = {
             id: childId,
             type: 'person',
-            person: personNodeMap.get(childId),
+            person: person,
             x: 0,
             y: 0,
             children: [],
@@ -215,7 +273,8 @@ function calculateFamilyPositions(node, startX, startY, levelPositions) {
   
   // Calculate children positions recursively
   if (node.children && node.children.length > 0 && !collapsedFamilies.has(node.id)) {
-    const childSpacing = 350; // Spacing between children
+    // Calculate spacing based on number of children
+    const childSpacing = Math.max(350, 300 + (node.children.length - 1) * 50); // Dynamic spacing
     const totalWidth = (node.children.length - 1) * childSpacing;
     const childStartX = startX - totalWidth / 2; // Center children around parent
     
