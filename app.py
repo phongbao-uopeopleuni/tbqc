@@ -176,7 +176,7 @@ def login_page():
     """Trang đăng nhập (public)"""
     return render_template('login.html')
 
-@app.route('/genealogy')
+@app.route('/api/geoapify-key')
 def get_geoapify_api_key():
     """
     Lấy Geoapify API key từ environment variable hoặc tbqc_db.env
@@ -208,7 +208,7 @@ def get_geoapify_api_key():
     if not api_key:
         logger.warning("GEOAPIFY_API_KEY chưa được cấu hình trong environment variables hoặc tbqc_db.env")
     
-    return api_key
+    return jsonify({'api_key': api_key})
 
 @app.route('/genealogy')
 def genealogy_page():
@@ -326,6 +326,7 @@ def search_grave():
     API tìm kiếm mộ phần
     Chỉ tìm kiếm những người có status = 'Đã mất'
     Trả về grave_info và thông tin để hiển thị bản đồ
+    Hỗ trợ autocomplete: trả về cả người chưa có grave_info để gợi ý
     """
     connection = None
     cursor = None
@@ -334,8 +335,10 @@ def search_grave():
         if request.method == 'POST':
             data = request.get_json() or {}
             query = data.get('query', '').strip()
+            autocomplete_only = data.get('autocomplete_only', False)  # Chỉ lấy danh sách gợi ý
         else:
             query = request.args.get('query', '').strip()
+            autocomplete_only = request.args.get('autocomplete_only', 'false').lower() == 'true'
         
         if not query:
             return jsonify({
@@ -355,26 +358,52 @@ def search_grave():
         # Tìm kiếm chỉ trong những người có status = 'Đã mất'
         # Tìm theo tên hoặc person_id
         search_pattern = f'%{query}%'
-        cursor.execute("""
-            SELECT 
-                p.person_id,
-                p.full_name,
-                p.alias,
-                p.gender,
-                p.generation_level,
-                p.birth_date_solar,
-                p.death_date_solar,
-                p.grave_info,
-                p.place_of_death,
-                p.home_town
-            FROM persons p
-            WHERE p.status = 'Đã mất'
-            AND (p.full_name LIKE %s OR p.person_id LIKE %s OR p.alias LIKE %s)
-            AND p.grave_info IS NOT NULL 
-            AND p.grave_info != ''
-            ORDER BY p.full_name ASC
-            LIMIT 50
-        """, (search_pattern, search_pattern, search_pattern))
+        
+        # Nếu là autocomplete, trả về cả người chưa có grave_info
+        if autocomplete_only:
+            cursor.execute("""
+                SELECT 
+                    p.person_id,
+                    p.full_name,
+                    p.alias,
+                    p.gender,
+                    p.generation_level,
+                    p.birth_date_solar,
+                    p.death_date_solar,
+                    p.grave_info,
+                    p.place_of_death,
+                    p.home_town
+                FROM persons p
+                WHERE p.status = 'Đã mất'
+                AND (p.full_name LIKE %s OR p.person_id LIKE %s OR p.alias LIKE %s)
+                ORDER BY 
+                    CASE WHEN p.grave_info IS NOT NULL AND p.grave_info != '' THEN 0 ELSE 1 END,
+                    p.full_name ASC
+                LIMIT 20
+            """, (search_pattern, search_pattern, search_pattern))
+        else:
+            # Tìm kiếm chính thức: trả về cả người có và chưa có grave_info
+            # Ưu tiên người có grave_info trước
+            cursor.execute("""
+                SELECT 
+                    p.person_id,
+                    p.full_name,
+                    p.alias,
+                    p.gender,
+                    p.generation_level,
+                    p.birth_date_solar,
+                    p.death_date_solar,
+                    p.grave_info,
+                    p.place_of_death,
+                    p.home_town
+                FROM persons p
+                WHERE p.status = 'Đã mất'
+                AND (p.full_name LIKE %s OR p.person_id LIKE %s OR p.alias LIKE %s)
+                ORDER BY 
+                    CASE WHEN p.grave_info IS NOT NULL AND p.grave_info != '' THEN 0 ELSE 1 END,
+                    p.full_name ASC
+                LIMIT 50
+            """, (search_pattern, search_pattern, search_pattern))
         
         results = cursor.fetchall()
         
@@ -382,19 +411,19 @@ def search_grave():
         graves = []
         for row in results:
             grave_info = row.get('grave_info', '').strip()
-            if grave_info:
-                graves.append({
-                    'person_id': row.get('person_id'),
-                    'full_name': row.get('full_name'),
-                    'alias': row.get('alias'),
-                    'gender': row.get('gender'),
-                    'generation_level': row.get('generation_level'),
-                    'birth_date': row.get('birth_date_solar'),
-                    'death_date': row.get('death_date_solar'),
-                    'grave_info': grave_info,
-                    'place_of_death': row.get('place_of_death'),
-                    'home_town': row.get('home_town')
-                })
+            graves.append({
+                'person_id': row.get('person_id'),
+                'full_name': row.get('full_name'),
+                'alias': row.get('alias'),
+                'gender': row.get('gender'),
+                'generation_level': row.get('generation_level'),
+                'birth_date': row.get('birth_date_solar'),
+                'death_date': row.get('death_date_solar'),
+                'grave_info': grave_info,
+                'place_of_death': row.get('place_of_death'),
+                'home_town': row.get('home_town'),
+                'has_grave_info': bool(grave_info)
+            })
         
         return jsonify({
             'success': True,

@@ -757,6 +757,86 @@
         </div>
       </div>
 
+      <!-- Phần tìm kiếm mộ phần -->
+      <div class="grave-search-panel" style="margin-top: var(--space-8);">
+        <div class="card lineage-card">
+          <div class="lineage-header">
+            <h2>🪦 Tìm kiếm mộ phần</h2>
+            <p>Tìm kiếm thông tin mộ phần của những người đã mất. Hệ thống sẽ hiển thị vị trí trên bản đồ.</p>
+          </div>
+          
+          <div class="lineage-controls">
+            <div class="lineage-input-group">
+              <label for="graveSearchInput">Tên hoặc ID (tìm kiếm thông minh):</label>
+              <input type="text" class="input" id="graveSearchInput" placeholder="Ví dụ: Nguyễn Văn A hoặc P-1-1..." 
+                     autocomplete="off" oninput="handleGraveSearchInput()">
+              <div id="graveSearchSuggestions" class="suggestions-dropdown" style="display: none;">
+                <!-- Suggestions sẽ được điền bằng JavaScript -->
+              </div>
+            </div>
+            <button id="btnSearchGrave" onclick="searchGrave()" class="btn btn-primary">🔍 Tìm mộ phần</button>
+          </div>
+
+          <!-- Kết quả tìm kiếm mộ phần -->
+          <div class="grave-result card" id="graveResult" style="display: none; margin-top: var(--space-4);">
+            <div class="grave-result-header" style="margin-bottom: var(--space-4);">
+              <h3 id="graveResultTitle" style="color: var(--color-primary); margin-bottom: var(--space-2);"></h3>
+            </div>
+            
+            <div class="grave-info-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4);">
+              <!-- Thông tin người -->
+              <div class="card" style="padding: var(--space-4);">
+                <h4 style="color: var(--color-primary); margin-bottom: var(--space-3); font-size: var(--font-size-lg);">Thông tin người</h4>
+                <div id="gravePersonInfo" style="line-height: 1.8; color: var(--color-text);">
+                  <!-- Thông tin sẽ được điền bằng JavaScript -->
+                </div>
+              </div>
+              
+              <!-- Thông tin mộ phần -->
+              <div class="card" style="padding: var(--space-4);">
+                <h4 style="color: var(--color-primary); margin-bottom: var(--space-3); font-size: var(--font-size-lg);">Thông tin mộ phần</h4>
+                <div id="graveInfoText" style="line-height: 1.8; color: var(--color-text); margin-bottom: var(--space-3);">
+                  <!-- Thông tin mộ phần sẽ được điền bằng JavaScript -->
+                </div>
+                <div id="graveCoordinates" style="font-size: var(--font-size-sm); color: var(--color-text-muted); font-family: monospace;">
+                  <!-- Tọa độ sẽ được hiển thị ở đây -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Bản đồ -->
+            <div class="grave-map-section" style="margin-bottom: var(--space-4);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3);">
+                <h4 style="color: var(--color-primary); font-size: var(--font-size-lg); margin: 0;">Bản đồ định vị</h4>
+                <button id="btnUpdateGraveLocation" onclick="enableGraveLocationEdit()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+                  ✏️ Cập nhật vị trí
+                </button>
+              </div>
+              <div id="graveMap" style="width: 100%; height: 400px; border: 1px solid var(--color-border); border-radius: var(--radius-md); position: relative;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-text-muted);">
+                  Đang tải bản đồ...
+                </div>
+              </div>
+              <div id="graveMapControls" style="display: none; margin-top: var(--space-3); padding: var(--space-4); background: var(--color-bg); border-radius: var(--radius-md);">
+                <p style="color: var(--color-text-muted); margin-bottom: var(--space-3);">
+                  💡 Nhấp vào bản đồ để đặt marker tại vị trí mộ phần. Sau đó nhấn "Lưu" để cập nhật.
+                </p>
+                <div style="display: flex; gap: var(--space-3); align-items: center;">
+                  <input type="password" id="graveUpdatePassword" placeholder="Nhập mật khẩu để cập nhật" 
+                         class="input" style="flex: 1;">
+                  <button id="btnSaveGraveLocation" onclick="saveGraveLocation()" class="btn btn-primary">
+                    💾 Lưu vị trí
+                  </button>
+                  <button id="btnCancelGraveLocation" onclick="cancelGraveLocationEdit()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+                    Hủy
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       <!-- Section: Member Stats -->
       <section id="stats" style="margin-top: var(--space-10);">
@@ -851,6 +931,9 @@
   <!-- Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
+  <!-- Leaflet for maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- Load genealogy scripts -->
   <script src="/static/js/common.js"></script>
@@ -1842,8 +1925,526 @@
       .stats-charts {
         grid-template-columns: 1fr !important;
       }
+      .grave-info-section {
+        grid-template-columns: 1fr !important;
+      }
     }
   </style>
+
+  <!-- Grave Search Scripts -->
+  <script>
+    // Grave search state
+    let graveMap = null;
+    let graveMarker = null;
+    let currentGravePerson = null;
+    let graveEditMode = false;
+    let graveSearchTimeout = null;
+
+    /**
+     * Xử lý khi người dùng gõ vào ô tìm kiếm mộ phần (autocomplete)
+     */
+    function handleGraveSearchInput() {
+      const searchInput = document.getElementById('graveSearchInput');
+      const suggestionsDiv = document.getElementById('graveSearchSuggestions');
+      
+      if (!searchInput || !suggestionsDiv) {
+        console.warn('[Grave Search] Required elements not found');
+        return;
+      }
+      
+      const query = searchInput.value.trim();
+      
+      if (graveSearchTimeout) {
+        clearTimeout(graveSearchTimeout);
+      }
+      
+      if (!query || query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        return;
+      }
+      
+      graveSearchTimeout = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/grave-search?query=${encodeURIComponent(query)}`);
+          
+          if (!response.ok) {
+            suggestionsDiv.style.display = 'none';
+            return;
+          }
+          
+          const data = await response.json();
+          
+          if (!data.success || !data.results || data.results.length === 0) {
+            suggestionsDiv.innerHTML = '<div class="suggestion-item" style="color: #999; font-style: italic;">Không tìm thấy kết quả</div>';
+            suggestionsDiv.style.display = 'block';
+            return;
+          }
+          
+          suggestionsDiv.innerHTML = data.results.slice(0, 10).map((person) => {
+            const gen = person.generation_level || '?';
+            const name = person.full_name || 'Không rõ tên';
+            const graveInfo = person.grave_info || '';
+            const hasLocation = extractCoordinates(graveInfo).lat !== null;
+            
+            return `
+              <div class="suggestion-item" onclick="selectGraveSuggestion('${person.person_id}')" style="cursor: pointer;">
+                <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                  ${escapeHtml(name)} – Đời ${gen}
+                </div>
+                <div style="color: var(--color-text-muted); font-size: 14px;">
+                  ${graveInfo ? escapeHtml(graveInfo.substring(0, 50)) + (graveInfo.length > 50 ? '...' : '') : 'Chưa có thông tin mộ phần'}
+                  ${hasLocation ? ' <span style="color: green;">📍</span>' : ''}
+                </div>
+              </div>
+            `;
+          }).join('');
+          
+          suggestionsDiv.style.display = 'block';
+        } catch (err) {
+          console.error('Error in grave autocomplete:', err);
+          suggestionsDiv.style.display = 'none';
+        }
+      }, 300);
+    }
+
+    /**
+     * Select suggestion from search results
+     */
+    async function selectGraveSuggestion(personId) {
+      const suggestionsDiv = document.getElementById('graveSearchSuggestions');
+      if (suggestionsDiv) {
+        suggestionsDiv.style.display = 'none';
+      }
+      
+      await displayGraveInfo(personId);
+    }
+
+    /**
+     * Search grave
+     */
+    async function searchGrave() {
+      const searchInput = document.getElementById('graveSearchInput');
+      
+      if (!searchInput) {
+        console.error('[Grave Search] graveSearchInput not found');
+        alert('Lỗi: Không tìm thấy ô nhập liệu');
+        return;
+      }
+      
+      const query = searchInput.value.trim();
+      
+      if (!query) {
+        alert('Vui lòng nhập tên hoặc ID để tìm kiếm');
+        return;
+      }
+      
+      const suggestionsDiv = document.getElementById('graveSearchSuggestions');
+      if (suggestionsDiv) {
+        suggestionsDiv.style.display = 'none';
+      }
+      
+      try {
+        const response = await fetch(`/api/grave-search?query=${encodeURIComponent(query)}`);
+        
+        if (!response.ok) {
+          throw new Error(`API trả mã ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success || !data.results || data.results.length === 0) {
+          alert(`Không tìm thấy mộ phần cho "${query}"`);
+          return;
+        }
+        
+        if (data.results.length > 1) {
+          // Hiển thị suggestions để chọn
+          if (suggestionsDiv) {
+            suggestionsDiv.innerHTML = data.results.map((person) => {
+              const gen = person.generation_level || '?';
+              const name = person.full_name || 'Không rõ tên';
+              const graveInfo = person.grave_info || '';
+              const hasLocation = extractCoordinates(graveInfo).lat !== null;
+              
+              return `
+                <div class="suggestion-item" onclick="selectGraveSuggestion('${person.person_id}')" style="cursor: pointer;">
+                  <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
+                    ${escapeHtml(name)} – Đời ${gen}
+                  </div>
+                  <div style="color: var(--color-text-muted); font-size: 14px;">
+                    ${graveInfo ? escapeHtml(graveInfo.substring(0, 50)) + (graveInfo.length > 50 ? '...' : '') : 'Chưa có thông tin mộ phần'}
+                    ${hasLocation ? ' <span style="color: green;">📍</span>' : ''}
+                  </div>
+                </div>
+              `;
+            }).join('');
+            suggestionsDiv.style.display = 'block';
+          }
+          return;
+        }
+        
+        // Chỉ có 1 kết quả, hiển thị luôn
+        await displayGraveInfo(data.results[0].person_id);
+      } catch (err) {
+        console.error('Error searching grave:', err);
+        alert(`Lỗi khi tìm kiếm: ${err.message}`);
+      }
+    }
+
+    /**
+     * Extract coordinates from grave_info string
+     */
+    function extractCoordinates(graveInfo) {
+      if (!graveInfo) return { lat: null, lng: null };
+      
+      // Format: "Địa chỉ | lat:16.4637,lng:107.5909" hoặc "lat:16.4637,lng:107.5909"
+      const latMatch = graveInfo.match(/lat:([\d.]+)/);
+      const lngMatch = graveInfo.match(/lng:([\d.]+)/);
+      
+      if (latMatch && lngMatch) {
+        return {
+          lat: parseFloat(latMatch[1]),
+          lng: parseFloat(lngMatch[1])
+        };
+      }
+      
+      return { lat: null, lng: null };
+    }
+
+    /**
+     * Display grave information and map
+     */
+    async function displayGraveInfo(personId) {
+      try {
+        const response = await fetch(`/api/grave-search?query=${personId}`);
+        
+        if (!response.ok) {
+          throw new Error(`API trả mã ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success || !data.results || data.results.length === 0) {
+          alert('Không tìm thấy thông tin mộ phần');
+          return;
+        }
+        
+        const person = data.results.find(p => p.person_id === personId) || data.results[0];
+        currentGravePerson = person;
+        
+        // Hiển thị kết quả
+        const resultDiv = document.getElementById('graveResult');
+        const resultTitle = document.getElementById('graveResultTitle');
+        const personInfoDiv = document.getElementById('gravePersonInfo');
+        const graveInfoDiv = document.getElementById('graveInfoText');
+        const coordinatesDiv = document.getElementById('graveCoordinates');
+        
+        if (resultDiv) {
+          resultDiv.style.display = 'block';
+        }
+        
+        if (resultTitle) {
+          resultTitle.textContent = `Mộ phần của ${person.full_name || 'Không rõ tên'}`;
+        }
+        
+        // Thông tin người
+        if (personInfoDiv) {
+          personInfoDiv.innerHTML = `
+            <div><strong>Person ID:</strong> ${person.person_id || 'Chưa có'}</div>
+            <div><strong>Tên đầy đủ:</strong> ${person.full_name || 'Chưa có'}</div>
+            ${person.alias ? `<div><strong>Tên thường gọi:</strong> ${person.alias}</div>` : ''}
+            <div><strong>Đời:</strong> ${person.generation_level || 'Chưa có'}</div>
+            <div><strong>Giới tính:</strong> ${person.gender || 'Chưa có'}</div>
+            ${person.birth_date ? `<div><strong>Ngày sinh:</strong> ${person.birth_date}</div>` : ''}
+            ${person.death_date ? `<div><strong>Ngày mất:</strong> ${person.death_date}</div>` : ''}
+            ${person.place_of_death ? `<div><strong>Nơi mất:</strong> ${person.place_of_death}</div>` : ''}
+            ${person.home_town ? `<div><strong>Quê quán:</strong> ${person.home_town}</div>` : ''}
+          `;
+        }
+        
+        // Thông tin mộ phần
+        const graveInfo = person.grave_info || '';
+        const coords = extractCoordinates(graveInfo);
+        const graveInfoText = graveInfo ? graveInfo.replace(/\s*\|\s*lat:[\d.]+,\s*lng:[\d.]+/g, '').trim() : '';
+        
+        if (graveInfoDiv) {
+          if (graveInfoText) {
+            graveInfoDiv.innerHTML = graveInfoText;
+          } else {
+            graveInfoDiv.innerHTML = '<span style="color: var(--color-text-muted); font-style: italic;">Chưa có thông tin mộ phần. Bạn có thể thêm vị trí bằng cách nhấn "Cập nhật vị trí".</span>';
+          }
+        }
+        
+        if (coordinatesDiv) {
+          if (coords.lat !== null && coords.lng !== null) {
+            coordinatesDiv.innerHTML = `📍 Tọa độ: ${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`;
+            coordinatesDiv.style.color = 'var(--color-text)';
+            coordinatesDiv.style.fontWeight = 'normal';
+          } else {
+            coordinatesDiv.innerHTML = '⚠️ Chưa có tọa độ định vị. Nhấn "Cập nhật vị trí" để thêm.';
+            coordinatesDiv.style.color = 'var(--color-text-muted)';
+            coordinatesDiv.style.fontWeight = 'normal';
+          }
+        }
+        
+        // Hiển thị bản đồ
+        await renderGraveMap(coords, person);
+        
+        // Scroll to result
+        resultDiv?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+      } catch (err) {
+        console.error('Error displaying grave info:', err);
+        alert(`Lỗi khi hiển thị thông tin mộ phần: ${err.message}`);
+      }
+    }
+
+    /**
+     * Render map with grave location
+     */
+    async function renderGraveMap(coords, person) {
+      const mapDiv = document.getElementById('graveMap');
+      if (!mapDiv) return;
+      
+      // Clear previous map
+      if (graveMap) {
+        graveMap.remove();
+        graveMap = null;
+        graveMarker = null;
+      }
+      
+      // Default center (Huế, Việt Nam)
+      let centerLat = 16.4637;
+      let centerLng = 107.5909;
+      let zoom = 10;
+      
+      if (coords.lat !== null && coords.lng !== null) {
+        centerLat = coords.lat;
+        centerLng = coords.lng;
+        zoom = 15;
+      }
+      
+      // Initialize map
+      graveMap = L.map('graveMap').setView([centerLat, centerLng], zoom);
+      
+      // Add tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(graveMap);
+      
+      // Add marker if coordinates exist
+      if (coords.lat !== null && coords.lng !== null) {
+        graveMarker = L.marker([coords.lat, coords.lng], {
+          draggable: false
+        }).addTo(graveMap);
+        
+        graveMarker.bindPopup(`
+          <strong>${person.full_name || 'Không rõ tên'}</strong><br>
+          ${person.grave_info ? escapeHtml(person.grave_info.replace(/\s*\|\s*lat:[\d.]+,\s*lng:[\d.]+/g, '').trim()) : 'Mộ phần'}
+        `).openPopup();
+      } else {
+        // Show message if no coordinates
+        L.popup()
+          .setLatLng([centerLat, centerLng])
+          .setContent(`
+            <div style="text-align: center;">
+              <strong>Chưa có tọa độ định vị</strong><br>
+              Nhấn "Cập nhật vị trí" để thêm tọa độ mộ phần<br>
+              <small style="color: #666;">Bạn có thể nhấp vào bản đồ để đặt marker</small>
+            </div>
+          `)
+          .openOn(graveMap);
+      }
+    }
+
+    /**
+     * Enable grave location edit mode
+     */
+    function enableGraveLocationEdit() {
+      if (!currentGravePerson || !graveMap) {
+        alert('Vui lòng tìm kiếm mộ phần trước');
+        return;
+      }
+      
+      graveEditMode = true;
+      const controlsDiv = document.getElementById('graveMapControls');
+      const updateBtn = document.getElementById('btnUpdateGraveLocation');
+      
+      if (controlsDiv) {
+        controlsDiv.style.display = 'block';
+      }
+      
+      if (updateBtn) {
+        updateBtn.style.display = 'none';
+      }
+      
+      // Make map clickable
+      graveMap.on('click', onGraveMapClick);
+      
+      // Make marker draggable if exists
+      if (graveMarker) {
+        graveMarker.setDraggable(true);
+        graveMarker.on('dragend', onGraveMarkerDrag);
+      }
+    }
+
+    /**
+     * Handle map click in edit mode
+     */
+    function onGraveMapClick(e) {
+      const { lat, lng } = e.latlng;
+      
+      // Remove old marker
+      if (graveMarker) {
+        graveMap.removeLayer(graveMarker);
+      }
+      
+      // Add new marker
+      graveMarker = L.marker([lat, lng], {
+        draggable: true
+      }).addTo(graveMap);
+      
+      graveMarker.bindPopup(`
+        <strong>Vị trí mới</strong><br>
+        ${lat.toFixed(6)}, ${lng.toFixed(6)}
+      `).openPopup();
+      
+      graveMarker.on('dragend', onGraveMarkerDrag);
+      
+      // Update coordinates display
+      const coordinatesDiv = document.getElementById('graveCoordinates');
+      if (coordinatesDiv) {
+        coordinatesDiv.innerHTML = `📍 Tọa độ mới: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        coordinatesDiv.style.color = 'var(--color-primary)';
+        coordinatesDiv.style.fontWeight = 'bold';
+      }
+    }
+
+    /**
+     * Handle marker drag end
+     */
+    function onGraveMarkerDrag(e) {
+      const marker = e.target;
+      const position = marker.getLatLng();
+      const { lat, lng } = position;
+      
+      // Update popup
+      marker.setPopupContent(`
+        <strong>Vị trí mới</strong><br>
+        ${lat.toFixed(6)}, ${lng.toFixed(6)}
+      `).openPopup();
+      
+      // Update coordinates display
+      const coordinatesDiv = document.getElementById('graveCoordinates');
+      if (coordinatesDiv) {
+        coordinatesDiv.innerHTML = `📍 Tọa độ mới: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        coordinatesDiv.style.color = 'var(--color-primary)';
+        coordinatesDiv.style.fontWeight = 'bold';
+      }
+    }
+
+    /**
+     * Save grave location
+     */
+    async function saveGraveLocation() {
+      if (!currentGravePerson || !graveMarker) {
+        alert('Vui lòng đặt marker trên bản đồ trước');
+        return;
+      }
+      
+      const passwordInput = document.getElementById('graveUpdatePassword');
+      const password = passwordInput?.value.trim();
+      
+      if (!password) {
+        alert('Vui lòng nhập mật khẩu');
+        return;
+      }
+      
+      const position = graveMarker.getLatLng();
+      const lat = position.lat;
+      const lng = position.lng;
+      
+      try {
+        const response = await fetch('/api/grave/update-location', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            person_id: currentGravePerson.person_id,
+            latitude: lat,
+            longitude: lng,
+            password: password
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Lỗi khi cập nhật vị trí');
+        }
+        
+        alert('Đã cập nhật vị trí mộ phần thành công!');
+        
+        // Reload grave info
+        await displayGraveInfo(currentGravePerson.person_id);
+        
+        // Exit edit mode
+        cancelGraveLocationEdit();
+        
+        // Clear password
+        if (passwordInput) {
+          passwordInput.value = '';
+        }
+        
+      } catch (err) {
+        console.error('Error saving grave location:', err);
+        alert(`Lỗi khi lưu vị trí: ${err.message}`);
+      }
+    }
+
+    /**
+     * Cancel grave location edit
+     */
+    function cancelGraveLocationEdit() {
+      graveEditMode = false;
+      const controlsDiv = document.getElementById('graveMapControls');
+      const updateBtn = document.getElementById('btnUpdateGraveLocation');
+      
+      if (controlsDiv) {
+        controlsDiv.style.display = 'none';
+      }
+      
+      if (updateBtn) {
+        updateBtn.style.display = 'block';
+      }
+      
+      // Remove click handler
+      if (graveMap) {
+        graveMap.off('click', onGraveMapClick);
+      }
+      
+      // Reload map to show original location
+      if (currentGravePerson) {
+        const graveInfo = currentGravePerson.grave_info || '';
+        const coords = extractCoordinates(graveInfo);
+        renderGraveMap(coords, currentGravePerson);
+      }
+    }
+
+    // Handle Enter key in search input
+    document.addEventListener('DOMContentLoaded', () => {
+      const graveSearchInput = document.getElementById('graveSearchInput');
+      if (graveSearchInput) {
+        graveSearchInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            searchGrave();
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
 
