@@ -1285,15 +1285,25 @@ def get_person(person_id):
                     # Giữ lại string format cho backward compatibility
                     person['children_string'] = '; '.join(children_names) if children_names else None
                 else:
+                    # Nếu query không tìm thấy nhưng có children_names từ helper, vẫn set children_string
                     person['children'] = []
                     person['children_string'] = '; '.join(children_names) if children_names else None
+                    logger.debug(f"Children names from helper: {children_names}, but query returned no records for {person_id}")
             else:
                 person['children'] = []
                 person['children_string'] = None
         except Exception as e:
             logger.warning(f"Error fetching children for {person_id}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            # Nếu có exception nhưng relationship_data đã load, vẫn thử lấy children_string từ children_map
+            if relationship_data:
+                children_map = relationship_data.get('children_map', {})
+                children_names = children_map.get(person_id, [])
+                person['children_string'] = '; '.join(children_names) if children_names else None
+            else:
+                person['children_string'] = None
             person['children'] = []
-            person['children_string'] = None
             
         # Lấy spouses từ marriages (giữ lại format đầy đủ cho marriages)
         try:
