@@ -510,16 +510,19 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
   const verticalHeight = verticalEndY - verticalStartY;
   
   if (verticalHeight > 0) {
-    // Đường dọc từ cặp bố mẹ xuống đến điểm giữa của siblings
+    // Đường dọc từ cặp bố mẹ xuống đến điểm giữa của siblings - Cải thiện styling
     const connectorV = document.createElement("div");
     connectorV.className = "connector vertical";
-    connectorV.style.left = (parentStartX - 1.5) + "px";
+    connectorV.style.left = (parentStartX - 2) + "px";
     connectorV.style.top = verticalStartY + "px";
     connectorV.style.height = verticalHeight + "px";
-    connectorV.style.width = "3px";
-    connectorV.style.backgroundColor = "var(--color-primary, #8B0000)";
-    connectorV.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
+    connectorV.style.width = "4px";
+    // Gradient màu đẹp hơn từ đỏ đậm đến đỏ nhạt
+    connectorV.style.background = "linear-gradient(to bottom, #8B0000 0%, #A52A2A 50%, #CD5C5C 100%)";
+    connectorV.style.borderRadius = "2px";
+    connectorV.style.boxShadow = "0 2px 8px rgba(139, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
     connectorV.style.zIndex = "1";
+    connectorV.style.transition = "all 0.3s ease";
     container.appendChild(connectorV);
     
     // Đường ngang từ đường dọc chính đến điểm giữa của siblings (nếu cần)
@@ -529,29 +532,33 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
       connectorH1.style.left = Math.min(parentStartX, siblingsMidX) + "px";
       connectorH1.style.top = (firstChildTopY - 20) + "px";
       connectorH1.style.width = Math.abs(parentStartX - siblingsMidX) + "px";
-      connectorH1.style.height = "3px";
-      connectorH1.style.backgroundColor = "var(--color-primary, #8B0000)";
-      connectorH1.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
+      connectorH1.style.height = "4px";
+      connectorH1.style.background = "linear-gradient(to right, #8B0000 0%, #A52A2A 50%, #CD5C5C 100%)";
+      connectorH1.style.borderRadius = "2px";
+      connectorH1.style.boxShadow = "0 2px 8px rgba(139, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
       connectorH1.style.zIndex = "1";
+      connectorH1.style.transition = "all 0.3s ease";
       container.appendChild(connectorH1);
     }
   }
 
-  // Đường ngang từ điểm giữa của siblings đến tất cả siblings
+  // Đường ngang từ điểm giữa của siblings đến tất cả siblings - Cải thiện styling
   if (siblings.length > 1) {
     const connectorH = document.createElement("div");
     connectorH.className = "connector horizontal";
     connectorH.style.left = minSiblingX + "px";
     connectorH.style.top = (firstChildTopY - 20) + "px";
     connectorH.style.width = (maxSiblingX - minSiblingX) + "px";
-    connectorH.style.height = "3px";
-    connectorH.style.backgroundColor = "var(--color-primary, #8B0000)";
-    connectorH.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
+    connectorH.style.height = "4px";
+    connectorH.style.background = "linear-gradient(to right, #8B0000 0%, #A52A2A 50%, #CD5C5C 100%)";
+    connectorH.style.borderRadius = "2px";
+    connectorH.style.boxShadow = "0 2px 8px rgba(139, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
     connectorH.style.zIndex = "1";
+    connectorH.style.transition = "all 0.3s ease";
     container.appendChild(connectorH);
   }
 
-  // Đường dọc từ đường ngang xuống từng child
+  // Đường dọc từ đường ngang xuống từng child - Cải thiện styling
   siblings.forEach(child => {
     const childCenterX = child.x + nodeWidth / 2;
     const childTopY = child.y;
@@ -559,13 +566,15 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     // Đường dọc từ đường ngang xuống child
     const connectorV2 = document.createElement("div");
     connectorV2.className = "connector vertical";
-    connectorV2.style.left = (childCenterX - 1.5) + "px";
+    connectorV2.style.left = (childCenterX - 2) + "px";
     connectorV2.style.top = (childTopY - 20) + "px";
     connectorV2.style.height = "20px";
-    connectorV2.style.width = "3px";
-    connectorV2.style.backgroundColor = "var(--color-primary, #8B0000)";
-    connectorV2.style.boxShadow = "0 0 3px rgba(139, 0, 0, 0.3)";
+    connectorV2.style.width = "4px";
+    connectorV2.style.background = "linear-gradient(to bottom, #8B0000 0%, #A52A2A 50%, #CD5C5C 100%)";
+    connectorV2.style.borderRadius = "2px";
+    connectorV2.style.boxShadow = "0 2px 8px rgba(139, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
     connectorV2.style.zIndex = "1";
+    connectorV2.style.transition = "all 0.3s ease";
     container.appendChild(connectorV2);
   });
 }
