@@ -40,15 +40,8 @@ try:
     print(f"   Static folder: {app.static_folder}")
     print(f"   Template folder: {app.template_folder}")
     
-    # Tự động copy ảnh vào Railway Volume khi khởi động (chỉ trên Railway)
-    if os.environ.get('RAILWAY_ENVIRONMENT'):
-        try:
-            from copy_images_to_volume import copy_images_to_volume
-            copy_images_to_volume()
-        except ImportError:
-            pass  # Script không có thì bỏ qua
-        except Exception as e:
-            print(f"Warning: Could not copy images to volume: {e}")
+    # Không cần copy ảnh vào Volume nữa - ảnh được serve trực tiếp từ git source
+    # Volume đã được xóa để đơn giản hóa và tăng tốc độ load
 except Exception as e:
     print(f"ERROR: Loi khi khoi tao Flask app: {e}")
     import traceback
