@@ -265,21 +265,24 @@ def permission_required(permission_name):
     """Decorator yêu cầu permission cụ thể"""
     def decorator(f):
         @wraps(f)
-        @login_required
         def decorated_function(*args, **kwargs):
             # Kiểm tra nếu là API request (path bắt đầu bằng /api/ hoặc /admin/api/)
             is_api_request = (
                 request.path.startswith('/api/') or 
                 request.path.startswith('/admin/api/') or
                 request.headers.get('Content-Type', '').startswith('application/json') or
-                'application/json' in request.headers.get('Accept', '')
+                'application/json' in request.headers.get('Accept', '') or
+                request.is_json
             )
             
+            # Kiểm tra authentication trước khi kiểm tra permission
             if not current_user.is_authenticated:
                 if is_api_request:
                     return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
+                # Cho non-API requests, redirect đến login
                 return redirect(url_for('admin_login'))
             
+            # Kiểm tra permission
             if not current_user.has_permission(permission_name):
                 return jsonify({'success': False, 'error': f'Không có quyền: {permission_name}'}), 403
             
