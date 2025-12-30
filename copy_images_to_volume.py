@@ -91,31 +91,63 @@ def copy_images_to_volume():
         os.makedirs(volume_path, exist_ok=True)
         
         # Copy từng file
-        for filename in os.listdir(source_dir):
+        for filename in source_files:
             source_file = os.path.join(source_dir, filename)
             dest_file = os.path.join(volume_path, filename)
             
             if os.path.isfile(source_file):
+                # Kiểm tra xem file đã tồn tại và có cùng size không
                 if os.path.exists(dest_file):
-                    logger.debug(f"Skipping {filename} (already exists)")
-                    skipped += 1
-                else:
                     try:
-                        shutil.copy2(source_file, dest_file)
-                        logger.info(f"Copied {filename}")
-                        copied += 1
+                        source_size = os.path.getsize(source_file)
+                        dest_size = os.path.getsize(dest_file)
+                        if source_size == dest_size:
+                            logger.debug(f"Skipping {filename} (already exists, same size)")
+                            skipped += 1
+                            continue
+                        else:
+                            logger.info(f"Overwriting {filename} (size differs: {source_size} vs {dest_size})")
                     except Exception as e:
-                        logger.error(f"Error copying {filename}: {e}")
-                        errors += 1
+                        logger.debug(f"Could not check file size for {filename}: {e}")
+                
+                try:
+                    shutil.copy2(source_file, dest_file)
+                    file_size = os.path.getsize(dest_file)
+                    logger.info(f"Copied {filename} ({file_size} bytes)")
+                    copied += 1
+                except Exception as e:
+                    logger.error(f"Error copying {filename}: {e}")
+                    errors += 1
             elif os.path.isdir(source_file):
                 # Copy subdirectories (như activities/)
                 dest_subdir = os.path.join(volume_path, filename)
-                if not os.path.exists(dest_subdir):
+                if os.path.exists(dest_subdir):
+                    # Xóa và copy lại để đảm bảo đồng bộ
+                    try:
+                        shutil.rmtree(dest_subdir)
+                        logger.debug(f"Removed existing directory {filename}/")
+                    except Exception as e:
+                        logger.warning(f"Could not remove {dest_subdir}: {e}")
+                try:
                     shutil.copytree(source_file, dest_subdir)
                     logger.info(f"Copied directory {filename}/")
                     copied += 1
+                except Exception as e:
+                    logger.error(f"Error copying directory {filename}: {e}")
+                    errors += 1
         
         logger.info(f"Copy completed: {copied} copied, {skipped} skipped, {errors} errors")
+        
+        # Verify: list một số files trong volume để confirm
+        if os.path.exists(volume_path):
+            try:
+                vol_files = os.listdir(volume_path)
+                logger.info(f"Volume now contains {len(vol_files)} items")
+                if vol_files:
+                    logger.info(f"Sample files in volume: {vol_files[:5]}")
+            except Exception as e:
+                logger.warning(f"Could not list volume contents: {e}")
+        
         return True
         
     except Exception as e:
