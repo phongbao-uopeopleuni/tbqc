@@ -3220,8 +3220,26 @@ erDiagram
             
             try {
                 const response = await fetch(`/admin/api/members/${personId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    credentials: 'same-origin' // Đảm bảo gửi cookies/session
                 });
+                
+                // Xử lý lỗi 401 (Unauthorized)
+                if (response.status === 401) {
+                    try {
+                        const errorData = await response.json();
+                        alert(errorData.error || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    } catch (e) {
+                        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    }
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+                }
                 
                 const result = await response.json();
                 
