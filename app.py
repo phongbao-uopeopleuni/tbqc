@@ -392,8 +392,8 @@ def search_grave():
                 ORDER BY 
                     CASE WHEN p.grave_info IS NOT NULL AND p.grave_info != '' THEN 0 ELSE 1 END,
                     p.full_name ASC
-                LIMIT 50
-            """, (search_pattern, search_pattern, search_pattern))
+            LIMIT 50
+        """, (search_pattern, search_pattern, search_pattern))
         
         results = cursor.fetchall()
         
@@ -1267,7 +1267,7 @@ def get_person(person_id):
                     ORDER BY p.full_name
                 """, children_names)
                 children_records = cursor.fetchall()
-                
+                    
                 if children_records:
                     # Trả về dưới dạng array với thông tin đầy đủ
                     children_list = []
@@ -2509,31 +2509,31 @@ def search_persons():
             where_params.append(generation_level)
         
         query_sql = f"""
-            SELECT
-                p.person_id,
-                p.full_name,
-                p.alias,
-                p.status,
-                p.generation_level,
-                p.home_town,
-                p.gender,
+                SELECT
+                    p.person_id,
+                    p.full_name,
+                    p.alias,
+                    p.status,
+                    p.generation_level,
+                    p.home_town,
+                    p.gender,
                 p.father_mother_id AS fm_id,
                 p.birth_date_solar,
                 p.death_date_solar,
-                -- Cha từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
-                (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
-                 FROM relationships r 
-                 JOIN persons parent ON r.parent_id = parent.person_id 
-                 WHERE r.child_id = p.person_id AND r.relation_type = 'father') AS father_name,
-                -- Mẹ từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
-                (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
-                 FROM relationships r 
-                 JOIN persons parent ON r.parent_id = parent.person_id 
-                 WHERE r.child_id = p.person_id AND r.relation_type = 'mother') AS mother_name
-            FROM persons p
+                    -- Cha từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
+                    (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
+                     FROM relationships r 
+                     JOIN persons parent ON r.parent_id = parent.person_id 
+                     WHERE r.child_id = p.person_id AND r.relation_type = 'father') AS father_name,
+                    -- Mẹ từ relationships (GROUP_CONCAT để đồng nhất với /api/members)
+                    (SELECT GROUP_CONCAT(DISTINCT parent.full_name SEPARATOR ', ')
+                     FROM relationships r 
+                     JOIN persons parent ON r.parent_id = parent.person_id 
+                     WHERE r.child_id = p.person_id AND r.relation_type = 'mother') AS mother_name
+                FROM persons p
             WHERE {where_clause}
-            ORDER BY p.generation_level, p.full_name
-            LIMIT %s
+                ORDER BY p.generation_level, p.full_name
+                LIMIT %s
         """
         where_params.append(limit)
         
@@ -3292,17 +3292,17 @@ def load_relationship_data(cursor):
     # 4. Load tất cả relationships và build maps
     try:
         cursor.execute("""
-            SELECT 
-                r.child_id,
-                r.parent_id,
-                r.relation_type,
-                parent.full_name AS parent_name,
-                child.full_name AS child_name
-            FROM relationships r
-            LEFT JOIN persons parent ON r.parent_id = parent.person_id
-            LEFT JOIN persons child ON r.child_id = child.person_id
-            WHERE parent.full_name IS NOT NULL AND child.full_name IS NOT NULL
-        """)
+                SELECT 
+                    r.child_id,
+                    r.parent_id,
+                    r.relation_type,
+                    parent.full_name AS parent_name,
+                    child.full_name AS child_name
+                FROM relationships r
+                LEFT JOIN persons parent ON r.parent_id = parent.person_id
+                LEFT JOIN persons child ON r.child_id = child.person_id
+                WHERE parent.full_name IS NOT NULL AND child.full_name IS NOT NULL
+            """)
         relationships = cursor.fetchall()
         
         for rel in relationships:
@@ -3357,11 +3357,11 @@ def load_relationship_data(cursor):
         parent_to_children = {}
         for child_id, parent_ids in result['parent_ids_map'].items():
             for parent_id in parent_ids:
-                if parent_id not in parent_to_children:
-                    parent_to_children[parent_id] = []
-                if child_id not in parent_to_children[parent_id]:
-                    parent_to_children[parent_id].append(child_id)
-        
+                    if parent_id not in parent_to_children:
+                        parent_to_children[parent_id] = []
+                    if child_id not in parent_to_children[parent_id]:
+                        parent_to_children[parent_id].append(child_id)
+            
         # Build siblings_map cho tất cả persons
         for person_id in result['person_name_map'].keys():
             person_parent_ids = result['parent_ids_map'].get(person_id, [])
@@ -3563,6 +3563,105 @@ def get_members():
         except Exception as e:
             logger.debug(f"Error closing connection: {e}")
 
+def _process_children_spouse_siblings(cursor, person_id, data):
+    """
+    Helper function để xử lý children, spouse, siblings từ form data
+    Parse tên từ textarea (phân cách bằng ;) và tạo relationships/marriages
+    """
+    try:
+        # Lấy thông tin giới tính của person để xác định relation_type
+        cursor.execute("SELECT gender FROM persons WHERE person_id = %s", (person_id,))
+        person_gender = cursor.fetchone()
+        person_gender = person_gender['gender'] if person_gender else None
+        
+        # Xử lý children: tạo relationships
+        if 'children_info' in data:
+            # Xóa relationships cũ với children (nếu có)
+            # Tìm tất cả children hiện tại của person này
+            cursor.execute("""
+                SELECT child_id FROM relationships 
+                WHERE parent_id = %s AND relation_type IN ('father', 'mother')
+            """, (person_id,))
+            old_children = [row['child_id'] for row in cursor.fetchall()]
+            
+            # Xóa relationships cũ
+            if old_children:
+                placeholders = ','.join(['%s'] * len(old_children))
+                cursor.execute(f"""
+                    DELETE FROM relationships 
+                    WHERE parent_id = %s AND child_id IN ({placeholders})
+                """, [person_id] + old_children)
+            
+            # Thêm relationships mới
+            if data.get('children_info'):
+                children_names = [name.strip() for name in data['children_info'].split(';') if name.strip()]
+                for child_name in children_names:
+                    # Tìm person_id của child
+                    cursor.execute("SELECT person_id FROM persons WHERE full_name = %s LIMIT 1", (child_name,))
+                    child = cursor.fetchone()
+                    if child:
+                        child_id = child['person_id']
+                        # Xác định relation_type dựa trên giới tính
+                        relation_type = 'father' if person_gender == 'Nam' else 'mother'
+                        # Tạo relationship: person_id là parent, child_id là child
+                        cursor.execute("""
+                            INSERT INTO relationships (child_id, parent_id, relation_type)
+                            VALUES (%s, %s, %s)
+                            ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id), relation_type = VALUES(relation_type)
+                        """, (child_id, person_id, relation_type))
+        
+        # Xử lý spouse: tạo marriages
+        if 'spouse_info' in data:
+            # Xóa marriages cũ của person này
+            cursor.execute("""
+                DELETE FROM marriages 
+                WHERE person_id = %s OR spouse_person_id = %s
+            """, (person_id, person_id))
+            
+            # Thêm marriages mới
+            if data.get('spouse_info'):
+                spouse_names = [name.strip() for name in data['spouse_info'].split(';') if name.strip()]
+                for spouse_name in spouse_names:
+                    # Tìm person_id của spouse
+                    cursor.execute("SELECT person_id FROM persons WHERE full_name = %s LIMIT 1", (spouse_name,))
+                    spouse = cursor.fetchone()
+                    if spouse:
+                        spouse_id = spouse['person_id']
+                        # Tạo marriage (chỉ tạo 1 chiều, không cần tạo ngược lại)
+                        cursor.execute("""
+                            INSERT INTO marriages (person_id, spouse_person_id, status)
+                            VALUES (%s, %s, 'active')
+                        """, (person_id, spouse_id))
+        
+        # Xử lý siblings: siblings được tính tự động từ relationships (cùng parent)
+        # Lưu vào spouse_sibling_children table nếu tồn tại để tham khảo
+        if 'siblings_info' in data:
+            cursor.execute("""
+                SELECT TABLE_NAME 
+                FROM information_schema.TABLES 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'spouse_sibling_children'
+            """)
+            if cursor.fetchone():
+                # Xóa siblings cũ
+                cursor.execute("""
+                    DELETE FROM spouse_sibling_children 
+                    WHERE person_id = %s
+                """, (person_id,))
+                
+                # Thêm siblings mới
+                if data.get('siblings_info'):
+                    siblings_names = [name.strip() for name in data['siblings_info'].split(';') if name.strip()]
+                    if siblings_names:
+                        siblings_str = '; '.join(siblings_names)
+                        cursor.execute("""
+                            INSERT INTO spouse_sibling_children (person_id, sibling_name)
+                            VALUES (%s, %s)
+                        """, (person_id, siblings_str))
+    except Exception as e:
+        logger.warning(f"Error processing children/spouse/siblings for {person_id}: {e}")
+        # Không throw exception để không làm gián đoạn quá trình lưu chính
+
 @app.route('/api/persons', methods=['POST'])
 def create_person():
     """API thêm thành viên mới - Yêu cầu mật khẩu"""
@@ -3670,6 +3769,10 @@ def create_person():
                 death_date = f'{death_date}-01-01'
             insert_values.append(death_date if death_date else None)
         
+        if 'place_of_death' in columns:
+            insert_fields.append('place_of_death')
+            insert_values.append(data.get('place_of_death'))
+        
         # Thêm person
         placeholders = ','.join(['%s'] * len(insert_values))
         insert_query = f"INSERT INTO persons ({', '.join(insert_fields)}) VALUES ({placeholders})"
@@ -3706,6 +3809,9 @@ def create_person():
                     VALUES (%s, %s, 'mother')
                     ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)
                 """, (person_id, mother_id))
+        
+        # Xử lý children, spouse, siblings
+        _process_children_spouse_siblings(cursor, person_id, data)
         
         connection.commit()
         return jsonify({'success': True, 'message': 'Thêm thành viên thành công', 'person_id': person_id})
@@ -3827,6 +3933,10 @@ def update_person_members(person_id):
                 death_date = f'{death_date}-01-01'
             update_values.append(death_date if death_date else None)
         
+        if 'place_of_death' in columns:
+            update_fields.append('place_of_death = %s')
+            update_values.append(data.get('place_of_death'))
+        
         if 'generation_id' in columns and data.get('generation_number'):
             # Fallback: nếu có generation_id, tìm hoặc tạo
             cursor.execute("SELECT generation_id FROM generations WHERE generation_number = %s", (data['generation_number'],))
@@ -3889,6 +3999,9 @@ def update_person_members(person_id):
                 VALUES (%s, %s, 'mother')
                 ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)
             """, (person_id, mother_id))
+        
+        # Xử lý children, spouse, siblings
+        _process_children_spouse_siblings(cursor, person_id, data)
         
         connection.commit()
         return jsonify({'success': True, 'message': 'Cập nhật thành viên thành công'})
