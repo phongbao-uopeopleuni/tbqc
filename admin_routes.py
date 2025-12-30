@@ -187,11 +187,11 @@ def register_admin_routes(app):
             has_permissions = cursor.fetchone() is not None
             
             if has_permissions:
-            cursor.execute("""
-                SELECT user_id, username, full_name, email, role, permissions,
-                       created_at, updated_at, last_login, is_active
-                FROM users
-                ORDER BY created_at DESC
+                cursor.execute("""
+                    SELECT user_id, username, full_name, email, role, permissions,
+                           created_at, updated_at, last_login, is_active
+                    FROM users
+                    ORDER BY created_at DESC
             """)
             else:
                 cursor.execute("""
