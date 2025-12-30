@@ -28,9 +28,10 @@
   text-decoration: none;
   transition: opacity var(--transition-fast);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 300px;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+  flex-shrink: 0;
 }
 
 .navbar-logo:hover {
