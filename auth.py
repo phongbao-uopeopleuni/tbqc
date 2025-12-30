@@ -215,7 +215,8 @@ def init_login_manager(app):
             request.path.startswith('/api/') or 
             request.path.startswith('/admin/api/') or
             request.headers.get('Content-Type', '').startswith('application/json') or
-            'application/json' in request.headers.get('Accept', '')
+            'application/json' in request.headers.get('Accept', '') or
+            request.is_json
         )
         
         if is_api_request:
