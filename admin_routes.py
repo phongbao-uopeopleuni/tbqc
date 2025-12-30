@@ -2568,8 +2568,7 @@ DATA_MANAGEMENT_TEMPLATE = '''
     </nav>
     <div class="container">
         <div class="page-header">
-            <h1>📊 Quản Lý Dữ Liệu CSV</h1>
-            <p style="color: #7f8c8d; margin-top: 5px;">Quản lý và điều chỉnh dữ liệu từ 3 file CSV: Sheet1, Sheet2, Sheet3</p>
+            <h1>📊 Quản Lý Dữ Liệu</h1>
         </div>
         
         <div id="alertContainer"></div>
