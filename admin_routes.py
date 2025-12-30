@@ -303,10 +303,10 @@ def register_admin_routes(app):
             has_permissions = cursor.fetchone() is not None
             
             if has_permissions:
-            cursor.execute("""
-                INSERT INTO users (username, password_hash, full_name, email, role, permissions)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (username, password_hash, full_name or None, email or None, role, default_permissions))
+                cursor.execute("""
+                    INSERT INTO users (username, password_hash, full_name, email, role, permissions)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (username, password_hash, full_name or None, email or None, role, default_permissions))
             else:
                 cursor.execute("""
                     INSERT INTO users (username, password_hash, full_name, email, role)
