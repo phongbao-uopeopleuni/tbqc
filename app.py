@@ -916,14 +916,20 @@ def serve_image_static(filename):
     logger.warning(f"[Serve Image] Checked paths: {possible_paths}")
     
     # List files trong các paths để debug
-    for path in possible_paths[:3]:  # Chỉ list 3 paths đầu để tránh spam log
+    for path in possible_paths[:5]:  # List 5 paths đầu để debug tốt hơn
         try:
-            files = os.listdir(path)
-            logger.debug(f"[Serve Image] Files in {path}: {len(files)} files")
-            if len(files) > 0:
-                logger.debug(f"[Serve Image] Sample files: {files[:5]}")
+            if os.path.exists(path):
+                files = os.listdir(path)
+                logger.warning(f"[Serve Image] Files in {path}: {len(files)} files")
+                if len(files) > 0:
+                    logger.warning(f"[Serve Image] Sample files in {path}: {files[:10]}")
+                    # Kiểm tra xem file có tồn tại không
+                    test_filepath = os.path.join(path, filename)
+                    logger.warning(f"[Serve Image] Test filepath: {test_filepath}, exists: {os.path.exists(test_filepath)}")
+            else:
+                logger.warning(f"[Serve Image] Path does not exist: {path}")
         except Exception as e:
-            logger.debug(f"[Serve Image] Could not list {path}: {e}")
+            logger.warning(f"[Serve Image] Could not list {path}: {e}")
     
     # Trả về 404
     from flask import abort
