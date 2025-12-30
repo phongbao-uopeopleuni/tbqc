@@ -187,12 +187,12 @@ def register_admin_routes(app):
             has_permissions = cursor.fetchone() is not None
             
             if has_permissions:
-                cursor.execute("""
-                    SELECT user_id, username, full_name, email, role, permissions,
-                           created_at, updated_at, last_login, is_active
-                    FROM users
-                    ORDER BY created_at DESC
-                """)
+            cursor.execute("""
+                SELECT user_id, username, full_name, email, role, permissions,
+                       created_at, updated_at, last_login, is_active
+                FROM users
+                ORDER BY created_at DESC
+            """)
             else:
                 cursor.execute("""
                     SELECT user_id, username, full_name, email, role,
@@ -303,10 +303,10 @@ def register_admin_routes(app):
             has_permissions = cursor.fetchone() is not None
             
             if has_permissions:
-                cursor.execute("""
-                    INSERT INTO users (username, password_hash, full_name, email, role, permissions)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                """, (username, password_hash, full_name or None, email or None, role, default_permissions))
+            cursor.execute("""
+                INSERT INTO users (username, password_hash, full_name, email, role, permissions)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (username, password_hash, full_name or None, email or None, role, default_permissions))
             else:
                 cursor.execute("""
                     INSERT INTO users (username, password_hash, full_name, email, role)
@@ -418,12 +418,12 @@ def register_admin_routes(app):
             has_permissions = cursor.fetchone() is not None
             
             if has_permissions:
-                cursor.execute("""
-                    SELECT user_id, username, full_name, email, role, permissions,
-                           created_at, updated_at, last_login, is_active
-                    FROM users
-                    WHERE user_id = %s
-                """, (user_id,))
+            cursor.execute("""
+                SELECT user_id, username, full_name, email, role, permissions,
+                       created_at, updated_at, last_login, is_active
+                FROM users
+                WHERE user_id = %s
+            """, (user_id,))
             else:
                 cursor.execute("""
                     SELECT user_id, username, full_name, email, role,
@@ -777,6 +777,52 @@ def register_admin_routes(app):
                 cursor.execute(query)
             
             persons = cursor.fetchall()
+            
+            # Thêm thông tin về hôn phối, anh/chị/em, con cho mỗi person
+            for person in persons:
+                person_id = person['person_id']
+                
+                # Lấy danh sách hôn phối (spouses)
+                cursor.execute("""
+                    SELECT DISTINCT 
+                        CASE 
+                            WHEN m.person_id = %s THEN spouse.full_name
+                            ELSE p.full_name
+                        END AS spouse_name
+                    FROM marriages m
+                    LEFT JOIN persons p ON m.person_id = p.person_id
+                    LEFT JOIN persons spouse ON m.spouse_person_id = spouse.person_id
+                    WHERE (m.person_id = %s OR m.spouse_person_id = %s)
+                    AND (m.status IS NULL OR m.status != 'Đã ly dị')
+                """, (person_id, person_id, person_id))
+                spouses = cursor.fetchall()
+                person['spouses'] = [s['spouse_name'] for s in spouses if s['spouse_name']]
+                
+                # Lấy danh sách con (children)
+                cursor.execute("""
+                    SELECT DISTINCT child.full_name
+                    FROM relationships r
+                    JOIN persons child ON r.child_id = child.person_id
+                    WHERE (r.parent_id = %s AND r.relation_type IN ('father', 'mother'))
+                    ORDER BY child.full_name
+                """, (person_id,))
+                children = cursor.fetchall()
+                person['children'] = [c['full_name'] for c in children if c['full_name']]
+                
+                # Lấy danh sách anh/chị/em (siblings) - cùng father_mother_id
+                fm_id = person.get('father_mother_id')
+                if fm_id:
+                    cursor.execute("""
+                        SELECT DISTINCT s.full_name
+                        FROM persons s
+                        WHERE s.father_mother_id = %s
+                        AND s.person_id != %s
+                        ORDER BY s.full_name
+                    """, (fm_id, person_id))
+                    siblings = cursor.fetchall()
+                    person['siblings'] = [s['full_name'] for s in siblings if s['full_name']]
+                else:
+                    person['siblings'] = []
             
             return jsonify({
                 'success': True,
@@ -2673,9 +2719,9 @@ erDiagram
         varchar in_law_person_id FK
         varchar relationship_type
     }
-                        </div>
-                    </div>
                 </div>
+            </div>
+            </div>
                 
                 <!-- Schema Tables -->
                 <div class="schema-section">
@@ -2709,8 +2755,8 @@ erDiagram
                                 <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">father_mother_id</td><td>VARCHAR(50)</td><td>ID nhóm cha mẹ từ CSV</td></tr>
                             </tbody>
                         </table>
-                    </div>
-                    
+        </div>
+        
                     <!-- Relationships Table -->
                     <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27ae60;">
                         <h4 style="color: #27ae60; margin-bottom: 15px;">🔗 RELATIONSHIPS (Quan hệ cha mẹ - con)</h4>
@@ -2729,7 +2775,7 @@ erDiagram
                                 <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">relation_type</td><td>ENUM</td><td>father, mother, in_law, child_in_law, other</td></tr>
                             </tbody>
                         </table>
-                    </div>
+                </div>
                     
                     <!-- Marriages Table -->
                     <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #e74c3c;">
@@ -2750,7 +2796,7 @@ erDiagram
                                 <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">note</td><td>TEXT</td><td>Ghi chú</td></tr>
                             </tbody>
                         </table>
-                    </div>
+            </div>
                     
                     <!-- Activities Table -->
                     <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #9b59b6;">
@@ -2773,7 +2819,7 @@ erDiagram
                                 <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">images</td><td>JSON</td><td>Danh sách ảnh đính kèm</td></tr>
                             </tbody>
                         </table>
-                    </div>
+            </div>
                     
                     <!-- Users Table -->
                     <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f39c12;">
@@ -2827,11 +2873,11 @@ erDiagram
                     <div class="form-group">
                         <label for="person_id_input">Person ID *</label>
                         <input type="text" id="person_id_input" name="person_id" required>
-                    </div>
+            </div>
                     <div class="form-group">
                         <label for="fm_id_input">Father_Mother_ID</label>
                         <input type="text" id="fm_id_input" name="fm_id">
-                    </div>
+                </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="full_name_input">Họ và tên *</label>
@@ -2981,43 +3027,55 @@ erDiagram
             const pageData = membersData;
             
             let html = `
-                <table style="width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px;">
+                <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; min-width: 1400px;">
                     <thead>
                         <tr style="background: #34495e; color: white;">
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">ID</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Họ và tên</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Giới tính</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Đời</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Trạng thái</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Ngày sinh</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Cha</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Mẹ</th>
-                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Thao tác</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">ID</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">Họ và tên</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">Giới tính</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">Đời</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">Trạng thái</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">Ngày sinh</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">Cha</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">Mẹ</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap; max-width: 200px;">Hôn phối</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap; max-width: 200px;">Anh/chị/em</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap; max-width: 200px;">Con</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd; white-space: nowrap;">Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
             `;
             
             pageData.forEach(person => {
+                const birthDate = person.birth_date_solar ? (person.birth_date_solar.length === 4 ? person.birth_date_solar : person.birth_date_solar.substring(0, 4)) : '';
+                const spouses = (person.spouses || []).join(', ') || '-';
+                const siblings = (person.siblings || []).join(', ') || '-';
+                const children = (person.children || []).join(', ') || '-';
+                
                 html += `
                     <tr style="border-bottom: 1px solid #ddd;">
-                        <td style="padding: 10px; border: 1px solid #ddd;">${person.person_id || ''}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${person.full_name || ''}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${person.gender || ''}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${person.generation_level || ''}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${person.status || ''}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${person.birth_date_solar || ''}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${person.father_name || ''}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">${person.mother_name || ''}</td>
-                        <td style="padding: 10px; border: 1px solid #ddd;">
-                            <button class="btn btn-warning btn-sm" onclick="openEditMemberModal('${person.person_id}')">✏️ Sửa</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteMember('${person.person_id}')">🗑️ Xóa</button>
+                        <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap;">${escapeHtml(person.person_id || '')}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${escapeHtml(person.full_name || '')}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap;">${escapeHtml(person.gender || '')}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap;">${person.generation_level || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap;">${escapeHtml(person.status || '')}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap;">${birthDate}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${escapeHtml(person.father_name || '')}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${escapeHtml(person.mother_name || '')}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; max-width: 200px; word-wrap: break-word; font-size: 13px;">${escapeHtml(spouses)}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; max-width: 200px; word-wrap: break-word; font-size: 13px;">${escapeHtml(siblings)}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; max-width: 200px; word-wrap: break-word; font-size: 13px;">${escapeHtml(children)}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd; white-space: nowrap;">
+                            <button class="btn btn-warning btn-sm" onclick="openEditMemberModal('${escapeHtml(person.person_id || '')}')">✏️ Sửa</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteMember('${escapeHtml(person.person_id || '')}')">🗑️ Xóa</button>
                         </td>
                     </tr>
                 `;
             });
             
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             
             if (totalPages > 1) {
                 html += '<div class="pagination" style="text-align: center; margin-top: 20px;">';
