@@ -2581,8 +2581,11 @@ DATA_MANAGEMENT_TEMPLATE = '''
         <!-- Members Management Content -->
         <div id="members" class="tab-content active">
             <div class="toolbar">
-                <div class="search-box">
-                    <input type="text" id="searchMembers" placeholder="Tìm kiếm theo tên, ID..." oninput="filterMembersData()">
+                <div class="search-box" style="display: flex; gap: 5px;">
+                    <input type="text" id="searchMembers" placeholder="Tìm kiếm theo tên, ID..." 
+                           onkeypress="if(event.key === 'Enter') handleSearch()" 
+                           style="flex: 1;">
+                    <button class="btn btn-info" onclick="handleSearch()" style="white-space: nowrap;">🔍 Tìm kiếm</button>
                 </div>
                 <button class="btn btn-success" onclick="openAddMemberModal()">➕ Thêm mới</button>
                 <button class="btn btn-warning" onclick="openBackupModal()">💾 Backup</button>

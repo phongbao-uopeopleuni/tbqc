@@ -42,8 +42,12 @@ try:
     is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true'
     app.config['SESSION_COOKIE_SECURE'] = is_production  # HTTPS only trên production
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # Bảo vệ khỏi XSS
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Bảo vệ khỏi CSRF, cho phép same-site requests
+    # Sử dụng 'None' cho SameSite trên HTTPS để đảm bảo cookie được gửi trong mọi trường hợp
+    # Nếu không phải production, dùng 'Lax' để tránh warning
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'
     app.config['SESSION_COOKIE_NAME'] = 'tbqc_session'  # Tên cookie rõ ràng
+    # Đảm bảo session được lưu mỗi khi có thay đổi
+    app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session mỗi request để kéo dài thời gian
     CORS(app)  # Cho phép frontend gọi API
     print("OK: Flask app da duoc khoi tao")
     print(f"   Static folder: {app.static_folder}")
