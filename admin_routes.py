@@ -3192,8 +3192,10 @@ erDiagram
                 const response = await fetch(url, {
                     method: method,
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
+                    credentials: 'same-origin', // Đảm bảo gửi cookies/session
                     body: JSON.stringify(data)
                 });
                 
