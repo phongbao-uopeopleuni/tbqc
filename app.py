@@ -39,6 +39,16 @@ try:
     print("OK: Flask app da duoc khoi tao")
     print(f"   Static folder: {app.static_folder}")
     print(f"   Template folder: {app.template_folder}")
+    
+    # Tự động copy ảnh vào Railway Volume khi khởi động (chỉ trên Railway)
+    if os.environ.get('RAILWAY_ENVIRONMENT'):
+        try:
+            from copy_images_to_volume import copy_images_to_volume
+            copy_images_to_volume()
+        except ImportError:
+            pass  # Script không có thì bỏ qua
+        except Exception as e:
+            print(f"Warning: Could not copy images to volume: {e}")
 except Exception as e:
     print(f"ERROR: Loi khi khoi tao Flask app: {e}")
     import traceback
@@ -842,36 +852,69 @@ def serve_genealogy_js():
 @app.route('/static/images/<path:filename>')
 def serve_image_static(filename):
     """Serve images from static/images/ or Railway Volume"""
+    from urllib.parse import unquote
+    import glob
+    
+    # Decode URL-encoded filename (handles spaces, special chars)
+    filename = unquote(filename)
     logger.debug(f"[Serve Image] Requested filename: {filename}")
     
-    # Kiểm tra Railway Volume path trước
-    volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
-    if volume_mount_path and os.path.exists(volume_mount_path):
-        volume_filepath = os.path.join(volume_mount_path, filename)
-        if os.path.exists(volume_filepath):
-            logger.info(f"[Serve Image] Serving from volume: {volume_filepath}")
-            return send_from_directory(volume_mount_path, filename)
-        else:
-            logger.debug(f"[Serve Image] Image not found in volume: {volume_filepath}")
+    # Tự động detect Railway Volume mount path
+    # Railway mount volume vào /app/static/images nếu được cấu hình đúng
+    # Hoặc có thể mount vào path khác, cần check cả hai
+    possible_paths = [
+        os.environ.get('RAILWAY_VOLUME_MOUNT_PATH'),
+        os.path.join(BASE_DIR, 'static', 'images'),  # Standard static path
+        '/app/static/images',  # Railway mount path
+    ]
     
-    # Fallback về static/images mặc định
-    static_images_path = os.path.join(BASE_DIR, 'static', 'images')
-    static_filepath = os.path.join(static_images_path, filename)
-    logger.debug(f"[Serve Image] Checking static path: {static_filepath}")
-    logger.debug(f"[Serve Image] BASE_DIR: {BASE_DIR}")
-    logger.debug(f"[Serve Image] Static images path exists: {os.path.exists(static_images_path)}")
+    # Thêm các volume mount paths có thể có từ Railway
+    # Railway thường mount vào /var/lib/containers/railwayapp/bind-mounts/...
+    # Nhưng nếu được mount đúng, sẽ mount vào /app/static/images
+    volume_base = '/var/lib/containers/railwayapp/bind-mounts'
+    if os.path.exists(volume_base):
+        try:
+            # Tìm các volume mount directories
+            for mount_dir in os.listdir(volume_base):
+                mount_path = os.path.join(volume_base, mount_dir)
+                if os.path.isdir(mount_path):
+                    # Check các subdirectories có thể chứa volume
+                    for subdir in os.listdir(mount_path):
+                        vol_path = os.path.join(mount_path, subdir)
+                        if os.path.isdir(vol_path) and 'vol_' in subdir:
+                            possible_paths.append(vol_path)
+        except Exception as e:
+            logger.debug(f"[Serve Image] Could not scan volume mounts: {e}")
     
-    if os.path.exists(static_filepath):
-        logger.info(f"[Serve Image] Serving from static: {static_filepath}")
-        return send_from_directory(static_images_path, filename)
-    else:
-        logger.warning(f"[Serve Image] Image not found: {filename}")
-        logger.warning(f"[Serve Image] Checked volume: {volume_mount_path}")
-        logger.warning(f"[Serve Image] Checked static: {static_images_path}")
-        logger.warning(f"[Serve Image] Static filepath: {static_filepath}")
-        logger.warning(f"[Serve Image] File exists: {os.path.exists(static_filepath)}")
+    # Loại bỏ None và duplicates
+    possible_paths = list(dict.fromkeys([p for p in possible_paths if p and os.path.exists(p)]))
     
-    # Nếu không tìm thấy, trả về 404
+    # Thử từng path
+    for image_path in possible_paths:
+        image_filepath = os.path.join(image_path, filename)
+        if os.path.exists(image_filepath):
+            logger.info(f"[Serve Image] Serving from: {image_filepath}")
+            try:
+                return send_from_directory(image_path, filename)
+            except Exception as e:
+                logger.error(f"[Serve Image] Error serving from {image_path}: {e}")
+                continue
+    
+    # Nếu không tìm thấy ở bất kỳ đâu, log chi tiết
+    logger.warning(f"[Serve Image] Image not found: {filename}")
+    logger.warning(f"[Serve Image] Checked paths: {possible_paths}")
+    
+    # List files trong các paths để debug
+    for path in possible_paths[:3]:  # Chỉ list 3 paths đầu để tránh spam log
+        try:
+            files = os.listdir(path)
+            logger.debug(f"[Serve Image] Files in {path}: {len(files)} files")
+            if len(files) > 0:
+                logger.debug(f"[Serve Image] Sample files: {files[:5]}")
+        except Exception as e:
+            logger.debug(f"[Serve Image] Could not list {path}: {e}")
+    
+    # Trả về 404
     from flask import abort
     abort(404)
 

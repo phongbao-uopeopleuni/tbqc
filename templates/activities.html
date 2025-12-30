@@ -72,6 +72,26 @@
       font-size: var(--font-size-sm);
     }
     
+    .activity-thumbnail {
+      width: 100%;
+      height: 200px;
+      overflow: hidden;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      background: var(--color-bg);
+    }
+    
+    .activity-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    
+    .activity-thumbnail img:hover {
+      transform: scale(1.05);
+    }
+    
     .navbar-login-btn {
       position: fixed;
       bottom: var(--space-6);
@@ -161,9 +181,18 @@
           ${posts.map(p => {
             const date = p.created_at ? formatDate(p.created_at) : '';
             const summary = p.summary || p.description || '';
+            const thumbnail = p.thumbnail || (p.images && p.images.length > 0 ? p.images[0] : null);
+            const thumbnailUrl = thumbnail ? `/static/images/${thumbnail}` : null;
             return `
               <a href="/activities/${p.id || p.activity_id || ''}" class="activity-card">
                 <div class="card">
+                  ${thumbnailUrl ? `
+                    <div class="activity-thumbnail" style="margin-bottom: 15px; border-radius: 8px; overflow: hidden;">
+                      <img src="${escapeHtml(thumbnailUrl)}" alt="${escapeHtml(p.title || '')}" 
+                           style="width: 100%; height: 200px; object-fit: cover;"
+                           onerror="this.style.display='none';">
+                    </div>
+                  ` : ''}
                   <h3 class="activity-card-title">${escapeHtml(p.title || 'Không có tiêu đề')}</h3>
                   ${date ? `<div class="activity-meta">📅 ${date}</div>` : ''}
                   <div class="activity-summary">${escapeHtml(summary).substring(0, 150)}${summary && summary.length > 150 ? '...' : ''}</div>

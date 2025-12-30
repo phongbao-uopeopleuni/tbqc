@@ -793,6 +793,274 @@ def register_admin_routes(app):
                 cursor.close()
                 connection.close()
     
+    @app.route('/admin/api/members', methods=['POST'])
+    @permission_required('canViewDashboard')
+    def create_member_admin():
+        """API: Thêm thành viên mới (admin không cần password)"""
+        from app import _process_children_spouse_siblings
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        
+        cursor = None
+        try:
+            data = request.get_json() or {}
+            if not data:
+                return jsonify({'success': False, 'error': 'Không có dữ liệu'}), 400
+            
+            cursor = connection.cursor(dictionary=True)
+            
+            # Kiểm tra person_id đã tồn tại chưa
+            person_id = data.get('person_id') or data.get('csv_id')
+            if person_id:
+                person_id = str(person_id).strip()
+                cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
+                if cursor.fetchone():
+                    return jsonify({'success': False, 'error': f'person_id {person_id} đã tồn tại'}), 400
+            else:
+                # Tạo person_id mới nếu không có
+                generation_num = data.get('generation_number')
+                if generation_num:
+                    cursor.execute("""
+                        SELECT MAX(CAST(SUBSTRING_INDEX(person_id, '-', -1) AS UNSIGNED)) as max_num
+                        FROM persons 
+                        WHERE person_id LIKE %s
+                    """, (f'P-{generation_num}-%',))
+                    result = cursor.fetchone()
+                    next_num = (result['max_num'] or 0) + 1
+                    person_id = f'P-{generation_num}-{next_num}'
+                else:
+                    return jsonify({'success': False, 'error': 'Cần có person_id hoặc generation_number để tạo ID'}), 400
+            
+            # Kiểm tra các cột có tồn tại không
+            cursor.execute("""
+                SELECT COLUMN_NAME 
+                FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'persons'
+            """)
+            columns = [row['COLUMN_NAME'] for row in cursor.fetchall()]
+            
+            # Build INSERT query động
+            insert_fields = ['person_id']
+            insert_values = [person_id]
+            
+            if 'full_name' in columns:
+                insert_fields.append('full_name')
+                insert_values.append(data.get('full_name'))
+            
+            if 'gender' in columns:
+                insert_fields.append('gender')
+                insert_values.append(data.get('gender'))
+            
+            if 'status' in columns:
+                insert_fields.append('status')
+                insert_values.append(data.get('status', 'Không rõ'))
+            
+            if 'generation_level' in columns and data.get('generation_number'):
+                insert_fields.append('generation_level')
+                insert_values.append(data.get('generation_number'))
+            
+            if 'father_mother_id' in columns:
+                insert_fields.append('father_mother_id')
+                insert_values.append(data.get('fm_id'))
+            elif 'fm_id' in columns:
+                insert_fields.append('fm_id')
+                insert_values.append(data.get('fm_id'))
+            
+            if 'birth_date_solar' in columns and data.get('birth_date_solar'):
+                insert_fields.append('birth_date_solar')
+                birth_date = data.get('birth_date_solar').strip()
+                if birth_date and len(birth_date) == 4 and birth_date.isdigit():
+                    birth_date = f'{birth_date}-01-01'
+                insert_values.append(birth_date if birth_date else None)
+            
+            if 'death_date_solar' in columns and data.get('death_date_solar'):
+                insert_fields.append('death_date_solar')
+                death_date = data.get('death_date_solar').strip()
+                if death_date and len(death_date) == 4 and death_date.isdigit():
+                    death_date = f'{death_date}-01-01'
+                insert_values.append(death_date if death_date else None)
+            
+            if 'place_of_death' in columns:
+                insert_fields.append('place_of_death')
+                insert_values.append(data.get('place_of_death'))
+            
+            # Thêm person
+            placeholders = ','.join(['%s'] * len(insert_values))
+            insert_query = f"INSERT INTO persons ({', '.join(insert_fields)}) VALUES ({placeholders})"
+            cursor.execute(insert_query, insert_values)
+            
+            # Xử lý relationships (cha/mẹ)
+            if data.get('father_name') or data.get('mother_name'):
+                father_id = None
+                mother_id = None
+                
+                if data.get('father_name'):
+                    cursor.execute("SELECT person_id FROM persons WHERE full_name = %s LIMIT 1", (data['father_name'],))
+                    father = cursor.fetchone()
+                    if father:
+                        father_id = father['person_id']
+                
+                if data.get('mother_name'):
+                    cursor.execute("SELECT person_id FROM persons WHERE full_name = %s LIMIT 1", (data['mother_name'],))
+                    mother = cursor.fetchone()
+                    if mother:
+                        mother_id = mother['person_id']
+                
+                if father_id:
+                    cursor.execute("""
+                        INSERT INTO relationships (child_id, parent_id, relation_type)
+                        VALUES (%s, %s, 'father')
+                        ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)
+                    """, (person_id, father_id))
+                
+                if mother_id:
+                    cursor.execute("""
+                        INSERT INTO relationships (child_id, parent_id, relation_type)
+                        VALUES (%s, %s, 'mother')
+                        ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)
+                    """, (person_id, mother_id))
+            
+            # Xử lý children, spouse, siblings
+            _process_children_spouse_siblings(cursor, person_id, data)
+            
+            connection.commit()
+            return jsonify({'success': True, 'message': 'Thêm thành viên thành công', 'person_id': person_id})
+            
+        except Error as e:
+            connection.rollback()
+            return jsonify({'success': False, 'error': f'Lỗi database: {str(e)}'}), 500
+        except Exception as e:
+            connection.rollback()
+            return jsonify({'success': False, 'error': f'Lỗi: {str(e)}'}), 500
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @app.route('/admin/api/members/<person_id>', methods=['PUT'])
+    @permission_required('canViewDashboard')
+    def update_member_admin(person_id):
+        """API: Cập nhật thành viên (admin không cần password)"""
+        from app import _process_children_spouse_siblings
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        
+        try:
+            data = request.get_json() or {}
+            cursor = connection.cursor(dictionary=True)
+            
+            # Kiểm tra person có tồn tại không
+            cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'error': f'Không tìm thấy person_id: {person_id}'}), 404
+            
+            # Kiểm tra các cột có tồn tại không
+            cursor.execute("""
+                SELECT COLUMN_NAME 
+                FROM information_schema.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = 'persons'
+            """)
+            columns = [row['COLUMN_NAME'] for row in cursor.fetchall()]
+            
+            # Build UPDATE query động
+            update_fields = []
+            update_values = []
+            
+            if 'full_name' in columns:
+                update_fields.append('full_name = %s')
+                update_values.append(data.get('full_name'))
+            
+            if 'gender' in columns:
+                update_fields.append('gender = %s')
+                update_values.append(data.get('gender'))
+            
+            if 'status' in columns:
+                update_fields.append('status = %s')
+                update_values.append(data.get('status'))
+            
+            if 'generation_level' in columns and data.get('generation_number'):
+                update_fields.append('generation_level = %s')
+                update_values.append(data.get('generation_number'))
+            
+            if 'father_mother_id' in columns:
+                update_fields.append('father_mother_id = %s')
+                update_values.append(data.get('fm_id'))
+            elif 'fm_id' in columns:
+                update_fields.append('fm_id = %s')
+                update_values.append(data.get('fm_id'))
+            
+            if 'birth_date_solar' in columns:
+                update_fields.append('birth_date_solar = %s')
+                birth_date = data.get('birth_date_solar', '').strip() if data.get('birth_date_solar') else ''
+                if birth_date and len(birth_date) == 4 and birth_date.isdigit():
+                    birth_date = f'{birth_date}-01-01'
+                update_values.append(birth_date if birth_date else None)
+            
+            if 'death_date_solar' in columns:
+                update_fields.append('death_date_solar = %s')
+                death_date = data.get('death_date_solar', '').strip() if data.get('death_date_solar') else ''
+                if death_date and len(death_date) == 4 and death_date.isdigit():
+                    death_date = f'{death_date}-01-01'
+                update_values.append(death_date if death_date else None)
+            
+            if 'place_of_death' in columns:
+                update_fields.append('place_of_death = %s')
+                update_values.append(data.get('place_of_death'))
+            
+            if update_fields:
+                update_values.append(person_id)
+                update_query = f"UPDATE persons SET {', '.join(update_fields)} WHERE person_id = %s"
+                cursor.execute(update_query, update_values)
+            
+            # Xử lý relationships (cha/mẹ)
+            if data.get('father_name') or data.get('mother_name'):
+                # Xóa relationships cũ
+                cursor.execute("DELETE FROM relationships WHERE child_id = %s AND relation_type IN ('father', 'mother')", (person_id,))
+                
+                father_id = None
+                mother_id = None
+                
+                if data.get('father_name'):
+                    cursor.execute("SELECT person_id FROM persons WHERE full_name = %s LIMIT 1", (data['father_name'],))
+                    father = cursor.fetchone()
+                    if father:
+                        father_id = father['person_id']
+                        cursor.execute("""
+                            INSERT INTO relationships (child_id, parent_id, relation_type)
+                            VALUES (%s, %s, 'father')
+                        """, (person_id, father_id))
+                
+                if data.get('mother_name'):
+                    cursor.execute("SELECT person_id FROM persons WHERE full_name = %s LIMIT 1", (data['mother_name'],))
+                    mother = cursor.fetchone()
+                    if mother:
+                        mother_id = mother['person_id']
+                        cursor.execute("""
+                            INSERT INTO relationships (child_id, parent_id, relation_type)
+                            VALUES (%s, %s, 'mother')
+                        """, (person_id, mother_id))
+            
+            # Xử lý children, spouse, siblings
+            _process_children_spouse_siblings(cursor, person_id, data)
+            
+            connection.commit()
+            return jsonify({'success': True, 'message': 'Cập nhật thành viên thành công'})
+            
+        except Error as e:
+            connection.rollback()
+            return jsonify({'success': False, 'error': f'Lỗi database: {str(e)}'}), 500
+        except Exception as e:
+            connection.rollback()
+            return jsonify({'success': False, 'error': f'Lỗi: {str(e)}'}), 500
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
     @app.route('/admin/api/members/<person_id>', methods=['DELETE'])
     @permission_required('canViewDashboard')
     def delete_member(person_id):
@@ -2041,6 +2309,70 @@ DATA_MANAGEMENT_TEMPLATE = '''
         .btn-warning:hover {
             background: #e67e22;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 30px;
+            border: 1px solid #888;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: #000;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -2485,19 +2817,91 @@ erDiagram
         </div>
     </div>
     
-    <!-- Modal for Add/Edit -->
-    <div id="dataModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">Thêm mới</h2>
-                <span class="close" onclick="closeModal()">&times;</span>
-            </div>
-            <form id="dataForm" onsubmit="saveData(event)">
-                <div id="modalFormContent">
-                    <!-- Form fields will be generated dynamically -->
+    <!-- Modal for Add/Edit Member -->
+    <div id="memberModal" class="modal">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
+            <span class="close" onclick="closeMemberModal()" style="float: right; font-size: 28px; font-weight: bold; cursor: pointer; color: #aaa;">&times;</span>
+            <h2 id="memberModalTitle">Thêm thành viên mới</h2>
+            <form id="memberForm" onsubmit="saveMember(event)">
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="person_id_input">Person ID *</label>
+                        <input type="text" id="person_id_input" name="person_id" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="fm_id_input">Father_Mother_ID</label>
+                        <input type="text" id="fm_id_input" name="fm_id">
+                    </div>
                 </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="full_name_input">Họ và tên *</label>
+                    <input type="text" id="full_name_input" name="full_name" required>
+                </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="gender_input">Giới tính *</label>
+                        <select id="gender_input" name="gender" required style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                            <option value="">-- Chọn --</option>
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="status_input">Trạng thái *</label>
+                        <select id="status_input" name="status" required style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                            <option value="">-- Chọn --</option>
+                            <option value="Còn sống">Còn sống</option>
+                            <option value="Đã mất">Đã mất</option>
+                            <option value="Không rõ">Không rõ</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="generation_number_input">Đời</label>
+                        <input type="number" id="generation_number_input" name="generation_number" min="1" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="birth_date_solar_input">Năm sinh</label>
+                        <input type="text" id="birth_date_solar_input" name="birth_date_solar" placeholder="YYYY-MM-DD hoặc YYYY" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                    </div>
+                </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="death_date_solar_input">Năm mất</label>
+                        <input type="text" id="death_date_solar_input" name="death_date_solar" placeholder="YYYY-MM-DD hoặc YYYY" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="place_of_death_input">Nơi mất</label>
+                        <input type="text" id="place_of_death_input" name="place_of_death" placeholder="Nhập nơi mất" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                    </div>
+                </div>
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="father_name_input">Tên bố</label>
+                        <input type="text" id="father_name_input" name="father_name" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                    </div>
+                    <div class="form-group">
+                        <label for="mother_name_input">Tên mẹ</label>
+                        <input type="text" id="mother_name_input" name="mother_name" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="children_info_input">Thông tin con</label>
+                    <textarea id="children_info_input" name="children_info" rows="3" placeholder="Nhập tên các con, phân cách bằng dấu chấm phẩy (;)" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="spouse_info_input">Hôn phối</label>
+                    <textarea id="spouse_info_input" name="spouse_info" rows="3" placeholder="Nhập tên hôn phối, phân cách bằng dấu chấm phẩy (;)" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="siblings_info_input">Thông tin anh chị em</label>
+                    <textarea id="siblings_info_input" name="siblings_info" rows="3" placeholder="Nhập tên anh chị em, phân cách bằng dấu chấm phẩy (;)" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px;"></textarea>
+                </div>
+                <input type="hidden" id="edit_person_id" name="edit_person_id">
                 <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-                    <button type="button" class="btn btn-warning" onclick="closeModal()">Hủy</button>
+                    <button type="button" class="btn btn-warning" onclick="closeMemberModal()">Hủy</button>
                     <button type="submit" class="btn btn-success">💾 Lưu</button>
                 </div>
             </form>
@@ -2505,11 +2909,6 @@ erDiagram
     </div>
     
     <script>
-        let currentSheet = 'sheet1';
-        let currentData = {};
-        let currentPage = {sheet1: 1, sheet2: 1, sheet3: 1};
-        const itemsPerPage = 50;
-        
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -2536,8 +2935,8 @@ erDiagram
         let currentMembersPage = 1;
         let totalPages = 1;
         let totalMembers = 0;
-        const itemsPerPage = 50;
         let currentSearch = '';
+        const membersItemsPerPage = 50;
         
         async function loadMembersData(page = 1, search = '') {
             const container = document.getElementById('membersTableContainer');
@@ -2546,7 +2945,7 @@ erDiagram
             try {
                 const params = new URLSearchParams({
                     page: page,
-                    per_page: itemsPerPage
+                    per_page: membersItemsPerPage
                 });
                 if (search) {
                     params.append('search', search);
@@ -2652,13 +3051,92 @@ erDiagram
         }
         
         function openAddMemberModal() {
-            // Redirect to members page for adding
-            window.location.href = '/members';
+            document.getElementById('memberModalTitle').textContent = 'Thêm thành viên mới';
+            document.getElementById('memberForm').reset();
+            document.getElementById('edit_person_id').value = '';
+            document.getElementById('person_id_input').removeAttribute('readonly');
+            document.getElementById('memberModal').style.display = 'block';
         }
         
         function openEditMemberModal(personId) {
-            // Redirect to members page for editing
-            window.location.href = `/members?edit=${personId}`;
+            // Tìm person trong membersData
+            const person = membersData.find(p => p.person_id === personId);
+            if (!person) {
+                alert('Không tìm thấy thành viên');
+                return;
+            }
+            
+            document.getElementById('memberModalTitle').textContent = 'Cập nhật thành viên';
+            document.getElementById('edit_person_id').value = personId;
+            document.getElementById('person_id_input').value = person.person_id || '';
+            document.getElementById('person_id_input').setAttribute('readonly', 'readonly');
+            document.getElementById('fm_id_input').value = person.father_mother_id || '';
+            document.getElementById('full_name_input').value = person.full_name || '';
+            document.getElementById('gender_input').value = person.gender || '';
+            document.getElementById('status_input').value = person.status || '';
+            document.getElementById('generation_number_input').value = person.generation_level || '';
+            document.getElementById('birth_date_solar_input').value = person.birth_date_solar || '';
+            document.getElementById('death_date_solar_input').value = person.death_date_solar || '';
+            document.getElementById('place_of_death_input').value = person.place_of_death || '';
+            document.getElementById('father_name_input').value = person.father_name || '';
+            document.getElementById('mother_name_input').value = person.mother_name || '';
+            
+            // Load children, spouse, siblings info (cần fetch từ API)
+            document.getElementById('children_info_input').value = '';
+            document.getElementById('spouse_info_input').value = '';
+            document.getElementById('siblings_info_input').value = '';
+            
+            document.getElementById('memberModal').style.display = 'block';
+        }
+        
+        function closeMemberModal() {
+            document.getElementById('memberModal').style.display = 'none';
+            document.getElementById('memberForm').reset();
+        }
+        
+        async function saveMember(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const data = {};
+            for (let [key, value] of formData.entries()) {
+                if (value) data[key] = value;
+            }
+            
+            const editPersonId = document.getElementById('edit_person_id').value;
+            const isEdit = !!editPersonId;
+            
+            try {
+                // Admin API không cần password
+                let url, method;
+                if (isEdit) {
+                    url = `/admin/api/members/${editPersonId}`;
+                    method = 'PUT';
+                } else {
+                    url = '/admin/api/members';
+                    method = 'POST';
+                }
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success || response.ok) {
+                    showAlert(isEdit ? 'Cập nhật thành công!' : 'Thêm thành công!', 'success');
+                    closeMemberModal();
+                    loadMembersData(currentMembersPage, currentSearch);
+                } else {
+                    showAlert('Lỗi: ' + (result.error || 'Không thể lưu'), 'error');
+                }
+            } catch (error) {
+                showAlert('Lỗi kết nối: ' + error.message, 'error');
+            }
         }
         
         async function deleteMember(personId) {
