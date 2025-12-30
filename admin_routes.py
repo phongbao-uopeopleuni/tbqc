@@ -2356,6 +2356,20 @@ DATA_MANAGEMENT_TEMPLATE = '''
         .btn-warning:hover {
             background: #e67e22;
         }
+        .btn-info {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        .btn-info:hover {
+            background: #2980b9;
+        }
         .modal {
             display: none;
             position: fixed;
