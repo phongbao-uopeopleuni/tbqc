@@ -2955,6 +2955,13 @@ erDiagram
     </div>
     
     <script>
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -2999,7 +3006,13 @@ erDiagram
                 
                 const response = await fetch(`/admin/api/members?${params.toString()}`);
                 if (!response.ok) {
-                    throw new Error('Không thể tải dữ liệu');
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+                }
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Expected JSON but got: ${contentType}. Response: ${text.substring(0, 200)}`);
                 }
                 const result = await response.json();
                 
@@ -3013,7 +3026,8 @@ erDiagram
                     container.innerHTML = `<div class="alert alert-error">Lỗi: ${result.error}</div>`;
                 }
             } catch (error) {
-                container.innerHTML = `<div class="alert alert-error">Lỗi: ${error.message}</div>`;
+                console.error('Error loading members data:', error);
+                container.innerHTML = `<div class="alert alert-error">Lỗi: ${escapeHtml(error.message)}</div>`;
             }
         }
         
