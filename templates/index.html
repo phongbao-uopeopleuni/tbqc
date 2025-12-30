@@ -846,7 +846,7 @@
       <li><a href="/activities">Hoạt động</a></li>
       <li><a href="/members" onclick="setActive(this)">Thành viên</a></li>
       <li><a href="/contact" onclick="setActive(this)">Liên hệ</a></li>
-      <li><a href="/login">Đăng nhập</a></li>
+      <li><a href="/admin/login">Admin</a></li>
     </ul>
   </nav>
 
@@ -3684,6 +3684,30 @@
         </div>
       </div>
       
+      <!-- Countdown Section -->
+      <div class="countdown-section">
+        <div class="countdown-item">
+          <div class="countdown-label">Giỗ Xuân 2026 (07/2 ÂL)</div>
+          <div class="countdown-date">Nhằm ngày 25/03/2026</div>
+          <div class="countdown-timer" id="countdown-xuan">
+            <span class="countdown-value">--</span> ngày 
+            <span class="countdown-value">--</span> giờ 
+            <span class="countdown-value">--</span> phút 
+            <span class="countdown-value">--</span> giây
+          </div>
+        </div>
+        <div class="countdown-item">
+          <div class="countdown-label">Giỗ Thu 2026 (03/7 ÂL)</div>
+          <div class="countdown-date">Nhằm ngày 15/08/2026</div>
+          <div class="countdown-timer" id="countdown-thu">
+            <span class="countdown-value">--</span> ngày 
+            <span class="countdown-value">--</span> giờ 
+            <span class="countdown-value">--</span> phút 
+            <span class="countdown-value">--</span> giây
+          </div>
+        </div>
+      </div>
+      
       <div class="footer-bottom">
         <p>&copy; 2025 Phòng Tuy Biên Quận Công - Gia Phả Nguyễn Phước Tộc. Tất cả quyền được bảo lưu.</p>
       </div>
@@ -3693,16 +3717,31 @@
   <style>
     /* Footer Styles */
     .footer {
-      background: #111827;
-      color: #E5E7EB;
+      background: linear-gradient(180deg, #2C1810 0%, #1A0F08 100%);
+      color: #F5E6D3;
       padding: 60px 0 40px;
       margin-top: 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .footer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(218, 165, 32, 0.05) 0%, rgba(139, 69, 19, 0.05) 100%);
+      pointer-events: none;
     }
 
     .footer .container {
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 20px;
+      position: relative;
+      z-index: 1;
     }
 
     .footer-content {
@@ -3713,17 +3752,18 @@
     }
 
     .footer-section h3 {
-      color: #F59E0B;
+      color: #FFD700;
       font-size: 18px;
       font-weight: 600;
       margin-bottom: 20px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .footer-section p,
     .footer-section ul {
       font-size: 14px;
       line-height: 1.8;
-      color: #CBD5E1;
+      color: #E8D5B7;
     }
 
     .footer-section ul {
@@ -3736,21 +3776,83 @@
     }
 
     .footer-section a {
-      color: #CBD5E1;
+      color: #E8D5B7;
       text-decoration: none;
-      transition: color 0.3s ease;
+      transition: all 0.3s ease;
+      display: inline-block;
     }
 
     .footer-section a:hover {
-      color: #F59E0B;
+      color: #FFD700;
+      transform: translateX(3px);
+    }
+
+    .countdown-section {
+      margin: 40px 0;
+      padding: 30px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+    
+    .countdown-item {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(218, 165, 32, 0.15) 0%, rgba(139, 69, 19, 0.15) 100%);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .countdown-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 215, 0, 0.2);
+    }
+    
+    .countdown-label {
+      font-size: 18px;
+      font-weight: 600;
+      color: #FFD700;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
+    .countdown-date {
+      font-size: 14px;
+      color: #E8D5B7;
+      margin-bottom: 15px;
+    }
+    
+    .countdown-timer {
+      font-size: 16px;
+      color: #F5E6D3;
+      font-weight: 500;
+    }
+    
+    .countdown-value {
+      color: #FFD700;
+      font-weight: 700;
+      font-size: 18px;
+      margin: 0 4px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    
+    @media (max-width: 768px) {
+      .countdown-section {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
     }
 
     .footer-bottom {
       padding-top: 30px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 215, 0, 0.2);
       text-align: center;
       font-size: 14px;
-      color: #94A3B8;
+      color: #D4A574;
     }
 
     @media (max-width: 767px) {
@@ -3760,6 +3862,64 @@
       }
     }
   </style>
+
+  <script>
+    // Countdown timer cho Giỗ Xuân và Giỗ Thu
+    function updateCountdown() {
+      // Ngày Giỗ Xuân 2026: 25/03/2026
+      const xuanDate = new Date('2026-03-25T00:00:00');
+      // Ngày Giỗ Thu 2026: 15/08/2026
+      const thuDate = new Date('2026-08-15T00:00:00');
+      
+      const now = new Date();
+      
+      // Tính toán cho Giỗ Xuân
+      let xuanDiff = xuanDate - now;
+      const xuanTimer = document.getElementById('countdown-xuan');
+      if (xuanTimer) {
+        if (xuanDiff < 0) {
+          xuanTimer.innerHTML = '<span style="color: #94A3B8;">Đã qua</span>';
+        } else {
+          const xuanDays = Math.floor(xuanDiff / (1000 * 60 * 60 * 24));
+          const xuanHours = Math.floor((xuanDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const xuanMinutes = Math.floor((xuanDiff % (1000 * 60 * 60)) / (1000 * 60));
+          const xuanSeconds = Math.floor((xuanDiff % (1000 * 60)) / 1000);
+          
+          xuanTimer.innerHTML = `
+            <span class="countdown-value">${xuanDays}</span> ngày 
+            <span class="countdown-value">${xuanHours}</span> giờ 
+            <span class="countdown-value">${xuanMinutes}</span> phút 
+            <span class="countdown-value">${xuanSeconds}</span> giây
+          `;
+        }
+      }
+      
+      // Tính toán cho Giỗ Thu
+      let thuDiff = thuDate - now;
+      const thuTimer = document.getElementById('countdown-thu');
+      if (thuTimer) {
+        if (thuDiff < 0) {
+          thuTimer.innerHTML = '<span style="color: #94A3B8;">Đã qua</span>';
+        } else {
+          const thuDays = Math.floor(thuDiff / (1000 * 60 * 60 * 24));
+          const thuHours = Math.floor((thuDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const thuMinutes = Math.floor((thuDiff % (1000 * 60 * 60)) / (1000 * 60));
+          const thuSeconds = Math.floor((thuDiff % (1000 * 60)) / 1000);
+          
+          thuTimer.innerHTML = `
+            <span class="countdown-value">${thuDays}</span> ngày 
+            <span class="countdown-value">${thuHours}</span> giờ 
+            <span class="countdown-value">${thuMinutes}</span> phút 
+            <span class="countdown-value">${thuSeconds}</span> giây
+          `;
+        }
+      }
+    }
+    
+    // Cập nhật countdown mỗi giây
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  </script>
 
 </body>
 </html>

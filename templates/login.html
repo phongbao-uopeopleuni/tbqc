@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Đăng nhập - Gia Phả Nguyễn Phước Tộc</title>
+  <title>{% if admin_mode %}Đăng nhập Admin{% else %}Đăng nhập{% endif %} - Gia Phả Nguyễn Phước Tộc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -67,10 +67,8 @@
   
   <div class="login-wrapper">
     <div class="card login-card">
-    <h1>Đăng nhập</h1>
-    <p>Đăng nhập để truy cập trang quản trị gia phả.</p>
-      <h1>Đăng nhập</h1>
-      <p>Đăng nhập để truy cập trang quản trị gia phả.</p>
+      <h1>{% if admin_mode %}Đăng nhập Admin{% else %}Đăng nhập{% endif %}</h1>
+      <p>{% if admin_mode %}Vui lòng đăng nhập để truy cập trang quản trị{% else %}Vui lòng đăng nhập để có thể đăng bài{% endif %}</p>
       
       <div id="loginError" class="alert alert-error" style="display: none;"></div>
       
@@ -123,8 +121,8 @@
         const result = await response.json();
 
         if (response.ok && result.success) {
-          // Redirect to editor page after login
-          const redirectUrl = result.redirect || '/editor';
+          // Redirect based on server response (handles admin → /admin/users, editor/user → /admin/activities)
+          const redirectUrl = result.redirect || '/admin/activities';
           window.location.href = redirectUrl;
         } else {
           errorDiv.textContent = result.error || 'Đăng nhập thất bại. Vui lòng thử lại.';

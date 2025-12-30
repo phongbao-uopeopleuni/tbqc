@@ -52,3 +52,21 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Admin creation scripts (contain sensitive credentials)
+create_*_admin.py
+create_*_admin_user.py
+create_admin_user.py
+create_phongb_admin.py
+create_admin_tbqc.py
+create_tbqc_admin.py
+create_tbqc_admin_user.py
+
+# CSV data files (may contain sensitive data)
+*.csv
+!folder_sql/*.sql
+
+# Backup files
+backups/
+*.sql
+!folder_sql/*.sql

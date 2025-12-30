@@ -10,8 +10,9 @@
   <link rel="stylesheet" href="/static/css/main.css">
   <style>
     .article-container {
-      max-width: 1000px;
+      max-width: 1400px;
       margin: 0 auto;
+      padding: 0 20px;
     }
     
     .back-link {
@@ -41,6 +42,7 @@
     .article-header {
       padding: var(--space-8);
       border-bottom: 1px solid var(--color-border);
+      max-width: 100%;
     }
     
     .article-meta {
@@ -62,7 +64,57 @@
       line-height: var(--line-height-relaxed);
       color: var(--color-text);
       white-space: pre-wrap;
-      max-width: 720px;
+      max-width: 100%;
+      width: 100%;
+    }
+    
+    .article-content > div:first-of-type {
+      margin-top: 0;
+    }
+    
+    .article-thumbnail {
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    
+    .article-thumbnail img {
+      width: 100%;
+      max-width: 1200px;
+      height: auto;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin: 0 auto;
+      display: block;
+    }
+    
+    .article-images {
+      margin-top: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .article-images .image-item {
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    
+    .article-images .image-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .article-images .image-item img {
+      width: 100%;
+      max-width: 1200px;
+      height: auto;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      margin: 0 auto;
+      display: block;
+    }
+    
+    .article-images .image-item img:hover {
+      transform: scale(1.02);
     }
     
     .related-section {
@@ -109,6 +161,9 @@
     }
     
     @media (max-width: 767px) {
+      .article-container {
+        padding: 0 15px;
+      }
       .article-title {
         font-size: var(--font-size-2xl);
       }
@@ -117,6 +172,10 @@
       }
       .related-grid {
         grid-template-columns: 1fr;
+      }
+      .article-thumbnail img,
+      .article-images .image-item img {
+        max-width: 100%;
       }
     }
   </style>
@@ -159,7 +218,40 @@
             <h1 class="article-title">{{ activity.title or 'Không có tiêu đề' }}</h1>
           </div>
           <div class="article-content">
-            {{ (activity.content or activity.summary or '') | replace('\n', '<br>') | safe }}
+            {% if activity.thumbnail %}
+              <div class="article-thumbnail">
+                <img src="{{ activity.thumbnail }}" alt="{{ activity.title }}" onclick="window.open(this.src, '_blank')">
+              </div>
+            {% endif %}
+            
+            <div style="max-width: 100%; word-wrap: break-word; overflow-wrap: break-word; line-height: 1.8; margin-top: {% if activity.thumbnail %}12px{% else %}0{% endif %}; margin-bottom: 16px;">
+              {{ (activity.content or activity.summary or '') | replace('\n', '<br>') | safe }}
+            </div>
+            
+            {% if activity.images %}
+              {% set images_list = activity.images if activity.images is iterable and activity.images is not string else [] %}
+              {% if images_list|length > 0 %}
+                <div class="article-images">
+                  {% for img_url in images_list %}
+                    {% if img_url %}
+                      <div class="image-item">
+                        <img src="{{ img_url }}" alt="Ảnh minh họa {{ loop.index }}" 
+                             onerror="console.error('Failed to load image:', this.src); this.style.display='none';" 
+                             onclick="window.open(this.src, '_blank')">
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div style="display:none;" id="debug-images">
+                  <p>Images list is empty. Raw data: {{ activity.images }}</p>
+                </div>
+              {% endif %}
+            {% else %}
+              <div style="display:none;" id="debug-no-images">
+                <p>No images field in activity data</p>
+              </div>
+            {% endif %}
           </div>
         </article>
 

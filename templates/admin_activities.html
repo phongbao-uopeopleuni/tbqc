@@ -50,7 +50,7 @@
       background: rgba(255, 215, 0, 0.1);
     }
     .container {
-      max-width: 1400px;
+      max-width: 1600px;
       margin: 0 auto;
       padding: 30px 20px;
     }
@@ -68,11 +68,11 @@
     }
     .main-content {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 30px;
       margin-bottom: 20px;
     }
-    @media (max-width: 1200px) {
+    @media (max-width: 1400px) {
       .main-content { grid-template-columns: 1fr; }
     }
     .panel {
@@ -111,6 +111,13 @@
     .form-group textarea {
       min-height: 120px;
       resize: vertical;
+      width: 100%;
+    }
+    
+    .form-group textarea#content {
+      min-height: 300px;
+      font-size: 15px;
+      line-height: 1.6;
     }
     .form-actions {
       display: flex;
@@ -526,19 +533,30 @@
         return;
       }
 
-      // Validate từng file
-      for (const file of files) {
+      // Validate và filter files hợp lệ
+      const validFiles = files.filter(file => {
         if (!file.type.startsWith('image/')) {
           showMessage(`File "${file.name}" không phải là ảnh`, 'error');
-          continue;
+          return false;
         }
         
         if (file.size > 5 * 1024 * 1024) {
           showMessage(`File "${file.name}" quá lớn (tối đa 5MB)`, 'error');
-          continue;
+          return false;
         }
+        return true;
+      });
 
-        // Upload từng file
+      if (validFiles.length === 0) {
+        event.target.value = '';
+        return;
+      }
+
+      // Upload từng file tuần tự để tránh lỗi
+      showMessage(`Đang upload ${validFiles.length} ảnh...`, 'success');
+      
+      for (let i = 0; i < validFiles.length; i++) {
+        const file = validFiles[i];
         const formData = new FormData();
         formData.append('image', file);
         
@@ -548,41 +566,72 @@
             body: formData
           });
           
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          
           const result = await response.json();
           if (result.success && result.url) {
+            console.log('Upload successful:', result);
+            console.log('Image URL:', result.url);
             uploadedImages.push(result.url);
             updateImagesPreview();
+            updateImagesCount();
           } else {
+            console.error('Upload failed:', result);
             showMessage(`Lỗi upload "${file.name}": ${result.error || 'Lỗi không xác định'}`, 'error');
           }
         } catch (err) {
+          console.error('Upload error:', err);
           showMessage(`Lỗi upload "${file.name}": ${err.message}`, 'error');
         }
       }
 
-      // Reset input
+      // Reset input sau khi upload xong
       event.target.value = '';
-      updateImagesCount();
+      
+      if (uploadedImages.length > 0) {
+        showMessage(`Đã upload thành công ${uploadedImages.length} ảnh`, 'success');
+      }
     }
 
     function updateImagesPreview() {
       const previewDiv = document.getElementById('imagesPreview');
+      if (!previewDiv) {
+        console.error('imagesPreview element not found');
+        return;
+      }
+      
       previewDiv.innerHTML = '';
       
+      if (!uploadedImages || uploadedImages.length === 0) {
+        previewDiv.style.display = 'none';
+        return;
+      }
+      
       uploadedImages.forEach((url, index) => {
+        if (!url) return; // Skip empty URLs
+        
         const imgContainer = document.createElement('div');
         imgContainer.style.position = 'relative';
         imgContainer.style.border = '2px solid #DAA520';
         imgContainer.style.borderRadius = '8px';
         imgContainer.style.overflow = 'hidden';
+        imgContainer.style.marginBottom = '10px';
         
         const img = document.createElement('img');
-        img.src = url;
+        // Đảm bảo URL là absolute hoặc relative đúng cách
+        let imageUrl = url;
+        if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+          imageUrl = '/' + imageUrl;
+        }
+        img.src = imageUrl;
         img.style.width = '100%';
         img.style.height = '120px';
         img.style.objectFit = 'cover';
         img.style.display = 'block';
-        
+        img.loading = 'lazy'; // Lazy load để tối ưu
+        // Tạo nút xóa trước để có thể giữ lại khi ảnh lỗi
         const removeBtn = document.createElement('button');
         removeBtn.textContent = '×';
         removeBtn.style.position = 'absolute';
@@ -597,22 +646,74 @@
         removeBtn.style.cursor = 'pointer';
         removeBtn.style.fontSize = '18px';
         removeBtn.style.lineHeight = '1';
-        removeBtn.onclick = () => {
-          uploadedImages.splice(index, 1);
-          updateImagesPreview();
-          updateImagesCount();
+        removeBtn.style.zIndex = '10';
+        removeBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+        removeBtn.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (confirm('Bạn có chắc muốn xóa ảnh này?')) {
+            uploadedImages.splice(index, 1);
+            updateImagesPreview();
+            updateImagesCount();
+          }
+        };
+        
+        // Tạo error message div để hiển thị khi lỗi
+        const errorDiv = document.createElement('div');
+        errorDiv.style.display = 'none';
+        errorDiv.style.padding = '20px';
+        errorDiv.style.textAlign = 'center';
+        errorDiv.style.color = '#c62828';
+        errorDiv.style.backgroundColor = '#ffebee';
+        errorDiv.style.height = '100%';
+        errorDiv.style.display = 'flex';
+        errorDiv.style.flexDirection = 'column';
+        errorDiv.style.justifyContent = 'center';
+        errorDiv.style.alignItems = 'center';
+        
+        const errorText = document.createElement('div');
+        errorText.textContent = 'Lỗi tải ảnh';
+        errorText.style.fontWeight = 'bold';
+        errorText.style.marginBottom = '5px';
+        
+        const errorUrl = document.createElement('div');
+        errorUrl.textContent = url;
+        errorUrl.style.fontSize = '10px';
+        errorUrl.style.wordBreak = 'break-all';
+        errorUrl.style.color = '#666';
+        
+        errorDiv.appendChild(errorText);
+        errorDiv.appendChild(errorUrl);
+        
+        img.onerror = function() {
+          console.error('Failed to load image:', imageUrl);
+          console.error('Original URL:', url);
+          // Thử load lại với URL gốc nếu khác
+          if (imageUrl !== url && !url.startsWith('http') && !url.startsWith('/')) {
+            img.src = '/' + url;
+            return;
+          }
+          // Hiển thị lỗi nhưng giữ lại nút xóa
+          imgContainer.style.border = '2px solid #c62828';
+          img.style.display = 'none';
+          errorDiv.style.display = 'flex';
+        };
+        img.onload = function() {
+          console.log('Image loaded successfully:', imageUrl);
+          img.style.display = 'block';
+          errorDiv.style.display = 'none';
+          imgContainer.style.border = '2px solid #DAA520';
         };
         
         imgContainer.appendChild(img);
+        imgContainer.appendChild(errorDiv);
         imgContainer.appendChild(removeBtn);
         previewDiv.appendChild(imgContainer);
       });
       
-      if (uploadedImages.length > 0) {
-        previewDiv.style.display = 'grid';
-      } else {
-        previewDiv.style.display = 'none';
-      }
+      previewDiv.style.display = 'grid';
+      previewDiv.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+      previewDiv.style.gap = '10px';
     }
 
     function updateImagesCount() {

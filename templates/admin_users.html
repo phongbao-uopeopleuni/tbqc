@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản lý Người dùng - Admin - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    .admin-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-6);
+    }
+    
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-6);
+    }
+    
+    .admin-header h1 {
+      color: var(--color-primary);
+      margin: 0;
+    }
+    
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .users-table th {
+      background: var(--color-primary);
+      color: white;
+      padding: var(--space-4);
+      text-align: left;
+      font-weight: var(--font-weight-semibold);
+    }
+    
+    .users-table td {
+      padding: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .users-table tr:hover {
+      background: var(--color-bg);
+    }
+    
+    .role-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: var(--font-size-xs);
+      font-weight: var(--font-weight-semibold);
+    }
+    
+    .role-admin {
+      background: #dc2626;
+      color: white;
+    }
+    
+    .role-editor {
+      background: #2563eb;
+      color: white;
+    }
+    
+    .role-user {
+      background: #6b7280;
+      color: white;
+    }
+    
+    .status-active {
+      color: #10b981;
+      font-weight: var(--font-weight-semibold);
+    }
+    
+    .status-inactive {
+      color: #ef4444;
+      font-weight: var(--font-weight-semibold);
+    }
+    
+    .form-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .form-modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: var(--space-8);
+      border-radius: var(--radius-lg);
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-6);
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      color: var(--color-primary);
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--color-text-muted);
+    }
+    
+    .close-btn:hover {
+      color: var(--color-text);
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công – Gia Phả Nguyễn Phước Tộc</a>
+    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/genealogy">Gia phả</a></li>
+      <li><a href="/activities">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/admin/activities">Quản lý Bài đăng</a></li>
+      <li><a href="/admin/users" class="active">Quản lý Người dùng</a></li>
+      <li><a href="/api/logout">Đăng xuất</a></li>
+    </ul>
+  </nav>
+
+  <div class="admin-container">
+    <div class="admin-header">
+      <h1>👥 Quản lý Người dùng</h1>
+      <button class="btn btn-primary" onclick="openAddUserModal()">+ Thêm người dùng</button>
+    </div>
+
+    <div id="message" style="display: none;"></div>
+
+    <div class="card">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Họ tên</th>
+            <th>Email</th>
+            <th>Vai trò</th>
+            <th>Trạng thái</th>
+            <th>Ngày tạo</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="usersList">
+          <tr>
+            <td colspan="8" style="text-align: center; padding: var(--space-8);">
+              <div class="loading">Đang tải...</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Thêm/Sửa User -->
+  <div id="userModal" class="form-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Thêm người dùng</h2>
+        <button class="close-btn" onclick="closeUserModal()">&times;</button>
+      </div>
+      <form id="userForm">
+        <input type="hidden" id="userId" name="user_id">
+        <div class="form-group">
+          <label for="username">Username *</label>
+          <input type="text" id="username" name="username" required>
+        </div>
+        <div class="form-group" id="passwordGroup">
+          <label for="password">Mật khẩu *</label>
+          <input type="password" id="password" name="password" required>
+          <small>Để trống nếu không muốn đổi mật khẩu (khi sửa)</small>
+        </div>
+        <div class="form-group">
+          <label for="full_name">Họ tên</label>
+          <input type="text" id="full_name" name="full_name">
+        </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email">
+        </div>
+        <div class="form-group">
+          <label for="role">Vai trò *</label>
+          <select id="role" name="role" required>
+            <option value="user">User (Chỉ xem)</option>
+            <option value="editor">Editor (Có thể đăng bài)</option>
+            <option value="admin">Admin (Toàn quyền)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="is_active" name="is_active" checked>
+            Kích hoạt tài khoản
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Lưu</button>
+          <button type="button" class="btn btn-secondary" onclick="closeUserModal()">Hủy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/js/common.js"></script>
+  <script>
+    async function fetchJson(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    }
+
+    function showMessage(text, type = 'success') {
+      const msgEl = document.getElementById('message');
+      msgEl.textContent = text;
+      msgEl.className = `alert alert-${type}`;
+      msgEl.style.display = 'block';
+      setTimeout(() => {
+        msgEl.style.display = 'none';
+      }, 5000);
+    }
+
+    async function loadUsers() {
+      const listEl = document.getElementById('usersList');
+      try {
+        const users = await fetchJson('/api/admin/users');
+        if (!Array.isArray(users) || users.length === 0) {
+          listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--space-8);">Chưa có người dùng nào</td></tr>';
+          return;
+        }
+        
+        listEl.innerHTML = users.map(u => {
+          const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '';
+          const roleClass = `role-${u.role || 'user'}`;
+          const statusClass = u.is_active ? 'status-active' : 'status-inactive';
+          const statusText = u.is_active ? 'Hoạt động' : 'Vô hiệu';
+          
+          return `
+            <tr>
+              <td>${u.user_id}</td>
+              <td><strong>${escapeHtml(u.username || '')}</strong></td>
+              <td>${escapeHtml(u.full_name || '-')}</td>
+              <td>${escapeHtml(u.email || '-')}</td>
+              <td><span class="role-badge ${roleClass}">${u.role || 'user'}</span></td>
+              <td><span class="${statusClass}">${statusText}</span></td>
+              <td>${createdDate}</td>
+              <td>
+                <button class="btn btn-sm btn-secondary" onclick="editUser(${u.user_id})">Sửa</button>
+                ${u.user_id !== currentUserId ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.user_id}, '${escapeHtml(u.username || '')}')">Xóa</button>` : ''}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">Lỗi: ${err.message}</td></tr>`;
+        showMessage('Lỗi khi tải danh sách người dùng: ' + err.message, 'error');
+      }
+    }
+
+    let currentUserId = null;
+    
+    async function getCurrentUser() {
+      try {
+        const result = await fetchJson('/api/current-user');
+        if (result && result.success && result.user) {
+          currentUserId = result.user.user_id;
+        }
+      } catch (e) {
+        console.error('Failed to get current user:', e);
+      }
+    }
+
+    function openAddUserModal() {
+      document.getElementById('modalTitle').textContent = 'Thêm người dùng';
+      document.getElementById('userForm').reset();
+      document.getElementById('userId').value = '';
+      document.getElementById('passwordGroup').style.display = 'block';
+      document.getElementById('password').required = true;
+      document.getElementById('userModal').classList.add('active');
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModal').classList.remove('active');
+    }
+
+    async function editUser(userId) {
+      try {
+        const user = await fetchJson(`/api/admin/users/${userId}`);
+        document.getElementById('modalTitle').textContent = 'Sửa người dùng';
+        document.getElementById('userId').value = user.user_id;
+        document.getElementById('username').value = user.username || '';
+        document.getElementById('password').value = '';
+        document.getElementById('passwordGroup').style.display = 'block';
+        document.getElementById('password').required = false;
+        document.getElementById('full_name').value = user.full_name || '';
+        document.getElementById('email').value = user.email || '';
+        document.getElementById('role').value = user.role || 'user';
+        document.getElementById('is_active').checked = user.is_active !== false;
+        document.getElementById('userModal').classList.add('active');
+      } catch (err) {
+        showMessage('Lỗi: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteUser(userId, username) {
+      if (!confirm(`Bạn có chắc muốn xóa người dùng "${username}"?`)) return;
+      try {
+        await fetchJson(`/api/admin/users/${userId}`, { method: 'DELETE' });
+        showMessage('Đã xóa thành công');
+        loadUsers();
+      } catch (err) {
+        showMessage('Lỗi: ' + err.message, 'error');
+      }
+    }
+
+    document.getElementById('userForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const userId = formData.get('user_id');
+      const data = Object.fromEntries(formData);
+      
+      // Nếu là sửa và không có password mới, không gửi password
+      if (userId && !data.password) {
+        delete data.password;
+      }
+      
+      try {
+        if (userId) {
+          await fetchJson(`/api/admin/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          showMessage('Đã cập nhật thành công');
+        } else {
+          await fetchJson('/api/admin/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+          showMessage('Đã thêm thành công');
+        }
+        closeUserModal();
+        loadUsers();
+      } catch (err) {
+        showMessage('Lỗi: ' + err.message, 'error');
+      }
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('userModal').addEventListener('click', (e) => {
+      if (e.target.id === 'userModal') {
+        closeUserModal();
+      }
+    });
+
+    // Initialize
+    getCurrentUser();
+    loadUsers();
+  </script>
+</body>
+</html>
+

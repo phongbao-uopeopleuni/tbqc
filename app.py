@@ -20,9 +20,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Xác định thư mục root của project (thư mục chứa index.html)
+# Xác định thư mục root của project (thư mục chứa app.py)
 try:
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     print(f"BASE_DIR: {BASE_DIR}")
 except Exception as e:
     print(f"ERROR: Loi khi xac dinh BASE_DIR: {e}")
@@ -175,6 +175,11 @@ def index():
 def login_page():
     """Trang đăng nhập (public)"""
     return render_template('login.html')
+
+@app.route('/admin/login')
+def admin_login_page():
+    """Trang đăng nhập Admin"""
+    return render_template('login.html', admin_mode=True)
 
 @app.route('/api/geoapify-key')
 def get_geoapify_api_key():
@@ -352,20 +357,20 @@ def search_grave():
         # Nếu là autocomplete, trả về cả người chưa có grave_info
         if autocomplete_only:
             cursor.execute("""
-                SELECT 
-                    p.person_id,
-                    p.full_name,
-                    p.alias,
-                    p.gender,
-                    p.generation_level,
-                    p.birth_date_solar,
-                    p.death_date_solar,
-                    p.grave_info,
-                    p.place_of_death,
-                    p.home_town
-                FROM persons p
-                WHERE p.status = 'Đã mất'
-                AND (p.full_name LIKE %s OR p.person_id LIKE %s OR p.alias LIKE %s)
+            SELECT 
+                p.person_id,
+                p.full_name,
+                p.alias,
+                p.gender,
+                p.generation_level,
+                p.birth_date_solar,
+                p.death_date_solar,
+                p.grave_info,
+                p.place_of_death,
+                p.home_town
+            FROM persons p
+            WHERE p.status = 'Đã mất'
+            AND (p.full_name LIKE %s OR p.person_id LIKE %s OR p.alias LIKE %s)
                 ORDER BY 
                     CASE WHEN p.grave_info IS NOT NULL AND p.grave_info != '' THEN 0 ELSE 1 END,
                     p.full_name ASC
@@ -402,18 +407,18 @@ def search_grave():
         for row in results:
             grave_info = row.get('grave_info', '').strip()
             graves.append({
-                'person_id': row.get('person_id'),
-                'full_name': row.get('full_name'),
-                'alias': row.get('alias'),
-                'gender': row.get('gender'),
-                'generation_level': row.get('generation_level'),
-                'birth_date': row.get('birth_date_solar'),
-                'death_date': row.get('death_date_solar'),
-                'grave_info': grave_info,
-                'place_of_death': row.get('place_of_death'),
+                    'person_id': row.get('person_id'),
+                    'full_name': row.get('full_name'),
+                    'alias': row.get('alias'),
+                    'gender': row.get('gender'),
+                    'generation_level': row.get('generation_level'),
+                    'birth_date': row.get('birth_date_solar'),
+                    'death_date': row.get('death_date_solar'),
+                    'grave_info': grave_info,
+                    'place_of_death': row.get('place_of_death'),
                 'home_town': row.get('home_town'),
                 'has_grave_info': bool(grave_info)
-            })
+                })
         
         return jsonify({
             'success': True,
@@ -464,6 +469,26 @@ def activity_detail_page(activity_id):
         if not activity:
             return render_template('activity_detail.html', error='Không tìm thấy bài viết', activity=None)
         
+        # Parse images JSON nếu có
+        if activity.get('images'):
+            try:
+                if isinstance(activity.get('images'), str):
+                    activity['images'] = json.loads(activity.get('images'))
+                else:
+                    activity['images'] = activity.get('images') or []
+                # Đảm bảo images là list
+                if not isinstance(activity['images'], list):
+                    activity['images'] = []
+                # Log để debug
+                logger.info(f"[Activity Detail] Activity ID {activity_id}: Found {len(activity['images'])} images")
+                logger.debug(f"[Activity Detail] Images data: {activity['images']}")
+            except Exception as e:
+                logger.error(f"Error parsing images JSON for activity {activity_id}: {e}")
+                activity['images'] = []
+        else:
+            activity['images'] = []
+            logger.debug(f"[Activity Detail] Activity ID {activity_id}: No images field")
+        
         # Lấy các bài liên quan
         cursor.execute("""
             SELECT * FROM activities 
@@ -482,6 +507,16 @@ def activity_detail_page(activity_id):
     finally:
         if connection:
             connection.close()
+
+@app.route('/admin/users')
+@login_required
+def admin_users_page():
+    """Trang quản lý người dùng (admin only)"""
+    # Check admin permission
+    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+        return redirect('/admin/login')
+    
+    return render_template('admin_users.html')
 
 @app.route('/admin/activities')
 @login_required
@@ -535,7 +570,12 @@ def activity_row_to_json(row):
                 images = json.loads(row.get('images'))
             else:
                 images = row.get('images') or []
-        except:
+            # Đảm bảo images là list
+            if not isinstance(images, list):
+                images = []
+            logger.debug(f"[activity_row_to_json] Parsed {len(images)} images")
+        except Exception as e:
+            logger.error(f"[activity_row_to_json] Error parsing images: {e}")
             images = []
     
     return {
@@ -724,13 +764,32 @@ def upload_image():
         extension = file.filename.rsplit('.', 1)[1].lower()
         safe_filename = secure_filename(f"activity_{timestamp}_{filename_hash}.{extension}")
         
+        # Xác định thư mục lưu ảnh (hỗ trợ Railway Volume)
+        # Railway Volume mount path (nếu có) hoặc dùng static/images mặc định
+        volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+        if volume_mount_path and os.path.exists(volume_mount_path):
+            # Sử dụng Railway Volume nếu có
+            images_dir = volume_mount_path
+        else:
+            # Dùng thư mục static/images mặc định
+            images_dir = os.path.join(BASE_DIR, 'static', 'images')
+        
         # Đảm bảo thư mục tồn tại
-        images_dir = os.path.join(BASE_DIR, 'static', 'images')
         os.makedirs(images_dir, exist_ok=True)
         
         # Lưu file
         filepath = os.path.join(images_dir, safe_filename)
         file.save(filepath)
+        
+        # Kiểm tra file đã được lưu chưa
+        if not os.path.exists(filepath):
+            logger.error(f"Failed to save image to {filepath}")
+            return jsonify({'success': False, 'error': 'Không thể lưu file ảnh'}), 500
+        
+        # Log để debug
+        logger.info(f"Image saved successfully: {filepath}")
+        logger.info(f"Images directory: {images_dir}")
+        logger.info(f"File exists: {os.path.exists(filepath)}")
         
         # Trả về URL
         image_url = f"/static/images/{safe_filename}"
@@ -738,7 +797,9 @@ def upload_image():
         return jsonify({
             'success': True,
             'url': image_url,
-            'filename': safe_filename
+            'filename': safe_filename,
+            'filepath': filepath,  # Debug info
+            'images_dir': images_dir  # Debug info
         })
     except Exception as e:
         logger.error(f"Error uploading image: {e}")
@@ -777,17 +838,62 @@ def serve_genealogy_js():
     """Legacy route - serves from static/js/"""
     return send_from_directory('static/js', 'genealogy-lineage.js', mimetype='application/javascript')
 
-# Image routes - serve from static/images/
+# Image routes - serve from static/images/ or Railway Volume
 @app.route('/static/images/<path:filename>')
 def serve_image_static(filename):
-    """Serve images from static/images/"""
-    return send_from_directory('static/images', filename)
+    """Serve images from static/images/ or Railway Volume"""
+    logger.debug(f"[Serve Image] Requested filename: {filename}")
+    
+    # Kiểm tra Railway Volume path trước
+    volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+    if volume_mount_path and os.path.exists(volume_mount_path):
+        volume_filepath = os.path.join(volume_mount_path, filename)
+        if os.path.exists(volume_filepath):
+            logger.info(f"[Serve Image] Serving from volume: {volume_filepath}")
+            return send_from_directory(volume_mount_path, filename)
+        else:
+            logger.debug(f"[Serve Image] Image not found in volume: {volume_filepath}")
+    
+    # Fallback về static/images mặc định
+    static_images_path = os.path.join(BASE_DIR, 'static', 'images')
+    static_filepath = os.path.join(static_images_path, filename)
+    logger.debug(f"[Serve Image] Checking static path: {static_filepath}")
+    logger.debug(f"[Serve Image] BASE_DIR: {BASE_DIR}")
+    logger.debug(f"[Serve Image] Static images path exists: {os.path.exists(static_images_path)}")
+    
+    if os.path.exists(static_filepath):
+        logger.info(f"[Serve Image] Serving from static: {static_filepath}")
+        return send_from_directory(static_images_path, filename)
+    else:
+        logger.warning(f"[Serve Image] Image not found: {filename}")
+        logger.warning(f"[Serve Image] Checked volume: {volume_mount_path}")
+        logger.warning(f"[Serve Image] Checked static: {static_images_path}")
+        logger.warning(f"[Serve Image] Static filepath: {static_filepath}")
+        logger.warning(f"[Serve Image] File exists: {os.path.exists(static_filepath)}")
+    
+    # Nếu không tìm thấy, trả về 404
+    from flask import abort
+    abort(404)
 
 # Legacy route for backward compatibility
 @app.route('/images/<path:filename>')
 def serve_image(filename):
-    """Legacy route - serves from static/images/"""
-    return send_from_directory('static/images', filename)
+    """Legacy route - serves from static/images/ or Railway Volume"""
+    # Kiểm tra Railway Volume path trước
+    volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+    if volume_mount_path and os.path.exists(volume_mount_path):
+        volume_filepath = os.path.join(volume_mount_path, filename)
+        if os.path.exists(volume_filepath):
+            return send_from_directory(volume_mount_path, filename)
+    
+    # Fallback về static/images mặc định
+    static_images_path = os.path.join(BASE_DIR, 'static', 'images')
+    if os.path.exists(static_images_path):
+        return send_from_directory(static_images_path, filename)
+    
+    # Nếu không tìm thấy, trả về 404
+    from flask import abort
+    abort(404)
 
 # Test route removed - không cần thiết
 
@@ -1257,7 +1363,7 @@ def get_person(person_id):
             if children_names:
                 placeholders = ','.join(['%s'] * len(children_names))
                 cursor.execute(f"""
-                    SELECT 
+                SELECT 
                         p.person_id,
                         p.full_name AS child_name,
                         p.generation_level,
@@ -1267,7 +1373,7 @@ def get_person(person_id):
                     ORDER BY p.full_name
                 """, children_names)
                 children_records = cursor.fetchall()
-                    
+                
                 if children_records:
                     # Trả về dưới dạng array với thông tin đầy đủ
                     children_list = []
@@ -1305,7 +1411,7 @@ def get_person(person_id):
                 person['children_string'] = '; '.join(children_names) if children_names else None
             else:
                 person['children_string'] = None
-            person['children'] = []
+                person['children'] = []
             
         # Lấy spouses từ marriages (giữ lại format đầy đủ cho marriages)
         try:
@@ -1347,7 +1453,7 @@ def get_person(person_id):
             person['marriages'] = []
             person['spouse'] = None
             person['spouse_name'] = None
-        
+            
         # LUÔN sử dụng helper để lấy spouse từ các nguồn khác (giống /api/members)
         # Điều này đảm bảo nếu marriages table không có hoặc có lỗi thì vẫn lấy được từ helper
         # Sử dụng relationship_data đã load ở trên (nếu có)
@@ -2245,9 +2351,8 @@ def get_ancestors(person_id):
                     spouse_names = spouse_data_from_marriages[ancestor_id]
                 elif ancestor_id in spouse_data_from_csv:
                     spouse_names = spouse_data_from_csv[ancestor_id]
-                
-                ancestor['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
-                ancestor['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                    ancestor['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                    ancestor['spouse'] = '; '.join(spouse_names) if spouse_names else None
                 
                 # Lấy thông tin con cái từ children_map (đã load sẵn từ helper)
                 children = children_map.get(ancestor_id, [])
@@ -2338,9 +2443,8 @@ def get_ancestors(person_id):
                 spouse_names = spouse_data_from_marriages[person_id]
             elif person_id in spouse_data_from_csv:
                 spouse_names = spouse_data_from_csv[person_id]
-            
-            person_info['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
-            person_info['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                person_info['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                person_info['spouse'] = '; '.join(spouse_names) if spouse_names else None
             
             # Lấy thông tin con cái từ children_map (đã load sẵn từ helper)
             children = children_map.get(person_id, [])
@@ -3288,21 +3392,21 @@ def load_relationship_data(cursor):
                         result['spouse_data_from_csv'][person_id_key] = spouse_names
     except Exception as e:
         logger.debug(f"Could not load spouse data from CSV: {e}")
-    
+        
     # 4. Load tất cả relationships và build maps
     try:
         cursor.execute("""
-                SELECT 
-                    r.child_id,
-                    r.parent_id,
-                    r.relation_type,
-                    parent.full_name AS parent_name,
-                    child.full_name AS child_name
-                FROM relationships r
-                LEFT JOIN persons parent ON r.parent_id = parent.person_id
-                LEFT JOIN persons child ON r.child_id = child.person_id
-                WHERE parent.full_name IS NOT NULL AND child.full_name IS NOT NULL
-            """)
+            SELECT 
+                r.child_id,
+                r.parent_id,
+                r.relation_type,
+                parent.full_name AS parent_name,
+                child.full_name AS child_name
+            FROM relationships r
+            LEFT JOIN persons parent ON r.parent_id = parent.person_id
+            LEFT JOIN persons child ON r.child_id = child.person_id
+            WHERE parent.full_name IS NOT NULL AND child.full_name IS NOT NULL
+        """)
         relationships = cursor.fetchall()
         
         for rel in relationships:
@@ -3315,7 +3419,7 @@ def load_relationship_data(cursor):
             # Build parent_data
             if child_id not in result['parent_data']:
                 result['parent_data'][child_id] = {'father_name': None, 'mother_name': None}
-            
+                
             if relation_type == 'father' and parent_name:
                 if result['parent_data'][child_id]['father_name']:
                     result['parent_data'][child_id]['father_name'] += ', ' + parent_name
@@ -3326,7 +3430,7 @@ def load_relationship_data(cursor):
                     result['parent_data'][child_id]['mother_name'] += ', ' + parent_name
                 else:
                     result['parent_data'][child_id]['mother_name'] = parent_name
-            
+                
             # Build parent_ids_map
             if child_id not in result['parent_ids_map']:
                 result['parent_ids_map'][child_id] = []
@@ -3338,11 +3442,11 @@ def load_relationship_data(cursor):
                 result['children_map'][parent_id] = []
             if child_name and child_name not in result['children_map'][parent_id]:
                 result['children_map'][parent_id].append(child_name)
-        
+            
         logger.debug(f"Loaded {len(relationships)} relationships")
     except Exception as e:
         logger.warning(f"Error loading relationships: {e}")
-    
+        
     # 5. Load person_name_map để lookup nhanh
     try:
         cursor.execute("SELECT person_id, full_name FROM persons WHERE full_name IS NOT NULL")
@@ -3357,17 +3461,17 @@ def load_relationship_data(cursor):
         parent_to_children = {}
         for child_id, parent_ids in result['parent_ids_map'].items():
             for parent_id in parent_ids:
-                    if parent_id not in parent_to_children:
-                        parent_to_children[parent_id] = []
-                    if child_id not in parent_to_children[parent_id]:
-                        parent_to_children[parent_id].append(child_id)
+                if parent_id not in parent_to_children:
+                    parent_to_children[parent_id] = []
+                if child_id not in parent_to_children[parent_id]:
+                    parent_to_children[parent_id].append(child_id)
             
         # Build siblings_map cho tất cả persons
         for person_id in result['person_name_map'].keys():
             person_parent_ids = result['parent_ids_map'].get(person_id, [])
             if not person_parent_ids:
                 continue
-            
+                
             sibling_names = set()
             for parent_id in person_parent_ids:
                 children_of_parent = parent_to_children.get(parent_id, [])
@@ -3376,10 +3480,10 @@ def load_relationship_data(cursor):
                         child_name = result['person_name_map'].get(child_id)
                         if child_name:
                             sibling_names.add(child_name)
-            
+                
             if sibling_names:
                 result['siblings_map'][person_id] = sorted(list(sibling_names))
-        
+            
         logger.debug(f"Loaded siblings for {len(result['siblings_map'])} persons")
     except Exception as e:
         logger.warning(f"Error loading siblings: {e}")
@@ -4201,6 +4305,186 @@ def delete_persons_batch():
             cursor.close()
             connection.close()
 
+@app.route('/api/admin/users', methods=['GET', 'POST'])
+@login_required
+def api_admin_users():
+    """API quản lý users (admin only)"""
+    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+        return jsonify({'success': False, 'error': 'Không có quyền truy cập'}), 403
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        if request.method == 'GET':
+            # Lấy danh sách users
+            cursor.execute("""
+                SELECT user_id, username, role, full_name, email, is_active, 
+                       created_at, last_login
+                FROM users
+                ORDER BY created_at DESC
+            """)
+            users = cursor.fetchall()
+            
+            # Format dates
+            for user in users:
+                if user.get('created_at'):
+                    user['created_at'] = user['created_at'].isoformat() if hasattr(user['created_at'], 'isoformat') else str(user['created_at'])
+                if user.get('last_login'):
+                    user['last_login'] = user['last_login'].isoformat() if hasattr(user['last_login'], 'isoformat') else str(user['last_login'])
+            
+            return jsonify(users)
+        
+        # POST - Tạo user mới
+        data = request.get_json(silent=True) or {}
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        full_name = data.get('full_name', '').strip()
+        email = data.get('email', '').strip()
+        role = data.get('role', 'user')
+        is_active = data.get('is_active', True)
+        
+        if not username:
+            return jsonify({'success': False, 'error': 'Username không được để trống'}), 400
+        
+        if not password:
+            return jsonify({'success': False, 'error': 'Mật khẩu không được để trống'}), 400
+        
+        # Hash password
+        from auth import hash_password
+        password_hash = hash_password(password)
+        
+        # Kiểm tra username đã tồn tại chưa
+        cursor.execute("SELECT user_id FROM users WHERE username = %s", (username,))
+        if cursor.fetchone():
+            return jsonify({'success': False, 'error': 'Username đã tồn tại'}), 400
+        
+        # Tạo user mới
+        cursor.execute("""
+            INSERT INTO users (username, password_hash, role, full_name, email, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (username, password_hash, role, full_name or None, email or None, is_active))
+        connection.commit()
+        
+        new_id = cursor.lastrowid
+        cursor.execute("SELECT * FROM users WHERE user_id = %s", (new_id,))
+        new_user = cursor.fetchone()
+        
+        return jsonify({'success': True, 'user': new_user}), 201
+        
+    except Error as e:
+        connection.rollback()
+        logger.error(f"Error in admin users API: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
+@app.route('/api/admin/users/<int:user_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+def api_admin_user_detail(user_id):
+    """API chi tiết user (admin only)"""
+    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+        return jsonify({'success': False, 'error': 'Không có quyền truy cập'}), 403
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        # GET - Lấy thông tin user
+        if request.method == 'GET':
+            cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({'success': False, 'error': 'Không tìm thấy user'}), 404
+            return jsonify(user)
+        
+        # PUT - Cập nhật user
+        if request.method == 'PUT':
+            data = request.get_json(silent=True) or {}
+            
+            # Kiểm tra user tồn tại
+            cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({'success': False, 'error': 'Không tìm thấy user'}), 404
+            
+            # Cập nhật các field
+            updates = []
+            params = []
+            
+            if 'username' in data:
+                new_username = data['username'].strip()
+                if new_username and new_username != user['username']:
+                    # Kiểm tra username đã tồn tại chưa
+                    cursor.execute("SELECT user_id FROM users WHERE username = %s AND user_id != %s", (new_username, user_id))
+                    if cursor.fetchone():
+                        return jsonify({'success': False, 'error': 'Username đã tồn tại'}), 400
+                    updates.append("username = %s")
+                    params.append(new_username)
+            
+            if 'password' in data and data['password']:
+                from auth import hash_password
+                password_hash = hash_password(data['password'])
+                updates.append("password_hash = %s")
+                params.append(password_hash)
+            
+            if 'full_name' in data:
+                updates.append("full_name = %s")
+                params.append(data['full_name'] or None)
+            
+            if 'email' in data:
+                updates.append("email = %s")
+                params.append(data['email'] or None)
+            
+            if 'role' in data:
+                updates.append("role = %s")
+                params.append(data['role'])
+            
+            if 'is_active' in data:
+                updates.append("is_active = %s")
+                params.append(data['is_active'])
+            
+            if updates:
+                params.append(user_id)
+                cursor.execute(f"""
+                    UPDATE users 
+                    SET {', '.join(updates)}
+                    WHERE user_id = %s
+                """, tuple(params))
+                connection.commit()
+            
+            cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+            updated_user = cursor.fetchone()
+            return jsonify({'success': True, 'user': updated_user})
+        
+        # DELETE - Xóa user
+        if request.method == 'DELETE':
+            cursor.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({'success': False, 'error': 'Không tìm thấy user'}), 404
+            
+            cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+            connection.commit()
+            return jsonify({'success': True, 'message': 'Đã xóa thành công'})
+        
+    except Error as e:
+        connection.rollback()
+        logger.error(f"Error in admin user detail API: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
 @app.route('/api/admin/verify-password', methods=['POST'])
 @login_required
 def verify_password_api():
@@ -4701,14 +4985,24 @@ def api_login():
                 cursor.close()
                 connection.close()
     
-    # Check redirect parameter or default to activities management for admins
+    # Check redirect parameter or default based on user role/username
     redirect_to = request.form.get('redirect', '')
     if not redirect_to:
-        # Default: admins go to activities management, others to activities page
-        if user.role == 'admin':
+        # Special case: tbqc_admin → /admin/activities (cập nhật bài đăng)
+        if username == 'tbqc_admin':
+            redirect_to = '/admin/activities'
+        # Special case: phongb → /admin/users (quản lý users)
+        elif username == 'phongb':
+            redirect_to = '/admin/users'
+        # Default redirect based on role:
+        # - Admin → /admin/users (quản lý users)
+        # - Editor/User → /admin/activities (đăng bài)
+        elif user.role == 'admin':
+            redirect_to = '/admin/users'
+        elif user.role == 'editor':
             redirect_to = '/admin/activities'
         else:
-            redirect_to = '/activities'
+            redirect_to = '/admin/activities'  # User cũng có thể đăng bài nếu được cấp quyền
     
     return jsonify({
         'success': True,

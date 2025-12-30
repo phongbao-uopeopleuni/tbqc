@@ -7,7 +7,11 @@ Routes cho trang quản trị
 
 from flask import render_template_string, request, jsonify, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
-from auth import (get_user_by_username, verify_password, hash_password, get_db_connection, 
+try:
+    from folder_py.db_config import get_db_connection
+except ImportError:
+    from db_config import get_db_connection
+from auth import (get_user_by_username, verify_password, hash_password,
                   admin_required, permission_required, role_required)
 from audit_log import log_activity, log_login, log_user_update
 import mysql.connector
@@ -77,9 +81,9 @@ def register_admin_routes(app):
             
             # Redirect theo role
             if user_data['role'] == 'admin':
-                return redirect(url_for('admin_dashboard'))
+                return redirect('/admin/users')
             else:
-                return redirect(url_for('index'))
+                return redirect('/')
         
         return render_template_string(ADMIN_LOGIN_TEMPLATE)
     
@@ -91,80 +95,15 @@ def register_admin_routes(app):
         return redirect(url_for('admin_login'))
     
     @app.route('/admin/dashboard')
-    @permission_required('canViewDashboard')
+    @login_required
     def admin_dashboard():
-        """Trang dashboard admin với thống kê"""
-        connection = get_db_connection()
-        if not connection:
-            return render_template_string(ADMIN_DASHBOARD_TEMPLATE,
-                current_user=current_user, stats={}, error='Không thể kết nối database')
+        """Trang dashboard admin - redirect đến quản lý users"""
+        # Check admin permission
+        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+            return redirect('/admin/login')
         
-        try:
-            cursor = connection.cursor(dictionary=True)
-            
-            # Tổng số thành viên
-            cursor.execute("SELECT COUNT(*) AS total FROM persons")
-            total_people = cursor.fetchone()['total']
-            
-            # Số người còn sống
-            cursor.execute("SELECT COUNT(*) AS alive FROM persons WHERE status = 'Còn sống'")
-            alive_count = cursor.fetchone()['alive']
-            
-            # Số người đã mất
-            cursor.execute("SELECT COUNT(*) AS deceased FROM persons WHERE status = 'Đã mất'")
-            deceased_count = cursor.fetchone()['deceased']
-            
-            # Số đời tối đa
-            cursor.execute("SELECT MAX(generation_number) AS max_gen FROM generations")
-            max_generation = cursor.fetchone()['max_gen'] or 0
-            
-            # Thống kê theo đời
-            cursor.execute("""
-                SELECT g.generation_number, COUNT(p.person_id) AS count
-                FROM generations g
-                LEFT JOIN persons p ON g.generation_id = p.generation_id
-                GROUP BY g.generation_number
-                ORDER BY g.generation_number
-            """)
-            generation_stats = cursor.fetchall()
-            
-            # Thống kê theo giới tính
-            cursor.execute("""
-                SELECT gender, COUNT(*) AS count
-                FROM persons
-                WHERE gender IS NOT NULL
-                GROUP BY gender
-            """)
-            gender_stats = cursor.fetchall()
-            
-            # Thống kê theo trạng thái
-            cursor.execute("""
-                SELECT status, COUNT(*) AS count
-                FROM persons
-                WHERE status IS NOT NULL
-                GROUP BY status
-            """)
-            status_stats = cursor.fetchall()
-            
-            stats = {
-                'total_people': total_people,
-                'alive_count': alive_count,
-                'deceased_count': deceased_count,
-                'max_generation': max_generation,
-                'generation_stats': generation_stats,
-                'gender_stats': gender_stats,
-                'status_stats': status_stats
-            }
-            
-            return render_template_string(ADMIN_DASHBOARD_TEMPLATE,
-                current_user=current_user, stats=stats)
-        except Error as e:
-            return render_template_string(ADMIN_DASHBOARD_TEMPLATE,
-                current_user=current_user, stats={}, error=str(e))
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
+        # Redirect đến trang quản lý users
+        return redirect('/admin/users')
     
     @app.route('/admin/requests')
     @permission_required('canViewDashboard')
@@ -243,13 +182,29 @@ def register_admin_routes(app):
         
         try:
             cursor = connection.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT user_id, username, full_name, email, role, permissions,
-                       created_at, updated_at, last_login, is_active
-                FROM users
-                ORDER BY created_at DESC
-            """)
+            # Kiểm tra xem cột permissions có tồn tại không
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
+            has_permissions = cursor.fetchone() is not None
+            
+            if has_permissions:
+                cursor.execute("""
+                    SELECT user_id, username, full_name, email, role, permissions,
+                           created_at, updated_at, last_login, is_active
+                    FROM users
+                    ORDER BY created_at DESC
+                """)
+            else:
+                cursor.execute("""
+                    SELECT user_id, username, full_name, email, role,
+                           created_at, updated_at, last_login, is_active
+                    FROM users
+                    ORDER BY created_at DESC
+                """)
             users = cursor.fetchall()
+            # Thêm permissions = None nếu không có cột
+            for user in users:
+                if 'permissions' not in user:
+                    user['permissions'] = None
             return render_template_string(ADMIN_USERS_TEMPLATE,
                 users=users, current_user=current_user)
         except Error as e:
@@ -343,10 +298,20 @@ def register_admin_routes(app):
             else:
                 default_permissions = None
             
-            cursor.execute("""
-                INSERT INTO users (username, password_hash, full_name, email, role, permissions)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (username, password_hash, full_name or None, email or None, role, default_permissions))
+            # Kiểm tra xem cột permissions có tồn tại không
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
+            has_permissions = cursor.fetchone() is not None
+            
+            if has_permissions:
+                cursor.execute("""
+                    INSERT INTO users (username, password_hash, full_name, email, role, permissions)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (username, password_hash, full_name or None, email or None, role, default_permissions))
+            else:
+                cursor.execute("""
+                    INSERT INTO users (username, password_hash, full_name, email, role)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (username, password_hash, full_name or None, email or None, role))
             connection.commit()
             
             return jsonify({'success': True, 'message': 'Đã tạo tài khoản thành công'})
@@ -409,8 +374,11 @@ def register_admin_routes(app):
                 updates.append("role = %s")
                 params.append(role)
             
-            # Cập nhật permissions nếu có
-            if permissions is not None:
+            # Cập nhật permissions nếu có và cột tồn tại
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
+            has_permissions = cursor.fetchone() is not None
+            
+            if permissions is not None and has_permissions:
                 import json
                 permissions_json = json.dumps(permissions, ensure_ascii=False)
                 updates.append("permissions = %s")
@@ -445,19 +413,31 @@ def register_admin_routes(app):
         
         try:
             cursor = connection.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT user_id, username, full_name, email, role, permissions,
-                       created_at, updated_at, last_login, is_active
-                FROM users
-                WHERE user_id = %s
-            """, (user_id,))
+            # Kiểm tra xem cột permissions có tồn tại không
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
+            has_permissions = cursor.fetchone() is not None
+            
+            if has_permissions:
+                cursor.execute("""
+                    SELECT user_id, username, full_name, email, role, permissions,
+                           created_at, updated_at, last_login, is_active
+                    FROM users
+                    WHERE user_id = %s
+                """, (user_id,))
+            else:
+                cursor.execute("""
+                    SELECT user_id, username, full_name, email, role,
+                           created_at, updated_at, last_login, is_active
+                    FROM users
+                    WHERE user_id = %s
+                """, (user_id,))
             user = cursor.fetchone()
             
             if not user:
                 return jsonify({'error': 'Không tìm thấy user'}), 404
             
             # Parse permissions JSON
-            if user.get('permissions'):
+            if has_permissions and user.get('permissions'):
                 import json
                 try:
                     if isinstance(user['permissions'], str):
@@ -716,6 +696,212 @@ def register_admin_routes(app):
         
         return jsonify({'success': True, 'message': 'Đã xóa thành công'})
     
+    @app.route('/admin/api/members', methods=['GET'])
+    @permission_required('canViewDashboard')
+    def get_members_admin():
+        """API: Lấy danh sách thành viên (tối ưu, không tính siblings/spouses)"""
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        
+        try:
+            # Lấy pagination params
+            page = request.args.get('page', 1, type=int)
+            per_page = request.args.get('per_page', 50, type=int)
+            search = request.args.get('search', '', type=str)
+            
+            cursor = connection.cursor(dictionary=True)
+            
+            # Query đơn giản hơn, chỉ lấy thông tin cần thiết
+            base_query = """
+                SELECT 
+                    p.person_id,
+                    p.full_name,
+                    p.alias,
+                    p.gender,
+                    p.status,
+                    p.generation_level,
+                    p.birth_date_solar,
+                    p.birth_date_lunar,
+                    p.death_date_solar,
+                    p.death_date_lunar,
+                    p.home_town,
+                    p.place_of_death,
+                    p.grave_info,
+                    p.father_mother_id,
+                    father.person_id AS father_id,
+                    father.full_name AS father_name,
+                    mother.person_id AS mother_id,
+                    mother.full_name AS mother_name
+                FROM persons p
+                LEFT JOIN relationships rel_father
+                    ON rel_father.child_id = p.person_id 
+                    AND rel_father.relation_type = 'father'
+                LEFT JOIN persons father
+                    ON rel_father.parent_id = father.person_id
+                LEFT JOIN relationships rel_mother
+                    ON rel_mother.child_id = p.person_id 
+                    AND rel_mother.relation_type = 'mother'
+                LEFT JOIN persons mother
+                    ON rel_mother.parent_id = mother.person_id
+            """
+            
+            where_clause = ""
+            params = []
+            
+            if search:
+                where_clause = "WHERE p.person_id LIKE %s OR p.full_name LIKE %s OR father.full_name LIKE %s OR mother.full_name LIKE %s"
+                search_pattern = f"%{search}%"
+                params = [search_pattern, search_pattern, search_pattern, search_pattern]
+            
+            # Count total
+            count_query = f"SELECT COUNT(*) as total FROM persons p {where_clause.replace('p.person_id', 'p.person_id').replace('p.full_name', 'p.full_name').replace('father.full_name', 'father.full_name').replace('mother.full_name', 'mother.full_name') if where_clause else ''}"
+            if where_clause:
+                # Simplified count query
+                cursor.execute("SELECT COUNT(*) as total FROM persons p WHERE p.person_id LIKE %s OR p.full_name LIKE %s", 
+                             (f"%{search}%", f"%{search}%"))
+            else:
+                cursor.execute("SELECT COUNT(*) as total FROM persons")
+            total = cursor.fetchone()['total']
+            
+            # Get paginated data
+            offset = (page - 1) * per_page
+            order_by = "ORDER BY p.generation_level ASC, p.full_name ASC"
+            limit_clause = f"LIMIT {per_page} OFFSET {offset}"
+            
+            if where_clause:
+                query = f"{base_query} {where_clause} {order_by} {limit_clause}"
+                cursor.execute(query, params)
+            else:
+                query = f"{base_query} {order_by} {limit_clause}"
+                cursor.execute(query)
+            
+            persons = cursor.fetchall()
+            
+            return jsonify({
+                'success': True,
+                'data': persons,
+                'total': total,
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (total + per_page - 1) // per_page
+            })
+        except Error as e:
+            return jsonify({'success': False, 'error': f'Lỗi: {str(e)}'}), 500
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @app.route('/admin/api/members/<person_id>', methods=['DELETE'])
+    @permission_required('canViewDashboard')
+    def delete_member(person_id):
+        """API: Xóa thành viên từ database"""
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        
+        try:
+            cursor = connection.cursor()
+            
+            # Kiểm tra person có tồn tại không
+            cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'error': 'Không tìm thấy thành viên'}), 404
+            
+            # Xóa các quan hệ trước (foreign key constraints)
+            cursor.execute("DELETE FROM relationships WHERE parent_id = %s OR child_id = %s", (person_id, person_id))
+            cursor.execute("DELETE FROM marriages WHERE person_id = %s OR spouse_person_id = %s", (person_id, person_id))
+            cursor.execute("DELETE FROM in_law_relationships WHERE person_id = %s OR in_law_person_id = %s", (person_id, person_id))
+            cursor.execute("DELETE FROM birth_records WHERE person_id = %s", (person_id,))
+            cursor.execute("DELETE FROM death_records WHERE person_id = %s", (person_id,))
+            cursor.execute("DELETE FROM personal_details WHERE person_id = %s", (person_id,))
+            
+            # Xóa person
+            cursor.execute("DELETE FROM persons WHERE person_id = %s", (person_id,))
+            connection.commit()
+            
+            return jsonify({'success': True, 'message': 'Đã xóa thành viên thành công'})
+        except Error as e:
+            connection.rollback()
+            return jsonify({'success': False, 'error': f'Lỗi: {str(e)}'}), 500
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @app.route('/admin/api/backup', methods=['POST'])
+    @permission_required('canViewDashboard')
+    def create_backup():
+        """API: Tạo backup database"""
+        import subprocess
+        import os
+        from datetime import datetime
+        
+        try:
+            # Lấy thông tin database từ environment
+            db_host = os.getenv('DB_HOST', 'localhost')
+            db_user = os.getenv('DB_USER', 'root')
+            db_password = os.getenv('DB_PASSWORD', '')
+            db_name = os.getenv('DB_NAME', 'railway')
+            
+            # Tạo tên file backup
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_filename = f'tbqc_backup_{timestamp}.sql'
+            backup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups', backup_filename)
+            
+            # Tạo thư mục backups nếu chưa có
+            os.makedirs(os.path.dirname(backup_path), exist_ok=True)
+            
+            # Tạo backup bằng mysqldump
+            cmd = [
+                'mysqldump',
+                f'--host={db_host}',
+                f'--user={db_user}',
+                f'--password={db_password}',
+                '--single-transaction',
+                '--routines',
+                '--triggers',
+                db_name
+            ]
+            
+            with open(backup_path, 'w', encoding='utf-8') as f:
+                result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True)
+            
+            if result.returncode != 0:
+                return jsonify({
+                    'success': False,
+                    'error': f'Lỗi tạo backup: {result.stderr}'
+                }), 500
+            
+            # Trả về đường dẫn download
+            download_url = f'/admin/api/backup/download/{backup_filename}'
+            
+            return jsonify({
+                'success': True,
+                'message': 'Backup thành công',
+                'filename': backup_filename,
+                'download_url': download_url
+            })
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Lỗi: {str(e)}'
+            }), 500
+    
+    @app.route('/admin/api/backup/download/<filename>', methods=['GET'])
+    @permission_required('canViewDashboard')
+    def download_backup_admin(filename):
+        """API: Download file backup"""
+        import os
+        from flask import send_file
+        
+        backup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups', filename)
+        
+        if not os.path.exists(backup_path):
+            return jsonify({'error': 'File backup không tồn tại'}), 404
+        
+        return send_file(backup_path, as_attachment=True, download_name=filename)
 
 # Templates
 ADMIN_LOGIN_TEMPLATE = '''
@@ -2010,50 +2196,291 @@ DATA_MANAGEMENT_TEMPLATE = '''
         <div id="alertContainer"></div>
         
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('sheet1')">📋 Sheet 1 - Thông tin chi tiết</button>
-            <button class="tab" onclick="switchTab('sheet2')">🔗 Sheet 2 - Quan hệ</button>
-            <button class="tab" onclick="switchTab('sheet3')">👨‍👩‍👧‍👦 Sheet 3 - Chi tiết quan hệ</button>
+            <button class="tab active" onclick="switchTab('members')">👥 Quản lý Thành viên</button>
+            <button class="tab" onclick="switchTab('schema')">🗄️ Schema & ERD</button>
         </div>
         
-        <!-- Sheet 1 Content -->
-        <div id="sheet1" class="tab-content active">
+        <!-- Members Management Content -->
+        <div id="members" class="tab-content active">
             <div class="toolbar">
                 <div class="search-box">
-                    <input type="text" id="searchSheet1" placeholder="Tìm kiếm..." oninput="filterData('sheet1')">
+                    <input type="text" id="searchMembers" placeholder="Tìm kiếm theo tên, ID..." oninput="filterMembersData()">
                 </div>
-                <button class="btn btn-success" onclick="openAddModal('sheet1')">➕ Thêm mới</button>
-                <button class="btn btn-primary" onclick="loadSheetData('sheet1')">🔄 Làm mới</button>
+                <button class="btn btn-success" onclick="openAddMemberModal()">➕ Thêm mới</button>
+                <button class="btn btn-warning" onclick="openBackupModal()">💾 Backup</button>
+                <button class="btn btn-primary" onclick="loadMembersData()">🔄 Làm mới</button>
             </div>
-            <div id="sheet1TableContainer">
+            <div id="membersTableContainer">
                 <div class="loading">Đang tải dữ liệu...</div>
             </div>
         </div>
         
-        <!-- Sheet 2 Content -->
-        <div id="sheet2" class="tab-content">
-            <div class="toolbar">
-                <div class="search-box">
-                    <input type="text" id="searchSheet2" placeholder="Tìm kiếm..." oninput="filterData('sheet2')">
+        <!-- Schema & ERD Content -->
+        <div id="schema" class="tab-content">
+            <div class="schema-container" style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">🗄️ Database Schema & ERD</h2>
+                
+                <!-- ERD Diagram -->
+                <div class="schema-section" style="margin-bottom: 40px;">
+                    <h3 style="color: #34495e; margin-bottom: 15px;">📊 Entity Relationship Diagram (ERD)</h3>
+                    <div class="erd-container" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; overflow-x: auto;">
+                        <div class="mermaid" id="erd-diagram">
+erDiagram
+    PERSONS ||--o{ RELATIONSHIPS : parent
+    PERSONS ||--o{ RELATIONSHIPS : child
+    PERSONS ||--o{ MARRIAGES : person
+    PERSONS ||--o{ MARRIAGES : spouse
+    PERSONS ||--o| PERSONAL_DETAILS : has
+    PERSONS ||--o{ BIRTH_RECORDS : has
+    PERSONS ||--o{ DEATH_RECORDS : has
+    PERSONS ||--o{ IN_LAW_RELATIONSHIPS : person
+    PERSONS ||--o{ IN_LAW_RELATIONSHIPS : in_law
+    
+    PERSONS {
+        varchar person_id PK
+        text full_name
+        text alias
+        varchar gender
+        varchar status
+        int generation_level
+        date birth_date_solar
+        varchar birth_date_lunar
+        date death_date_solar
+        varchar death_date_lunar
+        text home_town
+        text place_of_death
+        text grave_info
+        varchar father_mother_id
+    }
+    
+    RELATIONSHIPS {
+        int id PK
+        varchar parent_id FK
+        varchar child_id FK
+        enum relation_type
+    }
+    
+    MARRIAGES {
+        int id PK
+        varchar person_id FK
+        varchar spouse_person_id FK
+        varchar status
+        text note
+    }
+    
+    ACTIVITIES {
+        int activity_id PK
+        varchar title
+        text summary
+        text content
+        enum status
+        varchar thumbnail
+        json images
+    }
+    
+    USERS {
+        int user_id PK
+        varchar username UK
+        varchar password_hash
+        varchar full_name
+        varchar email
+        enum role
+        boolean is_active
+        json permissions
+    }
+    
+    GENERATIONS {
+        int generation_id PK
+        int generation_number UK
+        varchar description
+    }
+    
+    BRANCHES {
+        int branch_id PK
+        varchar branch_name UK
+        text description
+    }
+    
+    LOCATIONS {
+        int location_id PK
+        varchar location_name
+        enum location_type
+        varchar province
+        varchar district
+        text full_address
+    }
+    
+    PERSONAL_DETAILS {
+        int detail_id PK
+        varchar person_id FK
+        text contact_info
+        text social_media
+        varchar occupation
+        text education
+    }
+    
+    BIRTH_RECORDS {
+        int birth_record_id PK
+        varchar person_id FK
+        date birth_date_solar
+        varchar birth_date_lunar
+        int birth_location_id
+    }
+    
+    DEATH_RECORDS {
+        int death_record_id PK
+        varchar person_id FK
+        date death_date_solar
+        varchar death_date_lunar
+        text grave_location
+    }
+    
+    IN_LAW_RELATIONSHIPS {
+        int id PK
+        varchar person_id FK
+        varchar in_law_person_id FK
+        varchar relationship_type
+    }
+                        </div>
+                    </div>
                 </div>
-                <button class="btn btn-success" onclick="openAddModal('sheet2')">➕ Thêm mới</button>
-                <button class="btn btn-primary" onclick="loadSheetData('sheet2')">🔄 Làm mới</button>
-            </div>
-            <div id="sheet2TableContainer">
-                <div class="loading">Đang tải dữ liệu...</div>
-            </div>
-        </div>
-        
-        <!-- Sheet 3 Content -->
-        <div id="sheet3" class="tab-content">
-            <div class="toolbar">
-                <div class="search-box">
-                    <input type="text" id="searchSheet3" placeholder="Tìm kiếm..." oninput="filterData('sheet3')">
+                
+                <!-- Schema Tables -->
+                <div class="schema-section">
+                    <h3 style="color: #34495e; margin-bottom: 20px;">📋 Database Schema Details</h3>
+                    
+                    <!-- Persons Table -->
+                    <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3498db;">
+                        <h4 style="color: #3498db; margin-bottom: 15px;">📌 PERSONS (Bảng chính - Người)</h4>
+                        <table class="schema-table" style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr style="background: #ecf0f1;">
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Column</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Type</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>person_id</strong> (PK)</td><td>VARCHAR(50)</td><td>ID từ CSV (P-1-1, P-2-3, ...)</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">full_name</td><td>TEXT</td><td>Họ và tên đầy đủ</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">alias</td><td>TEXT</td><td>Tên thường gọi, biệt danh</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">gender</td><td>VARCHAR(20)</td><td>Nam, Nữ, Khác</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">status</td><td>VARCHAR(20)</td><td>Đã mất, Còn sống, Không rõ</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">generation_level</td><td>INT</td><td>Cấp đời (1, 2, 3, ...)</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">birth_date_solar</td><td>DATE</td><td>Ngày sinh dương lịch</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">birth_date_lunar</td><td>VARCHAR(50)</td><td>Ngày sinh âm lịch</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">death_date_solar</td><td>DATE</td><td>Ngày mất dương lịch</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">death_date_lunar</td><td>VARCHAR(50)</td><td>Ngày mất âm lịch</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">home_town</td><td>TEXT</td><td>Quê quán</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">place_of_death</td><td>TEXT</td><td>Nơi mất</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">grave_info</td><td>TEXT</td><td>Thông tin mộ phần</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">father_mother_id</td><td>VARCHAR(50)</td><td>ID nhóm cha mẹ từ CSV</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Relationships Table -->
+                    <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #27ae60;">
+                        <h4 style="color: #27ae60; margin-bottom: 15px;">🔗 RELATIONSHIPS (Quan hệ cha mẹ - con)</h4>
+                        <table class="schema-table" style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr style="background: #ecf0f1;">
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Column</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Type</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>id</strong> (PK)</td><td>INT AUTO_INCREMENT</td><td>ID tự động</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>parent_id</strong> (FK)</td><td>VARCHAR(50)</td><td>ID của cha hoặc mẹ → persons.person_id</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>child_id</strong> (FK)</td><td>VARCHAR(50)</td><td>ID của con → persons.person_id</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">relation_type</td><td>ENUM</td><td>father, mother, in_law, child_in_law, other</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Marriages Table -->
+                    <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #e74c3c;">
+                        <h4 style="color: #e74c3c; margin-bottom: 15px;">💑 MARRIAGES (Hôn nhân)</h4>
+                        <table class="schema-table" style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr style="background: #ecf0f1;">
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Column</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Type</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>id</strong> (PK)</td><td>INT AUTO_INCREMENT</td><td>ID tự động</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>person_id</strong> (FK)</td><td>VARCHAR(50)</td><td>ID người thứ nhất → persons.person_id</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>spouse_person_id</strong> (FK)</td><td>VARCHAR(50)</td><td>ID người thứ hai (vợ/chồng) → persons.person_id</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">status</td><td>VARCHAR(20)</td><td>Đang kết hôn, Đã ly dị, Đã qua đời, Khác</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">note</td><td>TEXT</td><td>Ghi chú</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Activities Table -->
+                    <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #9b59b6;">
+                        <h4 style="color: #9b59b6; margin-bottom: 15px;">📰 ACTIVITIES (Hoạt động/Tin tức)</h4>
+                        <table class="schema-table" style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr style="background: #ecf0f1;">
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Column</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Type</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>activity_id</strong> (PK)</td><td>INT AUTO_INCREMENT</td><td>ID tự động</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">title</td><td>VARCHAR(500)</td><td>Tiêu đề bài viết</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">summary</td><td>TEXT</td><td>Tóm tắt</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">content</td><td>TEXT</td><td>Nội dung bài viết</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">status</td><td>ENUM</td><td>published, draft</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">thumbnail</td><td>VARCHAR(500)</td><td>Ảnh đại diện</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">images</td><td>JSON</td><td>Danh sách ảnh đính kèm</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Users Table -->
+                    <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f39c12;">
+                        <h4 style="color: #f39c12; margin-bottom: 15px;">👤 USERS (Tài khoản)</h4>
+                        <table class="schema-table" style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr style="background: #ecf0f1;">
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Column</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Type</th>
+                                    <th style="padding: 10px; text-align: left; border: 1px solid #bdc3c7;">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>user_id</strong> (PK)</td><td>INT AUTO_INCREMENT</td><td>ID tự động</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;"><strong>username</strong> (UK)</td><td>VARCHAR(100)</td><td>Tên đăng nhập (unique)</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">password_hash</td><td>VARCHAR(255)</td><td>Mật khẩu đã hash</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">full_name</td><td>VARCHAR(255)</td><td>Họ và tên</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">email</td><td>VARCHAR(255)</td><td>Email</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">role</td><td>ENUM</td><td>admin, user, editor</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">permissions</td><td>JSON</td><td>Quyền chi tiết (optional)</td></tr>
+                                <tr><td style="padding: 8px; border: 1px solid #ecf0f1;">is_active</td><td>BOOLEAN</td><td>Trạng thái hoạt động</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Other Tables Summary -->
+                    <div class="schema-table-card" style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #95a5a6;">
+                        <h4 style="color: #95a5a6; margin-bottom: 15px;">📚 Các bảng phụ khác</h4>
+                        <ul style="line-height: 2; color: #2c3e50;">
+                            <li><strong>GENERATIONS:</strong> Quản lý các đời (generation_id PK, generation_number UK, description)</li>
+                            <li><strong>BRANCHES:</strong> Quản lý các nhánh (branch_id PK, branch_name UK, description)</li>
+                            <li><strong>LOCATIONS:</strong> Quản lý địa điểm (location_id PK, location_name, location_type, province, district, ward)</li>
+                            <li><strong>PERSONAL_DETAILS:</strong> Thông tin chi tiết cá nhân (detail_id PK, person_id FK UK, contact_info, social_media, occupation, education)</li>
+                            <li><strong>BIRTH_RECORDS:</strong> Ghi chép ngày sinh (birth_record_id PK, person_id FK, birth_date_solar, birth_date_lunar)</li>
+                            <li><strong>DEATH_RECORDS:</strong> Ghi chép ngày mất (death_record_id PK, person_id FK, death_date_solar, death_date_lunar, grave_location)</li>
+                            <li><strong>IN_LAW_RELATIONSHIPS:</strong> Quan hệ thông gia (id PK, person_id FK, in_law_person_id FK, relationship_type)</li>
+                        </ul>
+                    </div>
                 </div>
-                <button class="btn btn-success" onclick="openAddModal('sheet3')">➕ Thêm mới</button>
-                <button class="btn btn-primary" onclick="loadSheetData('sheet3')">🔄 Làm mới</button>
-            </div>
-            <div id="sheet3TableContainer">
-                <div class="loading">Đang tải dữ liệu...</div>
             </div>
         </div>
     </div>
@@ -2083,33 +2510,205 @@ DATA_MANAGEMENT_TEMPLATE = '''
         let currentPage = {sheet1: 1, sheet2: 1, sheet3: 1};
         const itemsPerPage = 50;
         
-        function switchTab(sheetName) {
-            currentSheet = sheetName;
+        function switchTab(tabName) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
             
             event.target.classList.add('active');
-            document.getElementById(sheetName).classList.add('active');
+            document.getElementById(tabName).classList.add('active');
             
-            loadSheetData(sheetName);
+            if (tabName === 'members') {
+                loadMembersData();
+            } else if (tabName === 'schema') {
+                // Initialize Mermaid for ERD when tab is switched
+                setTimeout(() => {
+                    if (typeof mermaid !== 'undefined') {
+                        const erdElement = document.getElementById('erd-diagram');
+                        if (erdElement) {
+                            mermaid.run();
+                        }
+                    }
+                }, 200);
+            }
         }
         
-        async function loadSheetData(sheetName) {
-            const container = document.getElementById(sheetName + 'TableContainer');
+        let membersData = [];
+        let currentMembersPage = 1;
+        let totalPages = 1;
+        let totalMembers = 0;
+        const itemsPerPage = 50;
+        let currentSearch = '';
+        
+        async function loadMembersData(page = 1, search = '') {
+            const container = document.getElementById('membersTableContainer');
             container.innerHTML = '<div class="loading">Đang tải dữ liệu...</div>';
             
             try {
-                const response = await fetch(`/admin/api/csv-data/${sheetName}`);
+                const params = new URLSearchParams({
+                    page: page,
+                    per_page: itemsPerPage
+                });
+                if (search) {
+                    params.append('search', search);
+                }
+                
+                const response = await fetch(`/admin/api/members?${params.toString()}`);
+                if (!response.ok) {
+                    throw new Error('Không thể tải dữ liệu');
+                }
                 const result = await response.json();
                 
                 if (result.success) {
-                    currentData[sheetName] = result.data;
-                    renderTable(sheetName, result.data);
+                    membersData = result.data;
+                    currentMembersPage = result.page;
+                    totalPages = result.total_pages;
+                    totalMembers = result.total;
+                    renderMembersTable();
                 } else {
                     container.innerHTML = `<div class="alert alert-error">Lỗi: ${result.error}</div>`;
                 }
             } catch (error) {
-                container.innerHTML = `<div class="alert alert-error">Lỗi kết nối: ${error.message}</div>`;
+                container.innerHTML = `<div class="alert alert-error">Lỗi: ${error.message}</div>`;
+            }
+        }
+        
+        function renderMembersTable() {
+            const container = document.getElementById('membersTableContainer');
+            if (!membersData || membersData.length === 0) {
+                container.innerHTML = '<div class="alert">Không có dữ liệu</div>';
+                return;
+            }
+            
+            const pageData = membersData;
+            
+            let html = `
+                <table style="width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px;">
+                    <thead>
+                        <tr style="background: #34495e; color: white;">
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">ID</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Họ và tên</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Giới tính</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Đời</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Trạng thái</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Ngày sinh</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Cha</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Mẹ</th>
+                            <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            pageData.forEach(person => {
+                html += `
+                    <tr style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 10px; border: 1px solid #ddd;">${person.person_id || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${person.full_name || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${person.gender || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${person.generation_level || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${person.status || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${person.birth_date_solar || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${person.father_name || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${person.mother_name || ''}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">
+                            <button class="btn btn-warning btn-sm" onclick="openEditMemberModal('${person.person_id}')">✏️ Sửa</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteMember('${person.person_id}')">🗑️ Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            
+            if (totalPages > 1) {
+                html += '<div class="pagination" style="text-align: center; margin-top: 20px;">';
+                for (let i = 1; i <= totalPages; i++) {
+                    html += `<button class="btn ${i === currentMembersPage ? 'btn-primary' : 'btn-secondary'}" 
+                             onclick="changeMembersPage(${i})" style="margin: 0 5px;">${i}</button>`;
+                }
+                html += '</div>';
+            }
+            
+            html += `<div style="margin-top: 10px; color: #666;">Tổng số: ${totalMembers} thành viên | Trang ${currentMembersPage}/${totalPages}</div>`;
+            
+            container.innerHTML = html;
+        }
+        
+        function changeMembersPage(page) {
+            loadMembersData(page, currentSearch);
+        }
+        
+        function handleSearch() {
+            const searchTerm = document.getElementById('searchMembers').value.trim();
+            currentSearch = searchTerm;
+            loadMembersData(1, searchTerm);
+        }
+        
+        function openUpdateMemberModal() {
+            const personId = prompt('Nhập Person ID cần cập nhật:');
+            if (personId) {
+                openEditMemberModal(personId.trim());
+            }
+        }
+        
+        function openAddMemberModal() {
+            // Redirect to members page for adding
+            window.location.href = '/members';
+        }
+        
+        function openEditMemberModal(personId) {
+            // Redirect to members page for editing
+            window.location.href = `/members?edit=${personId}`;
+        }
+        
+        async function deleteMember(personId) {
+            if (!confirm(`Bạn có chắc chắn muốn xóa thành viên ${personId}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/api/members/${personId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Xóa thành công!', 'success');
+                    loadMembersData(currentMembersPage, currentSearch);
+                } else {
+                    showAlert('Lỗi: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Lỗi kết nối: ' + error.message, 'error');
+            }
+        }
+        
+        function openBackupModal() {
+            if (confirm('Bạn có muốn tạo backup database không?')) {
+                createBackup();
+            }
+        }
+        
+        async function createBackup() {
+            try {
+                showAlert('Đang tạo backup...', 'info');
+                const response = await fetch('/admin/api/backup', {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showAlert('Backup thành công! File: ' + result.filename, 'success');
+                    if (result.download_url) {
+                        window.open(result.download_url, '_blank');
+                    }
+                } else {
+                    showAlert('Lỗi: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Lỗi kết nối: ' + error.message, 'error');
             }
         }
         
@@ -2309,9 +2908,14 @@ DATA_MANAGEMENT_TEMPLATE = '''
             }
         }
         
-        function showAlert(type, message) {
+        function showAlert(message, type = 'info') {
             const alertContainer = document.getElementById('alertContainer');
-            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            let alertClass = 'alert-info';
+            if (type === 'success') {
+                alertClass = 'alert-success';
+            } else if (type === 'error') {
+                alertClass = 'alert-error';
+            }
             alertContainer.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
             
             setTimeout(() => {
@@ -2321,7 +2925,31 @@ DATA_MANAGEMENT_TEMPLATE = '''
         
         // Load data on page load
         window.addEventListener('DOMContentLoaded', () => {
-            loadSheetData('sheet1');
+            loadMembersData();
+            // Load Mermaid library for ERD
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+            script.onload = function() {
+                mermaid.initialize({ 
+                    startOnLoad: false,
+                    theme: 'default',
+                    securityLevel: 'loose',
+                    flowchart: { useMaxWidth: true },
+                    er: { 
+                        layoutDirection: 'TB',
+                        minEntityWidth: 100,
+                        minEntityHeight: 75
+                    }
+                });
+                // Render ERD if schema tab is active
+                setTimeout(() => {
+                    const schemaTab = document.getElementById('schema');
+                    if (schemaTab && schemaTab.classList.contains('active')) {
+                        mermaid.run();
+                    }
+                }, 100);
+            };
+            document.head.appendChild(script);
         });
         
         // Close modal when clicking outside

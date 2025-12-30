@@ -71,6 +71,30 @@
       font-weight: var(--font-weight-semibold);
       font-size: var(--font-size-sm);
     }
+    
+    .navbar-login-btn {
+      position: fixed;
+      bottom: var(--space-6);
+      right: var(--space-6);
+      z-index: 1000;
+    }
+    
+    .navbar-login-btn .btn {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .navbar-login-btn .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+    
+    @media (max-width: 767px) {
+      .navbar-login-btn {
+        bottom: var(--space-4);
+        right: var(--space-4);
+      }
+    }
   </style>
 </head>
 <body>
@@ -85,6 +109,9 @@
       <li><a href="/contact">Liên hệ</a></li>
       <li><a href="/login">Đăng nhập</a></li>
     </ul>
+    <div class="navbar-login-btn">
+      <a href="/login" class="btn btn-primary btn-sm">🔐 Đăng nhập</a>
+    </div>
   </nav>
 
   <div class="container section">
