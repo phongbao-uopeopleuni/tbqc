@@ -847,6 +847,17 @@
                   </div>
                 </div>
                 
+                <!-- Nút định vị bằng điện thoại -->
+                <div style="margin-bottom: var(--space-3); padding: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                  <p style="color: var(--color-text-muted); margin-bottom: var(--space-2); font-size: var(--font-size-sm);">
+                    📱 Định vị bằng điện thoại:
+                  </p>
+                  <button id="btnGetCurrentLocation" onclick="getCurrentLocation()" class="btn btn-primary" style="width: 100%;">
+                    📍 Định vị bằng điện thoại
+                  </button>
+                  <div id="locationStatus" style="margin-top: var(--space-2); font-size: var(--font-size-sm); color: var(--color-text-muted); display: none;"></div>
+                </div>
+                
                 <div style="display: flex; gap: var(--space-3); align-items: center;">
                   <button id="btnSaveGraveLocation" onclick="saveGraveLocation()" class="btn btn-primary">
                     💾 Lưu vị trí
@@ -2653,6 +2664,125 @@
       }
     }
 
+    /**
+     * Get current location using device GPS (Geolocation API)
+     */
+    function getCurrentLocation() {
+      const statusDiv = document.getElementById('locationStatus');
+      const btnGetLocation = document.getElementById('btnGetCurrentLocation');
+      
+      if (!navigator.geolocation) {
+        alert('Trình duyệt của bạn không hỗ trợ định vị GPS. Vui lòng sử dụng trình duyệt khác hoặc cập nhật trình duyệt.');
+        return;
+      }
+      
+      if (!graveMap) {
+        alert('Vui lòng tìm kiếm mộ phần và bật chế độ chỉnh sửa trước');
+        return;
+      }
+      
+      // Disable button và hiển thị trạng thái
+      if (btnGetLocation) {
+        btnGetLocation.disabled = true;
+        btnGetLocation.textContent = '⏳ Đang lấy vị trí...';
+      }
+      
+      if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = 'Đang lấy vị trí GPS từ điện thoại...';
+        statusDiv.style.color = 'var(--color-primary)';
+      }
+      
+      // Lấy vị trí với độ chính xác cao
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const accuracy = position.coords.accuracy; // Độ chính xác tính bằng mét
+          
+          console.log(`[Grave Location] GPS Position: ${lat}, ${lng} (accuracy: ${accuracy}m)`);
+          
+          // Di chuyển map đến vị trí GPS
+          graveMap.setView([lat, lng], 18); // Zoom level 18 để xem chi tiết
+          
+          // Remove old marker
+          if (graveMarker) {
+            graveMap.removeLayer(graveMarker);
+          }
+          
+          // Add new marker tại vị trí GPS
+          graveMarker = L.marker([lat, lng], {
+            draggable: true
+          }).addTo(graveMap);
+          
+          graveMarker.bindPopup(`
+            <strong>📍 Vị trí GPS</strong><br>
+            ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>
+            <small>Độ chính xác: ±${Math.round(accuracy)}m</small>
+          `).openPopup();
+          
+          graveMarker.on('dragend', onGraveMarkerDrag);
+          
+          // Update coordinates display
+          const coordinatesDiv = document.getElementById('graveCoordinates');
+          if (coordinatesDiv) {
+            coordinatesDiv.innerHTML = `📍 Tọa độ GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)} (Độ chính xác: ±${Math.round(accuracy)}m)`;
+            coordinatesDiv.style.color = 'var(--color-primary)';
+            coordinatesDiv.style.fontWeight = 'bold';
+          }
+          
+          // Hiển thị thông báo thành công
+          if (statusDiv) {
+            statusDiv.textContent = `✅ Đã lấy vị trí GPS thành công! Độ chính xác: ±${Math.round(accuracy)}m. Nhấn "Lưu vị trí" để lưu lại.`;
+            statusDiv.style.color = 'var(--color-success, #28a745)';
+          }
+          
+          // Restore button
+          if (btnGetLocation) {
+            btnGetLocation.disabled = false;
+            btnGetLocation.textContent = '📍 Định vị bằng điện thoại';
+          }
+        },
+        (error) => {
+          console.error('[Grave Location] Geolocation error:', error);
+          
+          let errorMessage = 'Không thể lấy vị trí GPS. ';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += 'Bạn đã từ chối quyền truy cập vị trí. Vui lòng cấp quyền trong cài đặt trình duyệt.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += 'Vị trí không khả dụng. Vui lòng kiểm tra GPS của điện thoại.';
+              break;
+            case error.TIMEOUT:
+              errorMessage += 'Hết thời gian chờ lấy vị trí. Vui lòng thử lại.';
+              break;
+            default:
+              errorMessage += 'Lỗi không xác định.';
+              break;
+          }
+          
+          alert(errorMessage);
+          
+          // Restore button
+          if (btnGetLocation) {
+            btnGetLocation.disabled = false;
+            btnGetLocation.textContent = '📍 Định vị bằng điện thoại';
+          }
+          
+          if (statusDiv) {
+            statusDiv.textContent = '❌ ' + errorMessage;
+            statusDiv.style.color = 'var(--color-error, #dc3545)';
+          }
+        },
+        {
+          enableHighAccuracy: true, // Sử dụng GPS độ chính xác cao
+          timeout: 10000, // Timeout 10 giây
+          maximumAge: 0 // Không sử dụng cache, luôn lấy vị trí mới
+        }
+      );
+    }
+    
     /**
      * Save grave location
      */
