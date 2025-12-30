@@ -853,7 +853,6 @@ def serve_genealogy_js():
 def serve_image_static(filename):
     """Serve images from static/images/ or Railway Volume"""
     from urllib.parse import unquote
-    import glob
     
     # Decode URL-encoded filename (handles spaces, special chars)
     filename = unquote(filename)
@@ -864,18 +863,39 @@ def serve_image_static(filename):
     possible_paths = []
     
     # 1. Kiểm tra git static/images trước (nơi ảnh được commit vào git)
-    # Đây là nơi ảnh sẽ có nếu không có volume hoặc volume chưa được copy
+    # Git source ở BASE_DIR/static/images, nhưng khi volume mount vào /app/static/images, nó che git source
+    # Cần check git source từ git repo trước khi check mount point
     git_static_path = os.path.join(BASE_DIR, 'static', 'images')
     logger.debug(f"[Serve Image] Checking git static path: {git_static_path}, exists: {os.path.exists(git_static_path)}")
-    if os.path.exists(git_static_path):
-        possible_paths.append(git_static_path)
     
-    # 2. Kiểm tra mount point /app/static/images (nơi volume được mount vào)
-    # Đây là nơi ảnh sẽ có nếu volume được mount đúng
+    # Kiểm tra xem có phải là mount point không (nếu có lost+found thì là volume trống)
+    is_mount_point = False
+    if os.path.exists(git_static_path):
+        try:
+            files = os.listdir(git_static_path)
+            # Nếu chỉ có lost+found, đây là volume trống, không phải git source
+            if len(files) == 1 and 'lost+found' in files:
+                logger.debug(f"[Serve Image] {git_static_path} is a mount point (volume empty)")
+                is_mount_point = True
+            else:
+                # Đây là git source hoặc volume có data
+                possible_paths.append(git_static_path)
+                logger.debug(f"[Serve Image] Added git static path: {git_static_path}")
+        except Exception as e:
+            logger.debug(f"[Serve Image] Could not list {git_static_path}: {e}")
+    
+    # 2. Nếu git_static_path là mount point, cần tìm git source từ volume thực tế hoặc từ git repo
+    # Nhưng vì volume mount vào /app/static/images, git source bị che
+    # Giải pháp: Sử dụng Flask's built-in static file serving cho git source
+    # Custom route này chỉ để serve từ volume
+    
+    # 3. Kiểm tra mount point /app/static/images (nơi volume được mount vào)
+    # Chỉ thêm nếu không phải là git source (đã được thêm ở trên)
     mount_point = '/app/static/images'
-    logger.debug(f"[Serve Image] Checking mount point: {mount_point}, exists: {os.path.exists(mount_point)}")
-    if os.path.exists(mount_point):
-        possible_paths.append(mount_point)
+    if mount_point not in possible_paths:
+        logger.debug(f"[Serve Image] Checking mount point: {mount_point}, exists: {os.path.exists(mount_point)}")
+        if os.path.exists(mount_point):
+            possible_paths.append(mount_point)
     
     # 3. Kiểm tra volume thực tế từ bind-mounts (nơi chứa ảnh thực sự)
     # Đây là volume thực tế, nhưng thường được mount vào /app/static/images
