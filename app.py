@@ -863,17 +863,19 @@ def serve_image_static(filename):
     # Railway Volume được mount vào /app/static/images nhưng volume thực tế ở /var/lib/containers/railwayapp/bind-mounts/...
     possible_paths = []
     
-    # 1. Kiểm tra mount point /app/static/images trước (nơi volume được mount vào)
-    # Đây là nơi ảnh sẽ có nếu volume được mount đúng
-    mount_point = '/app/static/images'
-    if os.path.exists(mount_point):
-        possible_paths.append(mount_point)
-    
-    # 2. Kiểm tra git static/images (fallback - nơi ảnh được commit vào git)
+    # 1. Kiểm tra git static/images trước (nơi ảnh được commit vào git)
     # Đây là nơi ảnh sẽ có nếu không có volume hoặc volume chưa được copy
     git_static_path = os.path.join(BASE_DIR, 'static', 'images')
+    logger.debug(f"[Serve Image] Checking git static path: {git_static_path}, exists: {os.path.exists(git_static_path)}")
     if os.path.exists(git_static_path):
         possible_paths.append(git_static_path)
+    
+    # 2. Kiểm tra mount point /app/static/images (nơi volume được mount vào)
+    # Đây là nơi ảnh sẽ có nếu volume được mount đúng
+    mount_point = '/app/static/images'
+    logger.debug(f"[Serve Image] Checking mount point: {mount_point}, exists: {os.path.exists(mount_point)}")
+    if os.path.exists(mount_point):
+        possible_paths.append(mount_point)
     
     # 3. Kiểm tra volume thực tế từ bind-mounts (nơi chứa ảnh thực sự)
     # Đây là volume thực tế, nhưng thường được mount vào /app/static/images
