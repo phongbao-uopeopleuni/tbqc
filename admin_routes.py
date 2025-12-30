@@ -3004,7 +3004,26 @@ erDiagram
                     params.append('search', search);
                 }
                 
-                const response = await fetch(`/admin/api/members?${params.toString()}`);
+                const response = await fetch(`/admin/api/members?${params.toString()}`, {
+                    method: 'GET',
+                    credentials: 'same-origin', // Đảm bảo gửi cookies/session
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                // Xử lý lỗi 401 (Unauthorized) trước khi parse JSON
+                if (response.status === 401) {
+                    try {
+                        const errorData = await response.json();
+                        alert(errorData.error || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    } catch (e) {
+                        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    }
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                
                 if (!response.ok) {
                     const errorText = await response.text();
                     throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);

@@ -38,9 +38,12 @@ try:
     # Cấu hình session để kéo dài thời gian đăng nhập
     from datetime import timedelta
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # Session kéo dài 24 giờ
-    app.config['SESSION_COOKIE_SECURE'] = os.environ.get('RAILWAY_ENVIRONMENT') == 'production'  # HTTPS only trên production
+    # Kiểm tra xem có đang chạy trên Railway (production) không
+    is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true'
+    app.config['SESSION_COOKIE_SECURE'] = is_production  # HTTPS only trên production
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # Bảo vệ khỏi XSS
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Bảo vệ khỏi CSRF
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Bảo vệ khỏi CSRF, cho phép same-site requests
+    app.config['SESSION_COOKIE_NAME'] = 'tbqc_session'  # Tên cookie rõ ràng
     CORS(app)  # Cho phép frontend gọi API
     print("OK: Flask app da duoc khoi tao")
     print(f"   Static folder: {app.static_folder}")

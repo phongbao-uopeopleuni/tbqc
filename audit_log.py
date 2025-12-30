@@ -62,6 +62,7 @@ def log_activity(action, target_type=None, target_id=None, before_data=None, aft
     if not connection:
         return
     
+    cursor = None
     try:
         user_id = current_user.id if current_user.is_authenticated else None
         ip_address = request.remote_addr if request else None
@@ -71,7 +72,15 @@ def log_activity(action, target_type=None, target_id=None, before_data=None, aft
         before_json = json.dumps(before_data, ensure_ascii=False) if before_data else None
         after_json = json.dumps(after_data, ensure_ascii=False) if after_data else None
         
+        # Kiểm tra xem bảng activity_logs có tồn tại không
         cursor = connection.cursor()
+        cursor.execute("SHOW TABLES LIKE 'activity_logs'")
+        table_exists = cursor.fetchone()
+        
+        if not table_exists:
+            # Bảng không tồn tại, bỏ qua việc ghi log (không crash)
+            return
+        
         cursor.execute("""
             INSERT INTO activity_logs 
             (user_id, action, target_type, target_id, before_data, after_data, ip_address, user_agent)
@@ -79,12 +88,22 @@ def log_activity(action, target_type=None, target_id=None, before_data=None, aft
         """, (user_id, action, target_type, target_id, before_json, after_json, ip_address, user_agent))
         connection.commit()
     except Error as e:
-        print(f"Lỗi khi ghi log: {e}")
+        # Log lỗi nhưng không crash ứng dụng
+        error_code = e.errno if hasattr(e, 'errno') else None
+        if error_code == 1146:  # Table doesn't exist
+            # Bảng không tồn tại, bỏ qua
+            pass
+        else:
+            print(f"Lỗi khi ghi log: {error_code} ({e.errno if hasattr(e, 'errno') else 'N/A'}): {e}")
         if connection:
             connection.rollback()
+    except Exception as e:
+        # Bắt mọi exception khác để không crash ứng dụng
+        print(f"Lỗi không mong đợi khi ghi log: {e}")
     finally:
         if connection and connection.is_connected():
-            cursor.close()
+            if cursor:
+                cursor.close()
             connection.close()
 
 def log_login(success=True, username=None):
