@@ -860,25 +860,16 @@ def serve_image_static(filename):
     logger.debug(f"[Serve Image] Requested filename: {filename}")
     
     # Tự động detect Railway Volume mount path
-    # Railway mount volume vào /app/static/images nếu được cấu hình đúng
-    # Hoặc có thể mount vào path khác, cần check cả hai
-    possible_paths = [
-        os.environ.get('RAILWAY_VOLUME_MOUNT_PATH'),
-        os.path.join(BASE_DIR, 'static', 'images'),  # Standard static path
-        '/app/static/images',  # Railway mount path
-    ]
+    # Railway Volume được mount vào /app/static/images nhưng volume thực tế ở /var/lib/containers/railwayapp/bind-mounts/...
+    possible_paths = []
     
-    # Thêm các volume mount paths có thể có từ Railway
-    # Railway thường mount vào /var/lib/containers/railwayapp/bind-mounts/...
-    # Nhưng nếu được mount đúng, sẽ mount vào /app/static/images
+    # 1. Kiểm tra volume thực tế từ bind-mounts (nơi chứa ảnh thực sự)
     volume_base = '/var/lib/containers/railwayapp/bind-mounts'
     if os.path.exists(volume_base):
         try:
-            # Tìm các volume mount directories
             for mount_dir in os.listdir(volume_base):
                 mount_path = os.path.join(volume_base, mount_dir)
                 if os.path.isdir(mount_path):
-                    # Check các subdirectories có thể chứa volume
                     for subdir in os.listdir(mount_path):
                         vol_path = os.path.join(mount_path, subdir)
                         if os.path.isdir(vol_path) and 'vol_' in subdir:
@@ -886,8 +877,23 @@ def serve_image_static(filename):
         except Exception as e:
             logger.debug(f"[Serve Image] Could not scan volume mounts: {e}")
     
-    # Loại bỏ None và duplicates
-    possible_paths = list(dict.fromkeys([p for p in possible_paths if p and os.path.exists(p)]))
+    # 2. Kiểm tra mount point /app/static/images (nơi volume được mount vào)
+    mount_point = '/app/static/images'
+    if os.path.exists(mount_point):
+        possible_paths.append(mount_point)
+    
+    # 3. Kiểm tra git static/images (fallback)
+    git_static_path = os.path.join(BASE_DIR, 'static', 'images')
+    if os.path.exists(git_static_path):
+        possible_paths.append(git_static_path)
+    
+    # 4. Kiểm tra env var
+    env_volume_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+    if env_volume_path and os.path.exists(env_volume_path):
+        possible_paths.append(env_volume_path)
+    
+    # Loại bỏ None và duplicates, giữ thứ tự ưu tiên
+    possible_paths = list(dict.fromkeys([p for p in possible_paths if p]))
     
     # Thử từng path
     for image_path in possible_paths:
