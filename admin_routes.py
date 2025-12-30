@@ -3199,9 +3199,32 @@ erDiagram
                     body: JSON.stringify(data)
                 });
                 
+                // Xử lý lỗi 401 (Unauthorized) trước khi parse JSON
+                if (response.status === 401) {
+                    try {
+                        const errorData = await response.json();
+                        alert(errorData.error || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    } catch (e) {
+                        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+                    }
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 100)}`);
+                }
+                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Expected JSON but got: ${contentType}. Response: ${text.substring(0, 200)}`);
+                }
+                
                 const result = await response.json();
                 
-                if (result.success || response.ok) {
+                if (result.success) {
                     showAlert(isEdit ? 'Cập nhật thành công!' : 'Thêm thành công!', 'success');
                     closeMemberModal();
                     loadMembersData(currentMembersPage, currentSearch);
@@ -3209,6 +3232,7 @@ erDiagram
                     showAlert('Lỗi: ' + (result.error || 'Không thể lưu'), 'error');
                 }
             } catch (error) {
+                console.error('Error saving member:', error);
                 showAlert('Lỗi kết nối: ' + error.message, 'error');
             }
         }

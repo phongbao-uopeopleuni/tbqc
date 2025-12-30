@@ -35,6 +35,12 @@ try:
                 static_url_path='/static',
                 template_folder='templates')
     app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+    # Cấu hình session để kéo dài thời gian đăng nhập
+    from datetime import timedelta
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # Session kéo dài 24 giờ
+    app.config['SESSION_COOKIE_SECURE'] = os.environ.get('RAILWAY_ENVIRONMENT') == 'production'  # HTTPS only trên production
+    app.config['SESSION_COOKIE_HTTPONLY'] = True  # Bảo vệ khỏi XSS
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Bảo vệ khỏi CSRF
     CORS(app)  # Cho phép frontend gọi API
     print("OK: Flask app da duoc khoi tao")
     print(f"   Static folder: {app.static_folder}")
