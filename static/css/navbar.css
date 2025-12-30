@@ -19,6 +19,8 @@
   z-index: var(--z-fixed);
   box-shadow: var(--shadow-md);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: visible;
+  min-width: 0; /* Allow flex items to shrink if needed */
 }
 
 .navbar-logo {
@@ -43,6 +45,12 @@
   gap: var(--space-2);
   list-style: none;
   align-items: center;
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+
+.navbar-menu li {
+  flex-shrink: 0;
 }
 
 .navbar-menu a {
@@ -55,6 +63,8 @@
   transition: all var(--transition-fast);
   position: relative;
   white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .navbar-menu a:hover {
