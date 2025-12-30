@@ -18,30 +18,33 @@ def find_railway_volume_path():
     volume_base = '/var/lib/containers/railwayapp/bind-mounts'
     if os.path.exists(volume_base):
         try:
+            logger.info(f"Scanning volume base: {volume_base}")
             for mount_dir in os.listdir(volume_base):
                 mount_path = os.path.join(volume_base, mount_dir)
+                logger.debug(f"Checking mount dir: {mount_path}")
                 if os.path.isdir(mount_path):
                     for subdir in os.listdir(mount_path):
                         vol_path = os.path.join(mount_path, subdir)
+                        logger.debug(f"Checking subdir: {vol_path}")
                         if os.path.isdir(vol_path) and 'vol_' in subdir:
                             # Đây là volume mount path thực tế
                             if os.access(vol_path, os.W_OK):
                                 logger.info(f"Found Railway Volume mount path: {vol_path}")
                                 return vol_path
+                            else:
+                                logger.warning(f"Volume path exists but not writable: {vol_path}")
         except Exception as e:
             logger.error(f"Error scanning volume mounts: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     
-    # Fallback: kiểm tra env var hoặc /app/static/images
-    fallback_paths = [
-        os.environ.get('RAILWAY_VOLUME_MOUNT_PATH'),
-        '/app/static/images',
-    ]
+    # Fallback: kiểm tra env var
+    env_volume_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+    if env_volume_path and os.path.exists(env_volume_path) and os.access(env_volume_path, os.W_OK):
+        logger.info(f"Found volume path from env var: {env_volume_path}")
+        return env_volume_path
     
-    for path in fallback_paths:
-        if path and os.path.exists(path) and os.access(path, os.W_OK):
-            logger.info(f"Found writable path (fallback): {path}")
-            return path
-    
+    logger.warning("No Railway Volume found")
     return None
 
 def copy_images_to_volume():
