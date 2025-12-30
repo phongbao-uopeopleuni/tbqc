@@ -712,7 +712,7 @@ def register_admin_routes(app):
             
             cursor = connection.cursor(dictionary=True)
             
-            # Query đơn giản hơn, chỉ lấy thông tin cần thiết
+            # Query với thông tin đầy đủ: cha, mẹ, hôn phối, anh/chị/em, con
             base_query = """
                 SELECT 
                     p.person_id,
