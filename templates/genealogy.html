@@ -2676,8 +2676,18 @@
         return;
       }
       
+      if (!currentGravePerson) {
+        alert('Vui lòng tìm kiếm mộ phần trước');
+        return;
+      }
+      
+      // Tự động bật chế độ chỉnh sửa nếu chưa bật
+      if (!graveEditMode) {
+        enableGraveLocationEdit();
+      }
+      
       if (!graveMap) {
-        alert('Vui lòng tìm kiếm mộ phần và bật chế độ chỉnh sửa trước');
+        alert('Vui lòng đợi bản đồ tải xong');
         return;
       }
       
