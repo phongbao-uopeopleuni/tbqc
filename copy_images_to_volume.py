@@ -45,7 +45,7 @@ def find_railway_volume_path():
     return None
 
 def copy_images_to_volume():
-    """Copy ảnh từ git static/images vào volume"""
+    """Copy ảnh từ git static/images vào Railway Volume thực tế"""
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     source_dir = os.path.join(BASE_DIR, 'static', 'images')
     
@@ -53,31 +53,28 @@ def copy_images_to_volume():
         logger.error(f"Source directory not found: {source_dir}")
         return False
     
-    # Tìm volume mount path thực tế (không phải /app/static/images vì đó là mount point)
-    volume_path = find_railway_volume_path()
+    # Tìm volume thực tế từ bind-mounts (không phải mount point /app/static/images)
+    volume_path = None
+    volume_base = '/var/lib/containers/railwayapp/bind-mounts'
+    if os.path.exists(volume_base):
+        try:
+            for mount_dir in os.listdir(volume_base):
+                mount_path = os.path.join(volume_base, mount_dir)
+                if os.path.isdir(mount_path):
+                    for subdir in os.listdir(mount_path):
+                        vol_path = os.path.join(mount_path, subdir)
+                        if os.path.isdir(vol_path) and 'vol_' in subdir:
+                            if os.access(vol_path, os.W_OK):
+                                volume_path = vol_path
+                                logger.info(f"Found Railway Volume: {volume_path}")
+                                break
+                    if volume_path:
+                        break
+        except Exception as e:
+            logger.error(f"Error finding Railway Volume: {e}")
     
-    # Nếu volume_path là /app/static/images, đó là mount point, không phải volume thực tế
-    # Cần tìm volume thực tế từ bind-mounts
-    if volume_path == '/app/static/images':
-        # Tìm volume thực tế từ bind-mounts
-        volume_base = '/var/lib/containers/railwayapp/bind-mounts'
-        if os.path.exists(volume_base):
-            try:
-                for mount_dir in os.listdir(volume_base):
-                    mount_path = os.path.join(volume_base, mount_dir)
-                    if os.path.isdir(mount_path):
-                        for subdir in os.listdir(mount_path):
-                            vol_path = os.path.join(mount_path, subdir)
-                            if os.path.isdir(vol_path) and 'vol_' in subdir:
-                                if os.access(vol_path, os.W_OK):
-                                    volume_path = vol_path
-                                    logger.info(f"Using actual volume path: {volume_path}")
-                                    break
-            except Exception as e:
-                logger.error(f"Error finding actual volume: {e}")
-    
-    if not volume_path or volume_path == '/app/static/images':
-        logger.warning("No Railway Volume found or volume is mounted to /app/static/images. Images will be served from git static/images")
+    if not volume_path:
+        logger.warning("No Railway Volume found. Images will be served from git static/images")
         return False
     
     logger.info(f"Copying images from {source_dir} to {volume_path}")
