@@ -182,14 +182,31 @@
         return;
       }
       
+      // Disable submit button để tránh double submit
+      const submitButton = form.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      submitButton.textContent = 'Đang gửi...';
+      
       try {
         const response = await fetch('/api/contact', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(formData)
+          body: JSON.stringify(formData),
+          signal: AbortSignal.timeout(15000) // Timeout 15 giây
         });
+        
+        // Kiểm tra content-type trước khi parse JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('Non-JSON response:', text);
+          showAlert('Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.', 'error');
+          submitButton.disabled = false;
+          submitButton.textContent = '📧 Gửi Liên Hệ';
+          return;
+        }
         
         const data = await response.json();
         
@@ -201,7 +218,14 @@
         }
       } catch (error) {
         console.error('Contact form error:', error);
-        showAlert('Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.', 'error');
+        if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+          showAlert('Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại sau.', 'error');
+        } else {
+          showAlert('Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.', 'error');
+        }
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = '📧 Gửi Liên Hệ';
       }
     }
     

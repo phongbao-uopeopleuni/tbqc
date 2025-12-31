@@ -4728,45 +4728,80 @@ Email này được gửi tự động từ hệ thống Gia Phả Nguyễn Phư
                     msg['Subject'] = email_subject
                     msg.attach(MIMEText(email_body, 'plain', 'utf-8'))
                     
-                    # Gửi email
-                    server = smtplib.SMTP(smtp_server, smtp_port)
+                    # Gửi email với timeout
+                    import socket
+                    socket.setdefaulttimeout(10)  # Timeout 10 giây
+                    server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
                     server.starttls()
                     server.login(smtp_user, smtp_password)
                     server.send_message(msg)
                     server.quit()
                     
+                    logger.info(f"✅ Email đã được gửi thành công đến {smtp_to}")
                     print(f"✅ Email đã được gửi thành công đến {smtp_to}")
                     return jsonify({
                         'success': True,
                         'message': 'Yêu cầu đã được gửi thành công'
                     })
-                except Exception as email_error:
-                    print(f"❌ Lỗi gửi email: {email_error}")
-                    # Vẫn trả về success để không làm user lo lắng, nhưng log lỗi
+                except socket.timeout:
+                    error_msg = f"Timeout khi kết nối SMTP server {smtp_server}:{smtp_port}"
+                    logger.error(error_msg)
+                    print(f"❌ {error_msg}")
                     return jsonify({
-                        'success': True,
-                        'message': 'Yêu cầu đã được ghi nhận. Chúng tôi sẽ liên hệ lại sớm nhất có thể.'
-                    })
+                        'success': False,
+                        'error': 'Không thể kết nối đến server email. Vui lòng thử lại sau.'
+                    }), 500
+                except smtplib.SMTPAuthenticationError as auth_error:
+                    error_msg = f"Lỗi xác thực SMTP: {auth_error}"
+                    logger.error(error_msg)
+                    print(f"❌ {error_msg}")
+                    return jsonify({
+                        'success': False,
+                        'error': 'Lỗi cấu hình email. Vui lòng liên hệ admin.'
+                    }), 500
+                except Exception as email_error:
+                    error_msg = f"Lỗi gửi email: {email_error}"
+                    logger.error(error_msg)
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    print(f"❌ {error_msg}")
+                    print(traceback.format_exc())
+                    return jsonify({
+                        'success': False,
+                        'error': 'Không thể gửi email. Vui lòng thử lại sau.'
+                    }), 500
             else:
-                print("⚠️ Cảnh báo: Chưa cấu hình SMTP. Email không được gửi.")
+                error_msg = "⚠️ Cảnh báo: Chưa cấu hình SMTP. Email không được gửi."
+                logger.warning(error_msg)
+                logger.info(f"   Thông tin yêu cầu: Người gửi={requester_name}, Liên hệ={requester_contact}")
+                print(error_msg)
                 print(f"   Thông tin yêu cầu đã được log:")
                 print(f"   - Người gửi: {requester_name}")
                 print(f"   - Liên hệ: {requester_contact}")
                 print(f"   - Nội dung: {message}")
-                # Vẫn trả về success nhưng log để admin biết
+                print(f"   SMTP_USER={smtp_user}, SMTP_PASSWORD={'***' if smtp_password else 'NOT SET'}")
                 return jsonify({
-                    'success': True,
-                    'message': 'Yêu cầu đã được ghi nhận. Chúng tôi sẽ liên hệ lại sớm nhất có thể.'
-                })
+                    'success': False,
+                    'error': 'Hệ thống email chưa được cấu hình. Vui lòng liên hệ admin.'
+                }), 500
         except Exception as e:
-            print(f"❌ Lỗi khi xử lý email: {e}")
-            # Vẫn trả về success để không làm user lo lắng
+            error_msg = f"❌ Lỗi khi xử lý email: {e}"
+            logger.error(error_msg)
+            import traceback
+            logger.error(traceback.format_exc())
+            print(error_msg)
+            print(traceback.format_exc())
             return jsonify({
-                'success': True,
-                'message': 'Yêu cầu đã được ghi nhận. Chúng tôi sẽ liên hệ lại sớm nhất có thể.'
-            })
+                'success': False,
+                'error': 'Có lỗi xảy ra khi xử lý email. Vui lòng thử lại sau.'
+            }), 500
     except Exception as e:
-        logger.error(f"Lỗi xử lý contact form: {e}")
+        error_msg = f"Lỗi xử lý contact form: {e}"
+        logger.error(error_msg)
+        import traceback
+        logger.error(traceback.format_exc())
+        print(error_msg)
+        print(traceback.format_exc())
         return jsonify({'success': False, 'error': 'Có lỗi xảy ra khi xử lý yêu cầu. Vui lòng thử lại sau.'}), 500
 
 @app.route('/api/send-edit-request-email', methods=['POST'])
