@@ -35,6 +35,17 @@
       margin: 0 auto;
     }
     
+    .contact-container iframe {
+      width: 100%;
+      min-height: 2045px;
+    }
+    
+    @media (max-width: 768px) {
+      .contact-container iframe {
+        min-height: 1500px;
+      }
+    }
+    
     .contact-form {
       padding: var(--space-8);
     }
@@ -134,127 +145,24 @@
     </div>
 
     <div class="contact-container">
-      <div class="card contact-form">
-        <div id="contactAlert" class="alert"></div>
-        
-        <!-- Facebook Link Section -->
-        <div style="background: #f0f2f5; padding: 20px; border-radius: 8px; margin-bottom: 30px; text-align: center;">
-          <p style="margin-bottom: 15px; color: #333; font-size: 16px;">
-            <strong>Hoặc liên hệ trực tiếp qua Facebook:</strong>
-          </p>
-          <a href="https://www.facebook.com/PhongTuyBienQuanCong" 
-             target="_blank" 
-             rel="noopener noreferrer"
-             style="display: inline-block; background: #1877f2; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; transition: background 0.3s;">
-            <span style="margin-right: 8px;">📘</span>
-            Facebook Phòng Tuy Biên Quận Công
-          </a>
+      <div class="card contact-form" style="padding: 0;">
+        <div style="width: 100%; overflow: hidden;">
+          <iframe 
+            src="https://docs.google.com/forms/d/e/1FAIpQLSfRKJ0tN2xu857J7EM1jFQhh7g2ckvDF4UKLR5aZudqqKqizg/viewform?embedded=true" 
+            width="100%" 
+            height="2045" 
+            frameborder="0" 
+            marginheight="0" 
+            marginwidth="0"
+            style="display: block; border: none; min-height: 2045px;">
+            Loading…
+          </iframe>
         </div>
-        
-        <form id="contactForm" onsubmit="handleContactSubmit(event)">
-          <div class="form-group">
-            <label for="contactName">Họ và tên *</label>
-            <input type="text" id="contactName" name="name" class="input" required>
-          </div>
-          <div class="form-group">
-            <label for="contactEmail">Email / Số điện thoại *</label>
-            <input type="text" id="contactEmail" name="contact" class="input" required>
-          </div>
-          <div class="form-group">
-            <label for="contactType">Loại yêu cầu</label>
-            <select id="contactType" name="type" class="select">
-              <option value="update">Cập nhật thông tin người</option>
-              <option value="document">Gửi tài liệu</option>
-              <option value="other">Liên hệ khác</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="contactMessage">Nội dung *</label>
-            <textarea id="contactMessage" name="message" class="input" required placeholder="Vui lòng mô tả chi tiết yêu cầu của bạn..."></textarea>
-          </div>
-          <button type="submit" class="submit-button">📧 Gửi Liên Hệ</button>
-        </form>
       </div>
     </div>
   </div>
 
   <script src="/static/js/common.js"></script>
-  <script>
-    async function handleContactSubmit(event) {
-      event.preventDefault();
-      const form = event.target;
-      const alertEl = document.getElementById('contactAlert');
-      
-      const formData = {
-        name: form.contactName.value.trim(),
-        contact: form.contactEmail.value.trim(),
-        type: form.contactType.value,
-        message: form.contactMessage.value.trim()
-      };
-      
-      if (!formData.name || !formData.contact || !formData.message) {
-        showAlert('Vui lòng điền đầy đủ các trường bắt buộc', 'error');
-        return;
-      }
-      
-      // Disable submit button để tránh double submit
-      const submitButton = form.querySelector('button[type="submit"]');
-      submitButton.disabled = true;
-      submitButton.textContent = 'Đang gửi...';
-      
-      try {
-        const response = await fetch('/api/contact', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(formData),
-          signal: AbortSignal.timeout(15000) // Timeout 15 giây
-        });
-        
-        // Kiểm tra content-type trước khi parse JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const text = await response.text();
-          console.error('Non-JSON response:', text);
-          showAlert('Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.', 'error');
-          submitButton.disabled = false;
-          submitButton.textContent = '📧 Gửi Liên Hệ';
-          return;
-        }
-        
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-          showAlert('Cảm ơn bạn! Yêu cầu đã được gửi thành công. Chúng tôi sẽ liên hệ lại sớm nhất có thể.', 'success');
-          form.reset();
-        } else {
-          showAlert(data.error || 'Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.', 'error');
-        }
-      } catch (error) {
-        console.error('Contact form error:', error);
-        if (error.name === 'TimeoutError' || error.name === 'AbortError') {
-          showAlert('Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại sau.', 'error');
-        } else {
-          showAlert('Có lỗi xảy ra khi gửi yêu cầu. Vui lòng thử lại sau.', 'error');
-        }
-      } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = '📧 Gửi Liên Hệ';
-      }
-    }
-    
-    function showAlert(message, type) {
-      const alertEl = document.getElementById('contactAlert');
-      alertEl.textContent = message;
-      alertEl.className = `alert alert-${type}`;
-      alertEl.style.display = 'block';
-      
-      setTimeout(() => {
-        alertEl.style.display = 'none';
-      }, 5000);
-    }
-  </script>
 </body>
 </html>
 
