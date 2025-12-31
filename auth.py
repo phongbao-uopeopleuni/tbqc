@@ -265,6 +265,7 @@ def permission_required(permission_name):
     """Decorator yêu cầu permission cụ thể"""
     def decorator(f):
         @wraps(f)
+        @login_required  # Thêm @login_required để Flask-Login load user từ session
         def decorated_function(*args, **kwargs):
             # Kiểm tra nếu là API request (path bắt đầu bằng /api/ hoặc /admin/api/)
             is_api_request = (
@@ -276,6 +277,7 @@ def permission_required(permission_name):
             )
             
             # Kiểm tra authentication trước khi kiểm tra permission
+            # @login_required đã đảm bảo user được load, nhưng kiểm tra lại để chắc chắn
             if not current_user.is_authenticated:
                 if is_api_request:
                     return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
@@ -284,7 +286,12 @@ def permission_required(permission_name):
             
             # Kiểm tra permission
             if not current_user.has_permission(permission_name):
-                return jsonify({'success': False, 'error': f'Không có quyền: {permission_name}'}), 403
+                if is_api_request:
+                    return jsonify({'success': False, 'error': f'Không có quyền: {permission_name}'}), 403
+                # Cho non-API requests, có thể redirect hoặc hiển thị lỗi
+                from flask import flash
+                flash(f'Bạn không có quyền truy cập: {permission_name}', 'error')
+                return redirect(url_for('admin_login'))
             
             return f(*args, **kwargs)
         return decorated_function
