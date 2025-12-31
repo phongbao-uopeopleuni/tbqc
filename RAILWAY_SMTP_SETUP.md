@@ -155,18 +155,19 @@ railway variables set SMTP_TO=baophongcmu@gmail.com
 
 ## Tóm tắt các giá trị cần thiết
 
+**Cấu hình hiện tại:**
 ```
 SMTP_SERVER = smtp.gmail.com
 SMTP_PORT = 587
-SMTP_USER = your-email@gmail.com (email bạn dùng để GỬI - PHẢI KHÁC SMTP_TO)
-SMTP_PASSWORD = app-password-16-chars (từ Google App Passwords của SMTP_USER)
-SMTP_TO = baophongcmu@gmail.com (email NHẬN - nơi bạn muốn nhận email)
+SMTP_USER = baophongnsc@gmail.com (email dùng để GỬI)
+SMTP_PASSWORD = xpwgxaoytqwvxbmw (App Password - bỏ khoảng trắng)
+SMTP_TO = baophongcmu@gmail.com (email NHẬN)
 ```
 
 **⚠️ LƯU Ý QUAN TRỌNG:**
-- `SMTP_USER` và `SMTP_TO` **PHẢI KHÁC NHAU**
+- `SMTP_USER` và `SMTP_TO` **PHẢI KHÁC NHAU** ✅ (baophongnsc@gmail.com ≠ baophongcmu@gmail.com)
 - `SMTP_USER` phải là email mà bạn đã tạo App Password
-- Nếu cả hai giống nhau, Gmail có thể chặn hoặc không gửi được
+- App Password phải bỏ khoảng trắng khi thêm vào Railway
 
 ---
 
