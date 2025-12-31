@@ -6,6 +6,7 @@ Kết nối HTML với MySQL database
 """
 
 from flask import Flask, jsonify, send_from_directory, request, redirect, render_template
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 import json
 from flask_cors import CORS
@@ -34,13 +35,19 @@ try:
                 static_folder='static', 
                 static_url_path='/static',
                 template_folder='templates')
+
+    # Trust reverse-proxy headers (HTTPS/host/port) so session cookies + redirects are stable
+    # Client: HTTPS/HTTP2, upstream: HTTP/1.1
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+
     app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
     # Cấu hình session để kéo dài thời gian đăng nhập
     from datetime import timedelta
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # Session kéo dài 24 giờ
     # Kiểm tra xem có đang chạy trên Railway (production) không
     is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true'
-    cookie_domain = os.environ.get('COOKIE_DOMAIN', '.phongtuybienquancong.info') if is_production else None
+    # IMPORTANT: don't hard-code domain; set COOKIE_DOMAIN explicitly if you need cross-subdomain cookies.
+    cookie_domain = os.environ.get('COOKIE_DOMAIN') if is_production else None
     app.config['SESSION_COOKIE_SECURE'] = is_production  # HTTPS only trên production
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # Bảo vệ khỏi XSS
     # Sử dụng 'None' cho SameSite trên HTTPS để đảm bảo cookie được gửi trong mọi trường hợp
@@ -201,9 +208,13 @@ def login_page():
     """Trang đăng nhập (public)"""
     return render_template('login.html')
 
-@app.route('/admin/login')
+@app.route('/admin/login-page')
 def admin_login_page():
-    """Trang đăng nhập Admin"""
+    """
+    Trang đăng nhập Admin (legacy page).
+    NOTE: Canonical admin login is /admin/login handled by admin_routes.py (GET+POST).
+    This route must NOT use /admin/login to avoid route collisions/override.
+    """
     return render_template('login.html', admin_mode=True)
 
 @app.route('/api/geoapify-key')

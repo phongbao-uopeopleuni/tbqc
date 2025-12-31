@@ -12,6 +12,47 @@ import bcrypt
 import os
 import mysql.connector
 from mysql.connector import Error
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _is_api_request(req) -> bool:
+    return (
+        req.path.startswith('/api/') or
+        req.path.startswith('/admin/api/') or
+        req.headers.get('Content-Type', '').startswith('application/json') or
+        'application/json' in req.headers.get('Accept', '') or
+        req.is_json
+    )
+
+
+def _auth_debug(tag: str):
+    """Debug helper for auth/session issues. Enable by setting AUTH_DEBUG=1."""
+    if os.environ.get("AUTH_DEBUG", "").strip() not in ("1", "true", "True", "yes", "YES"):
+        return
+    try:
+        cookie_hdr = request.headers.get("Cookie", "")
+        xf_proto = request.headers.get("X-Forwarded-Proto", "")
+        xf_host = request.headers.get("X-Forwarded-Host", "")
+        xf_for = request.headers.get("X-Forwarded-For", "")
+        logger.warning(
+            "[AUTH_DEBUG] %s path=%s host=%s scheme=%s xf_proto=%s xf_host=%s xf_for=%s "
+            "cookie_len=%s session_keys=%s is_auth=%s user_id=%s",
+            tag,
+            request.path,
+            request.host,
+            request.scheme,
+            xf_proto,
+            xf_host,
+            xf_for,
+            len(cookie_hdr),
+            list(session.keys()),
+            getattr(current_user, "is_authenticated", False),
+            getattr(current_user, "id", None),
+        )
+    except Exception:
+        logger.exception("[AUTH_DEBUG] failed to log")
 
 # Import unified DB connection
 try:
@@ -184,6 +225,14 @@ def init_login_manager(app):
     login_manager.login_view = 'admin_login'
     login_manager.login_message = 'Vui lòng đăng nhập để truy cập trang này.'
     login_manager.login_message_category = 'info'
+
+    @login_manager.unauthorized_handler
+    def unauthorized():
+        """Xử lý khi user chưa đăng nhập"""
+        _auth_debug("unauthorized")
+        if _is_api_request(request):
+            return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
+        return redirect(url_for('admin_login'))
     
     @login_manager.user_loader
     def load_user(user_id):
@@ -196,7 +245,13 @@ def admin_required(f):
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'admin':
+        if not current_user.is_authenticated:
+            _auth_debug("admin_required:not_authenticated")
+            return redirect(url_for('admin_login'))
+        if getattr(current_user, "role", None) != 'admin':
+            _auth_debug("admin_required:not_admin")
+            if _is_api_request(request):
+                return jsonify({'success': False, 'error': 'Không có quyền admin'}), 403
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -232,7 +287,9 @@ def permission_required(permission_name):
             if not current_user.is_authenticated:
                 return redirect(url_for('admin_login'))
             if not current_user.has_permission(permission_name):
-                return jsonify({'error': f'Không có quyền: {permission_name}'}), 403
+                if _is_api_request(request):
+                    return jsonify({'error': f'Không có quyền: {permission_name}'}), 403
+                return redirect(url_for('admin_login'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -246,7 +303,9 @@ def role_required(*allowed_roles):
             if not current_user.is_authenticated:
                 return redirect(url_for('admin_login'))
             if current_user.role not in allowed_roles:
-                return jsonify({'error': 'Không có quyền truy cập'}), 403
+                if _is_api_request(request):
+                    return jsonify({'error': 'Không có quyền truy cập'}), 403
+                return redirect(url_for('admin_login'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator

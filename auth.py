@@ -12,6 +12,47 @@ import bcrypt
 import os
 import mysql.connector
 from mysql.connector import Error
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _is_api_request(req) -> bool:
+    return (
+        req.path.startswith('/api/') or
+        req.path.startswith('/admin/api/') or
+        req.headers.get('Content-Type', '').startswith('application/json') or
+        'application/json' in req.headers.get('Accept', '') or
+        req.is_json
+    )
+
+
+def _auth_debug(tag: str):
+    """Debug helper for auth/session issues. Enable by setting AUTH_DEBUG=1."""
+    if os.environ.get("AUTH_DEBUG", "").strip() not in ("1", "true", "True", "yes", "YES"):
+        return
+    try:
+        cookie_hdr = request.headers.get("Cookie", "")
+        xf_proto = request.headers.get("X-Forwarded-Proto", "")
+        xf_host = request.headers.get("X-Forwarded-Host", "")
+        xf_for = request.headers.get("X-Forwarded-For", "")
+        logger.warning(
+            "[AUTH_DEBUG] %s path=%s host=%s scheme=%s xf_proto=%s xf_host=%s xf_for=%s "
+            "cookie_len=%s session_keys=%s is_auth=%s user_id=%s",
+            tag,
+            request.path,
+            request.host,
+            request.scheme,
+            xf_proto,
+            xf_host,
+            xf_for,
+            len(cookie_hdr),
+            list(session.keys()),
+            getattr(current_user, "is_authenticated", False),
+            getattr(current_user, "id", None),
+        )
+    except Exception:
+        logger.exception("[AUTH_DEBUG] failed to log")
 
 # Cấu hình database
 DB_CONFIG = {
@@ -209,17 +250,8 @@ def init_login_manager(app):
     @login_manager.unauthorized_handler
     def unauthorized():
         """Xử lý khi user chưa đăng nhập"""
-        # Kiểm tra nếu là API request
-        from flask import request, jsonify
-        is_api_request = (
-            request.path.startswith('/api/') or 
-            request.path.startswith('/admin/api/') or
-            request.headers.get('Content-Type', '').startswith('application/json') or
-            'application/json' in request.headers.get('Accept', '') or
-            request.is_json
-        )
-        
-        if is_api_request:
+        _auth_debug("unauthorized")
+        if _is_api_request(request):
             return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
         return redirect(url_for('admin_login'))
     
@@ -234,7 +266,14 @@ def admin_required(f):
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'admin':
+        if not current_user.is_authenticated:
+            # login_required should have handled this, but keep a safe fallback
+            _auth_debug("admin_required:not_authenticated")
+            return redirect(url_for('admin_login'))
+        if getattr(current_user, "role", None) != 'admin':
+            _auth_debug("admin_required:not_admin")
+            if _is_api_request(request):
+                return jsonify({'success': False, 'error': 'Không có quyền admin'}), 403
             return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
@@ -265,34 +304,14 @@ def permission_required(permission_name):
     """Decorator yêu cầu permission cụ thể"""
     def decorator(f):
         @wraps(f)
+        @login_required
         def decorated_function(*args, **kwargs):
-            # Kiểm tra nếu là API request (path bắt đầu bằng /api/ hoặc /admin/api/)
-            is_api_request = (
-                request.path.startswith('/api/') or 
-                request.path.startswith('/admin/api/') or
-                request.headers.get('Content-Type', '').startswith('application/json') or
-                'application/json' in request.headers.get('Accept', '') or
-                request.is_json
-            )
-            
-            # Đảm bảo Flask-Login đã load user từ session
-            # Kiểm tra session có user_id không
-            if '_user_id' not in session:
-                if is_api_request:
-                    return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
-                return redirect(url_for('admin_login'))
-            
-            # Kiểm tra authentication
-            # Flask-Login sẽ tự động load user từ session khi truy cập current_user
-            if not current_user.is_authenticated:
-                if is_api_request:
-                    return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
-                # Cho non-API requests, redirect đến login
-                return redirect(url_for('admin_login'))
-            
+            # At this point, Flask-Login already loaded current_user from session.
+            _auth_debug(f"permission_required:{permission_name}")
+
             # Kiểm tra permission
             if not current_user.has_permission(permission_name):
-                if is_api_request:
+                if _is_api_request(request):
                     return jsonify({'success': False, 'error': f'Không có quyền: {permission_name}'}), 403
                 # Cho non-API requests, có thể redirect hoặc hiển thị lỗi
                 from flask import flash
@@ -312,7 +331,9 @@ def role_required(*allowed_roles):
             if not current_user.is_authenticated:
                 return redirect(url_for('admin_login'))
             if current_user.role not in allowed_roles:
-                return jsonify({'error': 'Không có quyền truy cập'}), 403
+                if _is_api_request(request):
+                    return jsonify({'error': 'Không có quyền truy cập'}), 403
+                return redirect(url_for('admin_login'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
