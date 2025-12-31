@@ -11,14 +11,23 @@
    - Làm theo hướng dẫn để xác thực
 
 3. **Tạo App Password**:
-   - Vẫn trong phần **Security**
-   - Tìm mục **App passwords** (Mật khẩu ứng dụng)
-   - Nếu không thấy, click vào **2-Step Verification** và scroll xuống sẽ thấy **App passwords**
+   - **Bước quan trọng**: Click vào dòng **"2-Step Verification"** (có dấu tích xanh "On since...")
+   - Trang mới sẽ mở ra với các tùy chọn 2-Step Verification
+   - **Scroll xuống cuối trang** để tìm phần **"App passwords"** (Mật khẩu ứng dụng)
+   - Nếu vẫn không thấy, thử cách sau:
+     - Scroll xuống tìm phần **"App passwords"** hoặc **"App-specific passwords"**
+     - Hoặc tìm link có text **"App passwords"** ở cuối trang
+   - Click vào **"App passwords"**
    - Chọn **Select app** → chọn **Mail**
    - Chọn **Select device** → chọn **Other (Custom name)** → nhập "Railway TBQC"
    - Click **Generate**
    - **Copy mật khẩu 16 ký tự** này (ví dụ: `abcd efgh ijkl mnop`)
    - **Lưu ý**: Mật khẩu này chỉ hiển thị 1 lần, hãy copy ngay!
+
+   **Nếu vẫn không tìm thấy App passwords:**
+   - Một số tài khoản Google Workspace hoặc tài khoản dùng passkeys có thể không hiển thị App passwords
+   - Thử truy cập trực tiếp: https://myaccount.google.com/apppasswords
+   - Hoặc dùng link này: https://myaccount.google.com/security → Click "2-Step Verification" → Scroll xuống tìm "App passwords"
 
 ## Bước 2: Cấu hình trên Railway
 
@@ -109,6 +118,15 @@ railway variables set SMTP_TO=baophongcmu@gmail.com
      - Nếu lỗi: Sẽ có thông báo lỗi chi tiết
 
 ## Troubleshooting (Xử lý lỗi)
+
+### Không tìm thấy App passwords
+- **Nguyên nhân**: Google đã thay đổi giao diện hoặc tài khoản dùng phương thức xác thực mới
+- **Giải pháp**:
+  1. **Truy cập trực tiếp**: https://myaccount.google.com/apppasswords
+  2. **Hoặc**: Vào Security → Click vào "2-Step Verification" → Scroll xuống cuối trang
+  3. **Nếu vẫn không thấy**: Có thể tài khoản của bạn không hỗ trợ App passwords. Thử dùng:
+     - OAuth2 với Gmail API (phức tạp hơn)
+     - Hoặc dùng email service khác như SendGrid, Mailgun, AWS SES
 
 ### Lỗi: "Authentication failed"
 - **Nguyên nhân**: App Password sai hoặc chưa tạo đúng
