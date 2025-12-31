@@ -193,7 +193,7 @@ def register_admin_routes(app):
                            created_at, updated_at, last_login, is_active
                     FROM users
                     ORDER BY created_at DESC
-            """)
+                """)
             else:
                 cursor.execute("""
                     SELECT user_id, username, full_name, email, role,
@@ -1621,7 +1621,7 @@ ADMIN_USERS_TEMPLATE = '''
             background: rgba(255,255,255,0.1);
         }
         .container {
-            max-width: 1400px;
+            max-width: 95%;
             margin: 30px auto;
             padding: 0 20px;
         }
@@ -2594,16 +2594,21 @@ DATA_MANAGEMENT_TEMPLATE = '''
         
         <!-- Members Management Content -->
         <div id="members" class="tab-content active">
-            <div class="toolbar">
-                <div class="search-box" style="display: flex; gap: 5px;">
+            <div class="toolbar" style="flex-wrap: wrap; gap: 10px;">
+                <div class="search-box" style="display: flex; gap: 5px; flex: 1; min-width: 280px;">
                     <input type="text" id="searchMembers" placeholder="Tìm kiếm theo tên, ID..." 
                            onkeypress="if(event.key === 'Enter') handleSearch()" 
                            style="flex: 1;">
                     <button class="btn btn-info" onclick="handleSearch()" style="white-space: nowrap;">🔍 Tìm kiếm</button>
                 </div>
-                <button class="btn btn-success" onclick="openAddMemberModal()">➕ Thêm mới</button>
-                <button class="btn btn-warning" onclick="openBackupModal()">💾 Backup</button>
-                <button class="btn btn-primary" onclick="loadMembersData()">🔄 Làm mới</button>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                    <button class="btn btn-success" onclick="openAddMemberModal()">➕ Thêm mới</button>
+                    <button class="btn btn-warning" onclick="openBackupModal()">💾 Backup</button>
+                    <button class="btn btn-primary" onclick="loadMembersData()">🔄 Làm mới</button>
+                </div>
+                <div style="width: 100%; color: #34495e; font-size: 14px; margin-top: 6px;">
+                    Trạng thái: <span id="dbStatus">Đang tải...</span> · Cập nhật dữ liệu sẽ ghi xuống database.
+                </div>
             </div>
             <div id="membersTableContainer">
                 <div class="loading">Đang tải dữ liệu...</div>
@@ -3075,6 +3080,17 @@ erDiagram
                 return;
             }
             
+            function formatDateDDMMYYYY(dateStr) {
+                if (!dateStr) return '';
+                if (dateStr.length === 4) return dateStr; // chỉ có năm
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                const dd = String(d.getUTCDate()).padStart(2, '0');
+                const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+                const yyyy = d.getUTCFullYear();
+                return `${dd}-${mm}-${yyyy}`;
+            }
+            
             const pageData = membersData;
             
             let html = `
@@ -3100,7 +3116,7 @@ erDiagram
             `;
             
             pageData.forEach(person => {
-                const birthDate = person.birth_date_solar ? (person.birth_date_solar.length === 4 ? person.birth_date_solar : person.birth_date_solar.substring(0, 4)) : '';
+                const birthDate = formatDateDDMMYYYY(person.birth_date_solar);
                 const spouses = (person.spouses || []).join(', ') || '-';
                 const siblings = (person.siblings || []).join(', ') || '-';
                 const children = (person.children || []).join(', ') || '-';
