@@ -4719,6 +4719,16 @@ Email này được gửi tự động từ hệ thống Gia Phả Nguyễn Phư
                 except Exception as config_error:
                     print(f"WARNING: Lỗi đọc file config: {config_error}")
             
+            # Kiểm tra SMTP_USER và SMTP_TO phải khác nhau
+            if smtp_user == smtp_to:
+                error_msg = f"⚠️ Lỗi cấu hình: SMTP_USER ({smtp_user}) và SMTP_TO ({smtp_to}) không được giống nhau!"
+                logger.error(error_msg)
+                print(error_msg)
+                return jsonify({
+                    'success': False,
+                    'error': 'Cấu hình email không đúng. SMTP_USER và SMTP_TO phải khác nhau.'
+                }), 500
+            
             if smtp_user and smtp_password:
                 try:
                     # Tạo email
