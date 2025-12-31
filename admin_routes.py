@@ -3006,7 +3006,8 @@ erDiagram
         let totalPages = 1;
         let totalMembers = 0;
         let currentSearch = '';
-        const membersItemsPerPage = 50;
+        // Hiển thị tất cả trên 1 trang: đặt per_page rất lớn
+        const membersItemsPerPage = 5000;
         
         async function loadMembersData(page = 1, search = '') {
             const container = document.getElementById('membersTableContainer');
