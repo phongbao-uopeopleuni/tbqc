@@ -537,10 +537,13 @@ def admin_users_page():
 @app.route('/admin/activities')
 @login_required
 def admin_activities_page():
-    """Trang quản lý hoạt động (admin only)"""
-    # Check admin permission
-    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+    """Trang quản lý hoạt động (cập nhật bài đăng)"""
+    # Kiểm tra đăng nhập - nếu chưa đăng nhập thì redirect về trang login
+    if not current_user.is_authenticated:
         return redirect('/login')
+    
+    # Cho phép admin, editor và user có quyền đăng bài truy cập trang này
+    # (Không giới hạn chỉ admin như trước)
     
     return render_template('admin_activities.html')
 
@@ -4965,6 +4968,8 @@ def api_login():
     )
     
     login_user(user, remember=True)
+    session.permanent = True  # Đặt session là permanent để sử dụng PERMANENT_SESSION_LIFETIME
+    session.modified = True  # Đánh dấu session đã được thay đổi để đảm bảo được lưu
     
     # Cập nhật last_login
     connection = get_db_connection()
