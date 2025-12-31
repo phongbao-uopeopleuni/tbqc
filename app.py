@@ -878,6 +878,7 @@ def serve_genealogy_js():
 def serve_image_static(filename):
     """Serve images from static/images/ (git source only, no Volume)"""
     from urllib.parse import unquote
+    import os
     
     # Decode URL-encoded filename (handles spaces, special chars)
     filename = unquote(filename)
@@ -886,10 +887,24 @@ def serve_image_static(filename):
     # Flask will automatically serve from static/images/ in the git repo
     # This works even if /app/static/images is a mount point
     try:
+        # Kiểm tra file có tồn tại không trước khi serve
+        static_images_path = os.path.join(BASE_DIR, 'static', 'images')
+        file_path = os.path.join(static_images_path, filename)
+        
+        if not os.path.exists(file_path):
+            # File không tồn tại - chỉ log warning, không phải error
+            logger.warning(f"[Serve Image] File không tồn tại: {filename}")
+            from flask import abort
+            abort(404)
+        
         logger.debug(f"[Serve Image] Serving via Flask's static serving: {filename}")
         return send_from_directory('static/images', filename)
     except Exception as e:
-        logger.error(f"[Serve Image] Flask's static serving failed: {e}")
+        # Chỉ log warning cho các lỗi không nghiêm trọng (như file không tồn tại)
+        if '404' in str(e) or 'not found' in str(e).lower():
+            logger.warning(f"[Serve Image] File không tìm thấy: {filename}")
+        else:
+            logger.error(f"[Serve Image] Flask's static serving failed: {e}")
         from flask import abort
         abort(404)
 
@@ -5399,7 +5414,12 @@ def api_facebook_read_link():
         result = reader.read_facebook_post(url)
         
         if 'error' in result:
-            return jsonify({'success': False, 'error': result['error']}), 500
+            # Trả về error message rõ ràng hơn
+            error_msg = result['error']
+            # Nếu là lỗi thiếu API key, trả về 400 thay vì 500
+            if 'API key' in error_msg or 'OPENAI_API_KEY' in error_msg or 'ANTHROPIC_API_KEY' in error_msg:
+                return jsonify({'success': False, 'error': error_msg}), 400
+            return jsonify({'success': False, 'error': error_msg}), 500
         
         return jsonify({
             'success': True,

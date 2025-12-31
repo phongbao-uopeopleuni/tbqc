@@ -76,15 +76,27 @@ class AIFacebookReader:
         """
         try:
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
             }
             
-            response = requests.get(url, headers=headers, timeout=10, allow_redirects=True)
+            response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
             if not response.ok:
-                logger.warning(f"Không thể lấy HTML từ {url}: HTTP {response.status_code}")
+                # Facebook thường chặn scraping với HTTP 400/403
+                # Không phải lỗi nghiêm trọng, AI vẫn có thể đọc với URL trực tiếp
+                logger.info(f"Không thể scrape HTML từ {url}: HTTP {response.status_code} (Facebook có thể đang chặn scraping, sẽ dùng AI với URL trực tiếp)")
                 return None
             
             html = response.text
+            
+            # Kiểm tra xem có phải là trang lỗi của Facebook không
+            if 'login' in html.lower() or 'facebook.com/login' in html.lower() or len(html) < 1000:
+                logger.info(f"HTML từ {url} có vẻ không hợp lệ (có thể cần login), sẽ dùng AI với URL trực tiếp")
+                return None
             
             # Extract basic info từ HTML (rất hạn chế vì Facebook dùng JavaScript)
             # Đây chỉ là fallback, tốt nhất là dùng AI để đọc
@@ -92,8 +104,12 @@ class AIFacebookReader:
                 'html': html[:5000],  # Chỉ lấy một phần HTML để AI đọc
                 'url': url
             }
+        except requests.exceptions.RequestException as e:
+            # Lỗi kết nối hoặc timeout - không phải lỗi nghiêm trọng
+            logger.info(f"Không thể scrape Facebook {url}: {e} (sẽ dùng AI với URL trực tiếp)")
+            return None
         except Exception as e:
-            logger.error(f"Lỗi khi scrape Facebook: {e}")
+            logger.warning(f"Lỗi không mong đợi khi scrape Facebook: {e}")
             return None
     
     def extract_content_with_ai(self, url: str, html_content: str = None) -> Optional[Dict]:
@@ -247,15 +263,27 @@ Trả về JSON hợp lệ."""
         """
         logger.info(f"Đang đọc Facebook post: {url}")
         
-        # Bước 1: Thử scrape HTML (có thể không thành công)
+        # Kiểm tra API key trước
+        if not self.api_key:
+            error_msg = (
+                'Không có AI API key. Vui lòng set một trong các biến môi trường sau:\n'
+                '- OPENAI_API_KEY (cho OpenAI GPT)\n'
+                '- ANTHROPIC_API_KEY (cho Anthropic Claude)\n\n'
+                'Sau khi set, khởi động lại server.'
+            )
+            logger.error(error_msg)
+            return {'error': error_msg}
+        
+        # Bước 1: Thử scrape HTML (có thể không thành công - Facebook thường chặn)
         html_data = self.get_post_content_via_scraping(url)
         
-        # Bước 2: Dùng AI để extract nội dung
-        if self.api_key:
-            result = self.extract_content_with_ai(url, html_data.get('html') if html_data else None)
-            return result
-        else:
-            return {
-                'error': 'Không có AI API key. Vui lòng set OPENAI_API_KEY hoặc ANTHROPIC_API_KEY trong environment variables.'
-            }
+        # Bước 2: Dùng AI để extract nội dung (với hoặc không có HTML)
+        # Ngay cả khi không scrape được HTML, AI vẫn có thể đọc dựa vào URL
+        result = self.extract_content_with_ai(url, html_data.get('html') if html_data else None)
+        
+        # Nếu có warning về scraping nhưng AI vẫn thành công, thêm thông tin
+        if html_data is None and 'error' not in result:
+            result['_note'] = 'Không thể scrape HTML từ Facebook (có thể bị chặn), nhưng AI đã đọc được nội dung dựa vào URL.'
+        
+        return result
 
