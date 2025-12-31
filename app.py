@@ -4968,6 +4968,7 @@ def api_login():
     )
     
     login_user(user, remember=True)
+    from flask import session
     session.permanent = True  # Đặt session là permanent để sử dụng PERMANENT_SESSION_LIFETIME
     session.modified = True  # Đánh dấu session đã được thay đổi để đảm bảo được lưu
     
