@@ -4632,6 +4632,143 @@ def download_backup(filename):
             'error': f'Lỗi: {str(e)}'
         }), 500
 
+@app.route('/api/contact', methods=['POST'])
+def api_contact():
+    """API xử lý form liên hệ"""
+    try:
+        data = request.get_json()
+        
+        requester_name = data.get('name', '').strip()
+        requester_contact = data.get('contact', '').strip()
+        request_type = data.get('type', 'other')
+        message = data.get('message', '').strip()
+        
+        if not requester_name or not requester_contact or not message:
+            return jsonify({'success': False, 'error': 'Vui lòng điền đầy đủ các trường bắt buộc'}), 400
+        
+        # Map request type to Vietnamese
+        type_map = {
+            'update': 'Cập nhật thông tin người',
+            'document': 'Gửi tài liệu',
+            'other': 'Liên hệ khác'
+        }
+        type_vn = type_map.get(request_type, 'Liên hệ khác')
+        
+        # Tạo nội dung email
+        email_subject = f"Liên hệ từ website: {type_vn}"
+        email_body = f"""
+Yêu cầu liên hệ từ website Gia Phả Nguyễn Phước Tộc
+
+Loại yêu cầu: {type_vn}
+
+Thông tin người gửi:
+- Họ và tên: {requester_name}
+- Email/SĐT: {requester_contact}
+
+Nội dung:
+{message}
+
+---
+Email này được gửi tự động từ hệ thống Gia Phả Nguyễn Phước Tộc
+"""
+        
+        # Gửi email qua SMTP
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            # Log thông tin yêu cầu
+            print("="*80)
+            print("📧 YÊU CẦU LIÊN HỆ TỪ WEBSITE")
+            print("="*80)
+            print(f"Loại: {type_vn}")
+            print(f"Người gửi: {requester_name}")
+            print(f"Liên hệ: {requester_contact}")
+            print(f"Nội dung: {message}")
+            print("="*80)
+            
+            # Cấu hình SMTP - lấy từ biến môi trường hoặc file config
+            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
+            smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+            smtp_user = os.environ.get('SMTP_USER', '')
+            smtp_password = os.environ.get('SMTP_PASSWORD', '')
+            smtp_to = os.environ.get('SMTP_TO', 'baophongcmu@gmail.com')
+            
+            # Thử đọc từ file config nếu có
+            config_file = os.path.join(BASE_DIR, '.smtp_config')
+            if os.path.exists(config_file):
+                try:
+                    with open(config_file, 'r', encoding='utf-8') as f:
+                        for line in f:
+                            line = line.strip()
+                            if '=' in line and not line.startswith('#'):
+                                key, value = line.split('=', 1)
+                                key = key.strip()
+                                value = value.strip()
+                                if key == 'SMTP_SERVER' and not smtp_server:
+                                    smtp_server = value
+                                elif key == 'SMTP_PORT' and not smtp_port:
+                                    smtp_port = int(value)
+                                elif key == 'SMTP_USER' and not smtp_user:
+                                    smtp_user = value
+                                elif key == 'SMTP_PASSWORD' and not smtp_password:
+                                    smtp_password = value
+                                elif key == 'SMTP_TO' and not smtp_to:
+                                    smtp_to = value
+                except Exception as config_error:
+                    print(f"WARNING: Lỗi đọc file config: {config_error}")
+            
+            if smtp_user and smtp_password:
+                try:
+                    # Tạo email
+                    msg = MIMEMultipart()
+                    msg['From'] = smtp_user
+                    msg['To'] = smtp_to
+                    msg['Subject'] = email_subject
+                    msg.attach(MIMEText(email_body, 'plain', 'utf-8'))
+                    
+                    # Gửi email
+                    server = smtplib.SMTP(smtp_server, smtp_port)
+                    server.starttls()
+                    server.login(smtp_user, smtp_password)
+                    server.send_message(msg)
+                    server.quit()
+                    
+                    print(f"✅ Email đã được gửi thành công đến {smtp_to}")
+                    return jsonify({
+                        'success': True,
+                        'message': 'Yêu cầu đã được gửi thành công'
+                    })
+                except Exception as email_error:
+                    print(f"❌ Lỗi gửi email: {email_error}")
+                    # Vẫn trả về success để không làm user lo lắng, nhưng log lỗi
+                    return jsonify({
+                        'success': True,
+                        'message': 'Yêu cầu đã được ghi nhận. Chúng tôi sẽ liên hệ lại sớm nhất có thể.'
+                    })
+            else:
+                print("⚠️ Cảnh báo: Chưa cấu hình SMTP. Email không được gửi.")
+                print(f"   Thông tin yêu cầu đã được log:")
+                print(f"   - Người gửi: {requester_name}")
+                print(f"   - Liên hệ: {requester_contact}")
+                print(f"   - Nội dung: {message}")
+                # Vẫn trả về success nhưng log để admin biết
+                return jsonify({
+                    'success': True,
+                    'message': 'Yêu cầu đã được ghi nhận. Chúng tôi sẽ liên hệ lại sớm nhất có thể.'
+                })
+        except Exception as e:
+            print(f"❌ Lỗi khi xử lý email: {e}")
+            # Vẫn trả về success để không làm user lo lắng
+            return jsonify({
+                'success': True,
+                'message': 'Yêu cầu đã được ghi nhận. Chúng tôi sẽ liên hệ lại sớm nhất có thể.'
+            })
+    except Exception as e:
+        logger.error(f"Lỗi xử lý contact form: {e}")
+        return jsonify({'success': False, 'error': 'Có lỗi xảy ra khi xử lý yêu cầu. Vui lòng thử lại sau.'}), 500
+
 @app.route('/api/send-edit-request-email', methods=['POST'])
 def send_edit_request_email():
     """API gửi email yêu cầu cập nhật thông tin"""
