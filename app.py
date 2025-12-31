@@ -40,12 +40,21 @@ try:
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # Session kéo dài 24 giờ
     # Kiểm tra xem có đang chạy trên Railway (production) không
     is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true'
+    cookie_domain = os.environ.get('COOKIE_DOMAIN', '.phongtuybienquancong.info') if is_production else None
     app.config['SESSION_COOKIE_SECURE'] = is_production  # HTTPS only trên production
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # Bảo vệ khỏi XSS
     # Sử dụng 'None' cho SameSite trên HTTPS để đảm bảo cookie được gửi trong mọi trường hợp
     # Nếu không phải production, dùng 'Lax' để tránh warning
     app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'
     app.config['SESSION_COOKIE_NAME'] = 'tbqc_session'  # Tên cookie rõ ràng
+    app.config['SESSION_COOKIE_DOMAIN'] = cookie_domain  # Dùng domain chung để tránh mất session khi có/không www
+    app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session mỗi request
+    # Cấu hình cookie cho Flask-Login remember_token
+    app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
+    app.config['REMEMBER_COOKIE_SECURE'] = is_production
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+    app.config['REMEMBER_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'
+    app.config['REMEMBER_COOKIE_DOMAIN'] = cookie_domain
     # Đảm bảo session được lưu mỗi khi có thay đổi
     app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session mỗi request để kéo dài thời gian
     CORS(app)  # Cho phép frontend gọi API
