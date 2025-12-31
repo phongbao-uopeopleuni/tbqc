@@ -277,13 +277,13 @@ def permission_required(permission_name):
             
             # Đảm bảo Flask-Login đã load user từ session
             # Kiểm tra session có user_id không
-            from flask_login import _get_user
             if '_user_id' not in session:
                 if is_api_request:
                     return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
                 return redirect(url_for('admin_login'))
             
             # Kiểm tra authentication
+            # Flask-Login sẽ tự động load user từ session khi truy cập current_user
             if not current_user.is_authenticated:
                 if is_api_request:
                     return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
