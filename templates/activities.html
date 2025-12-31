@@ -121,27 +121,31 @@
       text-overflow: clip;
     }
     
-    .navbar-login-btn {
-      position: fixed;
-      bottom: var(--space-6);
-      right: var(--space-6);
-      z-index: 1000;
+    .activities-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin: var(--space-4) 0 var(--space-6);
     }
-    
-    .navbar-login-btn .btn {
+
+    .activities-actions .btn {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       transition: transform 0.2s ease, box-shadow 0.2s ease;
+      white-space: nowrap;
     }
-    
-    .navbar-login-btn .btn:hover {
-      transform: translateY(-2px);
+
+    .activities-actions .btn:hover {
+      transform: translateY(-1px);
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     }
-    
+
     @media (max-width: 767px) {
-      .navbar-login-btn {
-        bottom: var(--space-4);
-        right: var(--space-4);
+      .activities-actions {
+        justify-content: stretch;
+      }
+
+      .activities-actions .btn {
+        width: 100%;
+        justify-content: center;
       }
       
       .navbar-logo {
@@ -169,17 +173,18 @@
       <li><a href="/activities" class="active">Hoạt động</a></li>
       <li><a href="/members">Thành viên</a></li>
       <li><a href="/contact">Liên hệ</a></li>
-      <li><a href="/admin/activities">Đăng nhập</a></li>
+      <li style="display: none;"><a href="/admin/activities">Đăng nhập bài đăng</a></li>
     </ul>
-  <div class="navbar-login-btn">
-    <a href="/admin/activities" class="btn btn-primary btn-sm">🔐 Đăng nhập</a>
-  </div>
   </nav>
 
   <div class="container section">
     <div class="page-header">
       <h1>📰 Hoạt động</h1>
       <p class="page-subtitle">Tin tức và sự kiện của dòng họ Nguyễn Phước Tộc</p>
+    </div>
+
+    <div class="activities-actions">
+      <a href="/admin/activities" class="btn btn-primary btn-sm">🔐 Đăng nhập bài đăng</a>
     </div>
     
     

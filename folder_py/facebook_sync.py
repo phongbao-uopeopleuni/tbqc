@@ -37,7 +37,8 @@ class FacebookSync:
             page_id: Facebook page ID hoặc username (e.g., "PhongTuyBienQuanCong")
             access_token: Facebook Page Access Token (từ Facebook Graph API)
         """
-        self.page_id = page_id or os.environ.get('FB_PAGE_ID', '350336648378946')
+        # Default page_id là username của page "PhongTuyBienQuanCong"
+        self.page_id = page_id or os.environ.get('FB_PAGE_ID', 'PhongTuyBienQuanCong')
         self.access_token = access_token or os.environ.get('FB_ACCESS_TOKEN')
         self.base_url = "https://graph.facebook.com/v24.0"
         self.images_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images', 'facebook')
@@ -46,7 +47,7 @@ class FacebookSync:
         os.makedirs(self.images_dir, exist_ok=True)
         
         if not self.access_token:
-            logger.warning("FB_ACCESS_TOKEN không được set. Sẽ sử dụng public access (hạn chế)")
+            logger.info("FB_ACCESS_TOKEN không được set. Sử dụng public access để lấy các bài đăng public từ page.")
     
     def get_page_info(self) -> Optional[Dict]:
         """Lấy thông tin page"""
@@ -78,17 +79,69 @@ class FacebookSync:
         
         try:
             # Graph API endpoint
+            # Lưu ý: Facebook Graph API yêu cầu access token để lấy posts
+            # Với public access (không có token), có thể không lấy được posts
+            # Cần ít nhất App Access Token (app_id|app_secret)
             url = f"{self.base_url}/{self.page_id}/posts"
-            params = {
-                'fields': 'id,message,created_time,full_picture,permalink_url,attachments{media,subattachments}',
-                'limit': min(limit, 100),  # Facebook max limit
-                'access_token': self.access_token
-            } if self.access_token else {
-                'fields': 'id,message,created_time',
-                'limit': min(limit, 25)  # Public access limit
-            }
+            
+            if self.access_token:
+                # Có token: lấy đầy đủ fields kèm images
+                params = {
+                    'fields': 'id,message,created_time,full_picture,permalink_url,attachments{media,subattachments}',
+                    'limit': min(limit, 100),  # Facebook max limit
+                    'access_token': self.access_token
+                }
+            else:
+                # Không có token: thử dùng App Access Token (app_id|app_secret)
+                # Nếu có FB_APP_ID và FB_APP_SECRET trong env
+                app_id = os.environ.get('FB_APP_ID')
+                app_secret = os.environ.get('FB_APP_SECRET')
+                if app_id and app_secret:
+                    # Tạo App Access Token
+                    app_token = f"{app_id}|{app_secret}"
+                    params = {
+                        'fields': 'id,message,created_time,full_picture,permalink_url,attachments{media,subattachments}',
+                        'limit': min(limit, 100),
+                        'access_token': app_token
+                    }
+                    logger.info("Sử dụng App Access Token để lấy posts")
+                else:
+                    # Không có token nào: thử public access (có thể fail)
+                    params = {
+                        'fields': 'id,message,created_time',
+                        'limit': min(limit, 25)  # Public access limit
+                    }
+                    logger.warning("Không có access token. Thử public access (có thể không thành công)")
             
             response = requests.get(url, params=params, timeout=15)
+            
+            # Kiểm tra response
+            if not response.ok:
+                error_data = response.json() if response.headers.get('content-type', '').startswith('application/json') else {}
+                error_info = error_data.get('error', {})
+                error_msg = error_info.get('message', f'HTTP {response.status_code}')
+                error_type = error_info.get('type', 'Unknown')
+                
+                # Nếu lỗi do thiếu permission, đưa ra hướng dẫn
+                if 'permission' in error_msg.lower() or 'pages_read' in error_msg.lower() or 'Page Public Content' in error_msg:
+                    raise Exception(
+                        f"Facebook API yêu cầu permission để đọc posts từ page. "
+                        f"Vui lòng:\n"
+                        f"1. Vào Facebook App Dashboard → Products → thêm 'pages_read_engagement' permission\n"
+                        f"2. Hoặc enable 'Page Public Content Access' feature\n"
+                        f"3. Hoặc dùng Page Access Token (nếu bạn là owner của page)\n"
+                        f"Chi tiết lỗi: {error_msg}"
+                    )
+                elif 'token' in error_msg.lower() or response.status_code == 400:
+                    raise Exception(
+                        f"Facebook API yêu cầu access token. "
+                        f"Vui lòng set FB_APP_ID và FB_APP_SECRET trong environment variables, "
+                        f"hoặc set FB_ACCESS_TOKEN. "
+                        f"Lỗi: {error_msg}"
+                    )
+                else:
+                    raise Exception(f"Facebook API Error ({error_type}): {error_msg}")
+            
             response.raise_for_status()
             
             data = response.json()

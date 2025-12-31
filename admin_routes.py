@@ -25,24 +25,27 @@ def register_admin_routes(app):
     @app.route('/admin/login', methods=['GET', 'POST'])
     def admin_login():
         """Trang đăng nhập admin"""
+        # Lấy next param từ query string (GET) hoặc form (POST)
+        next_url = request.args.get('next') or request.form.get('next', '')
+        
         if request.method == 'POST':
             username = request.form.get('username', '').strip()
             password = request.form.get('password', '')
             
             if not username or not password:
                 return render_template_string(ADMIN_LOGIN_TEMPLATE, 
-                    error='Vui lòng nhập đầy đủ username và password')
+                    error='Vui lòng nhập đầy đủ username và password', next=next_url)
             
             # Tìm user
             user_data = get_user_by_username(username)
             if not user_data:
                 return render_template_string(ADMIN_LOGIN_TEMPLATE,
-                    error='Không tồn tại tài khoản')
+                    error='Không tồn tại tài khoản', next=next_url)
             
             # Xác thực mật khẩu
             if not verify_password(password, user_data['password_hash']):
                 return render_template_string(ADMIN_LOGIN_TEMPLATE,
-                    error='Sai mật khẩu')
+                    error='Sai mật khẩu', next=next_url)
             
             # Tạo user object và đăng nhập
             from auth import User
@@ -80,13 +83,15 @@ def register_admin_routes(app):
                         cursor.close()
                         connection.close()
             
-            # Redirect theo role
-            if user_data['role'] == 'admin':
+            # Redirect: ưu tiên next_url nếu có, nếu không thì theo role
+            if next_url:
+                return redirect(next_url)
+            elif user_data['role'] == 'admin':
                 return redirect('/admin/users')
             else:
                 return redirect('/')
         
-        return render_template_string(ADMIN_LOGIN_TEMPLATE)
+        return render_template_string(ADMIN_LOGIN_TEMPLATE, next=next_url)
     
     @app.route('/admin/logout')
     @login_required
@@ -1318,6 +1323,9 @@ ADMIN_LOGIN_TEMPLATE = '''
         <div class="error">{{ error }}</div>
         {% endif %}
         <form method="POST">
+            {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required autofocus>

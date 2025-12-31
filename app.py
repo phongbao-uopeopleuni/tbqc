@@ -555,13 +555,9 @@ def admin_users_page():
     return render_template('admin_users.html')
 
 @app.route('/admin/activities')
-@login_required
 def admin_activities_page():
     """Trang quản lý hoạt động (cập nhật bài đăng)"""
-    # Kiểm tra đăng nhập - nếu chưa đăng nhập thì redirect về trang login
-    if not current_user.is_authenticated:
-        return redirect('/login')
-    
+    # Cho phép vào trang ngay, template sẽ tự check auth và redirect nếu cần
     # Cho phép admin, editor và user có quyền đăng bài truy cập trang này
     # (Không giới hạn chỉ admin như trước)
     
@@ -5193,18 +5189,13 @@ def api_login():
                 connection.close()
     
     # Check redirect parameter or default based on user role/username
-    redirect_to = request.form.get('redirect', '')
+    # Ưu tiên redirect param (next) nếu có (từ query string khi vào /admin/login?next=...)
+    redirect_to = request.form.get('redirect', '') or request.args.get('next', '')
     if not redirect_to:
-        # Special case: tbqc_admin → /admin/activities (cập nhật bài đăng)
-        if username == 'tbqc_admin':
-            redirect_to = '/admin/activities'
-        # Special case: phongb → /admin/users (quản lý users)
-        elif username == 'phongb':
-            redirect_to = '/admin/users'
-        # Default redirect based on role:
-        # - Admin → /admin/users (quản lý users)
-        # - Editor/User → /admin/activities (đăng bài)
-        elif user.role == 'admin':
+        # Kịch bản 2: Login từ trang chủ (link "Admin") → route về /admin/users cho admin accounts
+        # Kịch bản 1: Login từ "Đăng nhập bài đăng" → có next param → route về /admin/activities
+        if user.role == 'admin':
+            # Tất cả admin (phongb, tbqc_admin, ...) → /admin/users khi login từ trang chủ
             redirect_to = '/admin/users'
         elif user.role == 'editor':
             redirect_to = '/admin/activities'
@@ -5230,6 +5221,267 @@ def api_logout():
     from flask_login import logout_user
     logout_user()
     return jsonify({'success': True, 'message': 'Đã đăng xuất thành công'})
+
+@app.route('/admin/api/facebook/setup', methods=['POST'])
+@login_required
+def api_facebook_setup():
+    """API setup Facebook token - lấy Page Token từ User Token"""
+    # Check admin permission
+    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+        return jsonify({'success': False, 'error': 'Chỉ admin mới có quyền setup Facebook'}), 403
+    
+    try:
+        import requests
+        from folder_py.db_config import get_db_connection
+        
+        logger.info("Facebook setup: Bắt đầu xử lý request")
+        
+        data = request.get_json(silent=True) or {}
+        user_token = data.get('user_token', '').strip()
+        page_id = data.get('page_id', '350336648378946')  # Page ID của "Phòng Tuy Biên Quân Công"
+        
+        logger.info(f"Facebook setup: user_token length = {len(user_token)}, page_id = {page_id}")
+        
+        if not user_token:
+            return jsonify({'success': False, 'error': 'Vui lòng nhập User Token'}), 400
+        
+        # Lấy danh sách pages từ User Token
+        url = f"https://graph.facebook.com/v24.0/me/accounts"
+        logger.info(f"Facebook setup: Đang gọi Facebook API: {url}")
+        try:
+            response = requests.get(url, params={'access_token': user_token}, timeout=10)
+            logger.info(f"Facebook setup: Response status = {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Lỗi kết nối Facebook API: {e}", exc_info=True)
+            return jsonify({'success': False, 'error': f'Lỗi kết nối Facebook API: {str(e)}'}), 500
+        
+        if not response.ok:
+            try:
+                error_data = response.json()
+                error_info = error_data.get('error', {})
+                error_msg = error_info.get('message', f'HTTP {response.status_code}')
+                error_type = error_info.get('type', 'Unknown')
+                logger.error(f"Facebook API Error: {error_type} - {error_msg}")
+                return jsonify({'success': False, 'error': f'Lỗi khi lấy pages: {error_msg}'}), 400
+            except (ValueError, KeyError):
+                logger.error(f"Facebook API Error: {response.status_code} - {response.text[:200]}")
+                return jsonify({'success': False, 'error': f'Lỗi khi lấy pages: HTTP {response.status_code}'}), 400
+        
+        try:
+            pages_data = response.json()
+            pages = pages_data.get('data', [])
+            logger.info(f"Facebook setup: Đã lấy được {len(pages)} page(s)")
+        except (ValueError, KeyError) as e:
+            logger.error(f"Lỗi parse response từ Facebook: {e}", exc_info=True)
+            logger.error(f"Response text: {response.text[:500]}")
+            return jsonify({'success': False, 'error': f'Lỗi khi xử lý response từ Facebook: {str(e)}'}), 500
+        
+        # Tìm page "Phòng Tuy Biên Quân Công"
+        page = None
+        for p in pages:
+            if p.get('id') == page_id or 'Phòng Tuy Biên' in p.get('name', '') or 'PhongTuyBien' in p.get('name', ''):
+                page = p
+                break
+        
+        if not page:
+            return jsonify({
+                'success': False,
+                'error': f'Không tìm thấy page "Phòng Tuy Biên Quân Công" trong danh sách. Có {len(pages)} page(s) khác.'
+            }), 404
+        
+        page_token = page.get('access_token')
+        if not page_token:
+            return jsonify({'success': False, 'error': 'Không lấy được Page Access Token'}), 500
+        
+        # Lưu vào database
+        logger.info(f"Facebook setup: Đang lưu token vào database cho page_id = {page.get('id')}")
+        try:
+            connection = get_db_connection()
+            logger.info("Facebook setup: Đã kết nối database")
+            cursor = connection.cursor()
+            
+            # Kiểm tra và tạo table nếu chưa có
+            cursor.execute("SHOW TABLES LIKE 'facebook_tokens'")
+            if not cursor.fetchone():
+                logger.info("Facebook setup: Table chưa có, đang tạo table...")
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS facebook_tokens (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        token_type ENUM('user', 'page', 'app') NOT NULL DEFAULT 'page',
+                        access_token TEXT NOT NULL,
+                        page_id VARCHAR(255) DEFAULT 'PhongTuyBienQuanCong',
+                        expires_at DATETIME NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        INDEX idx_page_id (page_id),
+                        INDEX idx_is_active (is_active)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """)
+                connection.commit()
+                logger.info("Facebook setup: Đã tạo table facebook_tokens")
+            
+            # Xóa token cũ (nếu có)
+            logger.info(f"Facebook setup: Đang xóa token cũ cho page_id = {page.get('id')}")
+            cursor.execute("DELETE FROM facebook_tokens WHERE page_id = %s AND is_active = TRUE", (page.get('id'),))
+            
+            # Insert token mới
+            logger.info("Facebook setup: Đang insert token mới")
+            cursor.execute("""
+                INSERT INTO facebook_tokens (token_type, access_token, page_id, is_active)
+                VALUES (%s, %s, %s, %s)
+            """, ('page', page_token, page.get('id'), True))
+            
+            connection.commit()
+            logger.info("Facebook setup: Đã lưu token thành công")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Đã lưu Facebook Page Access Token thành công!',
+                'page_name': page.get('name', ''),
+                'page_id': page.get('id')
+            })
+        except Exception as e:
+            if 'connection' in locals():
+                connection.rollback()
+            logger.error(f"Lỗi khi lưu token vào database: {e}", exc_info=True)
+            import traceback
+            error_trace = traceback.format_exc()
+            logger.error(f"Traceback: {error_trace}")
+            return jsonify({'success': False, 'error': f'Lỗi khi lưu token: {str(e)}'}), 500
+        finally:
+            if 'cursor' in locals():
+                cursor.close()
+            if 'connection' in locals():
+                connection.close()
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Lỗi kết nối Facebook API: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi kết nối Facebook API: {str(e)}'
+        }), 500
+    except Exception as e:
+        logger.error(f"Lỗi khi setup Facebook: {e}", exc_info=True)
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Traceback: {error_trace}")
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi khi setup Facebook: {str(e)}'
+        }), 500
+
+@app.route('/admin/api/facebook/read-link', methods=['POST'])
+@login_required
+def api_facebook_read_link():
+    """API đọc Facebook post link bằng AI"""
+    # Check admin permission
+    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+        return jsonify({'success': False, 'error': 'Chỉ admin mới có quyền đọc Facebook link'}), 403
+    
+    try:
+        from folder_py.ai_facebook_reader import AIFacebookReader
+        
+        data = request.get_json(silent=True) or {}
+        url = data.get('url', '').strip()
+        
+        if not url:
+            return jsonify({'success': False, 'error': 'Vui lòng nhập Facebook post URL'}), 400
+        
+        if 'facebook.com' not in url.lower():
+            return jsonify({'success': False, 'error': 'URL không phải là Facebook link'}), 400
+        
+        # Khởi tạo AI reader
+        ai_provider = data.get('ai_provider', 'openai')  # 'openai' hoặc 'anthropic'
+        reader = AIFacebookReader(ai_provider=ai_provider)
+        
+        # Đọc post
+        result = reader.read_facebook_post(url)
+        
+        if 'error' in result:
+            return jsonify({'success': False, 'error': result['error']}), 500
+        
+        return jsonify({
+            'success': True,
+            'data': result
+        })
+        
+    except ImportError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Module AI chưa được cài đặt: {str(e)}. Chạy: pip install openai hoặc pip install anthropic'
+        }), 500
+    except Exception as e:
+        logger.error(f"Lỗi khi đọc Facebook link: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi khi đọc Facebook link: {str(e)}'
+        }), 500
+
+@app.route('/admin/api/facebook/sync', methods=['POST'])
+@login_required
+def api_facebook_sync():
+    """API sync posts từ Facebook page"""
+    # Check admin permission
+    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+        return jsonify({'success': False, 'error': 'Chỉ admin mới có quyền sync Facebook'}), 403
+    
+    try:
+        from folder_py.facebook_sync import FacebookSync
+        from folder_py.db_config import get_db_connection
+        
+        # Lấy params từ request
+        data = request.get_json(silent=True) or {}
+        limit = data.get('limit', 25)
+        status = data.get('status', 'published')  # 'published' hoặc 'draft'
+        
+        # Lấy token từ database (ưu tiên) hoặc environment
+        page_token = None
+        try:
+            connection = get_db_connection()
+            cursor = connection.cursor()
+            cursor.execute("""
+                SELECT access_token FROM facebook_tokens 
+                WHERE is_active = TRUE AND token_type = 'page'
+                ORDER BY updated_at DESC LIMIT 1
+            """)
+            result = cursor.fetchone()
+            if result:
+                page_token = result[0]
+            cursor.close()
+            connection.close()
+        except Exception as e:
+            logger.warning(f"Không lấy được token từ database: {e}")
+        
+        # Khởi tạo FacebookSync với token từ database hoặc environment
+        sync = FacebookSync(page_id='PhongTuyBienQuanCong', access_token=page_token)
+        
+        # Thực hiện sync
+        result = sync.sync(limit=limit, status=status)
+        
+        if result.get('success'):
+            return jsonify({
+                'success': True,
+                'message': result.get('message', 'Sync thành công'),
+                'stats': result.get('stats', {})
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Lỗi không xác định khi sync Facebook')
+            }), 500
+            
+    except ImportError:
+        return jsonify({
+            'success': False,
+            'error': 'Module facebook_sync không tìm thấy. Vui lòng kiểm tra lại.'
+        }), 500
+    except Exception as e:
+        logger.error(f"Lỗi khi sync Facebook: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi khi sync Facebook: {str(e)}'
+        }), 500
 
 
 # -----------------------------------------------------------------------------

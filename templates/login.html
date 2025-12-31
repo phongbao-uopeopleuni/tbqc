@@ -107,11 +107,18 @@
       errorDiv.textContent = '';
 
       try {
+        // Lấy next param từ query string nếu có
+        const urlParams = new URLSearchParams(window.location.search);
+        const nextUrl = urlParams.get('next') || '';
+
         const formData = new FormData();
         // Backend expects "username" and "password"
         formData.append('username', account);
         formData.append('password', password);
         formData.append('remember', remember ? '1' : '0');
+        if (nextUrl) {
+          formData.append('redirect', nextUrl);
+        }
 
         const response = await fetch('/api/login', {
           method: 'POST',

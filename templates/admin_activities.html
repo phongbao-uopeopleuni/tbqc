@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quản lý Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <!-- Quill Editor CSS -->
+  <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -237,8 +239,84 @@
 
   <div class="container">
     <div class="page-header">
-      <h1>📝 Quản lý Hoạt động</h1>
-      <p>Tạo, chỉnh sửa và quản lý các bài viết hoạt động</p>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1>📝 Quản lý Hoạt động</h1>
+          <p>Tạo, chỉnh sửa và quản lý các bài viết hoạt động</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="showFacebookSetup()" id="setupFacebookBtn" style="white-space: nowrap;">
+            ⚙️ Setup Facebook
+          </button>
+          <button type="button" class="btn btn-info" onclick="showReadFacebookLink()" id="readLinkBtn" style="white-space: nowrap; background: #17a2b8; color: white;">
+            🤖 Đọc Link Facebook (AI)
+          </button>
+          <button type="button" class="btn btn-primary" onclick="syncFromFacebook()" id="syncFacebookBtn" style="white-space: nowrap;">
+            📘 Import từ Facebook
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Read Facebook Link Modal -->
+    <div id="readFacebookLinkModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1001; align-items: center; justify-content: center;">
+      <div style="background: white; padding: 30px; border-radius: 8px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h2 style="margin-top: 0;">🤖 Đọc Link Facebook bằng AI</h2>
+        <p style="color: #666; margin-bottom: 20px;">
+          Paste link bài đăng Facebook, AI sẽ tự động đọc và extract nội dung, hình ảnh.
+        </p>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">Facebook Post URL:</label>
+          <input type="text" id="facebookLinkInput" placeholder="https://www.facebook.com/PhongTuyBienQuanCong/posts/123456..." 
+                 style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+          <small style="color: #666;">Ví dụ: https://www.facebook.com/PhongTuyBienQuanCong/posts/123456</small>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">AI Provider:</label>
+          <select id="aiProviderSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+            <option value="openai">OpenAI (GPT-4o-mini)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+          </select>
+          <small style="color: #666;">Cần set OPENAI_API_KEY hoặc ANTHROPIC_API_KEY trong environment variables</small>
+        </div>
+        
+        <div id="readLinkMessage" style="margin-bottom: 15px;"></div>
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="closeReadFacebookLink()">Hủy</button>
+          <button type="button" class="btn btn-primary" onclick="readFacebookLink()" id="readLinkSubmitBtn">Đọc Link</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Facebook Setup Modal -->
+    <div id="facebookSetupModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+      <div style="background: white; padding: 30px; border-radius: 8px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h2 style="margin-top: 0;">⚙️ Setup Facebook Import</h2>
+        <p style="color: #666; margin-bottom: 20px;">
+          Chỉ cần làm 1 lần duy nhất! Paste User Token từ 
+          <a href="https://developers.facebook.com/tools/accesstoken/" target="_blank">Access Token Tool</a>, 
+          hệ thống sẽ tự động lấy Page Token và lưu lại.
+        </p>
+        
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; margin-bottom: 5px; font-weight: bold;">User Access Token:</label>
+          <input type="text" id="userTokenInput" placeholder="EAATq5aLKopEBQdBNLDZAx..." 
+                 style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; font-size: 12px;">
+          <small style="color: #666;">
+            Lấy từ: <a href="https://developers.facebook.com/tools/accesstoken/" target="_blank">https://developers.facebook.com/tools/accesstoken/</a>
+          </small>
+        </div>
+        
+        <div id="setupMessage" style="margin-bottom: 15px;"></div>
+        
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn btn-secondary" onclick="closeFacebookSetup()">Hủy</button>
+          <button type="button" class="btn btn-primary" onclick="saveFacebookToken()" id="saveTokenBtn">Lưu Token</button>
+        </div>
+      </div>
     </div>
 
     <div id="message"></div>
@@ -259,7 +337,8 @@
           </div>
           <div class="form-group">
             <label for="content">Nội dung *</label>
-            <textarea id="content" name="content" required style="min-height: 200px;"></textarea>
+            <div id="contentEditor" style="min-height: 300px; background: white; border: 1px solid #ddd; border-radius: 4px;"></div>
+            <textarea id="content" name="content" required style="display: none;"></textarea>
           </div>
           <div class="form-group">
             <label for="thumbnail">Ảnh đại diện / Thumbnail (tùy chọn)</label>
@@ -307,7 +386,30 @@
     </div>
   </div>
 
+  <!-- Quill Editor JS -->
+  <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
   <script>
+    // Khởi tạo Quill Editor
+    let quillEditor = null;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      quillEditor = new Quill('#contentEditor', {
+        theme: 'snow',
+        modules: {
+          toolbar: [
+            [{ 'header': [1, 2, 3, false] }],
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ 'color': [] }, { 'background': [] }],
+            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+            [{ 'align': [] }],
+            ['link', 'image'],
+            ['clean']
+          ]
+        },
+        placeholder: 'Nhập nội dung bài viết...'
+      });
+    });
+
     // Generic JSON fetch helper
     async function fetchJson(url, options) {
       const res = await fetch(url, options);
@@ -347,16 +449,188 @@
       setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
     }
 
+    // Show Read Facebook Link Modal
+    function showReadFacebookLink() {
+      document.getElementById('readFacebookLinkModal').style.display = 'flex';
+      document.getElementById('facebookLinkInput').value = '';
+      document.getElementById('readLinkMessage').innerHTML = '';
+    }
+
+    // Close Read Facebook Link Modal
+    function closeReadFacebookLink() {
+      document.getElementById('readFacebookLinkModal').style.display = 'none';
+    }
+
+    // Read Facebook Link với AI
+    async function readFacebookLink() {
+      const url = document.getElementById('facebookLinkInput').value.trim();
+      const aiProvider = document.getElementById('aiProviderSelect').value;
+      const btn = document.getElementById('readLinkSubmitBtn');
+      const msgEl = document.getElementById('readLinkMessage');
+      
+      if (!url) {
+        msgEl.innerHTML = '<div style="color: red;">⚠️ Vui lòng nhập Facebook post URL</div>';
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ AI đang đọc...';
+      msgEl.innerHTML = '<div style="color: blue;">⏳ AI đang đọc và extract nội dung từ Facebook post...</div>';
+      
+      try {
+        const result = await fetchJson('/admin/api/facebook/read-link', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            url: url,
+            ai_provider: aiProvider
+          })
+        });
+        
+        if (result.success && result.data) {
+          const data = result.data;
+          
+          // Điền vào form
+          document.getElementById('title').value = data.title || '';
+          document.getElementById('summary').value = data.summary || '';
+          if (quillEditor) {
+            quillEditor.root.innerHTML = data.content || '';
+          }
+          
+          msgEl.innerHTML = `<div style="color: green;">✅ Đã đọc thành công!<br>Tiêu đề: ${data.title || 'N/A'}<br>Nội dung: ${(data.content || '').substring(0, 100)}...</div>`;
+          
+          setTimeout(() => {
+            closeReadFacebookLink();
+            showMessage('✅ AI đã đọc và điền nội dung vào form! Bạn có thể chỉnh sửa và lưu.', 'success');
+          }, 2000);
+        } else {
+          msgEl.innerHTML = `<div style="color: red;">❌ ${result.error || 'Lỗi không xác định'}</div>`;
+        }
+      } catch (e) {
+        msgEl.innerHTML = `<div style="color: red;">❌ Lỗi: ${e.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Đọc Link';
+      }
+    }
+
+    // Show Facebook Setup Modal
+    function showFacebookSetup() {
+      document.getElementById('facebookSetupModal').style.display = 'flex';
+      document.getElementById('userTokenInput').value = '';
+      document.getElementById('setupMessage').innerHTML = '';
+    }
+
+    // Close Facebook Setup Modal
+    function closeFacebookSetup() {
+      document.getElementById('facebookSetupModal').style.display = 'none';
+    }
+
+    // Save Facebook Token
+    async function saveFacebookToken() {
+      const userToken = document.getElementById('userTokenInput').value.trim();
+      const btn = document.getElementById('saveTokenBtn');
+      const msgEl = document.getElementById('setupMessage');
+      
+      if (!userToken) {
+        msgEl.innerHTML = '<div style="color: red;">⚠️ Vui lòng nhập User Token</div>';
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang xử lý...';
+      msgEl.innerHTML = '<div style="color: blue;">⏳ Đang lấy Page Token từ User Token...</div>';
+      
+      try {
+        const result = await fetchJson('/admin/api/facebook/setup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            user_token: userToken,
+            page_id: '350336648378946'  // Page ID của "Phòng Tuy Biên Quân Công"
+          })
+        });
+        
+        if (result.success) {
+          msgEl.innerHTML = `<div style="color: green;">✅ ${result.message}<br>Page: ${result.page_name || result.page_id}</div>`;
+          setTimeout(() => {
+            closeFacebookSetup();
+            showMessage('✅ Facebook token đã được lưu thành công! Bây giờ bạn có thể import từ Facebook.', 'success');
+          }, 2000);
+        } else {
+          msgEl.innerHTML = `<div style="color: red;">❌ ${result.error || 'Lỗi không xác định'}</div>`;
+        }
+      } catch (e) {
+        msgEl.innerHTML = `<div style="color: red;">❌ Lỗi: ${e.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Lưu Token';
+      }
+    }
+
+    // Sync từ Facebook
+    async function syncFromFacebook() {
+      const btn = document.getElementById('syncFacebookBtn');
+      const originalText = btn.textContent;
+      
+      if (!confirm('Bạn có muốn import các bài đăng mới từ Facebook page "PhongTuyBienQuanCong"?')) {
+        return;
+      }
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Đang sync...';
+      
+      try {
+        const result = await fetchJson('/admin/api/facebook/sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            limit: 25,
+            status: 'draft'  // Import về dạng draft để review trước khi publish
+          })
+        });
+        
+        if (result.success) {
+          const stats = result.stats || {};
+          showMessage(
+            `✅ ${result.message || 'Sync thành công'}\n` +
+            `- Bài mới: ${stats.new || 0}\n` +
+            `- Bài cập nhật: ${stats.updated || 0}\n` +
+            `- Tổng: ${stats.total || 0}`,
+            'success'
+          );
+          
+          // Reload danh sách posts
+          setTimeout(() => {
+            loadPosts();
+          }, 1000);
+        } else {
+          showMessage(`❌ ${result.error || 'Sync thất bại'}`, 'error');
+        }
+      } catch (e) {
+        showMessage(`❌ Lỗi: ${e.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+
     async function checkAuth() {
       try {
         const result = await fetchJson('/api/current-user');
         if (!result.success || !result.user || result.user.role !== 'admin') {
-          window.location.href = '/login';
+          window.location.href = '/admin/login?next=/admin/activities';
           return false;
         }
         return true;
       } catch (e) {
-        window.location.href = '/login';
+        window.location.href = '/admin/login?next=/admin/activities';
         return false;
       }
     }
@@ -403,7 +677,12 @@
         document.getElementById('activityId').value = post.id;
         document.getElementById('title').value = post.title || '';
         document.getElementById('summary').value = post.summary || '';
-        document.getElementById('content').value = post.content || '';
+        // Set content vào Quill editor
+        if (quillEditor && post.content) {
+          quillEditor.root.innerHTML = post.content;
+        } else {
+          document.getElementById('content').value = post.content || '';
+        }
         document.getElementById('thumbnail').value = post.thumbnail || '';
         document.getElementById('status').value = post.status || 'draft';
         document.getElementById('formTitle').textContent = 'Chỉnh sửa bài đăng';
@@ -723,26 +1002,44 @@
     async function logout() {
       try {
         await fetch('/api/logout', { method: 'POST' });
-        window.location.href = '/login';
+        window.location.href = '/admin/login';
       } catch (e) {
-        window.location.href = '/login';
+        window.location.href = '/admin/login';
       }
     }
 
     document.getElementById('activityForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const id = document.getElementById('activityId').value;
+      // Lấy HTML content từ Quill editor
+      let contentHtml = '';
+      if (quillEditor) {
+        contentHtml = quillEditor.root.innerHTML;
+        // Lấy text thuần để validate
+        const textContent = quillEditor.getText().trim();
+        if (!textContent) {
+          showMessage('Vui lòng nhập nội dung', 'error');
+          return;
+        }
+      } else {
+        contentHtml = document.getElementById('content').value.trim();
+      }
+      
+      // Set vào hidden textarea để submit
+      document.getElementById('content').value = contentHtml;
+      
       const data = {
         title: document.getElementById('title').value.trim(),
         summary: document.getElementById('summary').value.trim(),
-        content: document.getElementById('content').value.trim(),
+        content: contentHtml,
         status: document.getElementById('status').value,
         thumbnail: document.getElementById('thumbnail').value.trim(),
         images: uploadedImages
       };
 
-      if (!data.title || !data.content) {
-        showMessage('Vui lòng điền đầy đủ tiêu đề và nội dung', 'error');
+      // Validation đã được xử lý ở trên (check textContent)
+      if (!data.title) {
+        showMessage('Vui lòng nhập tiêu đề', 'error');
         return;
       }
 
