@@ -31,6 +31,9 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
   const familyNodeMap = new Map(); // familyId -> familyNode
   const childrenToFamilyMap = new Map(); // childId -> familyId (để group siblings)
   
+  // Debug: Track familyId collisions
+  const familyIdCollisions = [];
+  
   const childrenMap = relationships.childrenMap || new Map();
   const parentMap = relationships.parentMap || new Map();
   const marriagesMap = marriagesData.marriagesMap || new Map();
@@ -86,14 +89,15 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
     familyGroups.get(familyKey).push(person.id);
   });
   
-  // Step 3: Create family nodes từ groups
+  // Step 3: Create family nodes từ groups (sibling-group families)
   familyGroups.forEach((childIds, familyKey) => {
     const [fatherId, motherId] = familyKey.split('|');
     const actualFatherId = fatherId === 'null' ? null : fatherId;
     const actualMotherId = motherId === 'null' ? null : motherId;
     
-    // Tạo family node ID deterministic
-    const familyId = generateFamilyId(actualFatherId, actualMotherId, 0);
+    // Tạo family node ID với prefix "FG-" (Family Group) để tránh collision với marriage nodes
+    // Schema: FG-{father}-{mother} (sibling-group family)
+    const familyId = generateFamilyGroupId(actualFatherId, actualMotherId);
     
     // Kiểm tra duplicate
     if (familyNodeMap.has(familyId)) {
@@ -177,10 +181,35 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
         }
         
         // Nếu chỉ có 1 spouse (single parent), vẫn tạo family node với Unknown
-        const marriageFamilyId = generateFamilyId(spouse1Id || person.id, spouse2Id || null, index);
+        // Tạo family node ID với prefix "FM-" (Family Marriage) để tránh collision với sibling-group nodes
+        // Schema: FM-{spouse1}-{spouse2}-{order} (marriage family)
+        const marriageFamilyId = generateFamilyMarriageId(spouse1Id || person.id, spouse2Id || null, index);
         
-        // Kiểm tra duplicate
+        // Kiểm tra duplicate (should not happen with new schema, but keep for safety)
         if (familyNodeMap.has(marriageFamilyId)) {
+          // Log collision for debugging
+          const existingFamily = familyNodeMap.get(marriageFamilyId);
+          familyIdCollisions.push({
+            marriageFamilyId,
+            personId: person.id,
+            personName: person.name,
+            spouse1Id,
+            spouse2Id,
+            index,
+            existingFamilyType: existingFamily.children && existingFamily.children.length > 0 ? 'sibling-group' : 'marriage',
+            existingFamilyId: existingFamily.id
+          });
+          
+          if (window.DEBUG_TREE === 1 || window.DEBUG_FAMILY_TREE === 1) {
+            console.warn('[DEBUG buildRenderGraph] Marriage family ID collision (skipped):', marriageFamilyId, {
+              personId: person.id,
+              personName: person.name,
+              spouse1Id,
+              spouse2Id,
+              index,
+              existingFamily: existingFamily
+            });
+          }
           return;
         }
         
@@ -234,6 +263,28 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
   // Step 5: Handle single-parent families (Unknown spouse placeholder)
   // Đã xử lý trong Step 3 với null spouse
   
+  // Debug: Log collisions if any (should not happen with new schema)
+  if (familyIdCollisions.length > 0) {
+    console.warn('[DEBUG buildRenderGraph] Family ID collisions detected:', familyIdCollisions.length, familyIdCollisions);
+  }
+  
+  if (window.DEBUG_TREE === 1 || window.DEBUG_FAMILY_TREE === 1) {
+    const fgCount = familyNodes.filter(f => f.id.startsWith('FG-')).length;
+    const fmCount = familyNodes.filter(f => f.id.startsWith('FM-')).length;
+    console.log('[DEBUG buildRenderGraph] Summary:', {
+      personNodes: personNodes.length,
+      familyNodes: familyNodes.length,
+      siblingGroupFamilies: fgCount,
+      marriageFamilies: fmCount,
+      collisions: familyIdCollisions.length,
+      marriagesProcessed: Array.from(marriagesMap.values()).reduce((sum, m) => sum + (Array.isArray(m) ? m.length : 0), 0)
+    });
+    
+    if (familyIdCollisions.length > 0) {
+      console.warn('[DEBUG buildRenderGraph] WARNING: Collisions detected! This should not happen with FG-/FM- prefix schema.');
+    }
+  }
+  
   return {
     personNodes,
     familyNodes,
@@ -245,30 +296,69 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
 }
 
 /**
- * Generate deterministic family ID
+ * Generate deterministic family ID for sibling-group (Family Group)
+ * Schema: FG-{father}-{mother}
+ * @param {string|null} fatherId 
+ * @param {string|null} motherId 
+ * @returns {string}
+ */
+function generateFamilyGroupId(fatherId, motherId) {
+  if (!fatherId && !motherId) {
+    return `FG-unknown-unknown`;
+  }
+  
+  if (!fatherId) {
+    return `FG-unknown-${motherId}`;
+  }
+  
+  if (!motherId) {
+    return `FG-${fatherId}-unknown`;
+  }
+  
+  // Deterministic: sort IDs để cùng cặp luôn có cùng ID
+  const ids = [fatherId, motherId].sort();
+  return `FG-${ids[0]}-${ids[1]}`;
+}
+
+/**
+ * Generate deterministic family ID for marriage (Family Marriage)
+ * Schema: FM-{spouse1}-{spouse2}-{order}
+ * @param {string|null} spouse1Id 
+ * @param {string|null} spouse2Id 
+ * @param {number} order - Marriage order (0 = first marriage)
+ * @returns {string}
+ */
+function generateFamilyMarriageId(spouse1Id, spouse2Id, order = 0) {
+  if (!spouse1Id && !spouse2Id) {
+    return `FM-unknown-unknown-${order}`;
+  }
+  
+  if (!spouse1Id) {
+    return `FM-unknown-${spouse2Id}-${order}`;
+  }
+  
+  if (!spouse2Id) {
+    return `FM-${spouse1Id}-unknown-${order}`;
+  }
+  
+  // Deterministic: sort IDs để cùng cặp luôn có cùng ID
+  const ids = [spouse1Id, spouse2Id].sort();
+  const baseId = `FM-${ids[0]}-${ids[1]}`;
+  
+  return order > 0 ? `${baseId}-${order}` : baseId;
+}
+
+/**
+ * Generate deterministic family ID (LEGACY - kept for backward compatibility)
+ * @deprecated Use generateFamilyGroupId or generateFamilyMarriageId instead
  * @param {string|null} spouse1Id 
  * @param {string|null} spouse2Id 
  * @param {number} order - Marriage order (0 = first marriage)
  * @returns {string}
  */
 function generateFamilyId(spouse1Id, spouse2Id, order = 0) {
-  if (!spouse1Id && !spouse2Id) {
-    return `F-unknown-${order}`;
-  }
-  
-  if (!spouse1Id) {
-    return `F-${spouse2Id}-unknown-${order}`;
-  }
-  
-  if (!spouse2Id) {
-    return `F-${spouse1Id}-unknown-${order}`;
-  }
-  
-  // Deterministic: sort IDs để cùng cặp luôn có cùng ID
-  const ids = [spouse1Id, spouse2Id].sort();
-  const baseId = `F-${ids[0]}-${ids[1]}`;
-  
-  return order > 0 ? `${baseId}-${order}` : baseId;
+  // For backward compatibility, use FM- prefix (marriage family)
+  return generateFamilyMarriageId(spouse1Id, spouse2Id, order);
 }
 
 /**

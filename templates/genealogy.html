@@ -2459,6 +2459,11 @@
     let selectedPersonId = null; // Currently selected person ID
     let rootPersonId = 'P-1-1'; // Root person ID (Vua Minh Mạng)
     
+    // Debug flag for generation stats (set window.DEBUG_STATS = 1 to enable)
+    if (typeof window.DEBUG_STATS === 'undefined') {
+      window.DEBUG_STATS = 0; // Default: disabled
+    }
+    
     // Cache for generation stats to avoid rebuilding on every render
     let cachedGenerationBuckets = null; // Cached generation buckets (Map<number, Person[]>)
     let generationStatsCacheValid = false; // Flag to check if cache is valid
@@ -2501,7 +2506,7 @@
           person_id: personId,
           name: personData.name || personData.full_name || '',
           birth_year: birthYear,
-          generation: personData.generation || 0,
+          generation: personData.generation || personData.generation_level || personData.generation_number || 0,
           children: []
         };
         
@@ -2521,7 +2526,8 @@
     }
     
     /**
-     * Count total descendants (recursive)
+     * Count total descendants (recursive) - OLD METHOD using tree structure
+     * @deprecated Use countDescendantsFromMap instead for more reliable results
      * @param {Object} node - Person node
      * @returns {number} Total descendant count (including direct children)
      */
@@ -2537,84 +2543,277 @@
     }
     
     /**
-     * Count sons-in-law and daughters-in-law (rể và dâu) based on family tree
-     * @param {string} personId - Person ID
-     * @returns {number} Total count of in-laws (spouses of children and descendants)
+     * Count total descendants directly from childrenMap (graph-based)
+     * Uses DFS traversal to avoid dependency on personTreeRoot structure
+     * @param {string} personId - Person ID to count descendants for
+     * @param {number|null} maxGeneration - Maximum generation to count (null = no limit)
+     * @param {number} currentGeneration - Current generation (for internal recursion)
+     * @param {Set} visited - Visited nodes set (for internal recursion)
+     * @returns {number} Total count of unique descendants
      */
-    function countInLaws(personId) {
-      if (!personId || typeof window.personMap === 'undefined' || typeof window.childrenMap === 'undefined') return 0;
+    function countDescendantsFromMap(personId, maxGeneration = null, currentGeneration = 0, visited = null) {
+      // Initialize visited set on first call
+      if (visited === null) {
+        visited = new Set();
+      }
       
-      // Get children of this person
+      // Check if required data is available
+      if (!personId || typeof window.childrenMap === 'undefined' || typeof window.personMap === 'undefined') {
+        if (window.DEBUG_STATS === 1) {
+          console.warn('[DEBUG countDescendantsFromMap] Missing data:', {
+            personId,
+            hasChildrenMap: typeof window.childrenMap !== 'undefined',
+            hasPersonMap: typeof window.personMap !== 'undefined'
+          });
+        }
+        return 0;
+      }
+      
+      // Check max generation limit
+      if (maxGeneration !== null && currentGeneration >= maxGeneration) {
+        return 0;
+      }
+      
+      // Get children from childrenMap
       const childrenIds = window.childrenMap.get(personId) || [];
-      if (childrenIds.length === 0) return 0;
+      
+      if (childrenIds.length === 0) {
+        return 0; // No children
+      }
       
       let count = 0;
+      
+      // Count each child and their descendants
+      childrenIds.forEach(childId => {
+        // Skip if already visited (avoid cycles)
+        if (visited.has(childId)) {
+          if (window.DEBUG_STATS === 1) {
+            console.warn('[DEBUG countDescendantsFromMap] Cycle detected, skipping:', childId);
+          }
+          return;
+        }
+        
+        // Mark as visited
+        visited.add(childId);
+        
+        // Count this child
+        count += 1;
+        
+        // Get child's generation for limit check
+        const childData = window.personMap.get(childId);
+        const childGeneration = childData?.generation || childData?.generation_level || childData?.generation_number || (currentGeneration + 1);
+        
+        // Recursively count descendants of this child
+        const nextGeneration = maxGeneration !== null ? childGeneration : (currentGeneration + 1);
+        const descendantCount = countDescendantsFromMap(childId, maxGeneration, nextGeneration, visited);
+        count += descendantCount;
+      });
+      
+      if (window.DEBUG_STATS === 1 && count > 0 && Math.random() < 0.05) {
+        // Sample 5% of calls to avoid spam
+        console.log(`[DEBUG countDescendantsFromMap] ${personId}: ${count} descendants (${childrenIds.length} direct, gen ${currentGeneration})`);
+      }
+      
+      return count;
+    }
+    
+    /**
+     * Count sons-in-law and daughters-in-law (rể và dâu) based on descendants
+     * Uses graph-based traversal (childrenMap) similar to countDescendantsFromMap
+     * @param {string} personId - Person ID to count in-laws for
+     * @param {number|null} maxGeneration - Maximum generation to count (null = no limit)
+     * @returns {number} Total count of unique in-laws (spouses of descendants, excluding personId itself)
+     */
+    function countInLaws(personId, maxGeneration = null) {
+      if (!personId || typeof window.personMap === 'undefined' || typeof window.childrenMap === 'undefined') {
+        if (window.DEBUG_STATS === 1) {
+          console.warn('[DEBUG countInLaws] Missing data:', {
+            personId,
+            hasChildrenMap: typeof window.childrenMap !== 'undefined',
+            hasPersonMap: typeof window.personMap !== 'undefined'
+          });
+        }
+        return 0;
+      }
+      
+      // Set to store unique spouse identifiers (person_id preferred, fallback to normalized name)
+      const uniqueSpouses = new Set();
       const visited = new Set();
       
-      // Recursive function to count in-laws
-      function countInLawsRecursive(personId) {
-        if (visited.has(personId)) return;
-        visited.add(personId);
+      /**
+       * Extract spouse identifiers from a marriage entry
+       * Priority: spouse_person_id > spouse_id > spouse_name (normalized)
+       * @param {string|Object} marriage - Marriage entry (string or object)
+       * @param {string} personId - Person ID (to exclude self)
+       * @returns {string|null} Spouse identifier (person_id or normalized name) or null
+       */
+      function extractSpouseId(marriage, personId) {
+        if (!marriage) return null;
         
-        const childrenIds = window.childrenMap.get(personId) || [];
-        childrenIds.forEach(childId => {
-          // Get child's person data
-          const childData = window.personMap.get(childId);
-          if (childData) {
-            // Count spouses of this child (dâu/rể)
-            let spouseCount = 0;
-            
-            // Try to get from marriagesMap (from database marriages table or /api/members)
-            if (typeof window.marriagesMap !== 'undefined' && window.marriagesMap.has(childId)) {
-              const marriages = window.marriagesMap.get(childId);
-              if (Array.isArray(marriages) && marriages.length > 0) {
-                // Count unique spouses (can be spouse_name or spouse_person_id)
-                const spouseNames = new Set();
-                marriages.forEach(m => {
-                  if (typeof m === 'string') {
-                    if (m && m.toLowerCase() !== 'unknown') {
-                      spouseNames.add(m);
-                    }
-                  } else if (m && typeof m === 'object') {
-                    // Check for spouse_person_id (from marriages table)
-                    if (m.spouse_person_id && m.spouse_person_id !== childId) {
-                      spouseNames.add(m.spouse_person_id);
-                    } else if (m.person_id && m.person_id !== childId) {
-                      spouseNames.add(m.person_id);
-                    } else if (m.spouse_name && m.spouse_name.toLowerCase() !== 'unknown') {
-                      spouseNames.add(m.spouse_name);
-                    }
-                  }
-                });
-                spouseCount = spouseNames.size;
-              }
-            }
-            
-            // Fallback: Try to get from marriages array in personData
-            if (spouseCount === 0 && childData.marriages && Array.isArray(childData.marriages) && childData.marriages.length > 0) {
-              spouseCount = childData.marriages.filter(m => {
-                const spouseName = typeof m === 'string' ? m : (m.spouse_name || '');
-                return spouseName && spouseName.toLowerCase() !== 'unknown';
-              }).length;
-            }
-            
-            // Fallback: Try to get from spouses field
-            if (spouseCount === 0 && childData.spouses) {
-              const spouses = typeof childData.spouses === 'string' 
-                ? childData.spouses.split(';').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'unknown')
-                : (Array.isArray(childData.spouses) ? childData.spouses.filter(s => s && s.toLowerCase() !== 'unknown') : []);
-              spouseCount = spouses.length;
-            }
-            
-            count += spouseCount;
-            
-            // Recursively count in-laws of descendants
-            countInLawsRecursive(childId);
+        // If string, normalize and validate
+        if (typeof marriage === 'string') {
+          const normalized = marriage.trim();
+          if (!normalized || normalized.toLowerCase() === 'unknown' || normalized === '') {
+            return null;
           }
+          return normalized.toLowerCase(); // Use normalized name as identifier
+        }
+        
+        // If object, prioritize spouse_person_id > spouse_id > spouse_name
+        if (typeof marriage === 'object') {
+          // Prefer spouse_person_id (from marriages table)
+          if (marriage.spouse_person_id && marriage.spouse_person_id !== personId) {
+            return marriage.spouse_person_id;
+          }
+          
+          // Fallback to spouse_id
+          if (marriage.spouse_id && marriage.spouse_id !== personId) {
+            return marriage.spouse_id;
+          }
+          
+          // Last resort: spouse_name (normalized)
+          if (marriage.spouse_name) {
+            const normalized = marriage.spouse_name.trim();
+            if (normalized && normalized.toLowerCase() !== 'unknown' && normalized !== '') {
+              return normalized.toLowerCase();
+            }
+          }
+        }
+        
+        return null;
+      }
+      
+      /**
+       * Get spouses for a person using priority order
+       * @param {string} childId - Person ID
+       * @returns {Array<string>} Array of spouse identifiers
+       */
+      function getSpousesForPerson(childId) {
+        const spouseIds = new Set();
+        const childData = window.personMap.get(childId);
+        if (!childData) return Array.from(spouseIds);
+        
+        // Priority 1: window.marriagesMap (most reliable)
+        if (typeof window.marriagesMap !== 'undefined' && window.marriagesMap.has(childId)) {
+          const marriages = window.marriagesMap.get(childId);
+          if (Array.isArray(marriages) && marriages.length > 0) {
+            marriages.forEach(marriage => {
+              const spouseId = extractSpouseId(marriage, childId);
+              if (spouseId) {
+                spouseIds.add(spouseId);
+              }
+            });
+          }
+        }
+        
+        // Priority 2: childData.marriages array (if marriagesMap didn't have data)
+        if (spouseIds.size === 0 && childData.marriages && Array.isArray(childData.marriages) && childData.marriages.length > 0) {
+          childData.marriages.forEach(marriage => {
+            const spouseId = extractSpouseId(marriage, childId);
+            if (spouseId) {
+              spouseIds.add(spouseId);
+            }
+          });
+        }
+        
+        // Priority 3: childData.spouses string/array (last resort, only if no spouse_id available)
+        if (spouseIds.size === 0 && childData.spouses) {
+          let spouseList = [];
+          if (typeof childData.spouses === 'string') {
+            spouseList = childData.spouses.split(';').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'unknown' && s !== '');
+          } else if (Array.isArray(childData.spouses)) {
+            spouseList = childData.spouses.filter(s => s && typeof s === 'string' && s.toLowerCase() !== 'unknown' && s.trim() !== '');
+          }
+          
+          // Only use spouse_name if we don't have any spouse_id from previous sources
+          // This is less reliable but better than nothing
+          spouseList.forEach(spouseName => {
+            const normalized = spouseName.trim().toLowerCase();
+            if (normalized && normalized !== 'unknown') {
+              spouseIds.add(normalized);
+            }
+          });
+        }
+        
+        return Array.from(spouseIds);
+      }
+      
+      /**
+       * Recursive function to traverse descendants and collect unique spouses
+       * @param {string} currentId - Current person ID
+       * @param {number} currentGeneration - Current generation (for limit check)
+       */
+      function traverseDescendants(currentId, currentGeneration = 0) {
+        // Skip if already visited (avoid cycles)
+        if (visited.has(currentId)) {
+          if (window.DEBUG_STATS === 1) {
+            console.warn('[DEBUG countInLaws] Cycle detected, skipping:', currentId);
+          }
+          return;
+        }
+        
+        // Check max generation limit
+        if (maxGeneration !== null && currentGeneration >= maxGeneration) {
+          return;
+        }
+        
+        visited.add(currentId);
+        
+        // Get children of current person
+        const childrenIds = window.childrenMap.get(currentId) || [];
+        
+        // For each child, get their spouses and add to uniqueSpouses set
+        childrenIds.forEach(childId => {
+          // Skip if already visited
+          if (visited.has(childId)) return;
+          
+          // Get spouses for this child
+          const spouseIds = getSpousesForPerson(childId);
+          spouseIds.forEach(spouseId => {
+            // Don't count spouse = self
+            if (spouseId !== childId && spouseId !== currentId) {
+              uniqueSpouses.add(spouseId);
+            }
+          });
+          
+          // Get child's generation for recursive call
+          const childData = window.personMap.get(childId);
+          const childGeneration = childData?.generation || childData?.generation_level || childData?.generation_number || (currentGeneration + 1);
+          
+          // Recursively traverse descendants
+          const nextGeneration = maxGeneration !== null ? childGeneration : (currentGeneration + 1);
+          traverseDescendants(childId, nextGeneration);
         });
       }
       
-      countInLawsRecursive(personId);
+      // Start traversal from personId's children (not personId itself)
+      // In-laws are spouses of descendants, not of personId itself
+      const childrenIds = window.childrenMap.get(personId) || [];
+      if (childrenIds.length === 0) {
+        return 0; // No children = no in-laws
+      }
+      
+      // Get personId's generation
+      const personData = window.personMap.get(personId);
+      const startGeneration = personData?.generation || personData?.generation_level || personData?.generation_number || 0;
+      
+      // Traverse each child and their descendants
+      childrenIds.forEach(childId => {
+        const childData = window.personMap.get(childId);
+        const childGeneration = childData?.generation || childData?.generation_level || childData?.generation_number || (startGeneration + 1);
+        traverseDescendants(childId, childGeneration);
+      });
+      
+      const count = uniqueSpouses.size;
+      
+      if (window.DEBUG_STATS === 1 && count > 0) {
+        console.log(`[DEBUG countInLaws] ${personId}: ${count} unique in-laws`, {
+          visitedCount: visited.size,
+          maxGeneration,
+          sampleSpouses: Array.from(uniqueSpouses).slice(0, 5)
+        });
+      }
+      
       return count;
     }
     
@@ -2633,14 +2832,19 @@
         if (!node) return;
         
         const gen = node.generation || 0;
-        if (maxGeneration !== null && gen > maxGeneration) return; // Skip if beyond max
+        // Only skip if maxGeneration is set AND generation is beyond it
+        // If maxGeneration is null, include all generations
+        if (maxGeneration !== null && gen > maxGeneration) return;
         
-        if (!buckets.has(gen)) {
-          buckets.set(gen, []);
+        // Only add to buckets if generation is valid (>= 1)
+        if (gen >= 1) {
+          if (!buckets.has(gen)) {
+            buckets.set(gen, []);
+          }
+          buckets.get(gen).push(node);
         }
-        buckets.get(gen).push(node);
         
-        // Traverse children
+        // Traverse children (always traverse, even if node is beyond maxGeneration, to ensure all descendants are counted)
         if (node.children && node.children.length > 0) {
           node.children.forEach(child => traverse(child));
         }
@@ -2692,6 +2896,15 @@
           return null;
         }
         
+        // Debug: Log tree structure
+        console.log('[Genealogy] Person tree built:', {
+          rootId: personTreeRoot.person_id,
+          rootName: personTreeRoot.name,
+          rootChildrenCount: personTreeRoot.children ? personTreeRoot.children.length : 0,
+          totalPersonsInMap: window.personMap ? window.personMap.size : 0,
+          totalChildrenInMap: window.childrenMap ? window.childrenMap.size : 0
+        });
+        
         // Group by generation (always use maxGen = 8 to show all generations)
         cachedGenerationBuckets = groupByGeneration(personTreeRoot, 8);
         generationStatsCacheValid = true;
@@ -2720,17 +2933,37 @@
     
     /**
      * Get cached or compute descendant count for a person
-     * @param {Object} personNode - Person node
+     * Uses countDescendantsFromMap (graph-based) instead of tree structure for reliability
+     * @param {Object} personNode - Person node (optional, kept for backward compatibility)
      * @param {string} personId - Person ID
+     * @param {number|null} maxGeneration - Maximum generation to count (null = no limit, default = null)
      * @returns {number} Descendant count
      */
-    function getCachedDescendantCount(personNode, personId) {
-      const cacheKey = `desc_${personId}`;
+    function getCachedDescendantCount(personNode, personId, maxGeneration = null) {
+      const cacheKey = `desc_${personId}_${maxGeneration || 'all'}`;
+      
+      // Check cache first
       if (cachedStatsPerPerson.has(cacheKey)) {
+        if (window.DEBUG_STATS === 1) {
+          console.log(`[DEBUG getCachedDescendantCount] Cache hit for ${personId}:`, cachedStatsPerPerson.get(cacheKey));
+        }
         return cachedStatsPerPerson.get(cacheKey);
       }
-      const count = personNode ? countDescendants(personNode) : countDescendants({children: []});
+      
+      // Compute using graph-based method (more reliable)
+      const count = countDescendantsFromMap(personId, maxGeneration);
+      
+      // Cache result
       cachedStatsPerPerson.set(cacheKey, count);
+      
+      if (window.DEBUG_STATS === 1) {
+        console.log(`[DEBUG getCachedDescendantCount] Computed for ${personId}:`, count, {
+          maxGeneration,
+          hasPersonNode: !!personNode,
+          fallbackUsed: !personNode
+        });
+      }
+      
       return count;
     }
     
@@ -2802,8 +3035,19 @@
         const persons = generationBuckets.get(gen) || [];
         if (gen === 1) {
           // Render first tab immediately
-          const table = createGenerationTable(persons);
-          content.appendChild(table);
+          const result = createGenerationTable(persons);
+          content.appendChild(result.table);
+          
+          // Store stats for sanity check (if DEBUG_STATS=1)
+          if (window.DEBUG_STATS === 1 && result.stats) {
+            if (!window._generationStatsForSanity) {
+              window._generationStatsForSanity = [];
+            }
+            window._generationStatsForSanity.push(result.stats);
+            
+            // Run sanity check after first tab is rendered
+            sanityCheckGenerationStats(window._generationStatsForSanity);
+          }
         } else {
           // Lazy load: add placeholder, render when tab is clicked
           content.innerHTML = '<div class="tab-loading" style="text-align: center; padding: 20px; color: #666;">Đang tải...</div>';
@@ -2816,6 +3060,11 @@
       // Store generationBuckets for lazy loading
       if (generationBuckets) {
         window._cachedGenerationBucketsForLazy = generationBuckets;
+      }
+      
+      // Reset sanity check stats when tabs are re-rendered
+      if (window.DEBUG_STATS === 1) {
+        window._generationStatsForSanity = [];
       }
     }
     
@@ -2847,10 +3096,27 @@
               const buckets = cachedGenerationBuckets || window._cachedGenerationBucketsForLazy;
               const persons = buckets ? (buckets.get(genNum) || []) : [];
               
-              const table = createGenerationTable(persons);
+              const result = createGenerationTable(persons);
               content.innerHTML = '';
-              content.appendChild(table);
+              content.appendChild(result.table);
               delete content.dataset.gen; // Clear data attribute
+              
+              // Collect stats for sanity check (if DEBUG_STATS=1)
+              if (window.DEBUG_STATS === 1 && result.stats) {
+                if (!window._generationStatsForSanity) {
+                  window._generationStatsForSanity = [];
+                }
+                // Check if this generation's stats already exists
+                const existingIndex = window._generationStatsForSanity.findIndex(s => s.generation === result.stats.generation);
+                if (existingIndex >= 0) {
+                  window._generationStatsForSanity[existingIndex] = result.stats;
+                } else {
+                  window._generationStatsForSanity.push(result.stats);
+                }
+                
+                // Run sanity check with all collected stats
+                sanityCheckGenerationStats(window._generationStatsForSanity);
+              }
             } catch (err) {
               console.error('[Genealogy] Error lazy loading tab:', err);
               content.innerHTML = '<div style="padding: 20px; color: #d32f2f; text-align: center;">Lỗi khi tải dữ liệu</div>';
@@ -2863,9 +3129,66 @@
     }
     
     /**
-     * Create generation table
+     * Sanity check: Compare average descendants between generations
+     * @param {Array} generationStats - Array of {generation, avgDescendants, count, totalDescendants}
+     * @param {number} threshold - Threshold ratio (default 1.5)
+     */
+    function sanityCheckGenerationStats(generationStats, threshold = 1.5) {
+      if (!window.DEBUG_STATS || window.DEBUG_STATS !== 1) {
+        return; // Only run when DEBUG_STATS=1
+      }
+      
+      if (!generationStats || generationStats.length < 2) {
+        return; // Need at least 2 generations to compare
+      }
+      
+      // Sort by generation (ascending)
+      const sorted = generationStats.slice().sort((a, b) => a.generation - b.generation);
+      
+      for (let i = 1; i < sorted.length; i++) {
+        const prevGen = sorted[i - 1];
+        const currGen = sorted[i];
+        
+        // Skip if either generation has no data
+        if (!prevGen.avgDescendants || !currGen.avgDescendants || prevGen.count === 0 || currGen.count === 0) {
+          continue;
+        }
+        
+        const ratio = currGen.avgDescendants / prevGen.avgDescendants;
+        
+        if (ratio > threshold) {
+          console.warn('[DEBUG_STATS] Sanity check warning:', {
+            message: `Generation ${currGen.generation} has avg descendants ${ratio.toFixed(2)}x higher than Generation ${prevGen.generation}`,
+            generation: currGen.generation,
+            prevGeneration: prevGen.generation,
+            currAvgDescendants: currGen.avgDescendants.toFixed(2),
+            prevAvgDescendants: prevGen.avgDescendants.toFixed(2),
+            ratio: ratio.toFixed(2),
+            threshold,
+            suggestion: 'Check childrenMap/build tree - possible data inconsistency or incomplete tree structure',
+            details: {
+              currGen: {
+                generation: currGen.generation,
+                count: currGen.count,
+                totalDescendants: currGen.totalDescendants,
+                avgDescendants: currGen.avgDescendants.toFixed(2)
+              },
+              prevGen: {
+                generation: prevGen.generation,
+                count: prevGen.count,
+                totalDescendants: prevGen.totalDescendants,
+                avgDescendants: prevGen.avgDescendants.toFixed(2)
+              }
+            }
+          });
+        }
+      }
+    }
+    
+    /**
+     * Create generation table and return stats for sanity checks
      * @param {Array} persons - Array of Person nodes
-     * @returns {HTMLElement} Table element
+     * @returns {Object} {table: HTMLElement, stats: {avgDescendants, count, generation, totalDescendants}}
      */
     function createGenerationTable(persons) {
       const table = document.createElement('table');
@@ -2885,16 +3208,35 @@
       
       // Body
       const tbody = document.createElement('tbody');
+      let totalDescendants = 0;
+      const generation = persons.length > 0 ? (persons[0].generation || 0) : 0;
+      
       persons.forEach((person, index) => {
         const row = document.createElement('tr');
         row.dataset.personId = person.person_id;
         row.addEventListener('click', () => selectPerson(person.person_id));
         
-        // Find person in tree to get full node with children structure
-        const personInTree = personTreeRoot ? findPersonInTree(personTreeRoot, person.person_id) : null;
-        // Use cached stats for better performance
-        const descendantCount = getCachedDescendantCount(personInTree, person.person_id);
+        // Use graph-based counting (no longer need personInTree)
+        // This is more reliable as it doesn't depend on personTreeRoot structure
+        const descendantCount = getCachedDescendantCount(null, person.person_id, null);
         const inLawCount = getCachedInLawCount(person.person_id);
+        
+        totalDescendants += descendantCount;
+        
+        // Debug logging (only if DEBUG_STATS is enabled)
+        if (window.DEBUG_STATS === 1 && index < 3) {
+          const personInTree = personTreeRoot ? findPersonInTree(personTreeRoot, person.person_id) : null;
+          console.log(`[DEBUG createGenerationTable] Person ${index + 1}:`, {
+            personId: person.person_id,
+            name: person.name,
+            generation: person.generation,
+            descendantCount: descendantCount,
+            inLawCount: inLawCount,
+            hasPersonInTree: !!personInTree,
+            treeChildrenCount: personInTree?.children?.length || 0,
+            childrenInMap: window.childrenMap?.get(person.person_id) || []
+          });
+        }
         
         row.innerHTML = `
           <td>${index + 1}</td>
@@ -2906,7 +3248,15 @@
       });
       table.appendChild(tbody);
       
-      return table;
+      const avgDescendants = persons.length > 0 ? totalDescendants / persons.length : 0;
+      const stats = {
+        avgDescendants,
+        count: persons.length,
+        generation,
+        totalDescendants
+      };
+      
+      return {table, stats};
     }
     
     /**
@@ -2936,8 +3286,8 @@
       // Get person data from personMap
       if (typeof personMap !== 'undefined' && personMap.has(personId)) {
         const person = personMap.get(personId);
-        const descendantCount = personTreeRoot ? 
-          countDescendants(findPersonInTree(personTreeRoot, personId)) : 0;
+        // Use graph-based counting instead of tree-based
+        const descendantCount = getCachedDescendantCount(null, personId, null);
         
         infoContent.innerHTML = `
           <h4>${escapeHtml(person.name || '')}</h4>

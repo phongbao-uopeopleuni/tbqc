@@ -184,6 +184,19 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
             }
           });
           
+          // Debug: Log marriages coverage
+          if (window.DEBUG_TREE === 1 || window.DEBUG_FAMILY_TREE === 1) {
+            console.log('[DEBUG loadTreeData] Marriages coverage:', {
+              totalPersons: persons.length,
+              personsWithMarriages: marriagesDataMap.size,
+              sampleMarriages: Array.from(marriagesDataMap.entries()).slice(0, 5).map(([id, m]) => ({
+                personId: id,
+                marriagesCount: Array.isArray(m) ? m.length : 0,
+                firstMarriage: Array.isArray(m) && m.length > 0 ? m[0] : null
+              }))
+            });
+          }
+          
           console.log('[Tree] Total marriages loaded:', marriagesDataMap.size);
           
           // Build family graph với đầy đủ data

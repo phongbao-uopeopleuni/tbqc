@@ -2155,6 +2155,7 @@ def sync_genealogy_from_members():
         inserted_relationships = 0
         inserted_marriages = 0
         
+        # First pass: Insert/update all persons
         for member in members_data:
             person_id = member.get('person_id') or member.get('id')
             if not person_id:
@@ -2245,13 +2246,63 @@ def sync_genealogy_from_members():
             
             # Sync marriages if available
             spouses = member.get('spouses') or member.get('marriages') or []
+            spouse_list = []
+            
             if isinstance(spouses, str):
-                # If spouses is a string, skip (need to parse separately)
-                pass
+                # Parse string spouses (format: "Name1; Name2; ...")
+                spouse_names = [s.strip() for s in spouses.split(';') if s.strip() and s.strip().lower() != 'unknown']
+                for spouse_name in spouse_names:
+                    # Try to find spouse_id by name
+                    cursor.execute("SELECT person_id FROM persons WHERE (full_name = %s OR alias = %s) AND person_id != %s", 
+                                 (spouse_name, spouse_name, person_id))
+                    spouse_row = cursor.fetchone()
+                    if spouse_row:
+                        spouse_id = spouse_row['person_id']
+                        spouse_list.append({'spouse_id': spouse_id, 'spouse_name': spouse_name})
+                    else:
+                        # If spouse not found, still add marriage with name (for later matching)
+                        spouse_list.append({'spouse_name': spouse_name})
             elif isinstance(spouses, list):
-                for spouse in spouses:
-                    spouse_id = spouse.get('spouse_id') or spouse.get('person_id') or spouse.get('id') if isinstance(spouse, dict) else None
-                    if spouse_id and spouse_id != person_id:
+                spouse_list = spouses
+                # Insert marriages for list format (will be handled in second pass if spouse_id not found)
+                for spouse in spouse_list:
+                    if isinstance(spouse, dict):
+                        spouse_id = spouse.get('spouse_id') or spouse.get('person_id') or spouse.get('id')
+                        if spouse_id and spouse_id != person_id:
+                            # Check if marriage exists
+                            cursor.execute("""
+                                SELECT * FROM marriages 
+                                WHERE (person_id = %s AND spouse_person_id = %s)
+                                OR (person_id = %s AND spouse_person_id = %s)
+                            """, (person_id, spouse_id, spouse_id, person_id))
+                            if not cursor.fetchone():
+                                try:
+                                    cursor.execute("""
+                                        INSERT INTO marriages (person_id, spouse_person_id)
+                                        VALUES (%s, %s)
+                                    """, (person_id, spouse_id))
+                                    inserted_marriages += 1
+                                except Error:
+                                    # Marriage already exists, skip
+                                    pass
+        
+        # Second pass: Sync marriages from string spouses (after all persons are inserted)
+        for member in members_data:
+            person_id = member.get('person_id') or member.get('id')
+            if not person_id:
+                continue
+            
+            spouses = member.get('spouses') or member.get('marriages') or []
+            if isinstance(spouses, str):
+                # Parse string spouses (format: "Name1; Name2; ...")
+                spouse_names = [s.strip() for s in spouses.split(';') if s.strip() and s.strip().lower() != 'unknown']
+                for spouse_name in spouse_names:
+                    # Try to find spouse_id by name (now all persons should be inserted)
+                    cursor.execute("SELECT person_id FROM persons WHERE (full_name = %s OR alias = %s) AND person_id != %s", 
+                                 (spouse_name, spouse_name, person_id))
+                    spouse_row = cursor.fetchone()
+                    if spouse_row:
+                        spouse_id = spouse_row['person_id']
                         # Check if marriage exists
                         cursor.execute("""
                             SELECT * FROM marriages 

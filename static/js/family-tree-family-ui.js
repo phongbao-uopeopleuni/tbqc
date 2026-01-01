@@ -421,7 +421,51 @@ function buildFamilyTree(familyGraph, maxGeneration) {
           processedChildIds.add(childId);
         } else {
           // Child không có family riêng (chưa có con hoặc chưa kết hôn)
-          console.warn('[FamilyTree] Child has no own family (not a spouse):', childId);
+          // Tạo một family node đơn lẻ cho child này (single person family)
+          // Để đảm bảo tất cả children đều được hiển thị
+          const singlePersonFamilyId = `F-${childId}-unknown-single`;
+          if (!familyNodeMap.has(singlePersonFamilyId)) {
+            const childPerson = personNodeMap.get(childId);
+            if (childPerson) {
+              const singleFamily = {
+                id: singlePersonFamilyId,
+                spouse1Id: childId,
+                spouse2Id: null,
+                spouse1Name: childPerson.name || childPerson.full_name || '',
+                spouse2Name: null,
+                spouse1Gender: childPerson.gender || null,
+                spouse2Gender: null,
+                generation: childPerson.generation || childPerson.generation_number || childPerson.generation_level || (family.generation ? family.generation + 1 : 0),
+                children: [],
+                label: null
+              };
+              familyNodeMap.set(singlePersonFamilyId, singleFamily);
+            } else {
+              // Nếu không tìm thấy trong personNodeMap, vẫn tạo family node với thông tin tối thiểu
+              const singleFamily = {
+                id: singlePersonFamilyId,
+                spouse1Id: childId,
+                spouse2Id: null,
+                spouse1Name: childId, // Fallback to ID if name not available
+                spouse2Name: null,
+                spouse1Gender: null,
+                spouse2Gender: null,
+                generation: family.generation ? family.generation + 1 : 0,
+                children: [],
+                label: null
+              };
+              familyNodeMap.set(singlePersonFamilyId, singleFamily);
+            }
+          }
+          
+          // Add to family group để hiển thị
+          if (!childrenByFamily.has(singlePersonFamilyId)) {
+            childrenByFamily.set(singlePersonFamilyId, new Set());
+          }
+          childrenByFamily.get(singlePersonFamilyId).add(childId);
+          processedChildIds.add(childId);
+          
+          console.log('[FamilyTree] Created single-person family for child without spouse:', childId);
         }
       });
       
@@ -539,6 +583,24 @@ function buildFamilyTree(familyGraph, maxGeneration) {
       console.warn('[FamilyTree] Unmapped children:', unmapped);
     }
   }
+  
+  // Debug: Count total family nodes and person nodes
+  console.log('[FamilyTree] Total family nodes in graph:', familyNodes.length);
+  console.log('[FamilyTree] Total person nodes in graph:', personNodes.length);
+  
+  // Debug: Check for missing children in tree
+  function countChildrenInTree(node) {
+    if (!node) return 0;
+    let count = node.children ? node.children.length : 0;
+    if (node.children) {
+      node.children.forEach(child => {
+        count += countChildrenInTree(child);
+      });
+    }
+    return count;
+  }
+  const totalChildrenInTree = countChildrenInTree(parentNode0 || treeRoot);
+  console.log('[FamilyTree] Total children nodes in built tree:', totalChildrenInTree);
   
   return parentNode0 || treeRoot;
 }
