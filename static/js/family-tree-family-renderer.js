@@ -18,36 +18,40 @@ function renderFamilyNode(familyNode, x, y, options = {}) {
   const {
     isHighlighted = false,
     isCollapsed = false,
+    branchColor = "#64748b",
     onClick = null,
     onToggleCollapse = null
   } = options;
   
   const familyDiv = document.createElement('div');
-  familyDiv.className = 'family-node';
+  familyDiv.className = 'family-node branch-colored';
   familyDiv.style.position = 'absolute';
   familyDiv.style.left = x + 'px';
   familyDiv.style.top = y + 'px';
   familyDiv.style.width = '280px'; // Width cho couple
   familyDiv.style.minHeight = '120px';
-  familyDiv.style.border = '2px solid #333';
   familyDiv.style.borderRadius = '12px';
   familyDiv.style.backgroundColor = '#fff';
-  familyDiv.style.boxShadow = isHighlighted 
-    ? '0 0 15px rgba(0, 102, 255, 0.5)' 
-    : '0 2px 8px rgba(0,0,0,0.1)';
   familyDiv.style.cursor = 'pointer';
   familyDiv.style.transition = 'all 0.2s ease';
   
-  // Highlight border
+  // Apply branch color
+  familyDiv.style.setProperty("--branch-color", branchColor);
+  
+  // Border: highlight overrides branch color
   if (isHighlighted) {
     familyDiv.style.border = '3px solid #0066FF';
+    familyDiv.style.boxShadow = '0 0 15px rgba(0, 102, 255, 0.5)';
+  } else {
+    familyDiv.style.border = `2px solid ${branchColor}`;
+    familyDiv.style.boxShadow = '0 8px 18px rgba(0,0,0,.10)';
   }
   
   // Family ID attribute
   familyDiv.setAttribute('data-family-id', familyNode.id);
   familyDiv.setAttribute('data-generation', familyNode.generation || 0);
   
-  // Container cho 2 nửa
+  // Container cho 2 nửa (hoặc 1 nửa nếu không có spouse2)
   const container = document.createElement('div');
   container.style.display = 'flex';
   container.style.width = '100%';
@@ -55,26 +59,35 @@ function renderFamilyNode(familyNode, x, y, options = {}) {
   container.style.borderRadius = '10px';
   container.style.overflow = 'hidden';
   
+  // Kiểm tra xem có spouse2 hợp lệ không
+  const spouse1Name = (familyNode.spouse1Name || '').trim();
+  const spouse2Name = (familyNode.spouse2Name || '').trim();
+  const hasSpouse2 = spouse2Name !== '' && 
+                     spouse2Name.toLowerCase() !== 'unknown' &&
+                     spouse2Name !== spouse1Name; // Không hiển thị nếu trùng tên
+  
   // Nửa trái: Chồng (Nam) - Blue
   const spouse1Div = createSpouseHalf(
     familyNode.spouse1Name || 'Unknown',
     familyNode.spouse1Gender || '',
     familyNode.spouse1Id,
-    'left',
+    hasSpouse2 ? 'left' : 'full', // Full width nếu không có spouse2
     '#E3F2FD' // Light blue
   );
   
-  // Nửa phải: Vợ (Nữ) - Pink
-  const spouse2Div = createSpouseHalf(
-    familyNode.spouse2Name || 'Unknown',
-    familyNode.spouse2Gender || '',
-    familyNode.spouse2Id,
-    'right',
-    '#FCE4EC' // Light pink
-  );
-  
   container.appendChild(spouse1Div);
-  container.appendChild(spouse2Div);
+  
+  // Chỉ render spouse2 nếu có spouse2 hợp lệ
+  if (hasSpouse2) {
+    const spouse2Div = createSpouseHalf(
+      familyNode.spouse2Name,
+      familyNode.spouse2Gender || '',
+      familyNode.spouse2Id,
+      'right',
+      '#FCE4EC' // Light pink
+    );
+    container.appendChild(spouse2Div);
+  }
   
   // Badge: Đời, Chi, Thứ, Vợ cả/Vợ thứ
   const badgeDiv = createFamilyBadge(familyNode);
@@ -148,6 +161,11 @@ function createSpouseHalf(name, gender, personId, side, backgroundColor) {
   halfDiv.style.textAlign = 'center';
   halfDiv.style.minHeight = '100px';
   
+  // Nếu side là 'full', không cần borderRight
+  if (side === 'full') {
+    halfDiv.style.borderRight = 'none';
+  }
+  
   // Name
   const nameDiv = document.createElement('div');
   nameDiv.style.fontWeight = '600';
@@ -158,14 +176,7 @@ function createSpouseHalf(name, gender, personId, side, backgroundColor) {
   nameDiv.textContent = name;
   halfDiv.appendChild(nameDiv);
   
-  // Gender indicator
-  if (gender) {
-    const genderDiv = document.createElement('div');
-    genderDiv.style.fontSize = '11px';
-    genderDiv.style.color = '#666';
-    genderDiv.textContent = gender === 'Nam' ? '♂' : '♀';
-    halfDiv.appendChild(genderDiv);
-  }
+  // Gender indicator - REMOVED per user request
   
   // Person ID attribute
   if (personId) {
@@ -193,12 +204,7 @@ function createFamilyBadge(familyNode) {
     badges.push(`Chi ${familyNode.branch}`);
   }
   
-  // Vợ cả/Vợ thứ badge
-  if (familyNode.label) {
-    badges.push(familyNode.label);
-  } else if (familyNode.marriageOrder > 0) {
-    badges.push(`Vợ thứ ${familyNode.marriageOrder + 1}`);
-  }
+  // Vợ cả/Vợ thứ badge - REMOVED per user request
   
   if (badges.length === 0) {
     return null;

@@ -9,6 +9,94 @@
 @import url('./footer.css');
 
 /* ============================================
+   FLOATING CHAT BUTTON
+   ============================================ */
+.floating-chat-button {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #0084ff 0%, #0066cc 100%);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 132, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: white;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.floating-chat-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 132, 255, 0.6);
+  background: linear-gradient(135deg, #0099ff 0%, #0077dd 100%);
+}
+
+.floating-chat-button:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .floating-chat-button {
+    bottom: 20px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+}
+
+/* ============================================
+   FLOATING ZALO BUTTON
+   ============================================ */
+.floating-zalo-button {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #0180C7 0%, #0066A3 100%);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(1, 128, 199, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  color: white;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.floating-zalo-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(1, 128, 199, 0.6);
+  background: linear-gradient(135deg, #0190D7 0%, #0076B3 100%);
+}
+
+.floating-zalo-button:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .floating-zalo-button {
+    bottom: 90px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+}
+
+/* ============================================
    UTILITY CLASSES
    ============================================ */
 

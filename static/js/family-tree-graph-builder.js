@@ -149,9 +149,12 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
         // Tìm spouse ID từ name nếu không có spouse_id
         let actualSpouseId = spouseId;
         if (!actualSpouseId && spouseName) {
-          // Tìm trong personNodeMap theo name
+          // Tìm trong personNodeMap theo name (case-insensitive, trim whitespace)
+          const normalizedSpouseName = spouseName.trim().toLowerCase();
           for (const [pid, pnode] of personNodeMap.entries()) {
-            if (pnode.name === spouseName || pnode.full_name === spouseName) {
+            const nodeName = (pnode.name || '').trim().toLowerCase();
+            const nodeFullName = (pnode.full_name || '').trim().toLowerCase();
+            if (nodeName === normalizedSpouseName || nodeFullName === normalizedSpouseName) {
               actualSpouseId = pid;
               break;
             }
@@ -161,8 +164,17 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
         if (!actualSpouseId && !spouseName) return; // Skip nếu không có cả ID và name
         
         // Tạo family node cho marriage này
-        const spouse1Id = person.gender === 'Nam' ? person.id : actualSpouseId;
-        const spouse2Id = person.gender === 'Nam' ? actualSpouseId : person.id;
+        // Xác định spouse1Id và spouse2Id dựa trên gender (Nam = spouse1, Nữ = spouse2)
+        let spouse1Id, spouse2Id;
+        if (person.gender === 'Nam') {
+          // Person là Nam -> person là spouse1, actualSpouseId là spouse2
+          spouse1Id = person.id;
+          spouse2Id = actualSpouseId || null;
+        } else {
+          // Person là Nữ -> actualSpouseId là spouse1, person là spouse2
+          spouse1Id = actualSpouseId || null;
+          spouse2Id = person.id;
+        }
         
         // Nếu chỉ có 1 spouse (single parent), vẫn tạo family node với Unknown
         const marriageFamilyId = generateFamilyId(spouse1Id || person.id, spouse2Id || null, index);
@@ -172,22 +184,27 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
           return;
         }
         
-        const spouse1 = spouse1Id ? personNodeMap.get(spouse1Id) : person;
+        const spouse1 = spouse1Id ? personNodeMap.get(spouse1Id) : null;
         const spouse2 = spouse2Id ? personNodeMap.get(spouse2Id) : null;
         
+        // Nếu spouse1 là null, thì person phải là spouse1 (vì person.gender === 'Nam')
+        // Nếu spouse2 là null, thì person phải là spouse2 (vì person.gender === 'Nữ')
+        const finalSpouse1 = spouse1 || (spouse1Id === person.id ? person : null);
+        const finalSpouse2 = spouse2 || (spouse2Id === person.id ? person : null);
+        
         // Tìm children của marriage này (nếu có)
-        const marriageChildren = actualSpouseId 
-          ? findMarriageChildren(spouse1Id || person.id, spouse2Id, childrenMap, parentMap)
+        const marriageChildren = (spouse1Id && spouse2Id)
+          ? findMarriageChildren(spouse1Id, spouse2Id, childrenMap, parentMap)
           : (childrenMap.get(person.id) || []);
         
         const marriageFamilyNode = {
           id: marriageFamilyId,
           spouse1Id: spouse1Id || person.id,
-          spouse2Id: spouse2Id,
-          spouse1Name: spouse1 ? spouse1.name : person.name,
-          spouse2Name: spouse2 ? spouse2.name : (spouseName || 'Unknown'),
-          spouse1Gender: spouse1 ? spouse1.gender : person.gender,
-          spouse2Gender: spouse2 ? spouse2.gender : null,
+          spouse2Id: spouse2Id || null,
+          spouse1Name: finalSpouse1 ? finalSpouse1.name : (person.gender === 'Nam' ? person.name : (spouseName || 'Unknown')),
+          spouse2Name: finalSpouse2 ? finalSpouse2.name : (person.gender === 'Nữ' ? person.name : (spouseName || 'Unknown')),
+          spouse1Gender: finalSpouse1 ? finalSpouse1.gender : (person.gender === 'Nam' ? person.gender : null),
+          spouse2Gender: finalSpouse2 ? finalSpouse2.gender : (person.gender === 'Nữ' ? person.gender : null),
           marriageOrder: index,
           generation: person.generation,
           children: marriageChildren,

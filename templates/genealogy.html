@@ -213,6 +213,85 @@
       margin: 0;
     }
     
+    /* Generation Stats Tabs */
+    .generation-tabs {
+      margin-top: var(--space-4);
+    }
+    
+    .tab-buttons {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+      border-bottom: 2px solid var(--color-border);
+      flex-wrap: wrap;
+    }
+    
+    .tab-button {
+      padding: var(--space-3) var(--space-5);
+      background: var(--color-surface);
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: var(--font-size-base);
+      color: var(--color-text);
+      transition: all 0.2s;
+      margin-bottom: -2px;
+    }
+    
+    .tab-button:hover {
+      background: var(--color-surface-hover);
+      color: var(--color-primary);
+    }
+    
+    .tab-button.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+      background: var(--color-surface);
+    }
+    
+    .tab-content {
+      display: none;
+      padding: var(--space-4);
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .generation-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--space-4);
+    }
+    
+    .generation-table thead {
+      background: var(--color-primary);
+      color: white;
+    }
+    
+    .generation-table th,
+    .generation-table td {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      border: 1px solid var(--color-border);
+    }
+    
+    .generation-table tbody tr:nth-child(even) {
+      background: var(--color-surface);
+    }
+    
+    .generation-table tbody tr:hover {
+      background: var(--color-surface-hover);
+      cursor: pointer;
+    }
+    
+    .generation-table th {
+      font-weight: var(--font-weight-semibold);
+      position: sticky;
+      top: 0;
+    }
+    
     .close-btn {
       background: none;
       border: none;
@@ -394,6 +473,32 @@
       }
     }
     
+    /* Branch colored nodes - border theo branch color */
+    #treeContainer .node.branch-colored,
+    #treeContainer .family-node.branch-colored {
+      border: 2px solid var(--branch-color) !important;
+      box-shadow: 0 8px 18px rgba(0,0,0,.10);
+    }
+    
+    #treeContainer .node.branch-colored:hover,
+    #treeContainer .family-node.branch-colored:hover {
+      box-shadow: 0 12px 24px rgba(0,0,0,.15);
+      transform: translateY(-2px);
+    }
+    
+    /* Branch badge (optional) */
+    .branch-badge {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--branch-color);
+      border: 2px solid #fff;
+      z-index: 15;
+    }
+    
     #treeContainer .node-name {
       font-size: 11px;
       font-weight: var(--font-weight-semibold);
@@ -553,7 +658,7 @@
     /* Connector Styles - Cải thiện để đẹp hơn */
     #treeContainer .connector {
       position: absolute;
-      z-index: 1;
+      z-index: 2;
       pointer-events: none;
       transition: all 0.3s ease;
     }
@@ -698,6 +803,16 @@
                 <input type="text" class="input" id="searchInput" placeholder="Vui lòng nhập tên cần tìm kiếm">
               </div>
               <button id="searchBtn" class="btn btn-primary">Tìm kiếm</button>
+              <button id="syncBtn" class="btn btn-secondary" title="Đồng bộ dữ liệu từ database chuẩn">🔄 Đồng bộ</button>
+              <button id="updateInfoBtn" class="btn btn-secondary" title="Cập nhật thông tin hôn phối và tổ tiên">📝 Cập nhật thông tin</button>
+              <button id="exportPdfBtn" class="btn btn-secondary" title="Xuất Family Tree ra file PDF">📄 Xuất PDF</button>
+              
+              <!-- Zoom Controls -->
+              <div style="display: flex; gap: var(--space-2); align-items: center; margin-left: var(--space-2); border-left: 1px solid var(--color-border); padding-left: var(--space-2);">
+                <button id="zoomOutBtn" class="btn btn-secondary" title="Thu nhỏ" onclick="if(typeof window.zoomOut === 'function') window.zoomOut();">🔍-</button>
+                <button id="resetZoomBtn" class="btn btn-secondary" title="Đặt lại zoom mặc định" onclick="if(typeof window.resetZoom === 'function') window.resetZoom();">⌂</button>
+                <button id="zoomInBtn" class="btn btn-secondary" title="Phóng to" onclick="if(typeof window.zoomIn === 'function') window.zoomIn();">🔍+</button>
+              </div>
             </div>
             
             <!-- Search Results -->
@@ -872,6 +987,36 @@
         </div>
       </div>
 
+      <!-- Phần bảng thống kê theo thế hệ (Tabs + Table) -->
+      <div class="generation-stats-panel" style="margin-top: var(--space-8);">
+        <div class="card lineage-card">
+          <div class="lineage-header">
+            <h2>📊 Thống kê theo thế hệ</h2>
+            <p>Xem danh sách thành viên và số lượng con cháu theo từng thế hệ.</p>
+          </div>
+          
+          <!-- Tabs -->
+          <div id="generationTabs" class="generation-tabs" style="display: none;">
+            <div class="tab-buttons" id="tabButtons" style="display: flex; gap: var(--space-2); margin-bottom: var(--space-4); border-bottom: 2px solid var(--color-border); flex-wrap: wrap;">
+              <!-- Tabs will be generated dynamically -->
+            </div>
+            
+            <!-- Tab Contents -->
+            <div id="tabContents" class="tab-contents">
+              <!-- Tab content will be generated dynamically -->
+            </div>
+          </div>
+          
+          <div id="generationStatsLoading" style="text-align: center; padding: var(--space-5); color: var(--color-text-muted);">
+            Đang tải thống kê...
+          </div>
+          
+          <div id="generationStatsError" style="display: none; text-align: center; padding: var(--space-5); color: var(--color-error);">
+            Không thể tải thống kê. Vui lòng thử lại sau.
+          </div>
+        </div>
+      </div>
+
 
       <!-- Section: Member Stats -->
       <section id="stats" style="margin-top: var(--space-10);">
@@ -966,6 +1111,9 @@
   <!-- Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
+  <!-- PDF Export Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
   <!-- Leaflet for maps -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -982,6 +1130,221 @@
   <!-- Tree controls event listeners -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Sync button handler
+      const syncBtn = document.getElementById('syncBtn');
+      if (syncBtn) {
+        syncBtn.addEventListener('click', async () => {
+          // Disable button during sync
+          syncBtn.disabled = true;
+          syncBtn.textContent = 'Đang đồng bộ...';
+          
+          try {
+            const response = await fetch('/api/genealogy/sync', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              // Show success message
+              alert(`Đồng bộ thành công!\n\n` +
+                    `Thành viên: ${result.stats.persons}\n` +
+                    `Quan hệ: ${result.stats.relationships}\n` +
+                    `Hôn nhân: ${result.stats.marriages}\n` +
+                    `\n${result.message}`);
+              
+              // Refresh tree after sync
+              if (typeof refreshTree === 'function') {
+                await refreshTree();
+              }
+            } else {
+              alert(`Lỗi đồng bộ: ${result.error || 'Lỗi không xác định'}`);
+            }
+          } catch (error) {
+            console.error('Sync error:', error);
+            alert(`Lỗi khi đồng bộ: ${error.message}`);
+          } finally {
+            // Re-enable button
+            syncBtn.disabled = false;
+            syncBtn.textContent = '🔄 Đồng bộ';
+          }
+        });
+      }
+      
+      // Update Info button handler
+      const updateInfoBtn = document.getElementById('updateInfoBtn');
+      if (updateInfoBtn) {
+        updateInfoBtn.addEventListener('click', async () => {
+          // Disable button during update
+          updateInfoBtn.disabled = true;
+          updateInfoBtn.textContent = 'Đang cập nhật...';
+          
+          try {
+            const response = await fetch('/api/genealogy/update-info', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              // Show success message
+              let message = `Cập nhật thông tin thành công!\n\n`;
+              
+              if (result.results.marriages_added && result.results.marriages_added.length > 0) {
+                message += `Hôn phối đã thêm:\n`;
+                result.results.marriages_added.forEach(m => {
+                  message += `  - ${m}\n`;
+                });
+                message += `\n`;
+              }
+              
+              if (result.results.relationships_added && result.results.relationships_added.length > 0) {
+                message += `Quan hệ đã thêm:\n`;
+                result.results.relationships_added.forEach(r => {
+                  message += `  - ${r}\n`;
+                });
+                message += `\n`;
+              }
+              
+              if (result.results.errors && result.results.errors.length > 0) {
+                message += `Lỗi:\n`;
+                result.results.errors.forEach(e => {
+                  message += `  - ${e}\n`;
+                });
+              }
+              
+              message += `\n${result.message}`;
+              
+              alert(message);
+              
+              // Refresh tree after update
+              if (typeof refreshTree === 'function') {
+                await refreshTree();
+              } else if (typeof loadTreeData === 'function') {
+                const genFilter = document.getElementById('genFilter');
+                const maxGen = genFilter ? parseInt(genFilter.value) : 5;
+                const container = document.getElementById('treeContainer');
+                if (container) {
+                  container.innerHTML = '<div class="tree-loading">Đang tải lại cây gia phả...</div>';
+                }
+                const { graph: newGraph } = await loadTreeData(maxGen, 'P-1-1');
+                if (newGraph && typeof renderDefaultTree === 'function') {
+                  renderDefaultTree(newGraph, maxGen);
+                }
+              }
+            } else {
+              alert(`Lỗi cập nhật: ${result.error || 'Lỗi không xác định'}`);
+            }
+          } catch (error) {
+            console.error('Update info error:', error);
+            alert(`Lỗi khi cập nhật: ${error.message}`);
+          } finally {
+            // Re-enable button
+            updateInfoBtn.disabled = false;
+            updateInfoBtn.textContent = '📝 Cập nhật thông tin';
+          }
+        });
+      }
+      
+      // Export PDF button handler
+      const exportPdfBtn = document.getElementById('exportPdfBtn');
+      if (exportPdfBtn) {
+        exportPdfBtn.addEventListener('click', async () => {
+          try {
+            exportPdfBtn.disabled = true;
+            exportPdfBtn.textContent = 'Đang xuất PDF...';
+            
+            const genFilter = document.getElementById('genFilter');
+            const maxGen = genFilter ? parseInt(genFilter.value) : 5;
+            
+            // Get tree container
+            const treeContainer = document.getElementById('treeContainer');
+            if (!treeContainer) {
+              alert('Không tìm thấy cây gia phả để xuất PDF');
+              return;
+            }
+            
+            // Find the actual tree element
+            const treeElement = treeContainer.querySelector('.tree');
+            if (!treeElement) {
+              alert('Không tìm thấy nội dung cây gia phả');
+              return;
+            }
+            
+            // Get the tree container wrapper
+            const treeWrapper = treeContainer.closest('.tree-container-wrapper') || treeContainer;
+            
+            // Create a temporary container for PDF export
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.position = 'absolute';
+            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.backgroundColor = '#fff';
+            pdfContainer.style.padding = '20px';
+            
+            // Clone the tree wrapper content
+            const clonedWrapper = treeWrapper.cloneNode(true);
+            // Remove zoom transform for PDF
+            const clonedTree = clonedWrapper.querySelector('.tree');
+            if (clonedTree) {
+              clonedTree.style.transform = 'none';
+            }
+            clonedWrapper.style.position = 'relative';
+            clonedWrapper.style.width = '100%';
+            pdfContainer.appendChild(clonedWrapper);
+            document.body.appendChild(pdfContainer);
+            
+            // Get dimensions after appending
+            await new Promise(resolve => setTimeout(resolve, 100)); // Wait for layout
+            const width = clonedWrapper.scrollWidth || treeElement.scrollWidth;
+            const height = clonedWrapper.scrollHeight || treeElement.scrollHeight;
+            
+            // PDF options
+            const opt = {
+              margin: [5, 5, 5, 5],
+              filename: `Gia_pha_Den_doi_${maxGen}_${new Date().toISOString().slice(0, 10)}.pdf`,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { 
+                scale: 1.5,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                width: width,
+                height: height
+              },
+              jsPDF: { 
+                unit: 'mm', 
+                format: [Math.max(width * 0.264583, 210), Math.max(height * 0.264583, 297)], // Convert px to mm, min A4
+                orientation: width > height ? 'landscape' : 'portrait'
+              }
+            };
+            
+            // Export to PDF
+            if (typeof html2pdf !== 'undefined') {
+              await html2pdf().set(opt).from(pdfContainer).save();
+              alert(`Đã xuất PDF thành công!\nFile: Gia_pha_Den_doi_${maxGen}_${new Date().toISOString().slice(0, 10)}.pdf`);
+            } else {
+              alert('Thư viện xuất PDF chưa được tải. Vui lòng refresh trang và thử lại.');
+            }
+            
+            // Clean up
+            document.body.removeChild(pdfContainer);
+            
+          } catch (error) {
+            console.error('Error exporting PDF:', error);
+            alert(`Lỗi khi xuất PDF: ${error.message}`);
+          } finally {
+            exportPdfBtn.disabled = false;
+            exportPdfBtn.textContent = '📄 Xuất PDF';
+          }
+        });
+      }
+      
       // GenFilter change handler
       const genFilter = document.getElementById('genFilter');
       if (genFilter) {
@@ -999,6 +1362,11 @@
             // Load lại tree data với maxGeneration mới
             if (typeof loadTreeData === 'function') {
               const { graph: newGraph } = await loadTreeData(maxGen, 'P-1-1');
+              
+              // Render generation tabs (will use cache if available)
+              // Note: We don't rebuild generation stats here, only when data changes
+              renderGenerationTabs(); // Will load from cache or build if needed
+              
               if (newGraph && typeof renderDefaultTree === 'function') {
                 renderDefaultTree(newGraph, maxGen);
               }
@@ -1880,54 +2248,43 @@
 
     /**
      * Populate generation filter dropdown with available generations
-     * Sorts numerically and removes duplicates
+     * Creates options from 1 to maxGenFromDB (based on DB data)
      */
     function populateGenerationFilter(generationCounts) {
       const genFilter = document.getElementById('genFilter');
       if (!genFilter) return;
       
-      // Extract unique generation levels from data
-      const availableGenerations = new Set();
-      if (generationCounts && Array.isArray(generationCounts)) {
-        generationCounts.forEach(gen => {
-          if (gen.generation_level && gen.generation_level >= 1) {
-            availableGenerations.add(gen.generation_level);
-          }
-        });
-      }
-      
-      // If no data, use default range 1-8
-      if (availableGenerations.size === 0) {
-        for (let i = 1; i <= 8; i++) {
-          availableGenerations.add(i);
+      // Calculate maxGenFromDB from generationCounts
+      let maxGenFromDB = 1;
+      if (generationCounts && Array.isArray(generationCounts) && generationCounts.length > 0) {
+        const nums = generationCounts
+          .map(g => Number(g.generation_level))
+          .filter(n => Number.isFinite(n) && n >= 1);
+        if (nums.length > 0) {
+          maxGenFromDB = Math.max(...nums);
         }
       }
-      
-      // Create options array
-      const options = Array.from(availableGenerations).map(genLevel => ({
-        value: genLevel,
-        text: `Đến đời ${genLevel}`
-      }));
-      
-      // Sort numerically
-      const sortedOptions = sortGenerationOptions(options);
+
+      // Preserve current selection if possible
+      const current = parseInt(genFilter.value, 10);
+      const hasCurrent = Number.isFinite(current) && current >= 1;
       
       // Clear existing options
       genFilter.innerHTML = '';
       
-      // Add sorted options
-      sortedOptions.forEach((opt, index) => {
+      // Create options from 1 to maxGenFromDB
+      for (let i = 1; i <= maxGenFromDB; i++) {
         const option = document.createElement('option');
-        option.value = opt.value;
-        option.textContent = opt.text;
-        // Select the last option (highest generation) by default, or option 5 if exists
-        if (index === sortedOptions.length - 1 || opt.value === 5) {
-          option.selected = true;
-        }
+        option.value = String(i);
+        option.textContent = `Đến đời ${i}`;
         genFilter.appendChild(option);
-      });
-      
-      console.log('[Genealogy] Populated generation filter:', sortedOptions.map(o => o.text));
+      }
+
+      // Default select: keep current if valid else select maxGenFromDB
+      const target = hasCurrent ? Math.min(current, maxGenFromDB) : maxGenFromDB;
+      genFilter.value = String(target);
+
+      console.log('[Genealogy] GenFilter populated:', { maxGenFromDB, selected: target });
     }
 
     async function loadMemberStats() {
@@ -2093,9 +2450,551 @@
       });
     }
 
-    // Load stats on page load
-    document.addEventListener('DOMContentLoaded', () => {
+    // ============================================================
+    // MODEL: Person Tree Structure & Algorithms
+    // ============================================================
+    
+    // Global state
+    let personTreeRoot = null; // Root Person node
+    let selectedPersonId = null; // Currently selected person ID
+    let rootPersonId = 'P-1-1'; // Root person ID (Vua Minh Mạng)
+    
+    // Cache for generation stats to avoid rebuilding on every render
+    let cachedGenerationBuckets = null; // Cached generation buckets (Map<number, Person[]>)
+    let generationStatsCacheValid = false; // Flag to check if cache is valid
+    
+    /**
+     * Build Person Tree from personMap and childrenMap
+     * Note: personMap and childrenMap should be available from family-tree-core.js
+     * @param {string} rootId - Root person ID
+     * @param {Map} personMap - Map personId -> Person data (from global scope)
+     * @param {Map} childrenMap - Map parentId -> [childIds] (from global scope)
+     * @returns {Object|null} Root Person node
+     */
+    function buildPersonTree(rootId, personMap, childrenMap) {
+      // Use global personMap and childrenMap if not provided
+      if (!personMap && typeof window.personMap !== 'undefined') personMap = window.personMap;
+      if (!childrenMap && typeof window.childrenMap !== 'undefined') childrenMap = window.childrenMap;
+      if (!rootId || !personMap || !childrenMap) return null;
+      
+      const visited = new Set();
+      
+      function buildNode(personId) {
+        if (!personId || visited.has(personId)) return null;
+        visited.add(personId);
+        
+        const personData = personMap.get(personId);
+        if (!personData) return null;
+        
+        // Extract birth year from birth_date_solar if available
+        let birthYear = null;
+        if (personData.birth_date_solar) {
+          const dateStr = String(personData.birth_date_solar);
+          const yearMatch = dateStr.match(/^(\d{4})/);
+          if (yearMatch) {
+            birthYear = parseInt(yearMatch[1], 10);
+          }
+        }
+        
+        const personNode = {
+          person_id: personId,
+          name: personData.name || personData.full_name || '',
+          birth_year: birthYear,
+          generation: personData.generation || 0,
+          children: []
+        };
+        
+        // Build children recursively
+        const childrenIds = childrenMap.get(personId) || [];
+        childrenIds.forEach(childId => {
+          const childNode = buildNode(childId);
+          if (childNode) {
+            personNode.children.push(childNode);
+          }
+        });
+        
+        return personNode;
+      }
+      
+      return buildNode(rootId);
+    }
+    
+    /**
+     * Count total descendants (recursive)
+     * @param {Object} node - Person node
+     * @returns {number} Total descendant count (including direct children)
+     */
+    function countDescendants(node) {
+      if (!node || !node.children) return 0;
+      
+      let count = node.children.length; // Direct children
+      node.children.forEach(child => {
+        count += countDescendants(child); // Recursive count
+      });
+      
+      return count;
+    }
+    
+    /**
+     * Count sons-in-law and daughters-in-law (rể và dâu) based on family tree
+     * @param {string} personId - Person ID
+     * @returns {number} Total count of in-laws (spouses of children and descendants)
+     */
+    function countInLaws(personId) {
+      if (!personId || typeof window.personMap === 'undefined' || typeof window.childrenMap === 'undefined') return 0;
+      
+      // Get children of this person
+      const childrenIds = window.childrenMap.get(personId) || [];
+      if (childrenIds.length === 0) return 0;
+      
+      let count = 0;
+      const visited = new Set();
+      
+      // Recursive function to count in-laws
+      function countInLawsRecursive(personId) {
+        if (visited.has(personId)) return;
+        visited.add(personId);
+        
+        const childrenIds = window.childrenMap.get(personId) || [];
+        childrenIds.forEach(childId => {
+          // Get child's person data
+          const childData = window.personMap.get(childId);
+          if (childData) {
+            // Count spouses of this child (dâu/rể)
+            let spouseCount = 0;
+            
+            // Try to get from marriages array
+            if (childData.marriages && Array.isArray(childData.marriages) && childData.marriages.length > 0) {
+              spouseCount = childData.marriages.filter(m => {
+                const spouseName = typeof m === 'string' ? m : (m.spouse_name || '');
+                return spouseName && spouseName.toLowerCase() !== 'unknown';
+              }).length;
+            } else if (childData.spouses) {
+              // If spouses is a string, split it
+              const spouses = typeof childData.spouses === 'string' 
+                ? childData.spouses.split(';').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'unknown')
+                : (Array.isArray(childData.spouses) ? childData.spouses.filter(s => s && s.toLowerCase() !== 'unknown') : []);
+              spouseCount = spouses.length;
+            }
+            
+            count += spouseCount;
+            
+            // Recursively count in-laws of descendants
+            countInLawsRecursive(childId);
+          }
+        });
+      }
+      
+      countInLawsRecursive(personId);
+      return count;
+    }
+    
+    /**
+     * Group persons by generation
+     * @param {Object} root - Root Person node
+     * @param {number} maxGeneration - Maximum generation to include
+     * @returns {Map<number, Array>} Map generation -> [Person nodes]
+     */
+    function groupByGeneration(root, maxGeneration = null) {
+      const buckets = new Map();
+      
+      if (!root) return buckets;
+      
+      function traverse(node) {
+        if (!node) return;
+        
+        const gen = node.generation || 0;
+        if (maxGeneration !== null && gen > maxGeneration) return; // Skip if beyond max
+        
+        if (!buckets.has(gen)) {
+          buckets.set(gen, []);
+        }
+        buckets.get(gen).push(node);
+        
+        // Traverse children
+        if (node.children && node.children.length > 0) {
+          node.children.forEach(child => traverse(child));
+        }
+      }
+      
+      traverse(root);
+      
+      // Sort each bucket by name
+      buckets.forEach((persons, gen) => {
+        persons.sort((a, b) => {
+          const nameA = (a.name || '').toLowerCase();
+          const nameB = (b.name || '').toLowerCase();
+          return nameA.localeCompare(nameB, 'vi');
+        });
+      });
+      
+      return buckets;
+    }
+    
+    // ============================================================
+    // CONTROLLER: UI Updates & Interactions
+    // ============================================================
+    
+    /**
+     * Load and build generation stats (with caching)
+     * @returns {Map|null} Generation buckets or null if data not available
+     */
+    function loadGenerationStats(forceRebuild = false) {
+      // Return cached data if available and valid
+      if (!forceRebuild && generationStatsCacheValid && cachedGenerationBuckets) {
+        console.log('[Genealogy] Using cached generation stats');
+        return cachedGenerationBuckets;
+      }
+      
+      // Check if required data is available
+      if (typeof window.personMap === 'undefined' || typeof window.childrenMap === 'undefined' || !rootPersonId) {
+        console.warn('[Genealogy] Required data not available for generation stats');
+        return null;
+      }
+      
+      try {
+        console.log('[Genealogy] Building generation stats...');
+        const startTime = performance.now();
+        
+        // Build person tree
+        personTreeRoot = buildPersonTree(rootPersonId, window.personMap, window.childrenMap);
+        if (!personTreeRoot) {
+          console.warn('[Genealogy] Failed to build person tree');
+          return null;
+        }
+        
+        // Group by generation (always use maxGen = 8 to show all generations)
+        cachedGenerationBuckets = groupByGeneration(personTreeRoot, 8);
+        generationStatsCacheValid = true;
+        
+        const endTime = performance.now();
+        console.log(`[Genealogy] Generation stats built in ${(endTime - startTime).toFixed(2)}ms`);
+        
+        return cachedGenerationBuckets;
+      } catch (err) {
+        console.error('[Genealogy] Error building generation stats:', err);
+        generationStatsCacheValid = false;
+        cachedGenerationBuckets = null;
+        return null;
+      }
+    }
+    
+    /**
+     * Clear generation stats cache (call after database sync)
+     */
+    function clearGenerationStatsCache() {
+      cachedGenerationBuckets = null;
+      generationStatsCacheValid = false;
+      console.log('[Genealogy] Generation stats cache cleared');
+    }
+    
+    /**
+     * Render generation tabs and tables
+     * Always show tabs from generation 1 to 8, regardless of data
+     * @param {Map} generationBuckets - Map generation -> [Person nodes] (optional, will load if not provided)
+     */
+    function renderGenerationTabs(generationBuckets = null) {
+      const tabsContainer = document.getElementById('generationTabs');
+      const buttonsContainer = document.getElementById('tabButtons');
+      const contentsContainer = document.getElementById('tabContents');
+      const loadingEl = document.getElementById('generationStatsLoading');
+      const errorEl = document.getElementById('generationStatsError');
+      
+      if (!tabsContainer || !buttonsContainer || !contentsContainer) return;
+      
+      // Load generation buckets if not provided
+      if (!generationBuckets) {
+        generationBuckets = loadGenerationStats();
+      }
+      
+      // Hide loading/error
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (errorEl) errorEl.style.display = 'none';
+      
+      // Clear previous content
+      buttonsContainer.innerHTML = '';
+      contentsContainer.innerHTML = '';
+      
+      tabsContainer.style.display = 'block';
+      
+      // Use empty Map if generationBuckets is null
+      if (!generationBuckets) {
+        generationBuckets = new Map();
+      }
+      
+      // Always create tabs from generation 1 to 8
+      for (let gen = 1; gen <= 8; gen++) {
+        // Tab button
+        const button = document.createElement('button');
+        button.className = 'tab-button' + (gen === 1 ? ' active' : '');
+        button.textContent = `Thế hệ ${gen}`;
+        button.dataset.gen = gen;
+        button.addEventListener('click', () => switchTab(gen));
+        buttonsContainer.appendChild(button);
+        
+        // Tab content
+        const content = document.createElement('div');
+        content.className = 'tab-content' + (gen === 1 ? ' active' : '');
+        content.id = `tabContent${gen}`;
+        
+        // Get persons for this generation (may be empty)
+        const persons = generationBuckets.get(gen) || [];
+        const table = createGenerationTable(persons);
+        content.appendChild(table);
+        contentsContainer.appendChild(content);
+      }
+    }
+    
+    /**
+     * Switch active tab
+     * @param {number} gen - Generation number
+     */
+    function switchTab(gen) {
+      // Update buttons
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        if (parseInt(btn.dataset.gen) === gen) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+      
+      // Update contents
+      document.querySelectorAll('.tab-content').forEach(content => {
+        if (content.id === `tabContent${gen}`) {
+          content.classList.add('active');
+        } else {
+          content.classList.remove('active');
+        }
+      });
+    }
+    
+    /**
+     * Create generation table
+     * @param {Array} persons - Array of Person nodes
+     * @returns {HTMLElement} Table element
+     */
+    function createGenerationTable(persons) {
+      const table = document.createElement('table');
+      table.className = 'generation-table';
+      
+      // Header
+      const thead = document.createElement('thead');
+      thead.innerHTML = `
+        <tr>
+          <th>STT</th>
+          <th>Tên</th>
+          <th>Tổng số con cháu</th>
+          <th>Số lượng dâu và rể</th>
+        </tr>
+      `;
+      table.appendChild(thead);
+      
+      // Body
+      const tbody = document.createElement('tbody');
+      persons.forEach((person, index) => {
+        const row = document.createElement('tr');
+        row.dataset.personId = person.person_id;
+        row.addEventListener('click', () => selectPerson(person.person_id));
+        
+        // Find person in tree to get full node with children structure
+        const personInTree = personTreeRoot ? findPersonInTree(personTreeRoot, person.person_id) : null;
+        const descendantCount = personInTree ? countDescendants(personInTree) : countDescendants(person);
+        // Count in-laws based on personId (uses family tree data)
+        const inLawCount = countInLaws(person.person_id);
+        
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td><strong>${escapeHtml(person.name || '')}</strong></td>
+          <td>${descendantCount}</td>
+          <td>${inLawCount}</td>
+        `;
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+      
+      return table;
+    }
+    
+    /**
+     * Select person (highlight in tree + update info panel)
+     * @param {string} personId - Person ID
+     */
+    function selectPerson(personId) {
+      selectedPersonId = personId;
+      
+      // Update highlight in tree (will be handled by family tree renderer)
+      if (typeof window.setSelectedPerson === 'function') {
+        window.setSelectedPerson(personId);
+      }
+      
+      // Update info panel
+      updateInfoPanel(personId);
+    }
+    
+    /**
+     * Update info panel with person details
+     * @param {string} personId - Person ID
+     */
+    function updateInfoPanel(personId) {
+      const infoContent = document.getElementById('infoContent');
+      if (!infoContent) return;
+      
+      // Get person data from personMap
+      if (typeof personMap !== 'undefined' && personMap.has(personId)) {
+        const person = personMap.get(personId);
+        const descendantCount = personTreeRoot ? 
+          countDescendants(findPersonInTree(personTreeRoot, personId)) : 0;
+        
+        infoContent.innerHTML = `
+          <h4>${escapeHtml(person.name || '')}</h4>
+          <p><strong>ID:</strong> ${escapeHtml(personId)}</p>
+          <p><strong>Thế hệ:</strong> ${person.generation || '-'}</p>
+          <p><strong>Tổng số con cháu:</strong> ${descendantCount}</p>
+          <div style="margin-top: var(--space-4);">
+            <button class="btn btn-primary" onclick="openEditModal('${personId}')" style="margin-right: var(--space-2);">Chỉnh sửa</button>
+            <button class="btn btn-secondary" onclick="openAddChildModal('${personId}')" style="margin-right: var(--space-2);">Thêm con</button>
+            <button class="btn btn-danger" onclick="handleDeletePerson('${personId}')" ${personId === rootPersonId ? 'disabled title="Không thể xóa nút gốc"' : ''}>Xóa</button>
+          </div>
+        `;
+      } else {
+        infoContent.innerHTML = '<p>Không tìm thấy thông tin</p>';
+      }
+    }
+    
+    /**
+     * Find person in tree
+     * @param {Object} node - Person node
+     * @param {string} personId - Person ID to find
+     * @returns {Object|null} Found node
+     */
+    function findPersonInTree(node, personId) {
+      if (!node) return null;
+      if (node.person_id === personId) return node;
+      
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          const found = findPersonInTree(child, personId);
+          if (found) return found;
+        }
+      }
+      
+      return null;
+    }
+    
+    /**
+     * Refresh tree (reload data and rebuild UI)
+     */
+    async function refreshTree() {
+      try {
+        // Clear generation stats cache when refreshing
+        clearGenerationStatsCache();
+        
+        const genFilter = document.getElementById('genFilter');
+        const maxGen = genFilter ? parseInt(genFilter.value) : 5;
+        
+        // Reload tree data
+        if (typeof loadTreeData === 'function') {
+          const container = document.getElementById('treeContainer');
+          if (container) {
+            container.innerHTML = '<div class="tree-loading">Đang tải lại cây gia phả...</div>';
+          }
+          
+          const { graph: newGraph } = await loadTreeData(maxGen, rootPersonId);
+          
+          // Rebuild person tree and generation stats (force rebuild)
+          if (newGraph && typeof window.personMap !== 'undefined' && typeof window.childrenMap !== 'undefined') {
+            const generationBuckets = loadGenerationStats(true); // Force rebuild
+            renderGenerationTabs(generationBuckets);
+          }
+          
+          // Re-render tree
+          if (newGraph && typeof renderDefaultTree === 'function') {
+            renderDefaultTree(newGraph, maxGen);
+          }
+        }
+      } catch (err) {
+        console.error('[Genealogy] Error refreshing tree:', err);
+      }
+    }
+    
+    /**
+     * Handle delete person
+     * @param {string} personId - Person ID to delete
+     */
+    async function handleDeletePerson(personId) {
+      if (personId === rootPersonId) {
+        alert('Không thể xóa nút gốc của cây gia phả');
+        return;
+      }
+      
+      if (!confirm(`Bạn có chắc muốn xóa "${personId}"?`)) {
+        return;
+      }
+      
+      try {
+        // TODO: Call DELETE API
+        // const response = await fetch(`/api/persons/${personId}`, { method: 'DELETE' });
+        // if (!response.ok) throw new Error('Delete failed');
+        
+        console.log('[Genealogy] Delete person:', personId);
+        alert('Tính năng xóa đang được phát triển');
+        
+        // Refresh tree after delete
+        // await refreshTree();
+      } catch (err) {
+        console.error('[Genealogy] Error deleting person:', err);
+        alert('Lỗi khi xóa: ' + err.message);
+      }
+    }
+    
+    /**
+     * Open edit modal
+     * @param {string} personId - Person ID to edit
+     */
+    function openEditModal(personId) {
+      alert('Tính năng chỉnh sửa đang được phát triển');
+      // TODO: Implement edit modal
+    }
+    
+    /**
+     * Open add child modal
+     * @param {string} parentId - Parent person ID
+     */
+    function openAddChildModal(parentId) {
+      alert('Tính năng thêm con đang được phát triển');
+      // TODO: Implement add child modal
+    }
+    
+    /**
+     * Escape HTML to prevent XSS
+     */
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Expose functions to global scope for tree renderer
+    window.selectPerson = selectPerson;
+    window.refreshTree = refreshTree;
+    
+    // Load stats and generation tabs on page load
+    document.addEventListener('DOMContentLoaded', async () => {
       loadMemberStats();
+      
+      // Auto-load generation tabs after a short delay to ensure tree data is loaded
+      setTimeout(async () => {
+        try {
+          // Load generation stats (will build on first load)
+          const generationBuckets = loadGenerationStats();
+          if (generationBuckets) {
+            renderGenerationTabs(generationBuckets);
+          }
+        } catch (err) {
+          console.error('[Genealogy] Error loading generation tabs on init:', err);
+        }
+      }, 1000); // Wait 1 second for tree data to load
     });
   </script>
 
@@ -2915,6 +3814,10 @@
       }
     }
   </script>
+  
+  <!-- Floating Chat Buttons -->
+  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  <a href="https://m.me/PhongTuyBienQuanCong" target="_blank" class="floating-chat-button" title="Nhắn tin cho Phòng Tuy Biên Quận Công">💬</a>
 </body>
 </html>
 

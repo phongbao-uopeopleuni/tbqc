@@ -39,25 +39,21 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   }
   container.innerHTML = "";
   
-  // DISABLED: Quay lại person-node renderer để hiển thị rõ con của ai
   // Check if family graph is available and use family renderer
-  // const availableFamilyGraph = window.familyGraph || (typeof familyGraph !== 'undefined' ? familyGraph : null);
-  // 
-  // if (availableFamilyGraph && typeof renderFamilyDefaultTree === 'function') {
-  //   console.log('[Tree] Using family-node renderer, familyNodes:', availableFamilyGraph.familyNodes?.length || 0);
-  //   try {
-  //     renderFamilyDefaultTree(availableFamilyGraph, maxGeneration);
-  //     return;
-  //   } catch (error) {
-  //     console.error('[Tree] Error rendering family tree:', error);
-  //     console.error(error.stack);
-  //     // Fallback to person-node renderer
-  //   }
-  // } else {
-  //   console.log('[Tree] Using person-node renderer (familyGraph not available or renderFamilyDefaultTree not found)');
-  // }
+  const availableFamilyGraph = window.familyGraph || (typeof familyGraph !== 'undefined' ? familyGraph : null);
   
-  console.log('[Tree] Using person-node renderer with family grouping');
+  if (availableFamilyGraph && typeof renderFamilyDefaultTree === 'function') {
+    console.log('[Tree] Using family-node renderer, familyNodes:', availableFamilyGraph.familyNodes?.length || 0);
+    try {
+      renderFamilyDefaultTree(availableFamilyGraph, maxGeneration);
+      return;
+    } catch (error) {
+      console.error('[Tree] Error rendering family tree:', error);
+      // Fallback to person-node renderer
+    }
+  }
+  
+  console.log('[Tree] Using person-node renderer (familyGraph not available or renderFamilyDefaultTree not found)');
   
   if (!graph || !personMap || personMap.size === 0) {
     container.innerHTML = '<div class="error">Chưa có dữ liệu</div>';
@@ -172,7 +168,7 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   // Tăng chiều ngang để có scroll ngang
   treeDiv.style.width = Math.max(maxX, 3000) + "px";
   treeDiv.style.height = Math.max(maxY, 600) + "px";
-  treeDiv.style.transform = `scale(${currentZoom}) translate(${currentOffsetX}px, ${currentOffsetY}px)`;
+  treeDiv.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${currentZoom})`;
   treeDiv.style.transformOrigin = "top left";
 
   container.appendChild(treeDiv);
@@ -319,7 +315,7 @@ function renderFocusTree(targetId) {
   // Tăng chiều ngang để có scroll ngang
   treeDiv.style.width = Math.max(maxX, 3000) + "px";
   treeDiv.style.height = Math.max(maxY, 600) + "px";
-  treeDiv.style.transform = `scale(${currentZoom}) translate(${currentOffsetX}px, ${currentOffsetY}px)`;
+  treeDiv.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${currentZoom})`;
   treeDiv.style.transformOrigin = "top left";
 
   container.appendChild(treeDiv);
@@ -341,6 +337,14 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
   const nodeDiv = document.createElement("div");
   nodeDiv.className = "node";
   nodeDiv.dataset.personId = person.id;
+  
+  // Add click handler
+  nodeDiv.style.cursor = "pointer";
+  nodeDiv.addEventListener('click', () => {
+    if (typeof window.selectPerson === 'function') {
+      window.selectPerson(person.id);
+    }
+  });
   
   if (isFounder) nodeDiv.classList.add("founder");
   if (person.gender === "Nam") nodeDiv.classList.add("male");
@@ -1177,11 +1181,23 @@ function resetZoom() {
 }
 
 function applyZoom() {
-  const treeDiv = document.querySelector('.tree');
+  // Try to find tree div (could be from person tree or family tree)
+  let treeDiv = document.querySelector('.tree');
+  if (!treeDiv && typeof window !== 'undefined' && window.familyTreeDiv) {
+    treeDiv = window.familyTreeDiv;
+  }
   if (treeDiv) {
-    treeDiv.style.transform = `scale(${currentZoom}) translate(${currentOffsetX}px, ${currentOffsetY}px)`;
+    treeDiv.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${currentZoom})`;
     treeDiv.style.transformOrigin = "top left";
   }
+}
+
+// Export zoom functions and variables to window
+if (typeof window !== 'undefined') {
+  window.zoomIn = zoomIn;
+  window.zoomOut = zoomOut;
+  window.resetZoom = resetZoom;
+  window.applyZoom = applyZoom;
 }
 
 // ============================================
@@ -1228,23 +1244,8 @@ async function init() {
     resetToDefault(); // Render default mode (đời 1-5)
     console.log('Đã render xong');
     
-    // Điền filter generation
-    const genSet = new Set();
-    personMap.forEach(p => {
-      if (p.generation) genSet.add(p.generation);
-    });
-    // Sửa selector để khớp với HTML: genFilter thay vì filterGeneration
-    const genSelect = document.getElementById("genFilter");
-    if (genSelect) {
-      Array.from(genSet).sort((a, b) => a - b).forEach(gen => {
-        const opt = document.createElement("option");
-        opt.value = gen;
-        opt.textContent = `Đời ${gen}`;
-        genSelect.appendChild(opt);
-      });
-    } else {
-      console.warn('[Tree] genFilter select not found');
-    }
+    // Note: genFilter is now populated by genealogy.html's populateGenerationFilter()
+    // No need to populate here to avoid duplicate options
     
     console.log('Khởi tạo hoàn tất!');
     

@@ -32,6 +32,48 @@ class AIFacebookReader:
         if not self.api_key:
             logger.warning("Không có AI API key. Một số tính năng có thể không hoạt động.")
     
+    def extract_url_from_iframe(self, text: str) -> Optional[str]:
+        """
+        Extract Facebook post URL từ iframe embed code
+        
+        Args:
+            text: iframe embed code hoặc URL
+        
+        Returns:
+            Facebook post URL hoặc None
+        """
+        try:
+            # Kiểm tra nếu là iframe embed code
+            if 'iframe' in text.lower() and 'facebook.com/plugins/post.php' in text:
+                # Extract href parameter từ iframe src (có thể có quote hoặc không)
+                # Pattern 1: href=https%3A%2F%2F... (không có quote)
+                match = re.search(r'href=([^&\s"\'<>]+)', text)
+                if not match:
+                    # Pattern 2: href="https%3A%2F%2F..." (có quote)
+                    match = re.search(r'href=["\']([^"\']+)["\']', text)
+                if not match:
+                    # Pattern 3: href=%22https%3A%2F%2F... (double encoded)
+                    match = re.search(r'href=([^&\s<>]+)', text)
+                
+                if match:
+                    encoded_url = match.group(1)
+                    # Decode URL (có thể cần decode nhiều lần)
+                    from urllib.parse import unquote
+                    decoded_url = unquote(encoded_url)
+                    # Nếu vẫn còn encoded, decode thêm lần nữa
+                    if '%' in decoded_url:
+                        decoded_url = unquote(decoded_url)
+                    logger.info(f"Đã extract URL từ iframe: {decoded_url}")
+                    return decoded_url
+            
+            # Nếu không phải iframe, trả về text gốc (có thể đã là URL)
+            if text.strip().startswith('http'):
+                return text.strip()
+            return None
+        except Exception as e:
+            logger.warning(f"Lỗi khi extract URL từ iframe: {e}")
+            return None
+    
     def extract_post_id_from_url(self, url: str) -> Optional[str]:
         """
         Extract post ID từ Facebook URL
@@ -43,8 +85,8 @@ class AIFacebookReader:
             Post ID hoặc None
         """
         try:
-            # Pattern 1: /posts/123456
-            match = re.search(r'/posts/(\d+)', url)
+            # Pattern 1: /posts/123456 hoặc /posts/pfbid...
+            match = re.search(r'/posts/([^/?]+)', url)
             if match:
                 return match.group(1)
             
@@ -251,16 +293,22 @@ Trả về JSON hợp lệ."""
             logger.error(f"Lỗi Anthropic API: {e}", exc_info=True)
             return {'error': f'Lỗi Anthropic: {str(e)}'}
     
-    def read_facebook_post(self, url: str) -> Dict:
+    def read_facebook_post(self, url_or_iframe: str) -> Dict:
         """
         Main function: Đọc Facebook post và extract nội dung
         
         Args:
-            url: Facebook post URL
+            url_or_iframe: Facebook post URL hoặc iframe embed code
         
         Returns:
             Dict với title, content, summary, images, date, author
         """
+        # Bước 0: Extract URL từ iframe nếu cần
+        url = self.extract_url_from_iframe(url_or_iframe)
+        if not url:
+            # Nếu không extract được từ iframe, dùng text gốc
+            url = url_or_iframe.strip()
+        
         logger.info(f"Đang đọc Facebook post: {url}")
         
         # Kiểm tra API key trước

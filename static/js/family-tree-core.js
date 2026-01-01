@@ -218,7 +218,14 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
         }
       }
       
-      return { treeData, graph, familyGraph };
+      // Expose personMap and childrenMap to window for use in genealogy.html
+  if (typeof window !== 'undefined') {
+    window.personMap = personMap;
+    window.childrenMap = childrenMap;
+    window.parentMap = parentMap;
+  }
+  
+  return { treeData, graph, familyGraph };
     } else {
       throw new Error('Dữ liệu cây không hợp lệ');
     }
