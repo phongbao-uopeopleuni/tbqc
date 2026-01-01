@@ -2080,66 +2080,49 @@ def sync_genealogy_from_members():
     """
     logger.info("🔄 API /api/genealogy/sync được gọi - Sync từ database chuẩn (phongtuybienquancong.info)")
     
+    connection = None
+    cursor = None
+    
     try:
-        # Tìm file backup mới nhất
-        backup_dir = os.path.join(BASE_DIR, 'backups')
-        if not os.path.exists(backup_dir):
+        import requests
+        
+        # URL của database chuẩn
+        standard_db_url = "https://phongtuybienquancong.info/api/members"
+        
+        logger.info(f"📡 Fetching data from: {standard_db_url}")
+        
+        try:
+            # Fetch dữ liệu từ database chuẩn
+            response = requests.get(standard_db_url, timeout=60)
+            response.raise_for_status()
+            response_data = response.json()
+            
+            # Handle different response formats
+            # Format 1: Direct array [member1, member2, ...]
+            # Format 2: {success: true, data: [member1, member2, ...]}
+            if isinstance(response_data, list):
+                members_data = response_data
+            elif isinstance(response_data, dict) and response_data.get('success') and isinstance(response_data.get('data'), list):
+                members_data = response_data['data']
+            elif isinstance(response_data, dict) and isinstance(response_data.get('members'), list):
+                members_data = response_data['members']
+            else:
+                logger.error(f"❌ Unexpected response format from {standard_db_url}: {type(response_data)}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Dữ liệu từ database chuẩn không đúng định dạng. Expected array or {{success, data}}, got {type(response_data)}'
+                }), 500
+            
+            logger.info(f"📊 Đã fetch {len(members_data)} members từ database chuẩn")
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Lỗi khi fetch dữ liệu từ database chuẩn: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Thư mục backup không tồn tại: {backup_dir}'
-            }), 404
+                'error': f'Không thể kết nối đến database chuẩn: {str(e)}'
+            }), 500
         
-        # Tìm file backup mới nhất (format: tbqc_backup_YYYYMMDD_HHMMSS.sql)
-        backup_files = []
-        for filename in os.listdir(backup_dir):
-            if filename.startswith('tbqc_backup_') and filename.endswith('.sql'):
-                filepath = os.path.join(backup_dir, filename)
-                # Parse timestamp từ tên file
-                try:
-                    # Format: tbqc_backup_20260101_163737.sql
-                    parts = filename.replace('tbqc_backup_', '').replace('.sql', '').split('_')
-                    if len(parts) >= 2:
-                        date_str = parts[0]  # YYYYMMDD
-                        time_str = parts[1]  # HHMMSS
-                        timestamp = f"{date_str}_{time_str}"
-                        backup_files.append({
-                            'filename': filename,
-                            'filepath': filepath,
-                            'timestamp': timestamp
-                        })
-                except:
-                    continue
-        
-        if not backup_files:
-            return jsonify({
-                'success': False,
-                'error': 'Không tìm thấy file backup nào trong thư mục backups/'
-            }), 404
-        
-        # Sắp xếp theo timestamp (mới nhất trước)
-        backup_files.sort(key=lambda x: x['timestamp'], reverse=True)
-        latest_backup = backup_files[0]
-        backup_file = latest_backup['filepath']
-        
-        logger.info(f"📁 File backup chuẩn: {latest_backup['filename']}")
-        
-        # Kiểm tra file có tồn tại và có kích thước hợp lệ
-        if not os.path.exists(backup_file):
-            return jsonify({
-                'success': False,
-                'error': f'File backup không tồn tại: {backup_file}'
-            }), 404
-        
-        file_size = os.path.getsize(backup_file)
-        if file_size == 0:
-            return jsonify({
-                'success': False,
-                'error': 'File backup rỗng'
-            }), 400
-        
-        logger.info(f"📊 Kích thước file: {file_size / 1024:.2f} KB")
-        
-        # Kết nối database
+        # Kết nối database hiện tại
         connection = get_db_connection()
         if not connection:
             logger.error("❌ Không thể kết nối database")
@@ -2150,28 +2133,155 @@ def sync_genealogy_from_members():
         
         cursor = connection.cursor(dictionary=True)
         
-        # Đọc dữ liệu từ database hiện tại để so sánh (chỉ đọc, không sửa)
+        # Đếm records hiện tại (trước khi sync)
         cursor.execute("SELECT COUNT(*) AS count FROM persons")
-        current_persons_count = cursor.fetchone()['count']
+        before_persons_count = cursor.fetchone()['count']
         
         cursor.execute("SELECT COUNT(*) AS count FROM relationships")
-        current_relationships_count = cursor.fetchone()['count']
+        before_relationships_count = cursor.fetchone()['count']
         
         cursor.execute("SELECT COUNT(*) AS count FROM marriages")
-        current_marriages_count = cursor.fetchone()['count']
+        before_marriages_count = cursor.fetchone()['count']
         
-        # Load relationship data từ database hiện tại
-        relationship_data = load_relationship_data(cursor)
-        total_spouses = len(relationship_data['spouse_data_from_table']) + \
-                       len(relationship_data['spouse_data_from_marriages']) + \
-                       len(relationship_data['spouse_data_from_csv'])
-        total_parents = len(relationship_data['parent_data'])
-        total_children = len(relationship_data['children_map'])
-        total_siblings = len(relationship_data['siblings_map'])
+        # Sync dữ liệu từ members_data vào database
+        # Giả sử members_data là array của person objects với đầy đủ thông tin
+        inserted_persons = 0
+        updated_persons = 0
+        inserted_relationships = 0
+        inserted_marriages = 0
         
-        # Đóng cursor và connection
-        cursor.close()
-        connection.close()
+        for member in members_data:
+            person_id = member.get('person_id') or member.get('id')
+            if not person_id:
+                continue
+            
+            # Prepare person data
+            full_name = member.get('full_name') or member.get('name') or ''
+            alias = member.get('alias') or None
+            gender = member.get('gender') or None
+            generation_level = member.get('generation_level') or member.get('generation') or None
+            birth_date_solar = member.get('birth_date_solar') or member.get('birth_date') or None
+            death_date_solar = member.get('death_date_solar') or member.get('death_date') or None
+            grave_info = member.get('grave_info') or None
+            place_of_death = member.get('place_of_death') or None
+            home_town = member.get('home_town') or None
+            status = member.get('status') or 'Đang sống'
+            
+            # Check if person exists
+            cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
+            exists = cursor.fetchone()
+            
+            if exists:
+                # Update existing person
+                cursor.execute("""
+                    UPDATE persons SET
+                        full_name = %s,
+                        alias = %s,
+                        gender = %s,
+                        generation_level = %s,
+                        birth_date_solar = %s,
+                        death_date_solar = %s,
+                        grave_info = %s,
+                        place_of_death = %s,
+                        home_town = %s,
+                        status = %s
+                    WHERE person_id = %s
+                """, (full_name, alias, gender, generation_level, birth_date_solar, 
+                      death_date_solar, grave_info, place_of_death, home_town, status, person_id))
+                updated_persons += 1
+            else:
+                # Insert new person
+                cursor.execute("""
+                    INSERT INTO persons (
+                        person_id, full_name, alias, gender, generation_level,
+                        birth_date_solar, death_date_solar, grave_info,
+                        place_of_death, home_town, status
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (person_id, full_name, alias, gender, generation_level,
+                      birth_date_solar, death_date_solar, grave_info,
+                      place_of_death, home_town, status))
+                inserted_persons += 1
+            
+            # Sync relationships (parents) if available
+            father_id = member.get('father_id')
+            mother_id = member.get('mother_id')
+            if father_id:
+                # Check if relationship exists
+                cursor.execute("""
+                    SELECT * FROM relationships 
+                    WHERE child_id = %s AND parent_id = %s AND relation_type = 'father'
+                """, (person_id, father_id))
+                if not cursor.fetchone():
+                    try:
+                        cursor.execute("""
+                            INSERT INTO relationships (parent_id, child_id, relation_type)
+                            VALUES (%s, %s, 'father')
+                        """, (father_id, person_id))
+                        inserted_relationships += 1
+                    except Error:
+                        # Relationship already exists, skip
+                        pass
+            
+            if mother_id:
+                cursor.execute("""
+                    SELECT * FROM relationships 
+                    WHERE child_id = %s AND parent_id = %s AND relation_type = 'mother'
+                """, (person_id, mother_id))
+                if not cursor.fetchone():
+                    try:
+                        cursor.execute("""
+                            INSERT INTO relationships (parent_id, child_id, relation_type)
+                            VALUES (%s, %s, 'mother')
+                        """, (mother_id, person_id))
+                        inserted_relationships += 1
+                    except Error:
+                        # Relationship already exists, skip
+                        pass
+            
+            # Sync marriages if available
+            spouses = member.get('spouses') or member.get('marriages') or []
+            if isinstance(spouses, str):
+                # If spouses is a string, skip (need to parse separately)
+                pass
+            elif isinstance(spouses, list):
+                for spouse in spouses:
+                    spouse_id = spouse.get('spouse_id') or spouse.get('person_id') or spouse.get('id') if isinstance(spouse, dict) else None
+                    if spouse_id and spouse_id != person_id:
+                        # Check if marriage exists
+                        cursor.execute("""
+                            SELECT * FROM marriages 
+                            WHERE (person_id = %s AND spouse_person_id = %s)
+                            OR (person_id = %s AND spouse_person_id = %s)
+                        """, (person_id, spouse_id, spouse_id, person_id))
+                        if not cursor.fetchone():
+                            try:
+                                cursor.execute("""
+                                    INSERT INTO marriages (person_id, spouse_person_id)
+                                    VALUES (%s, %s)
+                                """, (person_id, spouse_id))
+                                inserted_marriages += 1
+                            except Error:
+                                # Marriage already exists, skip
+                                pass
+        
+        # Commit changes
+        try:
+            connection.commit()
+            logger.info("✅ Database changes committed successfully")
+        except Error as commit_error:
+            connection.rollback()
+            logger.error(f"❌ Error committing changes, rolled back: {commit_error}")
+            raise
+        
+        # Đếm records sau khi sync
+        cursor.execute("SELECT COUNT(*) AS count FROM persons")
+        after_persons_count = cursor.fetchone()['count']
+        
+        cursor.execute("SELECT COUNT(*) AS count FROM relationships")
+        after_relationships_count = cursor.fetchone()['count']
+        
+        cursor.execute("SELECT COUNT(*) AS count FROM marriages")
+        after_marriages_count = cursor.fetchone()['count']
         
         # Lấy timestamp
         from datetime import datetime
@@ -2180,23 +2290,25 @@ def sync_genealogy_from_members():
         # Trả về thông tin sync
         sync_info = {
             'success': True,
-            'message': f'Đã đọc dữ liệu từ file backup chuẩn: {latest_backup["filename"]}',
+            'message': f'Đã sync {len(members_data)} members từ database chuẩn',
             'timestamp': sync_timestamp,
-            'backup_file': latest_backup['filename'],
-            'backup_size_kb': round(file_size / 1024, 2),
+            'source_url': standard_db_url,
             'stats': {
-                'persons': current_persons_count,
-                'relationships': current_relationships_count,
-                'marriages': current_marriages_count,
-                'spouses_mapped': total_spouses,
-                'parents_mapped': total_parents,
-                'children_mapped': total_children,
-                'siblings_mapped': total_siblings
+                'persons_before': before_persons_count,
+                'persons_after': after_persons_count,
+                'persons_inserted': inserted_persons,
+                'persons_updated': updated_persons,
+                'relationships_before': before_relationships_count,
+                'relationships_after': after_relationships_count,
+                'relationships_inserted': inserted_relationships,
+                'marriages_before': before_marriages_count,
+                'marriages_after': after_marriages_count,
+                'marriages_inserted': inserted_marriages
             },
-            'note': f'Dữ liệu được đọc từ file backup chuẩn: {latest_backup["filename"]}. File backup không bị sửa đổi. Database hiện tại đang có {current_persons_count} persons, {current_relationships_count} relationships, {current_marriages_count} marriages.'
+            'note': f'Đã sync từ {standard_db_url}. Inserted {inserted_persons} persons, updated {updated_persons} persons, inserted {inserted_relationships} relationships, {inserted_marriages} marriages.'
         }
         
-        logger.info(f"✅ Sync thành công: {current_persons_count} persons, {current_relationships_count} relationships, {current_marriages_count} marriages")
+        logger.info(f"✅ Sync thành công: {inserted_persons} inserted, {updated_persons} updated persons, {inserted_relationships} relationships, {inserted_marriages} marriages")
         return jsonify(sync_info)
         
     except Error as e:
