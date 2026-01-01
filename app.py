@@ -908,6 +908,39 @@ def serve_image_static(filename):
         from flask import abort
         abort(404)
 
+@app.route('/api/gallery/anh1', methods=['GET'])
+def api_gallery_anh1():
+    """List all image files in static/images/anh1 folder"""
+    try:
+        anh1_dir = os.path.join(BASE_DIR, 'static', 'images', 'anh1')
+        if not os.path.exists(anh1_dir):
+            return jsonify({'success': False, 'error': 'Folder không tồn tại'}), 404
+        
+        # Get all image files
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
+        image_files = []
+        for filename in os.listdir(anh1_dir):
+            file_path = os.path.join(anh1_dir, filename)
+            if os.path.isfile(file_path):
+                _, ext = os.path.splitext(filename.lower())
+                if ext in image_extensions:
+                    image_files.append({
+                        'filename': filename,
+                        'url': f'/static/images/anh1/{filename}'
+                    })
+        
+        # Sort by filename
+        image_files.sort(key=lambda x: x['filename'])
+        
+        return jsonify({
+            'success': True,
+            'count': len(image_files),
+            'images': image_files
+        })
+    except Exception as e:
+        logger.error(f"Error listing gallery images: {e}")
+        return jsonify({'success': False, 'error': f'Lỗi khi lấy danh sách ảnh: {str(e)}'}), 500
+
 # Legacy route for backward compatibility
 @app.route('/images/<path:filename>')
 def serve_image(filename):
