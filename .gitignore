@@ -70,7 +70,3 @@ create_tbqc_admin_user.py
 backups/
 *.sql
 !folder_sql/*.sql
-
-# Large PDF documents (too large for GitHub, use external storage)
-static/documents/*.pdf
-tailieu/*.pdf
