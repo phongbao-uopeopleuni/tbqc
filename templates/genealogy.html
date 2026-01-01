@@ -1281,11 +1281,19 @@
             const treeWrapper = treeContainer.closest('.tree-container-wrapper') || treeContainer;
             
             // Create a temporary container for PDF export
+            // Position on-screen but make it invisible so html2canvas can capture it
             const pdfContainer = document.createElement('div');
-            pdfContainer.style.position = 'absolute';
-            pdfContainer.style.left = '-9999px';
+            pdfContainer.style.position = 'fixed';
+            pdfContainer.style.left = '0';
+            pdfContainer.style.top = '0';
+            pdfContainer.style.width = '100vw';
+            pdfContainer.style.height = '100vh';
+            pdfContainer.style.overflow = 'auto';
             pdfContainer.style.backgroundColor = '#fff';
             pdfContainer.style.padding = '20px';
+            pdfContainer.style.zIndex = '-9999'; // Behind everything
+            pdfContainer.style.opacity = '0'; // Invisible but still in DOM
+            pdfContainer.style.pointerEvents = 'none'; // Don't intercept clicks
             
             // Clone the tree wrapper content
             const clonedWrapper = treeWrapper.cloneNode(true);
@@ -1299,8 +1307,8 @@
             pdfContainer.appendChild(clonedWrapper);
             document.body.appendChild(pdfContainer);
             
-            // Get dimensions after appending
-            await new Promise(resolve => setTimeout(resolve, 100)); // Wait for layout
+            // Get dimensions after appending - need longer wait for layout
+            await new Promise(resolve => setTimeout(resolve, 300)); // Wait for layout
             const width = clonedWrapper.scrollWidth || treeElement.scrollWidth;
             const height = clonedWrapper.scrollHeight || treeElement.scrollHeight;
             
