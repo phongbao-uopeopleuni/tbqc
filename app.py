@@ -544,6 +544,11 @@ def activity_detail_page(activity_id):
         if connection:
             connection.close()
 
+@app.route('/documents')
+def documents_page():
+    """Trang tài liệu - hiển thị các tài liệu PDF"""
+    return render_template('documents.html')
+
 @app.route('/admin/users')
 @login_required
 def admin_users_page():

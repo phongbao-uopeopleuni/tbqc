@@ -56,24 +56,25 @@
    FLOATING ZALO BUTTON
    ============================================ */
 .floating-zalo-button {
-  position: fixed;
-  bottom: 100px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #0180C7 0%, #0066A3 100%);
-  border-radius: 50%;
-  box-shadow: 0 4px 12px rgba(1, 128, 199, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 1000;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  color: white;
-  font-size: 32px;
-  line-height: 1;
+  position: fixed !important;
+  bottom: 30px !important;
+  right: 30px !important;
+  width: 60px !important;
+  height: 60px !important;
+  background: linear-gradient(135deg, #0180C7 0%, #0066A3 100%) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 12px rgba(1, 128, 199, 0.4) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  z-index: 9999 !important;
+  transition: all 0.3s ease !important;
+  text-decoration: none !important;
+  color: white !important;
+  font-size: 32px !important;
+  font-weight: bold !important;
+  line-height: 1 !important;
 }
 
 .floating-zalo-button:hover {
@@ -88,11 +89,11 @@
 
 @media (max-width: 768px) {
   .floating-zalo-button {
-    bottom: 90px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    font-size: 28px;
+    bottom: 30px !important;
+    right: 20px !important;
+    width: 56px !important;
+    height: 56px !important;
+    font-size: 28px !important;
   }
 }
 

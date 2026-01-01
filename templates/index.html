@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>Phòng Tuy Biên Quận Công - Gia Phả Nguyễn Phước Tộc| Hệ Thống Tra Cứu Gia Phả Nguyễn Phước Tộc</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -18,43 +18,12 @@
 
     body {
       font-family: 'Noto Serif TC', 'Playfair Display', serif;
-      background: linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DAA520 75%, #FFD700 100%);
+      background: #ffffff;
       background-attachment: fixed;
       position: relative;
       padding-top: 70px; /* Space for fixed navbar */
     }
 
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-image: 
-        repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,215,0,0.03) 10px, rgba(255,215,0,0.03) 20px),
-        repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(184,134,11,0.03) 10px, rgba(184,134,11,0.03) 20px);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    body::after {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      opacity: 0.06;
-      background-image: 
-        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><defs><linearGradient id="dragonGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23DAA520;stop-opacity:0.8" /><stop offset="100%" style="stop-color:%23FFD700;stop-opacity:0.6" /></linearGradient></defs><path d="M80,200 Q40,160 20,200 T80,240 Q120,220 140,200 T80,160" fill="none" stroke="url(%23dragonGrad)" stroke-width="3"/><path d="M60,180 Q20,140 10,180 T60,220 Q100,200 120,180 T60,140" fill="none" stroke="%23FFD700" stroke-width="2" opacity="0.7"/><circle cx="15" cy="180" r="4" fill="%23FFD700" opacity="0.8"/><path d="M50,200 L60,190 M50,200 L60,210" stroke="%23DAA520" stroke-width="2.5" fill="none"/><path d="M70,200 Q90,180 110,200" fill="none" stroke="%23DAA520" stroke-width="2" opacity="0.6"/><circle cx="100" cy="190" r="2" fill="%23FFD700"/></svg>'),
-        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><defs><linearGradient id="phoenixGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%23DC143C;stop-opacity:0.8" /><stop offset="100%" style="stop-color:%23FFD700;stop-opacity:0.6" /></linearGradient></defs><path d="M320,200 Q360,160 380,200 T320,240 Q280,220 260,200 T320,160" fill="none" stroke="url(%23phoenixGrad)" stroke-width="3"/><path d="M340,180 Q380,140 390,180 T340,220 Q300,200 280,180 T340,140" fill="none" stroke="%23FFD700" stroke-width="2" opacity="0.7"/><circle cx="385" cy="180" r="4" fill="%23FFD700" opacity="0.8"/><path d="M350,200 L340,190 M350,200 L340,210" stroke="%23DC143C" stroke-width="2.5" fill="none"/><path d="M330,200 Q310,180 290,200" fill="none" stroke="%23DC143C" stroke-width="2" opacity="0.6"/><circle cx="300" cy="190" r="2" fill="%23FFD700"/><path d="M310,200 Q315,195 320,200 Q315,205 310,200" fill="%23FFD700" opacity="0.5"/></svg>');
-      background-size: 500px 500px, 500px 500px;
-      background-position: -100px -50px, calc(100% + 100px) -50px;
-      background-repeat: no-repeat;
-      pointer-events: none;
-      z-index: 0;
-    }
 
     /* ============================================
        NAVBAR
@@ -120,6 +89,13 @@
       padding: 80px 30px;
       position: relative;
     }
+    
+    @media (max-width: 768px) {
+      section {
+        padding: 40px 16px;
+        min-height: auto;
+      }
+    }
 
     .section-container {
       max-width: 1200px;
@@ -140,8 +116,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, rgba(139, 0, 0, 0.9) 0%, rgba(220, 20, 60, 0.9) 100%);
-      color: white;
+      background: linear-gradient(135deg, rgba(139, 0, 0, 0.95) 0%, rgba(220, 20, 60, 0.95) 100%);
+      color: #FFD700;
       text-align: center;
     }
 
@@ -150,26 +126,30 @@
     }
 
     .hero-content h1 {
-      font-size: 48px;
-      margin-bottom: 20px;
+      font-size: clamp(26px, 6.5vw, 48px);
+      margin-bottom: clamp(20px, 5vw, 28px);
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
       color: #FFD700;
+      line-height: 1.4;
+      font-weight: 700;
     }
 
     .hero-content p {
-      font-size: 20px;
-      margin-bottom: 30px;
-      line-height: 1.6;
+      font-size: clamp(18px, 4.5vw, 24px);
+      margin-bottom: clamp(24px, 6vw, 36px);
+      line-height: 1.7;
+      color: #FFD700;
+      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
     }
 
     .cta-button {
       display: inline-block;
-      padding: 15px 40px;
+      padding: clamp(12px, 3vw, 15px) clamp(32px, 8vw, 40px);
       background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
       color: #8B0000;
       text-decoration: none;
       border-radius: 50px;
-      font-size: 18px;
+      font-size: clamp(16px, 4vw, 18px);
       font-weight: 700;
       transition: all 0.3s;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
@@ -192,9 +172,9 @@
     }
 
     .section-title {
-      font-size: 36px;
+      font-size: clamp(24px, 5vw, 36px);
       color: #8B0000;
-      margin-bottom: 30px;
+      margin-bottom: clamp(20px, 4vw, 30px);
       text-align: center;
       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
     }
@@ -230,6 +210,16 @@
 
     .about-text h3:first-of-type {
       margin-top: 0;
+    }
+
+    .about-text h4 {
+      color: #8B0000;
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 25px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid #DAA520;
+      padding-bottom: 8px;
     }
 
     .about-text blockquote {
@@ -826,7 +816,15 @@
       }
 
       .hero-content h1 {
-        font-size: 32px;
+        font-size: clamp(26px, 6.5vw, 48px);
+      }
+      
+      .hero-content p {
+        font-size: clamp(18px, 4.5vw, 24px);
+      }
+      
+      .hero-content {
+        padding: 0 16px;
       }
 
       .about-content {
@@ -850,6 +848,7 @@
       <li><a href="/activities">Hoạt động</a></li>
       <li><a href="/members" onclick="setActive(this)">Thành viên</a></li>
       <li><a href="/contact" onclick="setActive(this)">Liên hệ</a></li>
+      <li><a href="/documents" onclick="setActive(this)">Tài liệu</a></li>
       <li><a href="/admin/login">Admin</a></li>
     </ul>
   </nav>
@@ -857,10 +856,9 @@
   <!-- Section: Home -->
   <section id="home">
     <div class="hero-content">
-      <h1>Hệ Thống Gia Phả TBQC</h1>
-      <h2 style="font-size: 32px; margin-bottom: 20px; color: #FFD700;">Hậu Duệ Vua Minh Mạng</h2>
-      <p>Tra cứu và quản lý gia phả dòng họ Nguyễn Phước Tộc - Tuy Biên Phòng, từ Vua Minh Mạng đến các thế hệ con cháu hiện tại.</p>
-      <a href="#genealogy" class="cta-button" onclick="setActive(document.querySelector('a[href=\"#genealogy\"]'))">Xem Gia Phả</a>
+      <h1>Gia Phả Nguyễn Phước Tộc<br>Hậu duệ Vua Minh Mạng<br>Gia Phả Phòng Tuy Biên Quận Công</h1>
+      <p>Nhằm tra cứu, lưu trữ và quản lý gia phả dòng họ Nguyễn Phước Tộc - Tuy Biên Phòng đến thời điểm hiện tại.</p>
+      <a href="/genealogy" class="cta-button">Xem Gia Phả</a>
     </div>
   </section>
 
@@ -925,19 +923,122 @@
           <h3>Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</h3>
           
           <p>
-            Trong số 142 người con của vua Minh Mạng, <strong>Nguyễn Phúc Miên Sủng (1831–1865)</strong> – hoàng tử thứ 53 – là vị khai phong của <strong>Phòng Tuy Biên Quận Công</strong>, mở đầu cho một nhánh diệp chi riêng biệt trong đại gia đình Nguyễn Phước.
+            Trong hệ thống tôn phả đồ sộ của hoàng tộc Nguyễn Phước, mỗi phòng hệ đều mang trong mình một dấu ấn riêng, phản ánh vai trò, công đức và vị thế của người khai phòng. <strong>Nguyễn Phúc Miên Sủng (1831–1865)</strong> – hoàng tử thứ 53 của vua Minh Mạng – chính là vị khai phong của Phòng Tuy Biên Quận Công, mở đầu cho một nhánh diệp chi độc lập, có danh xưng, quy ước và truyền thống riêng trong đại gia đình Nguyễn Phước.
           </p>
           
           <p>
-            Ngài sinh ngày 8 tháng 4 năm 1831, là trưởng nam của bà Lục giai Tiệp dư Nguyễn Thị Viên. Ngay từ thuở thiếu thời, hoàng tử Miên Sủng đã nổi tiếng là người đoan chính, hiếu học, hành xử chừng mực, giữ trọn lễ nghi và phong thái của bậc vương tôn. Những phẩm hạnh ấy khiến ngài được triều đình và tôn thất đặc biệt coi trọng.
+            Ngài sinh ngày mùng 8 tháng 4 năm Tân Mão (1831), là trưởng nam của Lục giai Tiệp dư Nguyễn Thị Viên – một phi tần nổi tiếng đoan trang, tiết hạnh trong nội đình. Ngay từ thuở thiếu thời, hoàng tử Miên Sủng đã được nuôi dạy theo khuôn phép nghiêm cẩn của hoàng gia, sớm bộc lộ tư chất điềm đạm, cẩn trọng, hiếu học và trọng lễ nghi. Trong sinh hoạt thường nhật cũng như học tập, ngài luôn giữ phong thái mực thước, không phô trương, không thiên lệch, đúng với chuẩn mực của một bậc vương tôn được kỳ vọng lâu dài.
           </p>
           
           <p>
-            Năm 1840, ngài được sách phong làm <strong>Tuy Nhân Quận công</strong>. Tuy nhiên, đến năm 1842, dưới triều vua Thiệu Trị, do chữ "Nhân" trùng với thụy hiệu của vua Minh Mạng, tước hiệu của ngài được cải phong thành <strong>Tuy Biên Quận Công</strong> – danh xưng gắn liền với hậu duệ của ngài cho đến ngày nay.
+            Năm Canh Tý (1840), dưới triều vua Minh Mạng, ngài được sách phong <strong>Tuy Nhân Quận Công</strong> – một tước hiệu thể hiện sự tín nhiệm của triều đình đối với phẩm hạnh và tư chất của hoàng tử. Tuy nhiên, đến năm Nhâm Dần (1842), dưới triều vua Thiệu Trị, do chữ "Nhân" trùng với thụy hiệu của Tiên đế Minh Mạng, triều đình đã chuẩn y cải phong tước hiệu thành <strong>Tuy Biên Quận Công</strong>. Từ đây, danh xưng Tuy Biên chính thức gắn liền với ngài và trở thành định danh vĩnh viễn của toàn bộ hậu duệ phòng hệ.
           </p>
           
           <p>
-            Sau khi ngài qua đời năm 1865, được ban thụy hiệu <strong>Cẩn Mục</strong>, tẩm mộ và phủ thờ của ngài trở thành chốn linh thiêng để con cháu các đời về chiêm bái, tưởng niệm một vị hoàng thân đức độ, mẫu mực. Để định danh riêng cho hậu duệ của Phòng Tuy Biên, vua Minh Mạng còn ban <strong>bộ chữ "Phong" (风 – nghĩa là gió)</strong> làm chữ đặt tên cho các công tử trong phòng, tạo nên một dấu ấn riêng, vừa thống nhất trong đại tộc, vừa đặc thù cho nhánh Tuy Biên Quận Công.
+            Trên phương diện tôn thất, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng không chỉ là một hoàng tử được phong tước, mà còn là người đặt nền móng tổ chức cho một phòng hệ hoàn chỉnh: từ nghi lễ thờ tự, quy ước nội phòng, đến trật tự xưng danh của hậu duệ. Dù không nổi bật trên chính trường hay quân vụ, ngài được ghi nhận là bậc hoàng thân lấy đức làm gốc, giữ tròn bổn phận với triều đình, hòa mục với tôn thất, và nêu gương chuẩn mực cho con cháu.
+          </p>
+          
+          <p>
+            Năm Ất Sửu (1865), ngài qua đời, hưởng dương 35 tuổi. Triều đình truy ban thụy hiệu <strong>Cẩn Mục</strong> – một thụy hiệu mang ý nghĩa sâu sắc:
+          </p>
+          
+          <ul>
+            <li><strong>"Cẩn":</strong> cẩn trọng, nghiêm túc, giữ lễ không sai lệch</li>
+            <li><strong>"Mục":</strong> nhu hòa, đôn hậu, lấy đức để cảm hóa</li>
+          </ul>
+          
+          <p>
+            Sau khi ngài mất, tẩm mộ và phủ thờ của Tuy Biên Quận Công trở thành nơi con cháu các đời về phụng tế, tưởng niệm, không chỉ như một vị tổ khai phòng, mà còn như biểu tượng của nếp nhà lấy lễ – đức – kỷ cương làm trọng.
+          </p>
+          
+          <p>
+            Để định danh rõ ràng và tạo sự thống nhất cho hậu duệ phòng Tuy Biên, vua Minh Mạng đã ban riêng bộ chữ <strong>"Phong" (風 – nghĩa là gió)</strong> làm chữ lót đặt tên cho các công tử trong phòng. Việc ban chữ này không chỉ mang ý nghĩa quản lý tôn phả, mà còn hàm chứa tư tưởng biểu trưng: "Phong" – gió tuy vô hình nhưng lan tỏa bền bỉ, mềm mại mà không suy, linh hoạt mà vẫn có quy luật.
+          </p>
+          
+          <p>
+            Chính từ đây, Phòng Tuy Biên Quận Công được xác lập như một nhánh diệp chi riêng biệt, có:
+          </p>
+          
+          <ul>
+            <li>Tổ khai phòng rõ ràng</li>
+            <li>Tước hệ ổn định</li>
+            <li>Quy ước đặt tên đặc thù</li>
+            <li>Truyền thống gia phong xuyên suốt qua nhiều thế hệ</li>
+          </ul>
+          
+          <p>
+            Trong đại tộc Nguyễn Phước, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng vì thế không chỉ được nhớ đến với tư cách một hoàng tử, mà còn là người đặt nền móng cho một dòng hậu duệ có căn cơ, danh phận và bản sắc riêng, góp phần làm phong phú và bền vững cho cấu trúc toàn thể của hoàng tộc triều Nguyễn.
+          </p>
+
+          <h3>Phụ Hệ và Tổ Hệ của Tuy Biên Quận Công Nguyễn Phúc Miên Sủng</h3>
+          
+          <p>
+            Về phụ hệ trực tiếp, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng xuất thân từ dòng chính thống của hoàng tộc triều Nguyễn, kế thừa liên tục từ các đời chúa Nguyễn đến hoàng đế khai sáng vương triều.
+          </p>
+          
+          <p>
+            <strong>Cha của ngài là vua Minh Mạng</strong> – Nguyễn Phúc Đảm (阮福膽, 1791–1841), vị hoàng đế thứ hai của triều Nguyễn, trị vì từ năm 1820 đến 1841. Minh Mạng hoàng đế nổi tiếng là bậc minh quân có tầm nhìn sâu rộng, củng cố nền hành chính trung ương tập quyền, hoàn chỉnh thể chế quốc gia và đặc biệt chú trọng việc định danh, sắp xếp và quản lý tôn thất. <strong>Mẹ của Tuy Biên Quận Công là Lục giai Tiệp dư Nguyễn Thị Viên</strong>, người được ghi nhận với đức hạnh đoan trang, nề nếp, góp phần hình thành nhân cách cẩn trọng và khuôn phép của hoàng tử Miên Sủng.
+          </p>
+          
+          <p>
+            <strong>Ông nội của ngài là vua Gia Long</strong> – Nguyễn Phúc Ánh (阮福暎, 1762–1820), vị hoàng đế khai sáng triều Nguyễn, trị vì từ năm 1802 đến 1820. Gia Long là người thống nhất sơn hà sau nhiều thập niên binh biến, đặt nền móng cho triều đại kéo dài hơn một thế kỷ trong lịch sử Việt Nam.
+          </p>
+          
+          <p>
+            Lên một đời nữa, <strong>ông cố của ngài là Nguyễn Phúc Luân</strong> (阮福㫻, 1733–1765), được tôn xưng là Đức Hưng Tổ. Dù không trực tiếp trị vì, Nguyễn Phúc Luân giữ vai trò đặc biệt quan trọng trong việc truyền thừa chính thống của dòng chúa Nguyễn, là thân phụ của vua Gia Long.
+          </p>
+          
+          <p>
+            Trước đó, <strong>ông sơ của ngài là Nguyễn Phúc Khoát</strong> (阮福濶, 1714–1765), được tôn hiệu Vũ Vương (武王), trị vì Đàng Trong từ năm 1738 đến 1765. Thời kỳ của Vũ Vương đánh dấu sự phát triển ổn định về chính trị, văn hóa và lễ chế, đặt tiền đề cho việc hình thành vương quyền về sau.
+          </p>
+          
+          <h4>Tổ Tiên Dòng Chúa Nguyễn và Cao Tổ Đại Tộc</h4>
+          
+          <p>
+            Từ Nguyễn Phúc Khoát trở ngược lên, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng thuộc về chuỗi truyền thừa liên tục của các đời chúa Nguyễn, bắt đầu từ thời Nguyễn Hoàng vào Thuận Hóa:
+          </p>
+          
+          <ul>
+            <li><strong>Nguyễn Phúc Thụ</strong> (1697–1738) – Ninh Vương (寧王), trị vì giai đoạn 1725–1738</li>
+            <li><strong>Nguyễn Phúc Chu</strong> (阮福淍, 1675–1725) – Chúa Minh, người mở mang văn hóa, Phật giáo và giáo dục Đàng Trong</li>
+            <li><strong>Nguyễn Phúc Thái</strong> (阮福溙, 1649–1691) – Chúa Nghĩa</li>
+            <li><strong>Nguyễn Phúc Tần</strong> (阮福瀕, 1620–1687) – Chúa Hiền, củng cố quân sự và phòng thủ phương Nam</li>
+            <li><strong>Nguyễn Phúc Lan</strong> (阮福瀾, 1601–1648) – Chúa Thượng (上王)</li>
+            <li><strong>Nguyễn Phúc Nguyên</strong> (阮福源, 1563–1635) – Chúa Sãi, người đặt nền móng cai trị ổn định tại Thuận – Quảng</li>
+            <li><strong>Nguyễn Hoàng</strong> (阮潢, 1525–1613) – Chúa Tiên, vị tổ khai sáng cơ nghiệp các chúa Nguyễn tại Đàng Trong</li>
+          </ul>
+          
+          <p>
+            Trước thời các chúa Nguyễn, dòng họ tiếp tục nối dài qua các bậc công thần và danh tướng thời Lê – Trần, tiêu biểu như:
+          </p>
+          
+          <ul>
+            <li><strong>Nguyễn Kim</strong> (阮淦, 1468–1545) – Triệu Tổ, người trung hưng nhà Lê</li>
+            <li><strong>Nguyễn Văn Lựu</strong> (阮文溜) – Trừng Quốc Công</li>
+            <li><strong>Nguyễn Như Trác</strong> (阮如琢) – Phó Quốc Công</li>
+            <li><strong>Nguyễn Công Duẩn</strong> (阮公笋) – Thái Bảo Hoằng Quốc Công</li>
+            <li><strong>Nguyễn Sừ</strong> (阮儲) – Chiêu Quang Hầu</li>
+            <li><strong>Nguyễn Chiêm</strong> (阮佔) – Quản Nội</li>
+            <li><strong>Nguyễn Biện</strong> (阮忭) – Phụ Đạo Huệ Quốc Công</li>
+          </ul>
+          
+          <p>
+            Xa hơn nữa, tổ hệ của dòng Nguyễn Phước được truy nguyên đến các nhân vật thời Trần – Đinh:
+          </p>
+          
+          <ul>
+            <li><strong>Nguyễn Minh Du</strong> (阮明俞, 1330–1390) – Du Cần Công</li>
+            <li><strong>Nguyễn Công Luật</strong> (阮公律) – Hữu Hiểu Điểm</li>
+            <li><strong>Nguyễn Nạp Hoa</strong> (阮納和) – Bình Man Đại Tướng Quân</li>
+            <li><strong>Nguyễn Thế Tứ</strong> (阮世賜) – Đô Hiệu Kiểm</li>
+            <li><strong>Nguyễn Nộn</strong> (阮嫩) – Hoài Đạo Hiếu Vũ Vương</li>
+            <li><strong>Nguyễn Phụng</strong> (阮奉) – Tả Đô Đốc</li>
+            <li><strong>Nguyễn Viễn</strong> (阮遠) – Tả Quốc Công</li>
+            <li><strong>Nguyễn Đê</strong> (阮低) – Đức Đô Hiệu Kiểm</li>
+          </ul>
+          
+          <p>
+            Khởi nguyên của toàn bộ dòng tộc là <strong>Nguyễn Bặc</strong> (阮匐, 924–979) – Đức Định Quốc Công, khai quốc công thần triều Đinh, người được tôn làm Thủy tổ của đại tộc Nguyễn, từ đó mở ra dòng truyền thừa kéo dài hơn một thiên niên kỷ trong lịch sử Việt Nam.
           </p>
 
           <h3>Số Hóa Gia Phả – Kết Nối Quá Khứ Đến Tương Lai</h3>
@@ -993,43 +1094,43 @@
             <img src="/static/images/6. trong nha tho.jpg" alt="Hình ảnh bên trong nhà thờ Phòng Tuy Biên Quận Công" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
           </div>
 
-          <h3>1️⃣ Hoành phi ở chính giữa (phía trên)</h3>
+          <h3 style="font-size: clamp(18px, 5vw, 24px);">1️⃣ Hoành phi ở chính giữa (phía trên)</h3>
           
-          <div style="background: #f8f5f0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #d8b45c;">
-            <p style="font-size: 32px; font-weight: bold; text-align: center; margin-bottom: 15px; color: #8B4513;">
+          <div style="background: #f8f5f0; padding: clamp(16px, 4vw, 20px); border-radius: 8px; margin: clamp(16px, 4vw, 20px) 0; border-left: 4px solid #d8b45c;">
+            <p style="font-size: clamp(20px, 6vw, 32px); font-weight: bold; text-align: center; margin-bottom: clamp(12px, 3vw, 15px); color: #8B4513;">
               📜 繼述郡公祠
             </p>
             
-            <p><strong>Đọc Hán–Việt:</strong> Kế Thuật Quận Công Từ</p>
+            <p style="font-size: clamp(14px, 4vw, 16px);"><strong>Đọc Hán–Việt:</strong> Kế Thuật Quận Công Từ</p>
             
-            <p><strong>Ý nghĩa:</strong></p>
-            <ul style="margin-left: 20px; line-height: 1.8;">
+            <p style="font-size: clamp(14px, 4vw, 16px);"><strong>Ý nghĩa:</strong></p>
+            <ul style="margin-left: clamp(16px, 4vw, 20px); line-height: 1.8; font-size: clamp(13px, 3.5vw, 15px);">
               <li><strong>繼述 (Kế thuật):</strong> nối tiếp, kế thừa công đức – sự nghiệp của tiền nhân</li>
               <li><strong>郡公 (Quận công):</strong> tước vị quý tộc cao (thường phong cho công thần, hoàng thân)</li>
               <li><strong>祠 (Từ):</strong> đền thờ, từ đường</li>
             </ul>
             
-            <p style="margin-top: 15px; padding: 15px; background: #fff; border-radius: 5px; border: 1px solid #d8b45c;">
+            <p style="margin-top: clamp(12px, 3vw, 15px); padding: clamp(12px, 3vw, 15px); background: #fff; border-radius: 5px; border: 1px solid #d8b45c; font-size: clamp(13px, 3.5vw, 15px);">
               <strong>👉 Toàn bộ có thể hiểu là:</strong><br>
               "Đền thờ Quận Công – nơi kế thừa và tôn vinh công đức của bậc tiền nhân."
             </p>
           </div>
 
-          <h3>2️⃣ Câu đối bên trái (nhìn từ ngoài vào)</h3>
+          <h3 style="font-size: clamp(18px, 5vw, 24px);">2️⃣ Câu đối bên trái (nhìn từ ngoài vào)</h3>
           
-          <div style="background: #f8f5f0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #d8b45c;">
-            <p style="font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 15px; color: #8B4513;">
+          <div style="background: #f8f5f0; padding: clamp(16px, 4vw, 20px); border-radius: 8px; margin: clamp(16px, 4vw, 20px) 0; border-left: 4px solid #d8b45c;">
+            <p style="font-size: clamp(18px, 5vw, 28px); font-weight: bold; text-align: center; margin-bottom: clamp(12px, 3vw, 15px); color: #8B4513;">
               📜 九勳重書延定喜肇王芝季
             </p>
             
-            <p><strong>Đặc điểm:</strong></p>
-            <ul style="margin-left: 20px; line-height: 1.8;">
+            <p style="font-size: clamp(14px, 4vw, 16px);"><strong>Đặc điểm:</strong></p>
+            <ul style="margin-left: clamp(16px, 4vw, 20px); line-height: 1.8; font-size: clamp(13px, 3.5vw, 15px);">
               <li>Là câu đối Hán văn cổ, bố cục dọc</li>
               <li>Có các từ khóa mang tính vinh danh – phúc thọ – dòng tộc</li>
             </ul>
             
-            <p><strong>Phân tích ý nghĩa (theo cụm):</strong></p>
-            <ul style="margin-left: 20px; line-height: 1.8;">
+            <p style="font-size: clamp(14px, 4vw, 16px);"><strong>Phân tích ý nghĩa (theo cụm):</strong></p>
+            <ul style="margin-left: clamp(16px, 4vw, 20px); line-height: 1.8; font-size: clamp(13px, 3.5vw, 15px);">
               <li><strong>九勳:</strong> chín công lao lớn (ám chỉ đại công thần)</li>
               <li><strong>重書:</strong> ghi chép, lưu danh nhiều lần</li>
               <li><strong>延定:</strong> kéo dài sự ổn định, bền vững</li>
@@ -1037,52 +1138,52 @@
               <li><strong>王芝季:</strong> tên húy / pháp danh / thụy hiệu của nhân vật được thờ (thường không dịch nghĩa)</li>
             </ul>
             
-            <p style="margin-top: 15px; padding: 15px; background: #fff; border-radius: 5px; border: 1px solid #d8b45c;">
+            <p style="margin-top: clamp(12px, 3vw, 15px); padding: clamp(12px, 3vw, 15px); background: #fff; border-radius: 5px; border: 1px solid #d8b45c; font-size: clamp(13px, 3.5vw, 15px);">
               <strong>👉 Ý chung:</strong><br>
               Ca ngợi công lao lớn, lưu danh muôn đời, mang lại nền tảng ổn định và khởi đầu cát tường cho dòng tộc.
             </p>
           </div>
 
-          <h3>3️⃣ Câu đối bên phải</h3>
+          <h3 style="font-size: clamp(18px, 5vw, 24px);">3️⃣ Câu đối bên phải</h3>
           
-          <div style="background: #f8f5f0; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #d8b45c;">
-            <p style="font-size: 28px; font-weight: bold; text-align: center; margin-bottom: 15px; color: #8B4513;">
+          <div style="background: #f8f5f0; padding: clamp(16px, 4vw, 20px); border-radius: 8px; margin: clamp(16px, 4vw, 20px) 0; border-left: 4px solid #d8b45c;">
+            <p style="font-size: clamp(18px, 5vw, 28px); font-weight: bold; text-align: center; margin-bottom: clamp(12px, 3vw, 15px); color: #8B4513;">
               📜 國運昌隆壽福合慶萬年
             </p>
             
-            <p><strong>Đọc Hán–Việt:</strong> Quốc vận xương long, thọ phúc hợp khánh vạn niên</p>
+            <p style="font-size: clamp(14px, 4vw, 16px);"><strong>Đọc Hán–Việt:</strong> Quốc vận xương long, thọ phúc hợp khánh vạn niên</p>
             
-            <p><strong>Ý nghĩa từng phần:</strong></p>
-            <ul style="margin-left: 20px; line-height: 1.8;">
+            <p style="font-size: clamp(14px, 4vw, 16px);"><strong>Ý nghĩa từng phần:</strong></p>
+            <ul style="margin-left: clamp(16px, 4vw, 20px); line-height: 1.8; font-size: clamp(13px, 3.5vw, 15px);">
               <li><strong>國運昌隆:</strong> vận nước hưng thịnh</li>
               <li><strong>壽福:</strong> trường thọ và phúc đức</li>
               <li><strong>合慶:</strong> hội tụ điều lành</li>
               <li><strong>萬年:</strong> muôn năm</li>
             </ul>
             
-            <p style="margin-top: 15px; padding: 15px; background: #fff; border-radius: 5px; border: 1px solid #d8b45c;">
+            <p style="margin-top: clamp(12px, 3vw, 15px); padding: clamp(12px, 3vw, 15px); background: #fff; border-radius: 5px; border: 1px solid #d8b45c; font-size: clamp(13px, 3.5vw, 15px);">
               <strong>👉 Câu này mang ý nghĩa chúc tụng rất rõ:</strong><br>
               "Vận nước hưng thịnh, phúc thọ viên mãn, cát khánh hội tụ muôn đời."
             </p>
           </div>
 
-          <h3>4️⃣ Tổng thể phong cách chữ & ngữ cảnh</h3>
+          <h3 style="font-size: clamp(18px, 5vw, 24px);">4️⃣ Tổng thể phong cách chữ & ngữ cảnh</h3>
           
-          <p>Chữ viết là Hán tự truyền thống, thường dùng trong:</p>
-          <ul style="margin-left: 20px; line-height: 1.8;">
+          <p style="font-size: clamp(14px, 4vw, 16px);">Chữ viết là Hán tự truyền thống, thường dùng trong:</p>
+          <ul style="margin-left: clamp(16px, 4vw, 20px); line-height: 1.8; font-size: clamp(13px, 3.5vw, 15px);">
             <li>Đền thờ</li>
             <li>Từ đường</li>
             <li>Miếu thờ công thần, tổ tiên</li>
             <li>Văn phong trang trọng – điển chế – tôn vinh</li>
           </ul>
           
-          <p>Không phải chữ Trung Quốc hiện đại, mà là <strong>Hán văn cổ</strong> dùng trong văn hóa Việt – Hoa – Nho giáo.</p>
+          <p style="font-size: clamp(14px, 4vw, 16px);">Không phải chữ Trung Quốc hiện đại, mà là <strong>Hán văn cổ</strong> dùng trong văn hóa Việt – Hoa – Nho giáo.</p>
 
-          <h3>5️⃣ Nhận xét</h3>
+          <h3 style="font-size: clamp(18px, 5vw, 24px);">Nhận định chung</h3>
           
-          <div style="background: #fff5e6; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #d8b45c;">
-            <p>Đây không phải câu chữ trang trí ngẫu nhiên. Nội dung cho thấy:</p>
-            <ul style="margin-left: 20px; line-height: 1.8;">
+          <div style="background: #fff5e6; padding: clamp(16px, 4vw, 20px); border-radius: 8px; margin: clamp(16px, 4vw, 20px) 0; border: 2px solid #d8b45c;">
+            <p style="font-size: clamp(14px, 4vw, 16px);">Đây không phải câu chữ trang trí ngẫu nhiên. Nội dung cho thấy:</p>
+            <ul style="margin-left: clamp(16px, 4vw, 20px); line-height: 1.8; font-size: clamp(13px, 3.5vw, 15px);">
               <li>Thờ nhân vật có tước vị cao (Quận Công)</li>
               <li>Nhấn mạnh công lao – phúc đức – dòng tộc – vận nước</li>
               <li>Bố cục chuẩn mực của từ đường / công thần miếu</li>
@@ -3835,8 +3936,8 @@
   <style>
     /* Footer Styles */
     .footer {
-      background: linear-gradient(180deg, #2C1810 0%, #1A0F08 100%);
-      color: #F5E6D3;
+      background: linear-gradient(135deg, rgba(139, 0, 0, 0.95) 0%, rgba(220, 20, 60, 0.95) 100%);
+      color: #FFD700;
       padding: 60px 0 40px;
       margin-top: 80px;
       position: relative;
@@ -3850,7 +3951,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(135deg, rgba(218, 165, 32, 0.05) 0%, rgba(139, 69, 19, 0.05) 100%);
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.05) 0%, rgba(218, 165, 32, 0.05) 100%);
       pointer-events: none;
     }
 
@@ -3881,7 +3982,7 @@
     .footer-section ul {
       font-size: 14px;
       line-height: 1.8;
-      color: #E8D5B7;
+      color: #FFD700;
     }
 
     .footer-section ul {
@@ -3894,22 +3995,22 @@
     }
 
     .footer-section a {
-      color: #E8D5B7;
+      color: #FFD700;
       text-decoration: none;
       transition: all 0.3s ease;
       display: inline-block;
     }
 
     .footer-section a:hover {
-      color: #FFD700;
+      color: #FFFFFF;
       transform: translateX(3px);
     }
 
     .countdown-section {
       margin: 40px 0;
       padding: 30px 0;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-top: 1px solid rgba(255, 215, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 215, 0, 0.3);
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 30px;
@@ -3918,9 +4019,9 @@
     .countdown-item {
       text-align: center;
       padding: 20px;
-      background: linear-gradient(135deg, rgba(218, 165, 32, 0.15) 0%, rgba(139, 69, 19, 0.15) 100%);
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(218, 165, 32, 0.15) 100%);
       border-radius: 8px;
-      border: 1px solid rgba(255, 215, 0, 0.3);
+      border: 1px solid rgba(255, 215, 0, 0.5);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
@@ -3940,13 +4041,13 @@
     
     .countdown-date {
       font-size: 14px;
-      color: #E8D5B7;
+      color: #FFD700;
       margin-bottom: 15px;
     }
     
     .countdown-timer {
       font-size: 16px;
-      color: #F5E6D3;
+      color: #FFD700;
       font-weight: 500;
     }
     
@@ -3967,10 +4068,10 @@
 
     .footer-bottom {
       padding-top: 30px;
-      border-top: 1px solid rgba(255, 215, 0, 0.2);
+      border-top: 1px solid rgba(255, 215, 0, 0.3);
       text-align: center;
       font-size: 14px;
-      color: #D4A574;
+      color: #FFD700;
     }
 
     @media (max-width: 767px) {
@@ -4039,8 +4140,6 @@
     setInterval(updateCountdown, 1000);
   </script>
 
-  <!-- Floating Zalo Button -->
-  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
 </body>
 </html>
 
