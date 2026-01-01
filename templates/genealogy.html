@@ -2462,6 +2462,7 @@
     // Cache for generation stats to avoid rebuilding on every render
     let cachedGenerationBuckets = null; // Cached generation buckets (Map<number, Person[]>)
     let generationStatsCacheValid = false; // Flag to check if cache is valid
+    let cachedStatsPerPerson = new Map(); // Cache for descendant/inLaw counts per person ID
     
     /**
      * Build Person Tree from personMap and childrenMap
@@ -2685,7 +2686,39 @@
     function clearGenerationStatsCache() {
       cachedGenerationBuckets = null;
       generationStatsCacheValid = false;
+      cachedStatsPerPerson.clear(); // Clear person-level cache
       console.log('[Genealogy] Generation stats cache cleared');
+    }
+    
+    /**
+     * Get cached or compute descendant count for a person
+     * @param {Object} personNode - Person node
+     * @param {string} personId - Person ID
+     * @returns {number} Descendant count
+     */
+    function getCachedDescendantCount(personNode, personId) {
+      const cacheKey = `desc_${personId}`;
+      if (cachedStatsPerPerson.has(cacheKey)) {
+        return cachedStatsPerPerson.get(cacheKey);
+      }
+      const count = personNode ? countDescendants(personNode) : countDescendants({children: []});
+      cachedStatsPerPerson.set(cacheKey, count);
+      return count;
+    }
+    
+    /**
+     * Get cached or compute in-law count for a person
+     * @param {string} personId - Person ID
+     * @returns {number} In-law count
+     */
+    function getCachedInLawCount(personId) {
+      const cacheKey = `inlaw_${personId}`;
+      if (cachedStatsPerPerson.has(cacheKey)) {
+        return cachedStatsPerPerson.get(cacheKey);
+      }
+      const count = countInLaws(personId);
+      cachedStatsPerPerson.set(cacheKey, count);
+      return count;
     }
     
     /**
@@ -2732,16 +2765,29 @@
         button.addEventListener('click', () => switchTab(gen));
         buttonsContainer.appendChild(button);
         
-        // Tab content
+        // Tab content - lazy load table for better performance
         const content = document.createElement('div');
         content.className = 'tab-content' + (gen === 1 ? ' active' : '');
         content.id = `tabContent${gen}`;
         
-        // Get persons for this generation (may be empty)
+        // For first tab, render immediately; for others, render on demand
         const persons = generationBuckets.get(gen) || [];
-        const table = createGenerationTable(persons);
-        content.appendChild(table);
+        if (gen === 1) {
+          // Render first tab immediately
+          const table = createGenerationTable(persons);
+          content.appendChild(table);
+        } else {
+          // Lazy load: add placeholder, render when tab is clicked
+          content.innerHTML = '<div class="tab-loading" style="text-align: center; padding: 20px; color: #666;">Đang tải...</div>';
+          // Store persons data for lazy loading
+          content.dataset.gen = gen;
+        }
         contentsContainer.appendChild(content);
+      }
+      
+      // Store generationBuckets for lazy loading
+      if (generationBuckets) {
+        window._cachedGenerationBucketsForLazy = generationBuckets;
       }
     }
     
@@ -2763,6 +2809,25 @@
       document.querySelectorAll('.tab-content').forEach(content => {
         if (content.id === `tabContent${gen}`) {
           content.classList.add('active');
+          
+          // Lazy load: If content has placeholder, render table now
+          const loadingDiv = content.querySelector('.tab-loading');
+          if (loadingDiv && content.dataset.gen) {
+            try {
+              const genNum = parseInt(content.dataset.gen);
+              // Get persons from cached generation buckets
+              const buckets = cachedGenerationBuckets || window._cachedGenerationBucketsForLazy;
+              const persons = buckets ? (buckets.get(genNum) || []) : [];
+              
+              const table = createGenerationTable(persons);
+              content.innerHTML = '';
+              content.appendChild(table);
+              delete content.dataset.gen; // Clear data attribute
+            } catch (err) {
+              console.error('[Genealogy] Error lazy loading tab:', err);
+              content.innerHTML = '<div style="padding: 20px; color: #d32f2f; text-align: center;">Lỗi khi tải dữ liệu</div>';
+            }
+          }
         } else {
           content.classList.remove('active');
         }
@@ -2799,9 +2864,9 @@
         
         // Find person in tree to get full node with children structure
         const personInTree = personTreeRoot ? findPersonInTree(personTreeRoot, person.person_id) : null;
-        const descendantCount = personInTree ? countDescendants(personInTree) : countDescendants(person);
-        // Count in-laws based on personId (uses family tree data)
-        const inLawCount = countInLaws(person.person_id);
+        // Use cached stats for better performance
+        const descendantCount = getCachedDescendantCount(personInTree, person.person_id);
+        const inLawCount = getCachedInLawCount(person.person_id);
         
         row.innerHTML = `
           <td>${index + 1}</td>
@@ -3815,9 +3880,8 @@
     }
   </script>
   
-  <!-- Floating Chat Buttons -->
+  <!-- Floating Zalo Button -->
   <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
-  <a href="https://m.me/PhongTuyBienQuanCong" target="_blank" class="floating-chat-button" title="Nhắn tin cho Phòng Tuy Biên Quận Công">💬</a>
 </body>
 </html>
 

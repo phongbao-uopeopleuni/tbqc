@@ -2068,17 +2068,17 @@ except ImportError:
 @app.route('/api/genealogy/sync', methods=['POST'])
 def sync_genealogy_from_members():
     """
-    API sync dữ liệu Family Tree từ file SQL backup chuẩn (database chuẩn)
+    API sync dữ liệu Family Tree từ database chuẩn (https://phongtuybienquancong.info/members)
     
     Chức năng:
-    - Tìm file SQL backup mới nhất trong folder backups/
-    - Đọc và sync dữ liệu từ file backup (database chuẩn) vào database hiện tại
-    - TUYỆT ĐỐI chỉ đọc từ file backup, KHÔNG sửa đổi file backup
+    - Fetch dữ liệu từ API endpoint /api/members của database chuẩn
+    - Sync dữ liệu vào database hiện tại
+    - TUYỆT ĐỐI chỉ đọc từ API, KHÔNG sửa đổi database chuẩn
     
     Returns:
         JSON với thông tin sync: số lượng records, status, message
     """
-    logger.info("🔄 API /api/genealogy/sync được gọi - Sync từ file backup chuẩn")
+    logger.info("🔄 API /api/genealogy/sync được gọi - Sync từ database chuẩn (phongtuybienquancong.info)")
     
     try:
         # Tìm file backup mới nhất
