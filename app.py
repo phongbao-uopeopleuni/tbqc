@@ -2068,7 +2068,7 @@ except ImportError:
 @app.route('/api/genealogy/sync', methods=['POST'])
 def sync_genealogy_from_members():
     """
-    API sync dữ liệu Family Tree từ database chuẩn (https://phongtuybienquancong.info/members)
+    API sync dữ liệu Family Tree từ database chuẩn (https://www.phongtuybienquancong.info/members)
     
     Chức năng:
     - Fetch dữ liệu từ API endpoint /api/members của database chuẩn
@@ -2078,22 +2078,27 @@ def sync_genealogy_from_members():
     Returns:
         JSON với thông tin sync: số lượng records, status, message
     """
-    logger.info("🔄 API /api/genealogy/sync được gọi - Sync từ database chuẩn (phongtuybienquancong.info)")
+    logger.info("🔄 API /api/genealogy/sync được gọi - Sync từ database chuẩn (www.phongtuybienquancong.info)")
     
     connection = None
     cursor = None
     
     try:
         import requests
+        import urllib3
         
-        # URL của database chuẩn
-        standard_db_url = "https://phongtuybienquancong.info/api/members"
+        # Disable SSL warnings (vì chúng ta đang disable SSL verification cho trường hợp certificate không hợp lệ)
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        
+        # URL của database chuẩn (có www)
+        standard_db_url = "https://www.phongtuybienquancong.info/api/members"
         
         logger.info(f"📡 Fetching data from: {standard_db_url}")
         
         try:
             # Fetch dữ liệu từ database chuẩn
-            response = requests.get(standard_db_url, timeout=60)
+            # Disable SSL verification để tránh lỗi certificate (có thể cần thiết cho một số server)
+            response = requests.get(standard_db_url, timeout=60, verify=False)
             response.raise_for_status()
             response_data = response.json()
             

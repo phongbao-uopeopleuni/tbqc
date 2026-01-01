@@ -223,6 +223,7 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
     window.personMap = personMap;
     window.childrenMap = childrenMap;
     window.parentMap = parentMap;
+    window.marriagesMap = marriagesDataMap; // Expose marriages map for counting in-laws
   }
   
   return { treeData, graph, familyGraph };

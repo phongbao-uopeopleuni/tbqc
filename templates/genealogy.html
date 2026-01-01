@@ -2564,14 +2564,42 @@
             // Count spouses of this child (dâu/rể)
             let spouseCount = 0;
             
-            // Try to get from marriages array
-            if (childData.marriages && Array.isArray(childData.marriages) && childData.marriages.length > 0) {
+            // Try to get from marriagesMap (from database marriages table or /api/members)
+            if (typeof window.marriagesMap !== 'undefined' && window.marriagesMap.has(childId)) {
+              const marriages = window.marriagesMap.get(childId);
+              if (Array.isArray(marriages) && marriages.length > 0) {
+                // Count unique spouses (can be spouse_name or spouse_person_id)
+                const spouseNames = new Set();
+                marriages.forEach(m => {
+                  if (typeof m === 'string') {
+                    if (m && m.toLowerCase() !== 'unknown') {
+                      spouseNames.add(m);
+                    }
+                  } else if (m && typeof m === 'object') {
+                    // Check for spouse_person_id (from marriages table)
+                    if (m.spouse_person_id && m.spouse_person_id !== childId) {
+                      spouseNames.add(m.spouse_person_id);
+                    } else if (m.person_id && m.person_id !== childId) {
+                      spouseNames.add(m.person_id);
+                    } else if (m.spouse_name && m.spouse_name.toLowerCase() !== 'unknown') {
+                      spouseNames.add(m.spouse_name);
+                    }
+                  }
+                });
+                spouseCount = spouseNames.size;
+              }
+            }
+            
+            // Fallback: Try to get from marriages array in personData
+            if (spouseCount === 0 && childData.marriages && Array.isArray(childData.marriages) && childData.marriages.length > 0) {
               spouseCount = childData.marriages.filter(m => {
                 const spouseName = typeof m === 'string' ? m : (m.spouse_name || '');
                 return spouseName && spouseName.toLowerCase() !== 'unknown';
               }).length;
-            } else if (childData.spouses) {
-              // If spouses is a string, split it
+            }
+            
+            // Fallback: Try to get from spouses field
+            if (spouseCount === 0 && childData.spouses) {
               const spouses = typeof childData.spouses === 'string' 
                 ? childData.spouses.split(';').map(s => s.trim()).filter(s => s && s.toLowerCase() !== 'unknown')
                 : (Array.isArray(childData.spouses) ? childData.spouses.filter(s => s && s.toLowerCase() !== 'unknown') : []);
