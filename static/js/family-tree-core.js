@@ -125,14 +125,16 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
       // Tree structure from /api/tree
       graph = convertTreeToGraph(treeData, membersDataMap);
       
-      // Build family-node graph if buildRenderGraph is available
-      if (typeof buildRenderGraph === 'function') {
+        // Build family-node graph if buildRenderGraph is available
+        // Initialize marriagesDataMap in outer scope
+        let marriagesDataMap = new Map();
+        
+        if (typeof buildRenderGraph === 'function') {
         try {
           // Extract persons array from tree
           const persons = extractPersonsFromTree(treeData);
           
           // Load marriages data từ API (sử dụng cùng database như /api/members)
-          let marriagesDataMap = new Map();
           try {
             const marriagesResponse = await fetch(`${API_BASE_URL}/members`);
             if (marriagesResponse.ok) {
@@ -210,11 +212,25 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
           if (founderId) {
             window.founderId = founderId;
           }
+          
+          // Expose marriagesMap to window (inside try block to ensure marriagesDataMap exists)
+          if (typeof window !== 'undefined') {
+            window.marriagesMap = marriagesDataMap;
+          }
         } catch (error) {
           console.error('[Tree] Error building family graph:', error);
           console.error(error.stack);
           familyGraph = null;
           window.familyGraph = null;
+          // Still expose marriagesMap even if there's an error (it's initialized as empty Map)
+          if (typeof window !== 'undefined') {
+            window.marriagesMap = marriagesDataMap || new Map();
+          }
+        }
+      } else {
+        // If buildRenderGraph is not available, still initialize marriagesMap
+        if (typeof window !== 'undefined') {
+          window.marriagesMap = marriagesDataMap || new Map();
         }
       }
       
@@ -223,7 +239,10 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
     window.personMap = personMap;
     window.childrenMap = childrenMap;
     window.parentMap = parentMap;
-    window.marriagesMap = marriagesDataMap; // Expose marriages map for counting in-laws
+    // Ensure marriagesMap is set (should already be set above, but check as fallback)
+    if (!window.marriagesMap) {
+      window.marriagesMap = new Map();
+    }
   }
   
   return { treeData, graph, familyGraph };
