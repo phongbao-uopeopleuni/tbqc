@@ -881,29 +881,35 @@ def serve_genealogy_js():
 # Image routes - serve from static/images/ or Railway Volume
 @app.route('/static/images/<path:filename>')
 def serve_image_static(filename):
-    """Serve images from static/images/ (git source only, no Volume)"""
+    """Serve images from static/images/ (git source) or Railway Volume"""
     from urllib.parse import unquote
     import os
     
     # Decode URL-encoded filename (handles spaces, special chars)
     filename = unquote(filename)
     
-    # Use Flask's built-in static file serving
-    # Flask will automatically serve from static/images/ in the git repo
-    # This works even if /app/static/images is a mount point
     try:
-        # Kiểm tra file có tồn tại không trước khi serve
+        # Kiểm tra Railway Volume trước (nếu có)
+        volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+        if volume_mount_path and os.path.exists(volume_mount_path):
+            volume_filepath = os.path.join(volume_mount_path, filename)
+            if os.path.exists(volume_filepath):
+                logger.debug(f"[Serve Image] Serving from volume: {filename}")
+                return send_from_directory(volume_mount_path, filename)
+        
+        # Fallback về static/images trong git repo
         static_images_path = os.path.join(BASE_DIR, 'static', 'images')
         file_path = os.path.join(static_images_path, filename)
         
-        if not os.path.exists(file_path):
-            # File không tồn tại - chỉ log warning, không phải error
-            logger.warning(f"[Serve Image] File không tồn tại: {filename}")
-            from flask import abort
-            abort(404)
+        if os.path.exists(file_path):
+            logger.debug(f"[Serve Image] Serving from static/images: {filename}")
+            return send_from_directory('static/images', filename)
         
-        logger.debug(f"[Serve Image] Serving via Flask's static serving: {filename}")
-        return send_from_directory('static/images', filename)
+        # File không tồn tại ở cả 2 nơi
+        logger.warning(f"[Serve Image] File không tồn tại: {filename}")
+        from flask import abort
+        abort(404)
+        
     except Exception as e:
         # Chỉ log warning cho các lỗi không nghiêm trọng (như file không tồn tại)
         if '404' in str(e) or 'not found' in str(e).lower():
