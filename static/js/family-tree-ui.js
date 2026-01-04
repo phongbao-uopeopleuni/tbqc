@@ -351,6 +351,12 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
   if (person.gender === "Nữ") nodeDiv.classList.add("female");
   if (person.status === "Đã mất") nodeDiv.classList.add("dead");
   if (isHighlighted) nodeDiv.classList.add("highlighted");
+  
+  // Thêm class để tô màu theo đời (generation)
+  if (person.generation) {
+    nodeDiv.classList.add(`gen-${person.generation}`);
+    nodeDiv.setAttribute('data-generation', person.generation);
+  }
 
   // Tên người - nổi bật
   const nameDiv = document.createElement("div");
@@ -1044,31 +1050,141 @@ function displayPersonInfo(personData) {
   
   // Tên người
   const fullName = personData.full_name || personData.name || 'Chưa có thông tin';
-  const alias = personData.alias ? ` (${escapeHtml(personData.alias)})` : '';
   html += `<div style="margin-bottom: var(--space-4); padding-bottom: var(--space-3); border-bottom: 2px solid var(--color-primary);">`;
-  html += `<h4 style="color: var(--color-primary); font-size: var(--font-size-lg); margin: 0;">${escapeHtml(fullName)}${alias}</h4>`;
+  html += `<h4 style="color: var(--color-primary); font-size: var(--font-size-lg); margin: 0;">${escapeHtml(fullName)}</h4>`;
   html += `</div>`;
   
-  // Thông tin cơ bản
-  const basicFields = [
+  // Thông tin cơ bản - Thứ tự mới: Tên thường gọi, Nguyên quán, Ngày sinh, Ngày mất, Mộ phần
+  html += `<div style="margin-bottom: var(--space-4);">`;
+  
+  // Tên thường gọi (alias) - nếu có
+  if (personData.alias) {
+    html += `
+      <div style="margin-bottom: var(--space-2); display: flex;">
+        <strong style="min-width: 120px; color: var(--color-text-muted);">Tên thường gọi:</strong>
+        <span style="color: var(--color-text);">${escapeHtml(personData.alias)}</span>
+      </div>
+    `;
+  }
+  
+  // Nguyên quán
+  const hometown = personData.hometown || personData.birth_place || null;
+  if (hometown) {
+    html += `
+      <div style="margin-bottom: var(--space-2); display: flex;">
+        <strong style="min-width: 120px; color: var(--color-text-muted);">Nguyên quán:</strong>
+        <span style="color: var(--color-text);">${escapeHtml(hometown)}</span>
+      </div>
+    `;
+  }
+  
+  // Hàm format date thành dd/mm/yyyy
+  function formatDate(dateStr) {
+    if (!dateStr) return dateStr;
+    // Nếu đã là format dd/mm/yyyy hoặc có chứa / thì giữ nguyên
+    if (dateStr.includes('/')) return dateStr;
+    // Nếu là format yyyy-mm-dd, convert sang dd/mm/yyyy
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+      const parts = dateStr.split(' ')[0].split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+    }
+    return dateStr;
+  }
+  
+  // Ngày tháng năm sinh - Format dd/mm/yyyy
+  const birthDate = personData.birth_date_solar || personData.birth_date || personData.birthdate || null;
+  if (birthDate) {
+    const formattedBirthDate = formatDate(birthDate);
+    html += `
+      <div style="margin-bottom: var(--space-2); display: flex;">
+        <strong style="min-width: 120px; color: var(--color-text-muted);">Ngày sinh:</strong>
+        <span style="color: var(--color-text);">${escapeHtml(formattedBirthDate)}</span>
+      </div>
+    `;
+  }
+  
+  // Ngày tháng năm mất (nếu trạng thái "Đã mất") - Format dd/mm/yyyy
+  const status = personData.status || '';
+  const isDead = status && (status.toLowerCase().includes('mất') || status.toLowerCase().includes('chết') || status.toLowerCase().includes('đã mất'));
+  if (isDead) {
+    const deathDate = personData.death_date_solar || personData.death_date || personData.deathdate || null;
+    if (deathDate) {
+      const formattedDeathDate = formatDate(deathDate);
+      html += `
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 120px; color: var(--color-text-muted);">Ngày mất:</strong>
+          <span style="color: var(--color-text);">${escapeHtml(formattedDeathDate)}</span>
+        </div>
+      `;
+    }
+    
+    // Mộ phần (nếu trạng thái "Đã mất")
+    const graveInfo = personData.grave_info || personData.grave || personData.grave_location || null;
+    if (graveInfo) {
+      html += `
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 120px; color: var(--color-text-muted);">Mộ phần:</strong>
+          <span style="color: var(--color-text);">${escapeHtml(graveInfo)}</span>
+        </div>
+      `;
+    }
+  }
+  
+  html += `</div>`;
+  
+  // Thông tin bổ sung: Person ID, Đời, Giới tính, Trạng thái
+  const additionalFields = [
+    { label: 'Person ID', key: 'person_id' },
     { label: 'Đời', key: 'generation_number', fallback: 'generation_level' },
     { label: 'Giới tính', key: 'gender' },
-    { label: 'Trạng thái', key: 'status' },
-    { label: 'Nguyên quán', key: 'hometown', fallback: 'birth_place' }
+    { label: 'Trạng thái', key: 'status' }
   ];
   
-  html += `<div style="margin-bottom: var(--space-4);">`;
-  basicFields.forEach(field => {
+  html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
+  additionalFields.forEach(field => {
     const value = personData[field.key] || (field.fallback ? personData[field.fallback] : null);
     if (value) {
       html += `
         <div style="margin-bottom: var(--space-2); display: flex;">
-          <strong style="min-width: 100px; color: var(--color-text-muted);">${field.label}:</strong>
+          <strong style="min-width: 120px; color: var(--color-text-muted);">${field.label}:</strong>
           <span style="color: var(--color-text);">${escapeHtml(value)}</span>
         </div>
       `;
     }
   });
+  html += `</div>`;
+  
+  // Tên bố và tên mẹ
+  html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
+  const fatherName = personData.father_name || personData.fatherName || '';
+  const motherName = personData.mother_name || personData.motherName || '';
+  
+  if (fatherName || motherName) {
+    if (fatherName) {
+      html += `
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 120px; color: var(--color-text-muted);">Tên bố:</strong>
+          <span style="color: var(--color-text);">${escapeHtml(fatherName)}</span>
+        </div>
+      `;
+    }
+    if (motherName) {
+      html += `
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 120px; color: var(--color-text-muted);">Tên mẹ:</strong>
+          <span style="color: var(--color-text);">${escapeHtml(motherName)}</span>
+        </div>
+      `;
+    }
+  } else {
+    html += `
+      <div style="margin-bottom: var(--space-2); color: var(--color-text-muted); font-style: italic;">
+        Chưa có thông tin về bố mẹ
+      </div>
+    `;
+  }
   html += `</div>`;
   
   // Tổ tiên (Ancestors) - Sắp xếp theo đời tăng dần (đời 1, đời 2, đời 3...)
@@ -1091,7 +1207,7 @@ function displayPersonInfo(personData) {
     html += `</ul></div>`;
   }
   
-  // Con cháu (Descendants)
+  // Con (Descendants) - Đổi từ "Con cháu" thành "Con:" và đánh số thứ tự
   let childrenList = [];
   if (personData.children) {
     if (Array.isArray(personData.children) && personData.children.length > 0) {
@@ -1104,13 +1220,14 @@ function displayPersonInfo(personData) {
   
   if (childrenList.length > 0) {
     html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
-    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Con cháu</h5>`;
+    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Con:</h5>`;
     html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
     childrenList.forEach((child, index) => {
       const gen = child.generation_number || child.generation_level || '';
       const genText = gen ? ` (Đời ${gen})` : '';
       const childName = child.full_name || child.name || child.child_name || '';
-      html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(childName)}${genText}</li>`;
+      const childNumber = index + 1; // Đánh số từ 1
+      html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${childNumber}. ${escapeHtml(childName)}${genText}</li>`;
     });
     html += `</ul></div>`;
   }
@@ -1129,7 +1246,7 @@ function displayPersonInfo(personData) {
     html += `</ul></div>`;
   }
   
-  // Anh chị em
+  // Anh chị em - Đánh số thứ tự
   if (personData.siblings) {
     const siblings = typeof personData.siblings === 'string' 
       ? personData.siblings.split(';').map(s => s.trim()).filter(s => s)
@@ -1138,8 +1255,9 @@ function displayPersonInfo(personData) {
       html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
       html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Anh chị em</h5>`;
       html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
-      siblings.forEach(sibling => {
-        html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(sibling)}</li>`;
+      siblings.forEach((sibling, index) => {
+        const siblingNumber = index + 1; // Đánh số từ 1
+        html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${siblingNumber}. ${escapeHtml(sibling)}</li>`;
       });
       html += `</ul></div>`;
     }

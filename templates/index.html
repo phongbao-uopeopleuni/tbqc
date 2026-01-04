@@ -1805,6 +1805,23 @@
         }
       }
       
+      // Thêm Vua Gia Long (Đời 0) nếu chưa có
+      const hasGen0 = sortedLineage.some(p => (p.generation_number === 0 || p.generation_level === 0));
+      if (!hasGen0) {
+        const gen0Person = {
+          person_id: 'P-0-1',
+          full_name: 'Vua Gia Long',
+          generation_number: 0,
+          generation_level: 0,
+          father_name: 'Chưa có thông tin',
+          mother_name: 'Chưa có thông tin',
+          gender: 'Nam',
+          status: 'Đã mất'
+        };
+        sortedLineage.unshift(gen0Person);
+        console.log('[Lineage] Added Generation 0 placeholder (Vua Gia Long)');
+      }
+      
       // Ensure Generation 1 exists (Vua Minh Mạng)
       const hasGen1 = sortedLineage.some(p => (p.generation_number === 1 || p.generation_level === 1));
       if (!hasGen1) {
@@ -1829,6 +1846,18 @@
           sortedLineage[gen1Index].father_name = gen1Parents.father_name;
           sortedLineage[gen1Index].mother_name = gen1Parents.mother_name;
           console.log('[Lineage] Normalized Generation 1 parents');
+        }
+      }
+      
+      // Đảm bảo Đời 1 có parent là Vua Gia Long nếu có Đời 0
+      const gen0Index = sortedLineage.findIndex(p => (p.generation_number === 0 || p.generation_level === 0));
+      const gen1Index = sortedLineage.findIndex(p => (p.generation_number === 1 || p.generation_level === 1));
+      if (gen0Index !== -1 && gen1Index !== -1) {
+        if (!sortedLineage[gen1Index].father_name || sortedLineage[gen1Index].father_name === 'Chưa có thông tin') {
+          sortedLineage[gen1Index].father_name = 'Vua Gia Long';
+        }
+        if (!sortedLineage[gen1Index].mother_name || sortedLineage[gen1Index].mother_name === 'Chưa có thông tin') {
+          sortedLineage[gen1Index].mother_name = 'Thuận Thiên Hoàng hậu';
         }
       }
       
@@ -1875,8 +1904,9 @@
         const fatherName = normalizeParentName(p.father_name, true) || p.father_name || '';
         const motherName = normalizeParentName(p.mother_name, false) || p.mother_name || '';
         
-        // Format theo yêu cầu: "Đời X – Tên tổ tiên" (không có tên bố trong ngoặc)
-        const titleLine = `Đời ${gen} – ${escapeHtml(name)}`;
+        // Hiển thị "Tổ tiên" cho Đời 0, "Đời X" cho các đời khác
+        const genLabel = gen === 0 ? 'Tổ tiên' : `Đời ${gen}`;
+        const titleLine = `${genLabel} – ${escapeHtml(name)}`;
         
         // Format parent info: "Con của Ông ... và Bà ..." (không có "Con của:" in nghiêng)
         let parentInfo = '';
@@ -1892,7 +1922,9 @@
         
         // Badge color by generation
         let badgeColor = '';
-        if (gen === 1) {
+        if (gen === 0) {
+          badgeColor = 'background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);'; // Màu xanh đậm cho Tổ tiên
+        } else if (gen === 1) {
           badgeColor = 'background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);'; // Red
         } else if (gen === 2) {
           badgeColor = 'background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);'; // Orange
@@ -1936,7 +1968,7 @@
                 display: inline-block;
                 min-width: 70px;
                 text-align: center;
-              ">Đời ${gen}</span>
+              ">${genLabel}</span>
               <h3 style="
                 color: #8B0000;
                 font-weight: 700;

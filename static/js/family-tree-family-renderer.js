@@ -38,6 +38,13 @@ function renderFamilyNode(familyNode, x, y, options = {}) {
   // Apply branch color
   familyDiv.style.setProperty("--branch-color", branchColor);
   
+  // Thêm class để tô màu theo đời (generation)
+  const generation = familyNode.generation || 0;
+  if (generation !== null && generation !== undefined) {
+    familyDiv.classList.add(`family-gen-${generation}`);
+    familyDiv.setAttribute('data-generation', generation);
+  }
+  
   // Border: highlight overrides branch color
   if (isHighlighted) {
     familyDiv.style.border = '3px solid #0066FF';
@@ -49,7 +56,6 @@ function renderFamilyNode(familyNode, x, y, options = {}) {
   
   // Family ID attribute
   familyDiv.setAttribute('data-family-id', familyNode.id);
-  familyDiv.setAttribute('data-generation', familyNode.generation || 0);
   
   // Container cho 2 nửa (hoặc 1 nửa nếu không có spouse2)
   const container = document.createElement('div');

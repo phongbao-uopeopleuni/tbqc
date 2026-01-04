@@ -653,6 +653,10 @@
             <input type="text" id="place_of_death" name="place_of_death" placeholder="Nhập nơi mất">
           </div>
         </div>
+        <div class="form-group">
+          <label for="grave_info">Mộ phần</label>
+          <input type="text" id="grave_info" name="grave_info" placeholder="Nhập thông tin mộ phần">
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label for="father_name">Tên bố</label>
@@ -662,10 +666,6 @@
             <label for="mother_name">Tên mẹ</label>
             <input type="text" id="mother_name" name="mother_name">
           </div>
-        </div>
-        <div class="form-group">
-          <label for="mother_name">Tên mẹ</label>
-          <input type="text" id="mother_name" name="mother_name">
         </div>
         <div class="form-group">
           <label for="children_info">Thông tin con</label>
@@ -1151,6 +1151,7 @@
       document.getElementById('birth_date_solar').value = member.birth_date_solar || '';
       document.getElementById('death_date_solar').value = member.death_date_solar || '';
       document.getElementById('place_of_death').value = member.place_of_death || '';
+      document.getElementById('grave_info').value = member.grave_info || '';
       document.getElementById('father_name').value = member.father_name || '';
       document.getElementById('mother_name').value = member.mother_name || '';
       // Populate children, spouse, siblings info

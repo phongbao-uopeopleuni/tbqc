@@ -13,7 +13,7 @@
 
 // Use relative URLs for compatibility with both local and Railway
 const API_BASE_URL = '/api';
-const MAX_DEFAULT_GENERATION = 5; // Chỉ hiển thị đến đời 5 trong chế độ mặc định
+const MAX_DEFAULT_GENERATION = 10; // Chỉ hiển thị đến đời 10 trong chế độ mặc định
 const FOUNDER_NAME = "Vua Minh Mạng";
 
 // ============================================
