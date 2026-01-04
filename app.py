@@ -3016,11 +3016,52 @@ def get_ancestors(person_id):
                 return jsonify({'error': f'Person {person_id} not found'}), 404
             
             # Nếu người được tra cứu là Nữ (con gái), cần tìm cha trước
+            # Nếu cha không thuộc dòng Nguyễn Phước, chuyển sang tìm dòng mẹ (cháu ngoại)
             # If the person being searched is Female (daughter), need to find father first
+            # If father doesn't belong to Nguyen Phuoc lineage, switch to mother's line (maternal grandchild)
             target_person_id = person_id
             person_gender = person_info.get('gender', '').strip().upper() if person_info.get('gender') else ''
             
-            if person_gender in ['NỮ', 'NU', 'F', 'FEMALE', 'NỮ GIỚI']:
+            # Kiểm tra xem người này có thuộc dòng Nguyễn Phước không
+            # Check if this person belongs to Nguyen Phuoc lineage
+            person_name = person_info.get('full_name', '')
+            nguyen_phuoc_keywords = ['Vua', 'Miên', 'Hồng', 'Hường', 'Ưng', 'Bửu', 'Vĩnh', 'Bảo', 'Quý', 'Nguyễn Phước', 'Nguyễn Phúc']
+            is_person_nguyen_phuoc = any(keyword in person_name for keyword in nguyen_phuoc_keywords)
+            
+            # Nếu là Nam nhưng không thuộc dòng Nguyễn Phước, chuyển sang tìm dòng mẹ
+            # If male but doesn't belong to Nguyen Phuoc lineage, switch to mother's line
+            if person_gender not in ['NỮ', 'NU', 'F', 'FEMALE', 'NỮ GIỚI'] and not is_person_nguyen_phuoc:
+                logger.info(f"[API /api/ancestors/{person_id}] Person {person_id} ({person_name}) is male but doesn't belong to Nguyen Phuoc lineage, switching to mother's line")
+                mother_id = None
+                
+                # Tìm mẹ
+                cursor.execute("""
+                    SELECT r.parent_id
+                    FROM relationships r
+                    WHERE r.child_id = %s AND r.relation_type = 'mother'
+                    LIMIT 1
+                """, (person_id,))
+                mother_rel = cursor.fetchone()
+                if mother_rel and mother_rel.get('parent_id'):
+                    mother_id = mother_rel.get('parent_id')
+                
+                # Nếu tìm thấy mẹ, tìm cha của mẹ (ông ngoại)
+                if mother_id:
+                    cursor.execute("""
+                        SELECT r.parent_id
+                        FROM relationships r
+                        WHERE r.child_id = %s AND r.relation_type = 'father'
+                        LIMIT 1
+                    """, (mother_id,))
+                    grandfather_rel = cursor.fetchone()
+                    if grandfather_rel and grandfather_rel.get('parent_id'):
+                        target_person_id = grandfather_rel.get('parent_id')
+                        logger.info(f"[API /api/ancestors/{person_id}] Found maternal grandfather: {target_person_id}, using for ancestors search")
+                    else:
+                        logger.warning(f"[API /api/ancestors/{person_id}] Person doesn't belong to Nguyen Phuoc lineage, no maternal grandfather found, using person directly")
+                else:
+                    logger.warning(f"[API /api/ancestors/{person_id}] Person doesn't belong to Nguyen Phuoc lineage, no mother found, using person directly")
+            elif person_gender in ['NỮ', 'NU', 'F', 'FEMALE', 'NỮ GIỚI']:
                 logger.info(f"[API /api/ancestors/{person_id}] Person is female, finding father first")
                 # Tìm cha của người này
                 # Find father of this person
@@ -3053,8 +3094,57 @@ def get_ancestors(person_id):
                         father_id = father_fm.get('person_id')
                 
                 if father_id:
-                    logger.info(f"[API /api/ancestors/{person_id}] Found father: {father_id}, using father for ancestors search")
-                    target_person_id = father_id
+                    # Kiểm tra xem cha có thuộc dòng Nguyễn Phước không
+                    # Check if father belongs to Nguyen Phuoc lineage
+                    cursor.execute("""
+                        SELECT full_name
+                        FROM persons
+                        WHERE person_id = %s
+                    """, (father_id,))
+                    father_info = cursor.fetchone()
+                    father_name = father_info.get('full_name', '') if father_info else ''
+                    
+                    # Kiểm tra các từ khóa đặc trưng của dòng Nguyễn Phước
+                    # Check for characteristic keywords of Nguyen Phuoc lineage
+                    nguyen_phuoc_keywords = ['Vua', 'Miên', 'Hồng', 'Hường', 'Ưng', 'Bửu', 'Vĩnh', 'Bảo', 'Quý', 'Nguyễn Phước', 'Nguyễn Phúc']
+                    is_nguyen_phuoc_lineage = any(keyword in father_name for keyword in nguyen_phuoc_keywords)
+                    
+                    if is_nguyen_phuoc_lineage:
+                        logger.info(f"[API /api/ancestors/{person_id}] Found father: {father_id} ({father_name}), belongs to Nguyen Phuoc lineage, using father for ancestors search")
+                        target_person_id = father_id
+                    else:
+                        # Cha không thuộc dòng Nguyễn Phước, chuyển sang tìm dòng mẹ (cháu ngoại)
+                        # Father doesn't belong to Nguyen Phuoc lineage, switch to mother's line (maternal grandchild)
+                        logger.info(f"[API /api/ancestors/{person_id}] Father {father_id} ({father_name}) doesn't belong to Nguyen Phuoc lineage, switching to mother's line")
+                        mother_id = None
+                        
+                        # Tìm mẹ
+                        cursor.execute("""
+                            SELECT r.parent_id
+                            FROM relationships r
+                            WHERE r.child_id = %s AND r.relation_type = 'mother'
+                            LIMIT 1
+                        """, (person_id,))
+                        mother_rel = cursor.fetchone()
+                        if mother_rel and mother_rel.get('parent_id'):
+                            mother_id = mother_rel.get('parent_id')
+                        
+                        # Nếu tìm thấy mẹ, tìm cha của mẹ (ông ngoại)
+                        if mother_id:
+                            cursor.execute("""
+                                SELECT r.parent_id
+                                FROM relationships r
+                                WHERE r.child_id = %s AND r.relation_type = 'father'
+                                LIMIT 1
+                            """, (mother_id,))
+                            grandfather_rel = cursor.fetchone()
+                            if grandfather_rel and grandfather_rel.get('parent_id'):
+                                target_person_id = grandfather_rel.get('parent_id')
+                                logger.info(f"[API /api/ancestors/{person_id}] Found maternal grandfather: {target_person_id}, using for ancestors search")
+                            else:
+                                logger.warning(f"[API /api/ancestors/{person_id}] Person is female, no maternal grandfather found, using person directly")
+                        else:
+                            logger.warning(f"[API /api/ancestors/{person_id}] Person is female but no mother found, using person directly")
                 else:
                     # Nếu không tìm thấy cha, thử tìm ông ngoại (cha của mẹ)
                     # If father not found, try to find maternal grandfather (mother's father)
@@ -3135,11 +3225,11 @@ def get_ancestors(person_id):
                         
                         -- Recursive case: CHA (chỉ theo dòng cha)
                         SELECT 
-                            COALESCE(parent_by_rel.person_id, parent_by_fm.person_id) AS person_id,
-                            COALESCE(parent_by_rel.full_name, parent_by_fm.full_name) AS full_name,
-                            COALESCE(parent_by_rel.gender, parent_by_fm.gender) AS gender,
-                            COALESCE(parent_by_rel.generation_level, parent_by_fm.generation_level) AS generation_level,
-                            COALESCE(parent_by_rel.father_mother_id, parent_by_fm.father_mother_id) AS father_mother_id,
+                            COALESCE(parent_by_rel.person_id, parent_by_fm.person_id, parent_by_gen.person_id) AS person_id,
+                            COALESCE(parent_by_rel.full_name, parent_by_fm.full_name, parent_by_gen.full_name) AS full_name,
+                            COALESCE(parent_by_rel.gender, parent_by_fm.gender, parent_by_gen.gender) AS gender,
+                            COALESCE(parent_by_rel.generation_level, parent_by_fm.generation_level, parent_by_gen.generation_level) AS generation_level,
+                            COALESCE(parent_by_rel.father_mother_id, parent_by_fm.father_mother_id, parent_by_gen.father_mother_id) AS father_mother_id,
                             a.level + 1
                         FROM ancestors a
                         INNER JOIN persons child ON a.person_id = child.person_id
@@ -3151,7 +3241,7 @@ def get_ancestors(person_id):
                         LEFT JOIN persons parent_by_rel ON (
                             r.parent_id = parent_by_rel.person_id
                         )
-                        -- Ưu tiên 2: Tìm cha theo father_mother_id (fallback)
+                        -- Ưu tiên 2: Tìm cha theo father_mother_id (fallback) - tìm cha gần nhất
                         LEFT JOIN persons parent_by_fm ON (
                             parent_by_rel.person_id IS NULL
                             AND child.father_mother_id IS NOT NULL 
@@ -3159,6 +3249,7 @@ def get_ancestors(person_id):
                             AND parent_by_fm.father_mother_id = child.father_mother_id
                             AND parent_by_fm.generation_level < child.generation_level
                             AND (parent_by_fm.gender = 'Nam' OR parent_by_fm.gender IS NULL)
+                            -- Tìm cha gần nhất (generation_level cao nhất nhưng vẫn < child)
                             AND parent_by_fm.generation_level = (
                                 SELECT MAX(p2.generation_level)
                                 FROM persons p2
@@ -3167,8 +3258,21 @@ def get_ancestors(person_id):
                                     AND (p2.gender = 'Nam' OR p2.gender IS NULL)
                             )
                         )
+                        -- Ưu tiên 3: Tìm cha theo generation_level - 1 (suy luận nếu có nhiều người cùng father_mother_id)
+                        -- Đảm bảo tìm được đầy đủ các đời, kể cả khi thiếu thông tin relationships
+                        LEFT JOIN persons parent_by_gen ON (
+                            parent_by_rel.person_id IS NULL
+                            AND parent_by_fm.person_id IS NULL
+                            AND child.father_mother_id IS NOT NULL 
+                            AND child.father_mother_id != ''
+                            AND parent_by_gen.father_mother_id = child.father_mother_id
+                            AND parent_by_gen.generation_level = child.generation_level - 1
+                            AND (parent_by_gen.gender = 'Nam' OR parent_by_gen.gender IS NULL)
+                        )
                         WHERE a.level < %s
-                            AND (parent_by_rel.person_id IS NOT NULL OR parent_by_fm.person_id IS NOT NULL)
+                            AND (parent_by_rel.person_id IS NOT NULL 
+                                 OR parent_by_fm.person_id IS NOT NULL 
+                                 OR parent_by_gen.person_id IS NOT NULL)
                     )
                     SELECT * FROM ancestors 
                     WHERE level > 0 
