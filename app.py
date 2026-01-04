@@ -3003,6 +3003,11 @@ def get_ancestors(person_id):
         
         cursor = connection.cursor(dictionary=True)
         
+        # Biến để lưu father_id và person_id cần thêm vào chain sau (khi tra cứu cháu ngoại)
+        # Variables to store father_id and person_id to add to chain later (when searching for maternal grandchild)
+        father_to_add_to_chain = None
+        original_person_id = person_id
+        
         # Validate person_id exists và lấy thông tin người đó
         # Validate person_id exists and get person information
         try:
@@ -3145,6 +3150,12 @@ def get_ancestors(person_id):
                                 logger.warning(f"[API /api/ancestors/{person_id}] Person is female, no maternal grandfather found, using person directly")
                         else:
                             logger.warning(f"[API /api/ancestors/{person_id}] Person is female but no mother found, using person directly")
+                            
+                        # Lưu father_id để thêm vào ancestors_chain sau (khi cha không thuộc dòng Nguyễn Phước)
+                        # Store father_id to add to ancestors_chain later (when father doesn't belong to Nguyen Phuoc lineage)
+                        if father_id:
+                            father_to_add_to_chain = father_id
+                            logger.info(f"[API /api/ancestors/{person_id}] Storing father_id {father_id} to add to chain later")
                 else:
                     # Nếu không tìm thấy cha, thử tìm ông ngoại (cha của mẹ)
                     # If father not found, try to find maternal grandfather (mother's father)
@@ -3202,7 +3213,9 @@ def get_ancestors(person_id):
         
         # FALLBACK: Nếu stored procedure không trả về đầy đủ hoặc lỗi, dùng query trực tiếp
         # FALLBACK: If stored procedure doesn't return complete data or errors, use direct query
-        if not ancestors_result or len(ancestors_result) == 0:
+        # Always use direct query for better reliability (stored procedure may miss some generations)
+        use_direct_query = True  # Force using direct query for more reliable results
+        if use_direct_query or not ancestors_result or len(ancestors_result) == 0:
             logger.info(f"[API /api/ancestors/{person_id}] Stored procedure returned empty, using direct query fallback (target_person_id={target_person_id})")
             try:
                 # Query trực tiếp để lấy ancestors theo relationships và father_mother_id
@@ -3432,6 +3445,65 @@ def get_ancestors(person_id):
                 pass
                 
             enriched_chain.append(ancestor)
+        
+        # Nếu có father_to_add_to_chain, thêm cha vào chain (trường hợp cháu ngoại)
+        # If father_to_add_to_chain exists, add father to chain (maternal grandchild case)
+        if father_to_add_to_chain:
+            try:
+                # Kiểm tra xem cha đã có trong chain chưa
+                # Check if father already exists in chain
+                father_already_in_chain = any(a.get('person_id') == father_to_add_to_chain for a in enriched_chain)
+                if not father_already_in_chain:
+                    # Lấy thông tin cha
+                    # Get father information
+                    cursor.execute("""
+                        SELECT person_id, full_name, gender, generation_level, status
+                        FROM persons
+                        WHERE person_id = %s
+                    """, (father_to_add_to_chain,))
+                    father_info = cursor.fetchone()
+                    if father_info:
+                        # Lấy thông tin cha mẹ của cha từ parent_data
+                        # Get father's parent information from parent_data
+                        rel = parent_data.get(father_to_add_to_chain, {'father_name': None, 'mother_name': None})
+                        
+                        # Tạo entry cho cha
+                        # Create entry for father
+                        father_entry = {
+                            'person_id': father_info.get('person_id'),
+                            'full_name': father_info.get('full_name', ''),
+                            'gender': father_info.get('gender'),
+                            'generation_level': father_info.get('generation_level'),
+                            'generation_number': father_info.get('generation_level'),
+                            'father_name': rel.get('father_name'),
+                            'mother_name': rel.get('mother_name'),
+                            'level': 999  # High level to ensure it's sorted after ancestors
+                        }
+                        
+                        # Lấy thông tin hôn phối, con cái, anh chị em
+                        # Get spouse, children, siblings information
+                        if father_to_add_to_chain in spouse_data_from_table:
+                            spouse_names = spouse_data_from_table[father_to_add_to_chain]
+                            father_entry['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                        elif father_to_add_to_chain in spouse_data_from_marriages:
+                            spouse_names = spouse_data_from_marriages[father_to_add_to_chain]
+                            father_entry['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                        elif father_to_add_to_chain in spouse_data_from_csv:
+                            spouse_names = spouse_data_from_csv[father_to_add_to_chain]
+                            father_entry['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                        
+                        children = children_map.get(father_to_add_to_chain, [])
+                        father_entry['children'] = '; '.join(children) if children else None
+                        
+                        siblings = siblings_map.get(father_to_add_to_chain, [])
+                        father_entry['siblings'] = '; '.join(siblings) if siblings else None
+                        
+                        enriched_chain.append(father_entry)
+                        logger.info(f"[API /api/ancestors/{person_id}] Added father {father_to_add_to_chain} to ancestors_chain")
+            except Exception as e:
+                logger.error(f"Error adding father to chain: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
         
         # Sort enriched_chain theo generation_level tăng dần
         # Đảm bảo sắp xếp đúng để không bỏ sót bất kỳ đời nào
