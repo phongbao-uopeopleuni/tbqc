@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>VR Tour - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    /* Page-specific styles */
+    .vr-tour-page {
+      padding-top: var(--space-8);
+      padding-bottom: var(--space-10);
+      min-height: calc(100vh - 64px);
+      background: linear-gradient(180deg, #FFF8DC 0%, #FFEBCD 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .vr-tour-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 var(--space-4);
+      text-align: center;
+    }
+    
+    .vr-tour-icon {
+      font-size: 120px;
+      margin-bottom: var(--space-6);
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0px);
+      }
+      50% {
+        transform: translateY(-20px);
+      }
+    }
+    
+    .vr-tour-title {
+      font-size: var(--font-size-4xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+      font-weight: var(--font-weight-bold);
+    }
+    
+    .vr-tour-message {
+      font-size: var(--font-size-xl);
+      color: var(--color-text);
+      line-height: var(--line-height-relaxed);
+      margin-bottom: var(--space-8);
+      padding: var(--space-6);
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .vr-tour-subtitle {
+      font-size: var(--font-size-lg);
+      color: var(--color-text-muted);
+      margin-top: var(--space-4);
+    }
+    
+    @media (max-width: 768px) {
+      .vr-tour-icon {
+        font-size: 80px;
+      }
+      
+      .vr-tour-title {
+        font-size: var(--font-size-3xl);
+      }
+      
+      .vr-tour-message {
+        font-size: var(--font-size-lg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công</a>
+    <button class="navbar-toggle" onclick="toggleMenu()">☰</button>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/genealogy">Gia phả</a></li>
+      <li><a href="/activities">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/documents">Tài liệu</a></li>
+      <li><a href="/vr-tour" class="active">VR Tour</a></li>
+      <li><a href="/admin/activities">Đăng nhập bài đăng</a></li>
+    </ul>
+  </nav>
+
+  <div class="vr-tour-page">
+    <div class="vr-tour-container">
+      <div class="vr-tour-icon">🥽</div>
+      <h1 class="vr-tour-title">VR Tour</h1>
+      <div class="vr-tour-message">
+        <p><strong>Chức năng hiện đang được phát triển</strong></p>
+        <p class="vr-tour-subtitle">Chúng tôi đang nỗ lực xây dựng tính năng tham quan ảo để mang đến trải nghiệm tuyệt vời cho bạn.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toggle menu for mobile
+    function toggleMenu() {
+      const menu = document.getElementById('navbarMenu');
+      menu.classList.toggle('active');
+    }
+
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+      const navbar = document.querySelector('.navbar');
+      const menu = document.getElementById('navbarMenu');
+      const toggle = document.querySelector('.navbar-toggle');
+      
+      if (menu.classList.contains('active') && 
+          !navbar.contains(event.target)) {
+        menu.classList.remove('active');
+      }
+    });
+  </script>
+
+  <!-- Floating Zalo Button -->
+  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+</body>
+</html>
+

@@ -6,6 +6,8 @@ flask-login==0.6.3
 gunicorn==23.0.0
 pytest==7.4.3
 requests==2.31.0
-Pillow==10.1.0
+Pillow>=10.1.0
 openai>=1.0.0
 anthropic>=0.18.0
+flask-wtf==1.2.1
+Flask-Limiter==3.5.0

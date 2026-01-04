@@ -11,6 +11,8 @@ from werkzeug.utils import secure_filename
 import json
 from flask_cors import CORS
 from flask_login import login_required, current_user
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import mysql.connector
 from mysql.connector import Error
 import os
@@ -18,6 +20,7 @@ import secrets
 import csv
 import sys
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,11 @@ try:
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # Session kéo dài 24 giờ
     # Kiểm tra xem có đang chạy trên Railway (production) không
     is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true'
+    
+    # Tắt debug mode trên production để bảo mật
+    # Disable debug mode on production for security
+    app.config['DEBUG'] = False if is_production else os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    
     # IMPORTANT: don't hard-code domain; set COOKIE_DOMAIN explicitly if you need cross-subdomain cookies.
     cookie_domain = os.environ.get('COOKIE_DOMAIN') if is_production else None
     app.config['SESSION_COOKIE_SECURE'] = is_production  # HTTPS only trên production
@@ -64,7 +72,32 @@ try:
     app.config['REMEMBER_COOKIE_DOMAIN'] = cookie_domain
     # Đảm bảo session được lưu mỗi khi có thay đổi
     app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session mỗi request để kéo dài thời gian
-    CORS(app)  # Cho phép frontend gọi API
+    
+    # CORS Configuration - Giới hạn origins cho bảo mật
+    # CORS Configuration - Limit origins for security
+    if is_production:
+        # Production: chỉ cho phép domain chính thức
+        # Production: only allow official domains
+        allowed_origins = [
+            "https://phongtuybienquancong.info",
+            "https://www.phongtuybienquancong.info"
+        ]
+        # Có thể thêm từ environment variable
+        # Can add from environment variable
+        custom_origins = os.environ.get('CORS_ALLOWED_ORIGINS', '')
+        if custom_origins:
+            allowed_origins.extend([origin.strip() for origin in custom_origins.split(',') if origin.strip()])
+    else:
+        # Development: cho phép localhost
+        # Development: allow localhost
+        allowed_origins = [
+            "http://localhost:5000",
+            "http://127.0.0.1:5000",
+            "http://localhost:3000",  # Cho frontend dev server nếu có
+            "http://127.0.0.1:3000"
+        ]
+    
+    CORS(app, origins=allowed_origins, supports_credentials=True)
     print("OK: Flask app da duoc khoi tao")
     print(f"   Static folder: {app.static_folder}")
     print(f"   Template folder: {app.template_folder}")
@@ -95,6 +128,20 @@ except Exception as e:
     print(f"WARNING: Loi khi khoi tao login manager: {e}")
     import traceback
     traceback.print_exc()
+
+# Khởi tạo Rate Limiter
+# Initialize Rate Limiter
+try:
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["200 per day", "50 per hour"],
+        storage_uri="memory://"  # In-memory storage (có thể dùng Redis cho production nếu cần)
+    )
+    print("OK: Rate limiter da duoc khoi tao")
+except Exception as e:
+    print(f"WARNING: Loi khi khoi tao rate limiter: {e}")
+    limiter = None
 
 # Import và đăng ký admin routes
 try:
@@ -160,6 +207,167 @@ except ImportError:
 # Get DB config for health endpoint
 DB_CONFIG = get_db_config()
 
+def validate_filename(filename: str) -> str:
+    """
+    Validate filename để chống path traversal attacks.
+    Cho phép subfolders nhưng vẫn đảm bảo an toàn.
+    
+    Validate filename to prevent path traversal attacks.
+    Allows subfolders but ensures security.
+    
+    Args:
+        filename: Tên file cần validate (có thể có subfolder như anh1/file.jpg)
+                 Filename to validate (can include subfolder like anh1/file.jpg)
+    
+    Returns:
+        Filename đã được sanitize / Sanitized filename
+    
+    Raises:
+        ValueError: Nếu filename không hợp lệ / If filename is invalid
+    """
+    if not filename or not isinstance(filename, str):
+        raise ValueError("Filename không được để trống")
+    
+    # Decode URL encoding nếu có
+    from urllib.parse import unquote
+    filename = unquote(filename)
+    
+    # Normalize path separators (chuyển \ thành /)
+    filename = filename.replace('\\', '/')
+    
+    # Loại bỏ leading/trailing slashes
+    filename = filename.strip('/')
+    
+    # Kiểm tra path traversal attempts
+    if '..' in filename or filename.startswith('/') or filename.startswith('\\'):
+        raise ValueError("Invalid filename: path traversal detected")
+    
+    # Kiểm tra từng component trong path
+    path_components = filename.split('/')
+    for component in path_components:
+        if not component or component == '.' or component == '..':
+            raise ValueError("Invalid filename: invalid path component")
+        
+        # Kiểm tra ký tự hợp lệ cho mỗi component (cho phép alphanumeric, dots, dashes, underscores, spaces)
+        # Cho phép Unicode cho tên file tiếng Việt
+        if not re.match(r'^[\w\s.-]+$', component, re.UNICODE):
+            raise ValueError(f"Invalid filename: contains invalid characters in component '{component}'")
+        
+        # Giới hạn độ dài mỗi component
+        if len(component) > 255:
+            raise ValueError(f"Filename component quá dài (max 255 characters): '{component}'")
+    
+    # Giới hạn tổng độ dài path
+    if len(filename) > 1000:
+        raise ValueError("Filename path quá dài (max 1000 characters)")
+    
+    return filename
+
+def validate_person_id(person_id: str) -> str:
+    """
+    Validate person_id format (phải là P-X-X).
+    Validate person_id format (must be P-X-X).
+    
+    Args:
+        person_id: Person ID cần validate / Person ID to validate
+    
+    Returns:
+        Person ID đã được validate / Validated person ID
+    
+    Raises:
+        ValueError: Nếu person_id không hợp lệ / If person_id is invalid
+    """
+    if not person_id or not isinstance(person_id, str):
+        raise ValueError("person_id không được để trống")
+    
+    person_id = person_id.strip()
+    
+    # Validate format: P-X-X (P-number-number)
+    if not re.match(r'^P-\d+-\d+$', person_id):
+        raise ValueError(f"Invalid person_id format: {person_id}. Must be P-X-X format")
+    
+    return person_id
+
+def sanitize_string(input_str: str, max_length: int = None, allow_empty: bool = False) -> str:
+    """
+    Sanitize string input để chống injection attacks.
+    Sanitize string input to prevent injection attacks.
+    
+    Args:
+        input_str: String cần sanitize / String to sanitize
+        max_length: Độ dài tối đa / Maximum length
+        allow_empty: Cho phép empty string / Allow empty string
+    
+    Returns:
+        String đã được sanitize / Sanitized string
+    """
+    if input_str is None:
+        return '' if allow_empty else None
+    
+    if not isinstance(input_str, str):
+        input_str = str(input_str)
+    
+    # Strip whitespace
+    sanitized = input_str.strip()
+    
+    # Check empty
+    if not sanitized and not allow_empty:
+        raise ValueError("Input không được để trống")
+    
+    # Limit length
+    if max_length and len(sanitized) > max_length:
+        sanitized = sanitized[:max_length]
+    
+    return sanitized
+
+def validate_integer(value: any, min_val: int = None, max_val: int = None, default: int = None) -> int:
+    """
+    Validate và giới hạn integer values để chống DoS.
+    Validate and limit integer values to prevent DoS.
+    
+    Args:
+        value: Giá trị cần validate / Value to validate
+        min_val: Giá trị tối thiểu / Minimum value
+        max_val: Giá trị tối đa / Maximum value
+        default: Giá trị mặc định nếu không hợp lệ / Default value if invalid
+    
+    Returns:
+        Integer đã được validate / Validated integer
+    """
+    try:
+        int_val = int(value)
+        
+        if min_val is not None and int_val < min_val:
+            if default is not None:
+                return default
+            raise ValueError(f"Value {int_val} is below minimum {min_val}")
+        
+        if max_val is not None and int_val > max_val:
+            if default is not None:
+                return default
+            raise ValueError(f"Value {int_val} exceeds maximum {max_val}")
+        
+        return int_val
+    except (ValueError, TypeError):
+        if default is not None:
+            return default
+        raise ValueError(f"Invalid integer value: {value}")
+
+def secure_compare(a: str, b: str) -> bool:
+    """
+    So sánh password an toàn, chống timing attack.
+    Secure password comparison, prevents timing attacks.
+    
+    Args:
+        a: String thứ nhất / First string
+        b: String thứ hai / Second string
+    
+    Returns:
+        True nếu hai string giống nhau, False nếu không
+        True if strings match, False otherwise
+    """
+    return secrets.compare_digest(a.encode('utf-8'), b.encode('utf-8'))
+
 def get_members_password():
     """
     Lấy mật khẩu cho các thao tác trên trang Members (Add, Update, Delete, Backup).
@@ -204,7 +412,9 @@ def get_members_password():
     # Fallback: sử dụng password mặc định nếu không có environment variable nào được set
     if not password:
         password = 'tbqc@2026'  # Password mặc định
-        logger.info("Using default password (tbqc@2026) - no environment variables set")
+        # Không log default password để bảo mật
+        # Don't log default password for security
+        logger.warning("MEMBERS_PASSWORD not set - using default (security risk in production)")
     
     return password
 
@@ -287,10 +497,14 @@ def genealogy_page():
     return render_template('genealogy.html')
 
 @app.route('/api/grave/update-location', methods=['POST'])
+@limiter.limit("10 per hour") if limiter else lambda f: f
 def update_grave_location():
     """
     API để cập nhật tọa độ mộ phần.
-    Không yêu cầu password - cho phép công khai cập nhật vị trí mộ phần.
+    Có rate limiting (10 requests/hour) để bảo vệ khỏi abuse.
+    
+    API to update grave location coordinates.
+    Rate limited (10 requests/hour) to prevent abuse.
     """
     connection = None
     cursor = None
@@ -302,6 +516,13 @@ def update_grave_location():
         
         if not person_id:
             return jsonify({'success': False, 'error': 'Thiếu person_id'}), 400
+        
+        # Validate person_id format để chống injection
+        # Validate person_id format to prevent injection
+        try:
+            person_id = validate_person_id(person_id)
+        except ValueError as e:
+            return jsonify({'success': False, 'error': f'Invalid person_id format: {str(e)}'}), 400
         
         if latitude is None or longitude is None:
             return jsonify({'success': False, 'error': 'Thiếu tọa độ (latitude, longitude)'}), 400
@@ -597,6 +818,15 @@ def documents_page():
     Documents page - displays PDF documents (genealogy, royal family records...)
     """
     return render_template('documents.html')
+
+@app.route('/vr-tour')
+def vr_tour_page():
+    """
+    Trang VR Tour - chức năng tham quan ảo đang được phát triển
+    
+    VR Tour page - virtual tour feature under development
+    """
+    return render_template('vr_tour.html')
 
 @app.route('/admin/users')
 @login_required
@@ -1027,6 +1257,15 @@ def serve_image_static(filename):
     # Decode URL-encoded filename (handles spaces, special chars)
     filename = unquote(filename)
     
+    # Validate filename để chống path traversal
+    # Validate filename to prevent path traversal
+    try:
+        filename = validate_filename(filename)
+    except ValueError as e:
+        logger.warning(f"[Serve Image Static] Invalid filename: {e}")
+        from flask import abort
+        abort(400)  # Bad Request
+    
     try:
         # Kiểm tra Railway Volume trước (nếu có)
         volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
@@ -1062,30 +1301,47 @@ def serve_image_static(filename):
 def api_gallery_anh1():
     """
     API liệt kê tất cả các file ảnh trong folder static/images/anh1
+    Ưu tiên Railway Volume nếu có, fallback về static/images/anh1
     
     API to list all image files in static/images/anh1 folder
+    Priority: Railway Volume if available, fallback to static/images/anh1
     
     Returns:
         JSON response với danh sách ảnh (success, count, images)
         JSON response with list of images (success, count, images)
     """
     try:
-        anh1_dir = os.path.join(BASE_DIR, 'static', 'images', 'anh1')
-        if not os.path.exists(anh1_dir):
-            return jsonify({'success': False, 'error': 'Folder không tồn tại'}), 404
-        
-        # Get all image files
         image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'}
         image_files = []
-        for filename in os.listdir(anh1_dir):
-            file_path = os.path.join(anh1_dir, filename)
-            if os.path.isfile(file_path):
-                _, ext = os.path.splitext(filename.lower())
-                if ext in image_extensions:
-                    image_files.append({
-                        'filename': filename,
-                        'url': f'/static/images/anh1/{filename}'
-                    })
+        
+        # Kiểm tra Railway Volume trước (nếu có)
+        volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+        if volume_mount_path and os.path.exists(volume_mount_path):
+            volume_anh1_dir = os.path.join(volume_mount_path, 'anh1')
+            if os.path.exists(volume_anh1_dir):
+                for filename in os.listdir(volume_anh1_dir):
+                    file_path = os.path.join(volume_anh1_dir, filename)
+                    if os.path.isfile(file_path):
+                        _, ext = os.path.splitext(filename.lower())
+                        if ext in image_extensions:
+                            image_files.append({
+                                'filename': filename,
+                                'url': f'/static/images/anh1/{filename}'
+                            })
+        
+        # Nếu không có ảnh từ volume, kiểm tra static/images/anh1
+        if not image_files:
+            anh1_dir = os.path.join(BASE_DIR, 'static', 'images', 'anh1')
+            if os.path.exists(anh1_dir):
+                for filename in os.listdir(anh1_dir):
+                    file_path = os.path.join(anh1_dir, filename)
+                    if os.path.isfile(file_path):
+                        _, ext = os.path.splitext(filename.lower())
+                        if ext in image_extensions:
+                            image_files.append({
+                                'filename': filename,
+                                'url': f'/static/images/anh1/{filename}'
+                            })
         
         # Sort by filename
         image_files.sort(key=lambda x: x['filename'])
@@ -1113,20 +1369,41 @@ def serve_image(filename):
         filename: Tên file ảnh cần phục vụ
                   Name of the image file to serve
     """
+    from urllib.parse import unquote
+    from flask import abort
+    
+    # Decode URL-encoded filename (handles spaces, special chars)
+    filename = unquote(filename)
+    
+    # Validate filename để chống path traversal
+    # Validate filename to prevent path traversal
+    try:
+        filename = validate_filename(filename)
+    except ValueError as e:
+        logger.warning(f"[Serve Image] Invalid filename: {e}")
+        abort(400)  # Bad Request
+    
     # Kiểm tra Railway Volume path trước
     volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
     if volume_mount_path and os.path.exists(volume_mount_path):
         volume_filepath = os.path.join(volume_mount_path, filename)
-        if os.path.exists(volume_filepath):
+        # Validate path để đảm bảo không có path traversal sau khi join
+        # Validate path to ensure no path traversal after join
+        volume_filepath = os.path.normpath(volume_filepath)
+        if volume_filepath.startswith(os.path.normpath(volume_mount_path)) and os.path.exists(volume_filepath):
             return send_from_directory(volume_mount_path, filename)
     
     # Fallback về static/images mặc định
     static_images_path = os.path.join(BASE_DIR, 'static', 'images')
     if os.path.exists(static_images_path):
-        return send_from_directory(static_images_path, filename)
+        # Validate path để đảm bảo không có path traversal sau khi join
+        # Validate path to ensure no path traversal after join
+        file_path = os.path.join(static_images_path, filename)
+        file_path = os.path.normpath(file_path)
+        if file_path.startswith(os.path.normpath(static_images_path)):
+            return send_from_directory(static_images_path, filename)
     
     # Nếu không tìm thấy, trả về 404
-    from flask import abort
     abort(404)
 
 # Test route removed - không cần thiết
@@ -2624,15 +2901,23 @@ def get_tree():
     cursor = None
     
     try:
+        # Validate root_id format
         root_id = request.args.get('root_id', 'P-1-1')  # Default to P-1-1 (Vua Minh Mạng)
+        try:
+            root_id = validate_person_id(root_id)
+        except ValueError:
+            root_id = 'P-1-1'  # Fallback to default
+        
         # Hỗ trợ cả max_gen và max_generation (frontend có thể dùng max_generation)
         max_gen_param = request.args.get('max_gen')
         max_generation_param = request.args.get('max_generation')
         
+        # Validate và giới hạn max_gen để chống DoS
+        # Validate and limit max_gen to prevent DoS
         if max_gen_param:
-            max_gen = int(max_gen_param)
+            max_gen = validate_integer(max_gen_param, min_val=1, max_val=20, default=5)
         elif max_generation_param:
-            max_gen = int(max_generation_param)
+            max_gen = validate_integer(max_generation_param, min_val=1, max_val=20, default=5)
         else:
             max_gen = 5  # Default value
             
@@ -2709,20 +2994,100 @@ def get_ancestors(person_id):
             logger.error(f"Cannot connect to database for /api/ancestors/{person_id}")
             return jsonify({'error': 'Không thể kết nối database'}), 500
         
+        # Validate and limit max_level to prevent DoS
+        # Validate và giới hạn max_level để chống DoS
         try:
-            max_level = int(request.args.get('max_level', 10))
+            max_level = validate_integer(request.args.get('max_level', 10), min_val=1, max_val=20, default=10)
         except (ValueError, TypeError):
             max_level = 10
         
         cursor = connection.cursor(dictionary=True)
         
-        # Validate person_id exists - trả 404 thay vì 500
+        # Validate person_id exists và lấy thông tin người đó
+        # Validate person_id exists and get person information
         try:
-            cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
-            person_exists = cursor.fetchone()
-            if not person_exists:
+            cursor.execute("""
+                SELECT person_id, full_name, gender, generation_level, father_mother_id
+                FROM persons WHERE person_id = %s
+            """, (person_id,))
+            person_info = cursor.fetchone()
+            if not person_info:
                 logger.warning(f"Person {person_id} not found in database")
                 return jsonify({'error': f'Person {person_id} not found'}), 404
+            
+            # Nếu người được tra cứu là Nữ (con gái), cần tìm cha trước
+            # If the person being searched is Female (daughter), need to find father first
+            target_person_id = person_id
+            person_gender = person_info.get('gender', '').strip().upper() if person_info.get('gender') else ''
+            
+            if person_gender in ['NỮ', 'NU', 'F', 'FEMALE', 'NỮ GIỚI']:
+                logger.info(f"[API /api/ancestors/{person_id}] Person is female, finding father first")
+                # Tìm cha của người này
+                # Find father of this person
+                father_id = None
+                
+                # Ưu tiên 1: Tìm cha theo relationships table
+                cursor.execute("""
+                    SELECT r.parent_id
+                    FROM relationships r
+                    WHERE r.child_id = %s AND r.relation_type = 'father'
+                    LIMIT 1
+                """, (person_id,))
+                father_rel = cursor.fetchone()
+                if father_rel and father_rel.get('parent_id'):
+                    father_id = father_rel.get('parent_id')
+                
+                # Ưu tiên 2: Tìm cha theo father_mother_id (fallback)
+                if not father_id and person_info.get('father_mother_id'):
+                    cursor.execute("""
+                        SELECT person_id
+                        FROM persons
+                        WHERE father_mother_id = %s
+                            AND generation_level < %s
+                            AND (gender = 'Nam' OR gender IS NULL)
+                        ORDER BY generation_level DESC
+                        LIMIT 1
+                    """, (person_info.get('father_mother_id'), person_info.get('generation_level', 999)))
+                    father_fm = cursor.fetchone()
+                    if father_fm and father_fm.get('person_id'):
+                        father_id = father_fm.get('person_id')
+                
+                if father_id:
+                    logger.info(f"[API /api/ancestors/{person_id}] Found father: {father_id}, using father for ancestors search")
+                    target_person_id = father_id
+                else:
+                    # Nếu không tìm thấy cha, thử tìm ông ngoại (cha của mẹ)
+                    # If father not found, try to find maternal grandfather (mother's father)
+                    logger.info(f"[API /api/ancestors/{person_id}] No father found, trying to find maternal grandfather")
+                    mother_id = None
+                    
+                    # Tìm mẹ
+                    cursor.execute("""
+                        SELECT r.parent_id
+                        FROM relationships r
+                        WHERE r.child_id = %s AND r.relation_type = 'mother'
+                        LIMIT 1
+                    """, (person_id,))
+                    mother_rel = cursor.fetchone()
+                    if mother_rel and mother_rel.get('parent_id'):
+                        mother_id = mother_rel.get('parent_id')
+                    
+                    # Nếu tìm thấy mẹ, tìm cha của mẹ (ông ngoại)
+                    if mother_id:
+                        cursor.execute("""
+                            SELECT r.parent_id
+                            FROM relationships r
+                            WHERE r.child_id = %s AND r.relation_type = 'father'
+                            LIMIT 1
+                        """, (mother_id,))
+                        grandfather_rel = cursor.fetchone()
+                        if grandfather_rel and grandfather_rel.get('parent_id'):
+                            target_person_id = grandfather_rel.get('parent_id')
+                            logger.info(f"[API /api/ancestors/{person_id}] Found maternal grandfather: {target_person_id}, using for ancestors search")
+                        else:
+                            logger.warning(f"[API /api/ancestors/{person_id}] Person is female, no father or maternal grandfather found, using person directly")
+                    else:
+                        logger.warning(f"[API /api/ancestors/{person_id}] Person is female but no father or mother found, using person directly")
         except Exception as e:
             logger.error(f"Error checking if person exists: {e}")
             import traceback
@@ -2731,26 +3096,31 @@ def get_ancestors(person_id):
         
         # Sử dụng stored procedure mới - với error handling
         # Nếu stored procedure không trả về đầy đủ, fallback về query trực tiếp
+        # Use new stored procedure - with error handling
+        # If stored procedure doesn't return complete data, fallback to direct query
         ancestors_result = None
         try:
-            cursor.callproc('sp_get_ancestors', [person_id, max_level])
+            cursor.callproc('sp_get_ancestors', [target_person_id, max_level])
             
             # Lấy kết quả từ stored procedure
             for result_set in cursor.stored_results():
                 ancestors_result = result_set.fetchall()
                 break
         except Exception as e:
-            logger.warning(f"Error calling sp_get_ancestors for person_id={person_id}: {e}")
+            logger.warning(f"Error calling sp_get_ancestors for person_id={target_person_id}: {e}")
             ancestors_result = None
         
         # FALLBACK: Nếu stored procedure không trả về đầy đủ hoặc lỗi, dùng query trực tiếp
+        # FALLBACK: If stored procedure doesn't return complete data or errors, use direct query
         if not ancestors_result or len(ancestors_result) == 0:
-            logger.info(f"[API /api/ancestors/{person_id}] Stored procedure returned empty, using direct query fallback")
+            logger.info(f"[API /api/ancestors/{person_id}] Stored procedure returned empty, using direct query fallback (target_person_id={target_person_id})")
             try:
                 # Query trực tiếp để lấy ancestors theo relationships và father_mother_id
+                # Direct query to get ancestors by relationships and father_mother_id
                 cursor.execute("""
                     WITH RECURSIVE ancestors AS (
-                        -- Base case: người hiện tại
+                        -- Base case: người hiện tại (hoặc cha nếu là con gái)
+                        -- Base case: current person (or father if female)
                         SELECT 
                             p.person_id,
                             p.full_name,
@@ -2804,7 +3174,7 @@ def get_ancestors(person_id):
                     WHERE level > 0 
                         AND (gender = 'Nam' OR gender IS NULL)
                     ORDER BY level, generation_level, full_name
-                """, (person_id, max_level))
+                """, (target_person_id, max_level))
                 ancestors_result = cursor.fetchall()
                 logger.info(f"[API /api/ancestors/{person_id}] Direct query returned {len(ancestors_result) if ancestors_result else 0} rows")
             except Exception as e2:
@@ -3065,8 +3435,10 @@ def get_descendants(person_id):
     if not connection:
         return jsonify({'error': 'Không thể kết nối database'}), 500
     
+    # Validate and limit max_level to prevent DoS
+    # Validate và giới hạn max_level để chống DoS
     try:
-        max_level = int(request.args.get('max_level', 5))
+        max_level = validate_integer(request.args.get('max_level', 5), min_val=1, max_val=20, default=5)
     except (ValueError, TypeError):
         max_level = 5
     
@@ -3136,15 +3508,22 @@ def search_persons():
     if not q:
         return jsonify([])
     
+    # Validate and limit generation to prevent DoS
+    # Validate và giới hạn generation để chống DoS
     try:
-        generation_level = int(request.args.get('generation')) if request.args.get('generation') else None
+        generation_param = request.args.get('generation')
+        if generation_param:
+            generation_level = validate_integer(generation_param, min_val=1, max_val=50, default=None)
+        else:
+            generation_level = None
     except (ValueError, TypeError):
         generation_level = None
     
+    # Validate và giới hạn limit để chống DoS
+    # Validate and limit limit to prevent DoS
     try:
-        limit = int(request.args.get('limit', 50))
-        limit = min(limit, 200)  # Max 200
-    except (ValueError, TypeError):
+        limit = validate_integer(request.args.get('limit', 50), min_val=1, max_val=100, default=50)
+    except ValueError:
         limit = 50
     
     connection = get_db_connection()
@@ -3378,7 +3757,15 @@ def get_stats():
 
 @app.route('/api/person/<int:person_id>', methods=['DELETE'])
 def delete_person(person_id):
-    """Xóa một người (yêu cầu mật khẩu admin)"""
+    """
+    Xóa một người (yêu cầu mật khẩu admin)
+    Delete a person (requires admin password)
+    """
+    # Validate person_id - có thể là integer (legacy) hoặc string format P-X-X
+    # Validate person_id - can be integer (legacy) or string format P-X-X
+    if not isinstance(person_id, (int, str)):
+        return jsonify({'error': 'Invalid person_id type'}), 400
+    
     connection = get_db_connection()
     if not connection:
         return jsonify({'error': 'Không thể kết nối database'}), 500
@@ -3394,8 +3781,9 @@ def delete_person(person_id):
             logger.error("BACKUP_PASSWORD hoặc ADMIN_PASSWORD chưa được cấu hình")
             return jsonify({'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
         
-        # Kiểm tra mật khẩu
-        if password != correct_password:
+        # Kiểm tra mật khẩu (constant-time comparison để chống timing attack)
+        # Check password (constant-time comparison to prevent timing attacks)
+        if not secure_compare(password, correct_password):
             return jsonify({'error': 'Mật khẩu không đúng'}), 403
         
         cursor = connection.cursor(dictionary=True)
@@ -3501,14 +3889,34 @@ def find_person_by_name(cursor, name, generation_id=None):
     return result[0] if result else None
 
 @app.route('/api/person/<int:person_id>', methods=['PUT'])
+@login_required
 def update_person(person_id):
-    """Cập nhật thông tin một người - LƯU TẤT CẢ DỮ LIỆU VÀO DATABASE"""
+    """
+    Cập nhật thông tin một người - LƯU TẤT CẢ DỮ LIỆU VÀO DATABASE
+    Yêu cầu đăng nhập và quyền admin/editor để chống IDOR
+    
+    Update person information - SAVE ALL DATA TO DATABASE
+    Requires login and admin/editor permissions to prevent IDOR
+    """
+    # Check authorization - chỉ admin/editor mới được update
+    # Check authorization - only admin/editor can update
+    if not is_admin_user() and getattr(current_user, 'role', '') != 'editor':
+        return jsonify({'error': 'Không có quyền cập nhật dữ liệu'}), 403
+    
+    # Validate person_id - có thể là integer (legacy) hoặc string format P-X-X
+    # Validate person_id - can be integer (legacy) or string format P-X-X
+    if not isinstance(person_id, (int, str)):
+        return jsonify({'error': 'Invalid person_id type'}), 400
+    
     connection = get_db_connection()
     if not connection:
         return jsonify({'error': 'Không thể kết nối database'}), 500
     
     try:
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Không có dữ liệu để cập nhật'}), 400
+        
         cursor = connection.cursor(dictionary=True)
         
         # Kiểm tra person có tồn tại không
@@ -3524,20 +3932,35 @@ def update_person(person_id):
         # =====================================================
         updates = {}
         
+        # Validate và giới hạn độ dài string fields để chống DoS
+        # Validate and limit string field lengths to prevent DoS
         if 'full_name' in data and data['full_name']:
-            updates['full_name'] = data['full_name'].strip()
+            full_name = sanitize_string(data['full_name'], max_length=255, allow_empty=False)
+            updates['full_name'] = full_name
         
         if 'gender' in data:
-            updates['gender'] = data['gender']
+            gender = data['gender']
+            if gender and gender not in ['M', 'F', 'Male', 'Female', 'Nam', 'Nữ']:
+                return jsonify({'error': 'Invalid gender value'}), 400
+            updates['gender'] = gender
         
         if 'status' in data:
-            updates['status'] = data['status']
+            status = data['status']
+            if status and len(str(status)) > 50:
+                status = str(status)[:50]
+            updates['status'] = status
         
         if 'nationality' in data:
-            updates['nationality'] = data['nationality'].strip() if data['nationality'] else 'Việt Nam'
+            nationality = data['nationality'].strip() if data['nationality'] else 'Việt Nam'
+            if len(nationality) > 100:
+                nationality = nationality[:100]
+            updates['nationality'] = nationality
         
         if 'religion' in data:
-            updates['religion'] = data['religion'].strip() if data['religion'] else None
+            religion = data['religion'].strip() if data['religion'] else None
+            if religion and len(religion) > 100:
+                religion = religion[:100]
+            updates['religion'] = religion
         
         # Xử lý generation_number
         if 'generation_number' in data:
@@ -3716,12 +4139,22 @@ def update_person(person_id):
             connection.close()
 
 @app.route('/api/person/<int:person_id>/sync', methods=['POST'])
+@login_required  # Yêu cầu đăng nhập để sync
 def sync_person(person_id):
-    """Đồng bộ dữ liệu Person sau khi cập nhật
+    """
+    Đồng bộ dữ liệu Person sau khi cập nhật.
+    Yêu cầu đăng nhập và quyền admin/editor.
     - Đồng bộ relationships (cha mẹ, con cái)
     - Đồng bộ marriages_spouses (vợ/chồng)
     - Tính lại siblings từ relationships
+    
+    Sync person data after update.
+    Requires login and admin/editor permissions.
     """
+    # Check authorization - chỉ admin/editor mới được sync
+    # Check authorization - only admin/editor can sync
+    if not is_admin_user() and getattr(current_user, 'role', '') != 'editor':
+        return jsonify({'success': False, 'error': 'Không có quyền sync dữ liệu'}), 403
     connection = get_db_connection()
     if not connection:
         return jsonify({'error': 'Không thể kết nối database'}), 500
@@ -4353,7 +4786,9 @@ def create_person():
         logger.error("MEMBERS_PASSWORD, ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình")
         return jsonify({'success': False, 'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
     
-    if not password or password != correct_password:
+    # Constant-time comparison để chống timing attack
+    # Constant-time comparison to prevent timing attacks
+    if not password or not secure_compare(password, correct_password):
         return jsonify({'success': False, 'error': 'Mật khẩu không đúng hoặc chưa được cung cấp'}), 403
     
     # Xóa password khỏi data trước khi xử lý
@@ -4408,16 +4843,27 @@ def create_person():
         insert_values = [person_id]
         
         if 'full_name' in columns:
+            full_name = data.get('full_name')
+            if full_name:
+                # Validate và giới hạn độ dài
+                # Validate and limit length
+                full_name = sanitize_string(str(full_name), max_length=255, allow_empty=False)
             insert_fields.append('full_name')
-            insert_values.append(data.get('full_name'))
+            insert_values.append(full_name)
         
         if 'gender' in columns:
+            gender = data.get('gender')
+            if gender and gender not in ['M', 'F', 'Male', 'Female', 'Nam', 'Nữ']:
+                return jsonify({'success': False, 'error': 'Invalid gender value'}), 400
             insert_fields.append('gender')
-            insert_values.append(data.get('gender'))
+            insert_values.append(gender)
         
         if 'status' in columns:
+            status = data.get('status', 'Không rõ')
+            if status and len(str(status)) > 50:
+                status = str(status)[:50]
             insert_fields.append('status')
-            insert_values.append(data.get('status', 'Không rõ'))
+            insert_values.append(status)
         
         if 'generation_level' in columns and data.get('generation_number'):
             insert_fields.append('generation_level')
@@ -4518,7 +4964,9 @@ def update_person_members(person_id):
         logger.error("MEMBERS_PASSWORD, ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình")
         return jsonify({'success': False, 'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
     
-    if not password or password != correct_password:
+    # Constant-time comparison để chống timing attack
+    # Constant-time comparison to prevent timing attacks
+    if not password or not secure_compare(password, correct_password):
         return jsonify({'success': False, 'error': 'Mật khẩu không đúng hoặc chưa được cung cấp'}), 403
     
     # Xóa password khỏi data trước khi xử lý
@@ -4531,6 +4979,12 @@ def update_person_members(person_id):
     
     try:
         cursor = connection.cursor(dictionary=True)
+        
+        # Validate person_id format
+        try:
+            person_id = validate_person_id(person_id)
+        except ValueError as e:
+            return jsonify({'success': False, 'error': f'Invalid person_id format: {str(e)}'}), 400
         
         # Normalize person_id
         person_id = str(person_id).strip() if person_id else None
@@ -4579,12 +5033,20 @@ def update_person_members(person_id):
         update_values = []
         
         if 'full_name' in columns:
+            full_name = data.get('full_name')
+            if full_name:
+                # Validate và giới hạn độ dài
+                # Validate and limit length
+                full_name = sanitize_string(str(full_name), max_length=255, allow_empty=False)
             update_fields.append('full_name = %s')
-            update_values.append(data.get('full_name'))
+            update_values.append(full_name)
         
         if 'gender' in columns:
+            gender = data.get('gender')
+            if gender and gender not in ['M', 'F', 'Male', 'Female', 'Nam', 'Nữ']:
+                return jsonify({'success': False, 'error': 'Invalid gender value'}), 400
             update_fields.append('gender = %s')
-            update_values.append(data.get('gender'))
+            update_values.append(gender)
         
         if 'status' in columns:
             update_fields.append('status = %s')
@@ -4920,7 +5382,9 @@ def delete_persons_batch():
         logger.error("MEMBERS_PASSWORD, ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình")
         return jsonify({'success': False, 'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
     
-    if not password or password != correct_password:
+    # Constant-time comparison để chống timing attack
+    # Constant-time comparison to prevent timing attacks
+    if not password or not secure_compare(password, correct_password):
         return jsonify({'success': False, 'error': 'Mật khẩu không đúng hoặc chưa được cung cấp'}), 403
     
     connection = get_db_connection()
@@ -4933,6 +5397,47 @@ def delete_persons_batch():
         
         if not person_ids:
             return jsonify({'success': False, 'error': 'Không có ID nào được chọn'}), 400
+        
+        # Validate person_ids format và giới hạn số lượng để chống DoS
+        # Validate person_ids format and limit count to prevent DoS
+        if not isinstance(person_ids, list):
+            return jsonify({'success': False, 'error': 'person_ids phải là một mảng'}), 400
+        
+        if len(person_ids) > 100:  # Giới hạn tối đa 100 IDs mỗi lần
+            return jsonify({'success': False, 'error': 'Chỉ có thể xóa tối đa 100 thành viên mỗi lần'}), 400
+        
+        # Validate từng person_id
+        # Validate each person_id
+        validated_ids = []
+        for pid in person_ids:
+            try:
+                # Có thể là string format P-X-X hoặc integer (legacy)
+                # Can be string format P-X-X or integer (legacy)
+                if isinstance(pid, str):
+                    pid = pid.strip()
+                    if not pid:
+                        continue
+                    # Validate format nếu là string
+                    # Validate format if string
+                    if not re.match(r'^P-\d+-\d+$', pid):
+                        logger.warning(f"Invalid person_id format: {pid}")
+                        continue
+                elif isinstance(pid, int):
+                    # Integer IDs được chấp nhận cho legacy compatibility
+                    # Integer IDs accepted for legacy compatibility
+                    pass
+                else:
+                    logger.warning(f"Invalid person_id type: {type(pid)}")
+                    continue
+                validated_ids.append(pid)
+            except Exception as e:
+                logger.warning(f"Error validating person_id {pid}: {e}")
+                continue
+        
+        if not validated_ids:
+            return jsonify({'success': False, 'error': 'Không có person_id hợp lệ'}), 400
+        
+        person_ids = validated_ids
         
         # Tự động backup trước khi xóa (trừ khi skip_backup=True)
         backup_result = None
@@ -5182,7 +5687,9 @@ def verify_password_api():
             logger.error("MEMBERS_PASSWORD, ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình")
             return jsonify({'success': False, 'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
         
-        if password != correct_password:
+        # Constant-time comparison để chống timing attack
+        # Constant-time comparison to prevent timing attacks
+        if not secure_compare(password, correct_password):
             return jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 403
         
         return jsonify({'success': True, 'message': 'Mật khẩu đúng'}), 200
@@ -5204,7 +5711,9 @@ def create_backup_api():
         logger.error("MEMBERS_PASSWORD, ADMIN_PASSWORD hoặc BACKUP_PASSWORD chưa được cấu hình")
         return jsonify({'success': False, 'error': 'Cấu hình bảo mật chưa được thiết lập'}), 500
     
-    if not password or password != correct_password:
+    # Constant-time comparison để chống timing attack
+    # Constant-time comparison to prevent timing attacks
+    if not password or not secure_compare(password, correct_password):
         return jsonify({'success': False, 'error': 'Mật khẩu không đúng hoặc chưa được cung cấp'}), 403
     
     try:
@@ -5359,35 +5868,8 @@ def api_health():
     return jsonify(health_status)
 
 # =====================================================
-# ERROR HANDLERS
+# ERROR HANDLERS - Moved to end of file (see line ~5635)
 # =====================================================
-
-@app.errorhandler(404)
-def not_found(error):
-    """Handle 404 errors"""
-    if request.path.startswith('/api/'):
-        return jsonify({'error': 'Not found'}), 404
-    # For non-API routes, try to render index.html (SPA fallback)
-    try:
-        return render_template('index.html')
-    except:
-        return jsonify({'error': 'Not found'}), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    """Handle 500 errors"""
-    logger.error(f"Internal server error: {error}", exc_info=True)
-    if request.path.startswith('/api/'):
-        return jsonify({'error': 'Internal server error'}), 500
-    return jsonify({'error': 'Internal server error'}), 500
-
-@app.errorhandler(Exception)
-def handle_exception(e):
-    """Handle all unhandled exceptions"""
-    logger.error(f"Unhandled exception: {e}", exc_info=True)
-    if request.path.startswith('/api/'):
-        return jsonify({'error': 'Internal server error'}), 500
-    return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/api/stats/members', methods=['GET'])
 def api_member_stats():
@@ -5461,8 +5943,15 @@ def api_member_stats():
             pass
 
 @app.route('/api/login', methods=['POST'])
+@limiter.limit("5 per minute") if limiter else lambda f: f
 def api_login():
-    """API đăng nhập (trả về JSON)"""
+    """
+    API đăng nhập (trả về JSON).
+    Rate limited: 5 attempts per minute để chống brute force.
+    
+    API login (returns JSON).
+    Rate limited: 5 attempts per minute to prevent brute force.
+    """
     from flask_login import login_user
     from auth import get_user_by_username, verify_password, User
     
@@ -5548,6 +6037,53 @@ def api_logout():
     from flask_login import logout_user
     logout_user()
     return jsonify({'success': True, 'message': 'Đã đăng xuất thành công'})
+
+# Error handlers - Xử lý lỗi không expose thông tin nhạy cảm
+# Error handlers - Handle errors without exposing sensitive information
+@app.errorhandler(500)
+def internal_error(error):
+    """
+    Xử lý lỗi 500 - không expose thông tin nhạy cảm.
+    Handle 500 errors - don't expose sensitive information.
+    """
+    logger.error(f"Internal server error: {error}", exc_info=True)
+    if request.path.startswith('/api/'):
+        return jsonify({'success': False, 'error': 'Internal server error'}), 500
+    return jsonify({'success': False, 'error': 'Internal server error'}), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    """
+    Xử lý lỗi 404 - Resource not found.
+    Handle 404 errors - Resource not found.
+    """
+    if request.path.startswith('/api/'):
+        return jsonify({'success': False, 'error': 'Resource not found'}), 404
+    # For non-API routes, try to render index.html (SPA fallback)
+    try:
+        return render_template('index.html')
+    except:
+        return jsonify({'success': False, 'error': 'Resource not found'}), 404
+
+@app.errorhandler(403)
+def forbidden(error):
+    """
+    Xử lý lỗi 403 - Access forbidden.
+    Handle 403 errors - Access forbidden.
+    """
+    return jsonify({'success': False, 'error': 'Access forbidden'}), 403
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    """
+    Xử lý lỗi 429 - Rate limit exceeded.
+    Handle 429 errors - Rate limit exceeded.
+    """
+    return jsonify({
+        'success': False,
+        'error': 'Too many requests. Please try again later.',
+        'retry_after': getattr(e, 'retry_after', None)
+    }), 429
 
 # -----------------------------------------------------------------------------
 # Lightweight smoke tests (manual run)
