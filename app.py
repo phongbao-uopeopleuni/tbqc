@@ -162,11 +162,21 @@ DB_CONFIG = get_db_config()
 
 def get_members_password():
     """
-    Lấy mật khẩu cho các thao tác trên trang Members (Add, Update, Delete, Backup)
+    Lấy mật khẩu cho các thao tác trên trang Members (Add, Update, Delete, Backup).
     Priority: MEMBERS_PASSWORD > ADMIN_PASSWORD > BACKUP_PASSWORD > Default (tbqc@2026)
-    Tự động load từ tbqc_db.env nếu không có trong environment variables (local dev)
-    Trên production: chỉ dùng environment variables
-    Fallback: tbqc@2026 nếu không có environment variable nào được set
+    Tự động load từ tbqc_db.env nếu không có trong environment variables (local dev).
+    Trên production: chỉ dùng environment variables.
+    Fallback: tbqc@2026 nếu không có environment variable nào được set.
+    
+    Get password for operations on Members page (Add, Update, Delete, Backup).
+    Priority: MEMBERS_PASSWORD > ADMIN_PASSWORD > BACKUP_PASSWORD > Default (tbqc@2026)
+    Automatically loads from tbqc_db.env if not in environment variables (local dev).
+    On production: only uses environment variables.
+    Fallback: tbqc@2026 if no environment variable is set.
+    
+    Returns:
+        Password string để sử dụng cho các thao tác Members
+        Password string to use for Members operations
     """
     # Kiểm tra environment variables trước (ưu tiên cho production)
     password = os.environ.get('MEMBERS_PASSWORD') or os.environ.get('ADMIN_PASSWORD') or os.environ.get('BACKUP_PASSWORD', '')
@@ -200,12 +210,20 @@ def get_members_password():
 
 @app.route('/')
 def index():
-    """Trang chủ - render template"""
+    """
+    Trang chủ - render template index.html
+    
+    Homepage - renders the index.html template
+    """
     return render_template('index.html')
 
 @app.route('/login')
 def login_page():
-    """Trang đăng nhập (public)"""
+    """
+    Trang đăng nhập công khai - render template login.html
+    
+    Public login page - renders the login.html template
+    """
     return render_template('login.html')
 
 @app.route('/admin/login-page')
@@ -220,8 +238,15 @@ def admin_login_page():
 @app.route('/api/geoapify-key')
 def get_geoapify_api_key():
     """
-    Lấy Geoapify API key từ environment variable hoặc tbqc_db.env
+    Lấy Geoapify API key từ environment variable hoặc tbqc_db.env.
     Priority: Environment variable > tbqc_db.env
+    
+    Get Geoapify API key from environment variable or tbqc_db.env.
+    Priority: Environment variable > tbqc_db.env
+    
+    Returns:
+        JSON response chứa api_key
+        JSON response containing api_key
     """
     # Kiểm tra environment variables trước (ưu tiên cho production)
     api_key = os.environ.get('GEOAPIFY_API_KEY', '')
@@ -253,7 +278,11 @@ def get_geoapify_api_key():
 
 @app.route('/genealogy')
 def genealogy_page():
-    """Trang gia phả (gộp tree + tra cứu)"""
+    """
+    Trang gia phả - hiển thị cây gia phả tương tác và các chức năng tra cứu
+    
+    Genealogy page - displays interactive family tree and search functions
+    """
     # Geoapify API key đã được xóa - sẽ nâng cấp sau
     return render_template('genealogy.html')
 
@@ -476,17 +505,33 @@ def search_grave():
 
 @app.route('/contact')
 def contact_page():
-    """Trang liên hệ"""
+    """
+    Trang liên hệ - hiển thị form liên hệ và thông tin liên hệ
+    
+    Contact page - displays contact form and contact information
+    """
     return render_template('contact.html')
 
 @app.route('/activities')
 def activities_page():
-    """Trang hoạt động (public)"""
+    """
+    Trang hoạt động công khai - hiển thị danh sách các hoạt động đã được publish
+    
+    Public activities page - displays list of published activities
+    """
     return render_template('activities.html')
 
 @app.route('/activities/<int:activity_id>')
 def activity_detail_page(activity_id):
-    """Trang chi tiết hoạt động (public)"""
+    """
+    Trang chi tiết hoạt động công khai - hiển thị nội dung chi tiết của một hoạt động
+    
+    Public activity detail page - displays detailed content of an activity
+    
+    Args:
+        activity_id: ID của activity cần hiển thị
+                     ID of the activity to display
+    """
     connection = get_db_connection()
     if not connection:
         return render_template('activity_detail.html', error='Không thể kết nối database', activity=None)
@@ -546,13 +591,23 @@ def activity_detail_page(activity_id):
 
 @app.route('/documents')
 def documents_page():
-    """Trang tài liệu - hiển thị các tài liệu PDF"""
+    """
+    Trang tài liệu - hiển thị các tài liệu PDF (gia phả, hoàng tộc...)
+    
+    Documents page - displays PDF documents (genealogy, royal family records...)
+    """
     return render_template('documents.html')
 
 @app.route('/admin/users')
 @login_required
 def admin_users_page():
-    """Trang quản lý người dùng (admin only)"""
+    """
+    Trang quản lý người dùng (chỉ admin)
+    Yêu cầu đăng nhập và có role 'admin'
+    
+    Admin users management page (admin only)
+    Requires authentication and 'admin' role
+    """
     # Check admin permission
     if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
         return redirect('/admin/login')
@@ -561,7 +616,13 @@ def admin_users_page():
 
 @app.route('/admin/activities')
 def admin_activities_page():
-    """Trang quản lý hoạt động (cập nhật bài đăng)"""
+    """
+    Trang quản lý hoạt động (cập nhật bài đăng)
+    Cho phép admin, editor và user có quyền đăng bài truy cập
+    
+    Admin activities management page (update posts)
+    Allows admin, editor and users with post permission to access
+    """
     # Cho phép vào trang ngay, template sẽ tự check auth và redirect nếu cần
     # Cho phép admin, editor và user có quyền đăng bài truy cập trang này
     # (Không giới hạn chỉ admin như trước)
@@ -573,7 +634,17 @@ def admin_activities_page():
 # ---------------------------------------------------------------------------
 
 def ensure_activities_table(cursor):
-    """Đảm bảo bảng activities tồn tại"""
+    """
+    Đảm bảo bảng activities tồn tại trong database.
+    Tạo bảng nếu chưa có, và thêm cột images nếu thiếu (migration).
+    
+    Ensure the activities table exists in the database.
+    Creates the table if it doesn't exist, and adds the images column if missing (migration).
+    
+    Args:
+        cursor: Database cursor để thực thi SQL queries
+                Database cursor to execute SQL queries
+    """
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS activities (
             activity_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -599,6 +670,23 @@ def ensure_activities_table(cursor):
         logger.debug(f"Column images check: {e}")
 
 def activity_row_to_json(row):
+    """
+    Chuyển đổi một row từ database thành JSON object cho activity.
+    Xử lý parsing images JSON và format datetime fields.
+    
+    Convert a database row to JSON object for activity.
+    Handles parsing images JSON and formatting datetime fields.
+    
+    Args:
+        row: Dictionary chứa dữ liệu activity từ database
+             Dictionary containing activity data from database
+        
+    Returns:
+        Dictionary với các fields: id, title, summary, content, status, thumbnail, images, created_at, updated_at
+        hoặc None nếu row là None/empty
+        Dictionary with fields: id, title, summary, content, status, thumbnail, images, created_at, updated_at
+        or None if row is None/empty
+    """
     if not row:
         return None
     
@@ -631,6 +719,15 @@ def activity_row_to_json(row):
     }
 
 def is_admin_user():
+    """
+    Kiểm tra xem user hiện tại có phải là admin không.
+    
+    Check if the current user is an admin.
+    
+    Returns:
+        True nếu user đã đăng nhập và có role là 'admin', False nếu không
+        True if user is authenticated and has role 'admin', False otherwise
+    """
     try:
         return current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin'
     except Exception:
@@ -779,7 +876,17 @@ def api_activity_detail(activity_id):
 
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
-    """API upload ảnh vào static/images (admin only)"""
+    """
+    API upload ảnh vào static/images (chỉ admin)
+    Hỗ trợ lưu vào Railway Volume nếu có cấu hình
+    
+    API to upload images to static/images (admin only)
+    Supports saving to Railway Volume if configured
+    
+    Returns:
+        JSON response với url, filename nếu thành công
+        JSON response with url, filename on success
+    """
     if not is_admin_user():
         return jsonify({'success': False, 'error': 'Bạn không có quyền upload ảnh'}), 403
     
@@ -847,7 +954,11 @@ def upload_image():
 
 @app.route('/members')
 def members():
-    """Trang danh sách thành viên"""
+    """
+    Trang danh sách thành viên - hiển thị danh sách tất cả thành viên trong gia phả
+    
+    Members page - displays list of all members in the genealogy
+    """
     # Lấy password từ helper function (tự động load từ env file nếu cần)
     members_password = get_members_password()
     
@@ -865,23 +976,51 @@ def members():
 # These are kept for backward compatibility but templates should use /static/js/
 @app.route('/family-tree-core.js')
 def serve_core_js():
-    """Legacy route - serves from static/js/"""
+    """
+    Legacy route - phục vụ file family-tree-core.js từ static/js/
+    Giữ lại để tương thích ngược, templates nên dùng /static/js/family-tree-core.js
+    
+    Legacy route - serves family-tree-core.js from static/js/
+    Kept for backward compatibility, templates should use /static/js/family-tree-core.js
+    """
     return send_from_directory('static/js', 'family-tree-core.js', mimetype='application/javascript')
 
 @app.route('/family-tree-ui.js')
 def serve_ui_js():
-    """Legacy route - serves from static/js/"""
+    """
+    Legacy route - phục vụ file family-tree-ui.js từ static/js/
+    Giữ lại để tương thích ngược, templates nên dùng /static/js/family-tree-ui.js
+    
+    Legacy route - serves family-tree-ui.js from static/js/
+    Kept for backward compatibility, templates should use /static/js/family-tree-ui.js
+    """
     return send_from_directory('static/js', 'family-tree-ui.js', mimetype='application/javascript')
 
 @app.route('/genealogy-lineage.js')
 def serve_genealogy_js():
-    """Legacy route - serves from static/js/"""
+    """
+    Legacy route - phục vụ file genealogy-lineage.js từ static/js/
+    Giữ lại để tương thích ngược, templates nên dùng /static/js/genealogy-lineage.js
+    
+    Legacy route - serves genealogy-lineage.js from static/js/
+    Kept for backward compatibility, templates should use /static/js/genealogy-lineage.js
+    """
     return send_from_directory('static/js', 'genealogy-lineage.js', mimetype='application/javascript')
 
 # Image routes - serve from static/images/ or Railway Volume
 @app.route('/static/images/<path:filename>')
 def serve_image_static(filename):
-    """Serve images from static/images/ (git source) or Railway Volume"""
+    """
+    Phục vụ ảnh từ static/images/ (từ git source) hoặc Railway Volume
+    Ưu tiên Railway Volume nếu có, fallback về static/images
+    
+    Serve images from static/images/ (git source) or Railway Volume
+    Priority: Railway Volume if available, fallback to static/images
+    
+    Args:
+        filename: Tên file ảnh cần phục vụ
+                  Name of the image file to serve
+    """
     from urllib.parse import unquote
     import os
     
@@ -921,7 +1060,15 @@ def serve_image_static(filename):
 
 @app.route('/api/gallery/anh1', methods=['GET'])
 def api_gallery_anh1():
-    """List all image files in static/images/anh1 folder"""
+    """
+    API liệt kê tất cả các file ảnh trong folder static/images/anh1
+    
+    API to list all image files in static/images/anh1 folder
+    
+    Returns:
+        JSON response với danh sách ảnh (success, count, images)
+        JSON response with list of images (success, count, images)
+    """
     try:
         anh1_dir = os.path.join(BASE_DIR, 'static', 'images', 'anh1')
         if not os.path.exists(anh1_dir):
@@ -955,7 +1102,17 @@ def api_gallery_anh1():
 # Legacy route for backward compatibility
 @app.route('/images/<path:filename>')
 def serve_image(filename):
-    """Legacy route - serves from static/images/ or Railway Volume"""
+    """
+    Legacy route - phục vụ ảnh từ static/images/ hoặc Railway Volume
+    Giữ lại để tương thích ngược, nên dùng /static/images/<filename>
+    
+    Legacy route - serves images from static/images/ or Railway Volume
+    Kept for backward compatibility, should use /static/images/<filename>
+    
+    Args:
+        filename: Tên file ảnh cần phục vụ
+                  Name of the image file to serve
+    """
     # Kiểm tra Railway Volume path trước
     volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
     if volume_mount_path and os.path.exists(volume_mount_path):
@@ -5391,280 +5548,6 @@ def api_logout():
     from flask_login import logout_user
     logout_user()
     return jsonify({'success': True, 'message': 'Đã đăng xuất thành công'})
-
-@app.route('/admin/api/facebook/setup', methods=['POST'])
-@login_required
-def api_facebook_setup():
-    """API setup Facebook token - lấy Page Token từ User Token"""
-    # Check admin permission
-    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-        return jsonify({'success': False, 'error': 'Chỉ admin mới có quyền setup Facebook'}), 403
-    
-    try:
-        import requests
-        from folder_py.db_config import get_db_connection
-        
-        logger.info("Facebook setup: Bắt đầu xử lý request")
-        
-        data = request.get_json(silent=True) or {}
-        user_token = data.get('user_token', '').strip()
-        page_id = data.get('page_id', '350336648378946')  # Page ID của "Phòng Tuy Biên Quân Công"
-        
-        logger.info(f"Facebook setup: user_token length = {len(user_token)}, page_id = {page_id}")
-        
-        if not user_token:
-            return jsonify({'success': False, 'error': 'Vui lòng nhập User Token'}), 400
-        
-        # Lấy danh sách pages từ User Token
-        url = f"https://graph.facebook.com/v24.0/me/accounts"
-        logger.info(f"Facebook setup: Đang gọi Facebook API: {url}")
-        try:
-            response = requests.get(url, params={'access_token': user_token}, timeout=10)
-            logger.info(f"Facebook setup: Response status = {response.status_code}")
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Lỗi kết nối Facebook API: {e}", exc_info=True)
-            return jsonify({'success': False, 'error': f'Lỗi kết nối Facebook API: {str(e)}'}), 500
-        
-        if not response.ok:
-            try:
-                error_data = response.json()
-                error_info = error_data.get('error', {})
-                error_msg = error_info.get('message', f'HTTP {response.status_code}')
-                error_type = error_info.get('type', 'Unknown')
-                logger.error(f"Facebook API Error: {error_type} - {error_msg}")
-                return jsonify({'success': False, 'error': f'Lỗi khi lấy pages: {error_msg}'}), 400
-            except (ValueError, KeyError):
-                logger.error(f"Facebook API Error: {response.status_code} - {response.text[:200]}")
-                return jsonify({'success': False, 'error': f'Lỗi khi lấy pages: HTTP {response.status_code}'}), 400
-        
-        try:
-            pages_data = response.json()
-            pages = pages_data.get('data', [])
-            logger.info(f"Facebook setup: Đã lấy được {len(pages)} page(s)")
-        except (ValueError, KeyError) as e:
-            logger.error(f"Lỗi parse response từ Facebook: {e}", exc_info=True)
-            logger.error(f"Response text: {response.text[:500]}")
-            return jsonify({'success': False, 'error': f'Lỗi khi xử lý response từ Facebook: {str(e)}'}), 500
-        
-        # Tìm page "Phòng Tuy Biên Quân Công"
-        page = None
-        for p in pages:
-            if p.get('id') == page_id or 'Phòng Tuy Biên' in p.get('name', '') or 'PhongTuyBien' in p.get('name', ''):
-                page = p
-                break
-        
-        if not page:
-            return jsonify({
-                'success': False,
-                'error': f'Không tìm thấy page "Phòng Tuy Biên Quân Công" trong danh sách. Có {len(pages)} page(s) khác.'
-            }), 404
-        
-        page_token = page.get('access_token')
-        if not page_token:
-            return jsonify({'success': False, 'error': 'Không lấy được Page Access Token'}), 500
-        
-        # Lưu vào database
-        logger.info(f"Facebook setup: Đang lưu token vào database cho page_id = {page.get('id')}")
-        try:
-            connection = get_db_connection()
-            logger.info("Facebook setup: Đã kết nối database")
-            cursor = connection.cursor()
-            
-            # Kiểm tra và tạo table nếu chưa có
-            cursor.execute("SHOW TABLES LIKE 'facebook_tokens'")
-            if not cursor.fetchone():
-                logger.info("Facebook setup: Table chưa có, đang tạo table...")
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS facebook_tokens (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        token_type ENUM('user', 'page', 'app') NOT NULL DEFAULT 'page',
-                        access_token TEXT NOT NULL,
-                        page_id VARCHAR(255) DEFAULT 'PhongTuyBienQuanCong',
-                        expires_at DATETIME NULL,
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                        is_active BOOLEAN DEFAULT TRUE,
-                        INDEX idx_page_id (page_id),
-                        INDEX idx_is_active (is_active)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-                """)
-                connection.commit()
-                logger.info("Facebook setup: Đã tạo table facebook_tokens")
-            
-            # Xóa token cũ (nếu có)
-            logger.info(f"Facebook setup: Đang xóa token cũ cho page_id = {page.get('id')}")
-            cursor.execute("DELETE FROM facebook_tokens WHERE page_id = %s AND is_active = TRUE", (page.get('id'),))
-            
-            # Insert token mới
-            logger.info("Facebook setup: Đang insert token mới")
-            cursor.execute("""
-                INSERT INTO facebook_tokens (token_type, access_token, page_id, is_active)
-                VALUES (%s, %s, %s, %s)
-            """, ('page', page_token, page.get('id'), True))
-            
-            connection.commit()
-            logger.info("Facebook setup: Đã lưu token thành công")
-            
-            return jsonify({
-                'success': True,
-                'message': 'Đã lưu Facebook Page Access Token thành công!',
-                'page_name': page.get('name', ''),
-                'page_id': page.get('id')
-            })
-        except Exception as e:
-            if 'connection' in locals():
-                connection.rollback()
-            logger.error(f"Lỗi khi lưu token vào database: {e}", exc_info=True)
-            import traceback
-            error_trace = traceback.format_exc()
-            logger.error(f"Traceback: {error_trace}")
-            return jsonify({'success': False, 'error': f'Lỗi khi lưu token: {str(e)}'}), 500
-        finally:
-            if 'cursor' in locals():
-                cursor.close()
-            if 'connection' in locals():
-                connection.close()
-            
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Lỗi kết nối Facebook API: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': f'Lỗi kết nối Facebook API: {str(e)}'
-        }), 500
-    except Exception as e:
-        logger.error(f"Lỗi khi setup Facebook: {e}", exc_info=True)
-        import traceback
-        error_trace = traceback.format_exc()
-        logger.error(f"Traceback: {error_trace}")
-        return jsonify({
-            'success': False,
-            'error': f'Lỗi khi setup Facebook: {str(e)}'
-        }), 500
-
-@app.route('/admin/api/facebook/read-link', methods=['POST'])
-@login_required
-def api_facebook_read_link():
-    """API đọc Facebook post link bằng AI"""
-    # Check admin permission
-    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-        return jsonify({'success': False, 'error': 'Chỉ admin mới có quyền đọc Facebook link'}), 403
-    
-    try:
-        from folder_py.ai_facebook_reader import AIFacebookReader
-        
-        data = request.get_json(silent=True) or {}
-        url = data.get('url', '').strip()
-        
-        if not url:
-            return jsonify({'success': False, 'error': 'Vui lòng nhập Facebook post URL hoặc iframe embed code'}), 400
-        
-        # Kiểm tra nếu là iframe embed code hoặc Facebook URL
-        is_facebook_content = (
-            'facebook.com' in url.lower() or 
-            'iframe' in url.lower() or 
-            'facebook.com/plugins/post.php' in url.lower()
-        )
-        
-        if not is_facebook_content:
-            return jsonify({'success': False, 'error': 'Vui lòng nhập Facebook post URL hoặc iframe embed code'}), 400
-        
-        # Khởi tạo AI reader
-        ai_provider = data.get('ai_provider', 'openai')  # 'openai' hoặc 'anthropic'
-        reader = AIFacebookReader(ai_provider=ai_provider)
-        
-        # Đọc post
-        result = reader.read_facebook_post(url)
-        
-        if 'error' in result:
-            # Trả về error message rõ ràng hơn
-            error_msg = result['error']
-            # Nếu là lỗi thiếu API key, trả về 400 thay vì 500
-            if 'API key' in error_msg or 'OPENAI_API_KEY' in error_msg or 'ANTHROPIC_API_KEY' in error_msg:
-                return jsonify({'success': False, 'error': error_msg}), 400
-            return jsonify({'success': False, 'error': error_msg}), 500
-        
-        return jsonify({
-            'success': True,
-            'data': result
-        })
-        
-    except ImportError as e:
-        return jsonify({
-            'success': False,
-            'error': f'Module AI chưa được cài đặt: {str(e)}. Chạy: pip install openai hoặc pip install anthropic'
-        }), 500
-    except Exception as e:
-        logger.error(f"Lỗi khi đọc Facebook link: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': f'Lỗi khi đọc Facebook link: {str(e)}'
-        }), 500
-
-@app.route('/admin/api/facebook/sync', methods=['POST'])
-@login_required
-def api_facebook_sync():
-    """API sync posts từ Facebook page"""
-    # Check admin permission
-    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-        return jsonify({'success': False, 'error': 'Chỉ admin mới có quyền sync Facebook'}), 403
-    
-    try:
-        from folder_py.facebook_sync import FacebookSync
-        from folder_py.db_config import get_db_connection
-        
-        # Lấy params từ request
-        data = request.get_json(silent=True) or {}
-        limit = data.get('limit', 25)
-        status = data.get('status', 'published')  # 'published' hoặc 'draft'
-        
-        # Lấy token từ database (ưu tiên) hoặc environment
-        page_token = None
-        try:
-            connection = get_db_connection()
-            cursor = connection.cursor()
-            cursor.execute("""
-                SELECT access_token FROM facebook_tokens 
-                WHERE is_active = TRUE AND token_type = 'page'
-                ORDER BY updated_at DESC LIMIT 1
-            """)
-            result = cursor.fetchone()
-            if result:
-                page_token = result[0]
-            cursor.close()
-            connection.close()
-        except Exception as e:
-            logger.warning(f"Không lấy được token từ database: {e}")
-        
-        # Khởi tạo FacebookSync với token từ database hoặc environment
-        sync = FacebookSync(page_id='PhongTuyBienQuanCong', access_token=page_token)
-        
-        # Thực hiện sync
-        result = sync.sync(limit=limit, status=status)
-        
-        if result.get('success'):
-            return jsonify({
-                'success': True,
-                'message': result.get('message', 'Sync thành công'),
-                'stats': result.get('stats', {})
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Lỗi không xác định khi sync Facebook')
-            }), 500
-            
-    except ImportError:
-        return jsonify({
-            'success': False,
-            'error': 'Module facebook_sync không tìm thấy. Vui lòng kiểm tra lại.'
-        }), 500
-    except Exception as e:
-        logger.error(f"Lỗi khi sync Facebook: {e}", exc_info=True)
-        return jsonify({
-            'success': False,
-            'error': f'Lỗi khi sync Facebook: {str(e)}'
-        }), 500
-
 
 # -----------------------------------------------------------------------------
 # Lightweight smoke tests (manual run)

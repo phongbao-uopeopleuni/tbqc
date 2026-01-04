@@ -188,10 +188,6 @@
       line-height: var(--line-height-relaxed);
     }
     
-      text-align: center;
-      color: var(--color-text-muted);
-    }
-    
     .lineage-detail-panel {
       margin-top: var(--space-4);
       padding: var(--space-5);
@@ -3435,22 +3431,81 @@
     document.addEventListener('DOMContentLoaded', async () => {
       loadMemberStats();
       
-      // Auto-load generation tabs after a short delay to ensure tree data is loaded
-      setTimeout(async () => {
-        try {
-          // Load generation stats (will build on first load)
-          const generationBuckets = loadGenerationStats();
-          if (generationBuckets) {
-            renderGenerationTabs(generationBuckets);
+      // Load generation tabs with full data (maxGeneration=8)
+      const loadingEl = document.getElementById('generationStatsLoading');
+      const errorEl = document.getElementById('generationStatsError');
+      
+      try {
+        // Wait for tree data to be available, with retry logic
+        let retries = 0;
+        const maxRetries = 20; // Wait up to 10 seconds (20 * 500ms)
+        
+        const waitForTreeData = async () => {
+          while (retries < maxRetries) {
+            if (typeof window.personMap !== 'undefined' && typeof window.childrenMap !== 'undefined' && 
+                window.personMap && window.childrenMap && window.personMap.size > 0) {
+              // Tree data is available
+              // For generation stats, we need data up to generation 8
+              // Check if we need to reload with maxGeneration=8
+              if (typeof loadTreeData === 'function') {
+                const genFilter = document.getElementById('genFilter');
+                const currentMaxGen = genFilter ? parseInt(genFilter.value) : 5;
+                
+                // Check if we have data up to generation 8 by checking if there are any persons at generation 8
+                let hasGen8Data = false;
+                if (window.personMap && window.personMap.size > 0) {
+                  for (const [personId, person] of window.personMap.entries()) {
+                    if (person.generation >= 8) {
+                      hasGen8Data = true;
+                      break;
+                    }
+                  }
+                }
+                
+                if (currentMaxGen < 8 && !hasGen8Data) {
+                  console.log('[Genealogy] Loading tree data with maxGeneration=8 for complete generation stats...');
+                  try {
+                    await loadTreeData(8, 'P-1-1');
+                    // Wait a bit for maps to be updated after loadTreeData
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                  } catch (err) {
+                    console.warn('[Genealogy] Error loading tree with maxGen=8, using existing data:', err);
+                  }
+                }
+              }
+              
+              // Build generation stats
+              const generationBuckets = loadGenerationStats(true); // Force rebuild
+              if (generationBuckets && generationBuckets.size > 0) {
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (errorEl) errorEl.style.display = 'none';
+                renderGenerationTabs(generationBuckets);
+                console.log('[Genealogy] Generation tabs loaded successfully with', generationBuckets.size, 'generations');
+              } else {
+                throw new Error('Failed to build generation stats or no data available');
+              }
+              return;
+            }
+            retries++;
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
           }
-        } catch (err) {
-          console.error('[Genealogy] Error loading generation tabs on init:', err);
+          
+          // If we get here, tree data is not available after max retries
+          throw new Error('Tree data not available after waiting');
+        };
+        
+        await waitForTreeData();
+        
+      } catch (err) {
+        console.error('[Genealogy] Error loading generation tabs:', err);
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (errorEl) {
+          errorEl.style.display = 'block';
+          errorEl.textContent = 'Không thể tải thống kê. Vui lòng tải lại trang hoặc kiểm tra kết nối.';
         }
-      }, 1000); // Wait 1 second for tree data to load
+      }
     });
   </script>
-
-  <style>
 
   <style>
     @media (max-width: 900px) {

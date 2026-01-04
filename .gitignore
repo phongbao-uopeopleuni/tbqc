@@ -70,3 +70,7 @@ create_tbqc_admin_user.py
 backups/
 *.sql
 !folder_sql/*.sql
+
+# Large PDF files (served externally, not in Git)
+static/documents/*.pdf
+tailieu/*.pdf

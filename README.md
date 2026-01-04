@@ -9,7 +9,6 @@ Website quản lý và tra cứu gia phả dòng họ Nguyễn Phước Tộc - 
 - [Cấu Trúc Dự Án](#cấu-trúc-dự-án)
 - [Frontend](#frontend)
 - [Backend](#backend)
-- [Map Website](#map-website)
 - [Cài Đặt và Chạy](#cài-đặt-và-chạy)
 - [Cấu Trúc Database](#cấu-trúc-database)
 
@@ -18,17 +17,17 @@ Website quản lý và tra cứu gia phả dòng họ Nguyễn Phước Tộc - 
 Dự án này là một ứng dụng web full-stack để:
 - Hiển thị cây gia phả tương tác với layout tidy tree, zoom/pan, và branch coloring
 - Quản lý thông tin thành viên (thêm, sửa, xóa)
-- Tra cứu thông tin lăng mộ với bản đồ tương tác
+- Tra cứu thông tin lăng mộ với bản đồ tương tác (Geoapify)
 - Quản lý hoạt động dòng họ
-- Hiển thị album ảnh và tài liệu
+- Hiển thị album ảnh và tài liệu PDF
 - Thống kê thành viên theo từng thế hệ
 - Đồng bộ dữ liệu với database chuẩn
 
 ## 🛠 Công Nghệ Sử Dụng
 
 ### Backend
-- **Python 3.x** - Ngôn ngữ chính
-- **Flask** - Web framework
+- **Python 3.8+** - Ngôn ngữ chính
+- **Flask 3.0** - Web framework
 - **MySQL/MariaDB** - Database
 - **Flask-Login** - Authentication
 - **Flask-CORS** - Cross-origin resource sharing
@@ -39,10 +38,10 @@ Dự án này là một ứng dụng web full-stack để:
 - **HTML5/CSS3** - Markup và styling
 - **JavaScript (Vanilla)** - Không dùng framework, pure JS
 - **CSS Variables** - Theming và customization
-- **SVG** - Vector graphics cho cây gia phả
+- **SVG/D3.js** - Vector graphics cho cây gia phả
 
 ### External Services
-- **Geoapify** - Maps và Geocoding API
+- **Geoapify** - Maps và Geocoding API (cho grave search)
 - **Railway** - Deployment platform (production)
 
 ## 📁 Cấu Trúc Dự Án
@@ -52,9 +51,9 @@ tbqc/
 ├── app.py                    # Flask application chính
 ├── auth.py                   # Authentication logic
 ├── admin_routes.py           # Admin routes
+├── create_admin_user.py      # Script tạo admin user (gom các script trùng lặp)
 ├── requirements.txt          # Python dependencies
 ├── Procfile                  # Railway deployment config
-├── render.yaml               # Render.com config (nếu có)
 │
 ├── templates/                # HTML templates
 │   ├── index.html           # Trang chủ
@@ -68,10 +67,11 @@ tbqc/
 │
 ├── static/                   # Static files
 │   ├── css/                 # Stylesheets
-│   │   ├── main.css
-│   │   ├── navbar.css
-│   │   ├── footer.css
-│   │   └── components.css
+│   │   ├── main.css        # Main styles (bao gồm floating Zalo button)
+│   │   ├── navbar.css      # Navigation bar
+│   │   ├── footer.css      # Footer
+│   │   ├── components.css  # Reusable components
+│   │   └── tokens.css      # Design tokens
 │   │
 │   ├── js/                  # JavaScript modules
 │   │   ├── family-tree-core.js          # Core data loading
@@ -86,9 +86,7 @@ tbqc/
 │   │   ├── anh1/           # Album ảnh hoạt động
 │   │   └── ...             # Các ảnh khác
 │   │
-│   └── documents/           # PDF documents
-│       ├── hoang-toc-luoc-bien.pdf
-│       └── NGUYEN-PHUC-TOC-THE-PHA.pdf
+│   └── documents/           # PDF documents (local storage)
 │
 ├── folder_py/               # Python utilities
 │   ├── db_config.py        # Database configuration
@@ -108,9 +106,10 @@ tbqc/
 
 #### 1. **index.html** - Trang Chủ
 - Hero section với thông tin dòng họ
-- Giới thiệu về dự án
+- Giới thiệu về dự án và Phòng Tuy Biên Quận Công
 - Hình ảnh bên trong nhà thờ với giải thích hoành phi, câu đối
-- Section liên hệ và tìm kiếm dòng dõi
+- Google Maps embed cho vị trí Phủ Tuy Biên
+- Section liên hệ
 
 #### 2. **genealogy.html** - Trang Gia Phả (Chính)
 - **Family Tree Visualization:**
@@ -122,34 +121,38 @@ tbqc/
 - **Generation Statistics Tabs:**
   - Tabs từ thế hệ 1-8
   - Bảng thống kê: Tên, Tổng số con cháu, Số lượng dâu và rể
-  - Lazy loading cho performance
-  - Caching để tối ưu tốc độ
+  - Lazy loading và caching để tối ưu performance
 - **Grave Search:**
   - Tìm kiếm lăng mộ với bản đồ tương tác (Geoapify)
   - Hiển thị vị trí trên map
+  - Cập nhật tọa độ mộ phần
 - **Sync Controls:**
   - Nút đồng bộ database
   - Nút cập nhật thông tin gia phả
 
 #### 3. **members.html** - Danh Sách Thành Viên
 - Hiển thị danh sách tất cả thành viên
-- Tìm kiếm và lọc
+- Tìm kiếm và lọc đa tiêu chí
 - Chi tiết từng thành viên
-- Yêu cầu mật khẩu cho các thao tác (Add/Edit/Delete)
+- Yêu cầu mật khẩu cho các thao tác (Add/Edit/Delete/Backup)
+- Floating Zalo button
 
 #### 4. **activities.html** - Hoạt Động
 - Danh sách hoạt động dòng họ
 - Album ảnh hoạt động (lightbox gallery)
 - Chi tiết từng hoạt động
+- Floating Zalo button
 
 #### 5. **documents.html** - Tài Liệu
-- Danh sách tài liệu PDF
+- Danh sách tài liệu PDF (link external)
 - Xem và tải xuống
 - Nguồn tham khảo
+- Floating Zalo button
 
 #### 6. **contact.html** - Liên Hệ
-- Form gửi yêu cầu chỉnh sửa thông tin
-- Gửi email thông báo
+- Thông tin liên hệ
+- Link Facebook Phòng Tuy Biên Quận Công
+- Floating Zalo button
 
 ### JavaScript Modules
 
@@ -161,7 +164,7 @@ tbqc/
 #### **family-tree-graph-builder.js**
 - `buildRenderGraph()`: Chuyển đổi raw data thành family/person graph
 - Tạo family nodes (sibling groups và marriages)
-- Generate unique family IDs: `FG-{father}-{mother}` cho sibling groups, `FM-{spouse1}-{spouse2}-{order}` cho marriages
+- Generate unique family IDs
 
 #### **family-tree-family-ui.js**
 - `buildFamilyTree()`: Xây dựng cây gia phả từ graph
@@ -188,11 +191,11 @@ tbqc/
 
 ### CSS Architecture
 
-- **main.css**: Base styles, layout, typography
+- **tokens.css**: Design tokens (colors, spacing, typography)
+- **components.css**: Reusable components (buttons, cards, etc.)
 - **navbar.css**: Navigation bar styling
 - **footer.css**: Footer styling
-- **components.css**: Reusable components (buttons, cards, etc.)
-- **tokens.css**: Design tokens (colors, spacing, etc.)
+- **main.css**: Base styles, layout, floating buttons (Zalo button)
 
 ## ⚙️ Backend
 
@@ -203,6 +206,7 @@ tbqc/
 - Session configuration
 - Route registration
 - Database connection management
+- Docstrings song ngữ (Tiếng Việt/English)
 
 ### API Endpoints
 
@@ -226,10 +230,11 @@ tbqc/
 | `/api/tree` | GET | Lấy cây gia phả (nested structure) |
 | `/api/family-tree` | GET | Lấy family tree graph |
 | `/api/persons` | GET | Danh sách tất cả persons |
+| `/api/persons` | POST | Tạo person mới (yêu cầu password) |
 | `/api/person/<id>` | GET | Chi tiết một person |
 | `/api/person/<id>` | PUT | Cập nhật person (yêu cầu password) |
 | `/api/person/<id>` | DELETE | Xóa person (yêu cầu password) |
-| `/api/persons` | POST | Tạo person mới (yêu cầu password) |
+| `/api/persons/batch` | DELETE | Xóa nhiều persons (yêu cầu password) |
 | `/api/relationships` | GET | Lấy relationships |
 | `/api/children/<parent_id>` | GET | Lấy con của một parent |
 | `/api/ancestors/<person_id>` | GET | Lấy ancestors chain |
@@ -256,14 +261,6 @@ tbqc/
 | `/api/activities/<id>` | GET, PUT, DELETE | Activity detail |
 | `/api/upload-image` | POST | Upload ảnh (admin only) |
 | `/api/gallery/anh1` | GET | List ảnh trong album anh1 |
-
-#### **API - Contact & Edit Requests**
-
-| Route | Method | Mô Tả |
-|-------|--------|-------|
-| `/api/contact` | POST | Gửi form liên hệ |
-| `/api/edit-requests` | POST | Tạo yêu cầu chỉnh sửa |
-| `/api/send-edit-request-email` | POST | Gửi email yêu cầu |
 
 #### **API - Authentication**
 
@@ -299,6 +296,7 @@ tbqc/
 - Connection pooling (nếu cần)
 - Environment variables cho configuration
 - File config example: `tbqc_db.env.example`
+- Hỗ trợ Railway Volume cho persistent storage (images)
 
 ### Authentication & Security
 
@@ -308,48 +306,24 @@ tbqc/
 - Session cookies với secure flags (production)
 - CORS enabled cho API access
 
-## 🗺 Map Website
+### Scripts Tiện Ích
 
-### Sitemap
+#### **create_admin_user.py**
+Script gom tất cả chức năng tạo admin user (thay thế các file trùng lặp cũ):
+- Hỗ trợ tạo nhiều users: `tbqc_admin`, `admin_tbqc`, `phongb`
+- Sử dụng command line arguments hoặc environment variables
+- Default passwords cho từng user
 
+**Usage:**
+```bash
+# Tạo user mặc định (admin_tbqc)
+python create_admin_user.py
+
+# Tạo user cụ thể
+python create_admin_user.py --username tbqc_admin --password tbqc@2026
+python create_admin_user.py --username admin_tbqc --password Thienanh@107
+python create_admin_user.py --username phongb --password Thienanh@107
 ```
-/
-├── /genealogy              # Trang gia phả (chính)
-│   ├── Family Tree        # Visualization với zoom/pan
-│   ├── Generation Stats   # Thống kê theo thế hệ
-│   └── Grave Search       # Tìm kiếm lăng mộ
-│
-├── /members               # Danh sách thành viên
-│   ├── List view         # Danh sách tất cả
-│   ├── Search/Filter     # Tìm kiếm
-│   └── Detail view       # Chi tiết từng người
-│
-├── /activities            # Hoạt động
-│   ├── List              # Danh sách hoạt động
-│   ├── Detail            # Chi tiết hoạt động
-│   └── Photo Gallery     # Album ảnh
-│
-├── /documents             # Tài liệu
-│   └── PDF Viewer        # Xem và tải PDF
-│
-├── /contact               # Liên hệ
-│   └── Edit Request Form # Form yêu cầu chỉnh sửa
-│
-├── /login                 # Đăng nhập
-│
-└── /admin/*               # Admin (protected)
-    ├── /admin/users       # Quản lý users
-    └── /admin/activities  # Quản lý activities
-```
-
-### User Flow
-
-1. **Trang chủ** → Giới thiệu → Link đến `/genealogy`
-2. **Genealogy** → Xem cây gia phả → Chọn thế hệ → Xem thống kê
-3. **Members** → Tìm kiếm → Xem chi tiết → (Yêu cầu password) Edit/Delete
-4. **Activities** → Xem hoạt động → Xem album ảnh
-5. **Documents** → Xem/tải tài liệu
-6. **Contact** → Gửi yêu cầu chỉnh sửa
 
 ## 🚀 Cài Đặt và Chạy
 
@@ -377,8 +351,8 @@ pip install -r requirements.txt
 1. Copy file `tbqc_db.env.example` thành `tbqc_db.env`
 2. Cập nhật thông tin database trong `tbqc_db.env`:
    ```
-DB_HOST=localhost
-DB_PORT=3306
+   DB_HOST=localhost
+   DB_PORT=3306
    DB_USER=your_user
    DB_PASSWORD=your_password
    DB_NAME=your_database
@@ -388,16 +362,22 @@ DB_PORT=3306
 ### Bước 4: Cấu Hình Environment Variables
 
 Các biến môi trường cần thiết (xem `tbqc_db.env.example`):
-- Database credentials (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
-- Application passwords (MEMBERS_PASSWORD, ADMIN_PASSWORD, BACKUP_PASSWORD)
-- Geoapify API key (GEOAPIFY_API_KEY) - Optional, cho grave search map
-- Facebook API (FB_PAGE_ID, FB_ACCESS_TOKEN) - Optional
+- **Database credentials**: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- **Application passwords**: `MEMBERS_PASSWORD`, `ADMIN_PASSWORD`, `BACKUP_PASSWORD`
+- **Geoapify API key**: `GEOAPIFY_API_KEY` (Optional, cho grave search map)
+- **Railway Volume** (Production): `RAILWAY_VOLUME_MOUNT_PATH` (đường dẫn mount volume cho images)
 
 ### Bước 5: Khởi Tạo Database
 
 Chạy các SQL scripts trong `folder_sql/` để tạo schema và tables.
 
-### Bước 6: Chạy Server
+### Bước 6: Tạo Admin User
+
+```bash
+python create_admin_user.py --username admin_tbqc --password your_password
+```
+
+### Bước 7: Chạy Server
 
 #### Development
 ```bash
@@ -413,11 +393,12 @@ Server sẽ chạy tại `http://localhost:5000`
 gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 ```
 
-### Bước 7: Truy Cập
+### Bước 8: Truy Cập
 
 - Trang chủ: `http://localhost:5000/`
 - Genealogy: `http://localhost:5000/genealogy`
 - Members: `http://localhost:5000/members`
+- Activities: `http://localhost:5000/activities`
 
 ## 🗄 Cấu Trúc Database
 
@@ -425,13 +406,18 @@ gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 
 #### **persons**
 - `person_id` (VARCHAR, PK) - ID duy nhất
+- `csv_id` - ID từ CSV
+- `fm_id` - Father_Mother_ID
 - `full_name` - Tên đầy đủ
 - `alias` - Tên khác
-- `birth_year` - Năm sinh
-- `death_year` - Năm mất
+- `birth_date_solar` - Năm sinh (solar calendar)
+- `death_date_solar` - Năm mất (solar calendar)
 - `gender` - Giới tính
-- `generation_level` - Thế hệ
+- `generation_number` - Thế hệ
+- `status` - Trạng thái (Còn sống/Đã mất/Không rõ)
 - `grave_location` - Vị trí lăng mộ (JSON)
+- `father_name`, `mother_name` - Tên bố mẹ
+- `spouses`, `siblings`, `children` - Thông tin quan hệ (text)
 - `notes` - Ghi chú
 - ... (các field khác)
 
@@ -446,10 +432,15 @@ gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 - `marriage_order` - Thứ tự hôn nhân (vợ cả, vợ thứ...)
 
 #### **users**
-- `id` (INT, PK)
+- `user_id` (INT, PK)
 - `username` - Tên đăng nhập
-- `password_hash` - Mật khẩu (hashed)
-- `role` - Vai trò (admin/user)
+- `password_hash` - Mật khẩu (hashed với bcrypt)
+- `role` - Vai trò (admin/editor/user)
+- `full_name` - Tên đầy đủ
+- `email` - Email
+- `is_active` - Trạng thái active
+- `created_at`, `updated_at`, `last_login` - Timestamps
+- `permissions` - JSON permissions
 
 #### **activities**
 - `id` (INT, PK)
@@ -457,13 +448,8 @@ gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 - `content` - Nội dung
 - `date` - Ngày
 - `images` - JSON array ảnh
-
-#### **edit_requests**
-- `id` (INT, PK)
-- `person_id` - ID người cần chỉnh sửa
-- `request_data` - JSON data yêu cầu
-- `status` - Trạng thái
-- `created_at` - Thời gian tạo
+- `status` - Trạng thái (published/draft)
+- `created_at`, `updated_at` - Timestamps
 
 ### Stored Procedures
 
@@ -480,8 +466,8 @@ gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 
 ### Code Style
 
-- **Python**: Follow PEP 8
-- **JavaScript**: ES6+, no frameworks
+- **Python**: Follow PEP 8, docstrings song ngữ (Việt/English)
+- **JavaScript**: ES6+, no frameworks, vanilla JS
 - **HTML**: Semantic HTML5
 - **CSS**: BEM-like naming, CSS variables
 
@@ -491,6 +477,7 @@ gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 - **Lazy Loading**: Generation tabs chỉ load khi click
 - **Database Indexing**: Đảm bảo indexes cho `person_id`, `father_id`, `mother_id`, `spouse_person_id`
 - **Connection Pooling**: Sử dụng connection pool cho production
+- **Image Serving**: Hỗ trợ cả static/images (Git) và Railway Volume (uploads)
 
 ### Debugging
 
@@ -504,7 +491,23 @@ gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 - **Railway**: Config trong `Procfile`
 - **Environment Variables**: Set trong Railway dashboard
 - **Static Files**: Serve từ `static/` folder
+- **Images**: Railway Volume mount tại `RAILWAY_VOLUME_MOUNT_PATH` (khuyến nghị: `/data/images`)
 - **Database**: Sử dụng Railway MySQL addon hoặc external database
+
+### File Organization
+
+- **Templates**: Tất cả HTML templates trong `templates/`
+- **Static Assets**: CSS, JS, images trong `static/`
+- **Python Utilities**: Helper modules trong `folder_py/`
+- **SQL Scripts**: Database scripts trong `folder_sql/`
+- **Scripts**: Utility scripts ở root (như `create_admin_user.py`)
+
+## 🔗 Liên Kết Ngoài
+
+- **Google Maps**: Embed map cho Phủ Tuy Biên
+- **Geoapify**: Maps API cho grave search
+- **PDF Documents**: Link external từ `nguyenphuoctoc.info`
+- **Facebook**: Link đến trang Facebook Phòng Tuy Biên Quận Công (chỉ link, không có API integration)
 
 ## 📄 License
 
@@ -521,4 +524,4 @@ gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
 - Sử dụng environment variables trong production
 - Không expose API keys, passwords trong code
 - Review code trước khi merge
-
+- Không commit các file chứa thông tin nhạy cảm (passwords, tokens)
