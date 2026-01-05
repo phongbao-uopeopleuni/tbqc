@@ -157,6 +157,176 @@
       color: var(--color-error);
     }
     
+    /* Album Management Styles */
+    .album-management {
+      margin-bottom: var(--space-6);
+      padding: var(--space-4);
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--color-border);
+    }
+    
+    .album-management-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+    
+    .albums-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: var(--space-3);
+      margin-top: var(--space-4);
+    }
+    
+    .album-card {
+      background: white;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+    
+    .album-card.selected {
+      border-color: var(--color-primary);
+      border-width: 2px;
+      background: #fff8e1;
+    }
+    
+    .album-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    
+    .album-name {
+      font-weight: var(--font-weight-semibold);
+      font-size: var(--font-size-lg);
+      color: var(--color-text);
+      flex: 1;
+    }
+    
+    .album-theme {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin-top: var(--space-1);
+    }
+    
+    .album-meta {
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+      margin-top: var(--space-2);
+    }
+    
+    .album-actions {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+    }
+    
+    .album-actions button {
+      flex: 1;
+      min-width: 70px;
+      padding: var(--space-2) var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      overflow: auto;
+    }
+    
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-content {
+      background-color: var(--color-surface);
+      margin: auto;
+      padding: var(--space-6);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      color: var(--color-primary);
+    }
+    
+    .modal-close {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      line-height: 1;
+    }
+    
+    .modal-close:hover {
+      color: var(--color-text);
+    }
+    
+    .modal-body {
+      margin-bottom: var(--space-4);
+    }
+    
+    .modal-footer {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: flex-end;
+    }
+    
+    .form-group {
+      margin-bottom: var(--space-4);
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: var(--space-2);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+    }
+    
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-family: inherit;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: 2px solid rgba(139, 0, 0, 0.25);
+      border-color: var(--color-primary);
+    }
+    
     /* Lightbox Modal */
     .lightbox-modal {
       display: none;
@@ -357,6 +527,18 @@
         <h2>📷 Album Ảnh</h2>
         <p>Bộ sưu tập hình ảnh từ các hoạt động và sự kiện</p>
       </div>
+      
+      <!-- Album Management -->
+      <div class="album-management">
+        <div class="album-management-header">
+          <h3 style="margin: 0; color: var(--color-primary);">Quản lý Album</h3>
+          <button class="btn btn-primary" onclick="showCreateAlbumModal()">+ Tạo album</button>
+        </div>
+        <div id="albumsList" class="albums-list">
+          <div class="gallery-loading">Đang tải danh sách album...</div>
+        </div>
+      </div>
+      
       <div id="galleryContainer">
         <div class="gallery-loading">Đang tải ảnh...</div>
       </div>
@@ -369,6 +551,56 @@
     <span class="lightbox-nav lightbox-prev" onclick="changeLightboxImage(-1)">&#10094;</span>
     <span class="lightbox-nav lightbox-next" onclick="changeLightboxImage(1)">&#10095;</span>
     <img id="lightboxImage" class="lightbox-content" src="" alt="Gallery Image">
+  </div>
+  
+  <!-- Password Modal -->
+  <div id="passwordModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Xác thực mật khẩu</h3>
+        <span class="modal-close" onclick="closePasswordModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="passwordInput">Nhập mật khẩu để tiếp tục:</label>
+          <input type="password" id="passwordInput" placeholder="Mật khẩu" onkeypress="if(event.key==='Enter') handlePasswordSubmit()">
+        </div>
+        <div id="passwordError" style="color: var(--color-error); display: none; margin-top: var(--space-2);"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closePasswordModal()">Hủy</button>
+        <button class="btn btn-primary" onclick="handlePasswordSubmit()">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Create/Update Album Modal -->
+  <div id="albumModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="albumModalTitle">Tạo album mới</h3>
+        <span class="modal-close" onclick="closeAlbumModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="albumNameInput">Tên album <span style="color: var(--color-error);">*</span></label>
+          <input type="text" id="albumNameInput" placeholder="Nhập tên album" required>
+        </div>
+        <div class="form-group">
+          <label for="albumThemeInput">Chủ đề</label>
+          <input type="text" id="albumThemeInput" placeholder="Nhập chủ đề (tùy chọn)">
+        </div>
+        <div class="form-group">
+          <label for="albumCreatedByInput">Người đăng</label>
+          <input type="text" id="albumCreatedByInput" placeholder="Nhập tên người đăng (tùy chọn)">
+        </div>
+        <div id="albumError" style="color: var(--color-error); display: none; margin-top: var(--space-2);"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAlbumModal()">Hủy</button>
+        <button class="btn btn-primary" onclick="handleAlbumSubmit()">Lưu</button>
+      </div>
+    </div>
   </div>
 
   <script src="/static/js/common.js"></script>
@@ -475,6 +707,264 @@
 
     initPage();
     
+    // Album Management Functionality
+    let albums = [];
+    let selectedAlbumId = null;
+    let currentAlbumEditId = null;
+    let authenticatedPassword = null;
+    let pendingAction = null; // 'create', 'update', 'delete'
+    
+    async function loadAlbums() {
+      const albumsListEl = document.getElementById('albumsList');
+      if (!albumsListEl) return;
+      
+      try {
+        const response = await fetch('/api/albums');
+        const data = await response.json();
+        
+        if (data.success && data.albums) {
+          albums = data.albums;
+          renderAlbums(albums);
+        } else {
+          albumsListEl.innerHTML = '<div class="gallery-error">Không thể tải danh sách album</div>';
+        }
+      } catch (error) {
+        console.error('Error loading albums:', error);
+        albumsListEl.innerHTML = '<div class="gallery-error">Lỗi khi tải danh sách album</div>';
+      }
+    }
+    
+    function renderAlbums(albumsList) {
+      const albumsListEl = document.getElementById('albumsList');
+      if (!albumsListEl) return;
+      
+      if (!albumsList || albumsList.length === 0) {
+        albumsListEl.innerHTML = '<div class="gallery-error">Chưa có album nào. Hãy tạo album mới!</div>';
+        return;
+      }
+      
+      const html = albumsList.map(album => {
+        const isSelected = selectedAlbumId === album.album_id;
+        const dateStr = album.created_at ? formatDate(album.created_at) : '';
+        return `
+          <div class="album-card ${isSelected ? 'selected' : ''}" data-album-id="${album.album_id}">
+            <div class="album-card-header">
+              <div style="flex: 1;">
+                <div class="album-name">${escapeHtml(album.name || 'Không có tên')}</div>
+                ${album.theme ? `<div class="album-theme">${escapeHtml(album.theme)}</div>` : ''}
+              </div>
+            </div>
+            <div class="album-meta">
+              ${dateStr ? `📅 ${dateStr}` : ''}
+              ${album.created_by ? ` | 👤 ${escapeHtml(album.created_by)}` : ''}
+            </div>
+            <div class="album-actions">
+              <button class="btn btn-secondary" onclick="selectAlbum(${album.album_id})">Chọn</button>
+              <button class="btn btn-secondary" onclick="showUpdateAlbumModal(${album.album_id})">Cập nhật</button>
+              <button class="btn btn-secondary" onclick="showDeleteAlbumConfirm(${album.album_id})" style="background: var(--color-error); color: white;">Xóa</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      albumsListEl.innerHTML = html;
+    }
+    
+    function selectAlbum(albumId) {
+      selectedAlbumId = albumId;
+      renderAlbums(albums);
+      // TODO: Load images for selected album
+      loadGallery();
+    }
+    
+    function showCreateAlbumModal() {
+      pendingAction = 'create';
+      currentAlbumEditId = null;
+      document.getElementById('albumModalTitle').textContent = 'Tạo album mới';
+      document.getElementById('albumNameInput').value = '';
+      document.getElementById('albumThemeInput').value = '';
+      document.getElementById('albumCreatedByInput').value = '';
+      document.getElementById('albumError').style.display = 'none';
+      showPasswordModal();
+    }
+    
+    function showUpdateAlbumModal(albumId) {
+      const album = albums.find(a => a.album_id === albumId);
+      if (!album) return;
+      
+      pendingAction = 'update';
+      currentAlbumEditId = albumId;
+      document.getElementById('albumModalTitle').textContent = 'Cập nhật album';
+      document.getElementById('albumNameInput').value = album.name || '';
+      document.getElementById('albumThemeInput').value = album.theme || '';
+      document.getElementById('albumCreatedByInput').value = album.created_by || '';
+      document.getElementById('albumError').style.display = 'none';
+      showPasswordModal();
+    }
+    
+    function showDeleteAlbumConfirm(albumId) {
+      const album = albums.find(a => a.album_id === albumId);
+      if (!album) return;
+      
+      if (confirm(`Bạn có chắc chắn muốn xóa album "${album.name}"?`)) {
+        pendingAction = 'delete';
+        currentAlbumEditId = albumId;
+        showPasswordModal();
+      }
+    }
+    
+    function showPasswordModal() {
+      const modal = document.getElementById('passwordModal');
+      const input = document.getElementById('passwordInput');
+      const errorEl = document.getElementById('passwordError');
+      
+      if (modal) {
+        modal.classList.add('active');
+        input.value = '';
+        errorEl.style.display = 'none';
+        setTimeout(() => input.focus(), 100);
+      }
+    }
+    
+    function closePasswordModal() {
+      const modal = document.getElementById('passwordModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+      pendingAction = null;
+      currentAlbumEditId = null;
+    }
+    
+    async function handlePasswordSubmit() {
+      const input = document.getElementById('passwordInput');
+      const errorEl = document.getElementById('passwordError');
+      const password = input.value.trim();
+      
+      if (!password) {
+        errorEl.textContent = 'Vui lòng nhập mật khẩu';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      try {
+        // Verify password bằng cách thử tạo một request test (hoặc có thể verify ở server)
+        authenticatedPassword = password;
+        closePasswordModal();
+        
+        // Proceed with the pending action
+        if (pendingAction === 'create') {
+          showAlbumModal();
+        } else if (pendingAction === 'update') {
+          showAlbumModal();
+        } else if (pendingAction === 'delete') {
+          await deleteAlbum(currentAlbumEditId);
+        }
+      } catch (error) {
+        errorEl.textContent = 'Mật khẩu không đúng';
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    function showAlbumModal() {
+      const modal = document.getElementById('albumModal');
+      if (modal) {
+        modal.classList.add('active');
+        document.getElementById('albumNameInput').focus();
+      }
+    }
+    
+    function closeAlbumModal() {
+      const modal = document.getElementById('albumModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+      pendingAction = null;
+      currentAlbumEditId = null;
+      authenticatedPassword = null;
+    }
+    
+    async function handleAlbumSubmit() {
+      const nameInput = document.getElementById('albumNameInput');
+      const themeInput = document.getElementById('albumThemeInput');
+      const createdByInput = document.getElementById('albumCreatedByInput');
+      const errorEl = document.getElementById('albumError');
+      
+      const name = nameInput.value.trim();
+      if (!name) {
+        errorEl.textContent = 'Tên album không được để trống';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      const data = {
+        name: name,
+        theme: themeInput.value.trim(),
+        created_by: createdByInput.value.trim(),
+        password: authenticatedPassword
+      };
+      
+      try {
+        let response;
+        if (pendingAction === 'create') {
+          response = await fetch('/api/albums', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else if (pendingAction === 'update') {
+          response = await fetch(`/api/albums/${currentAlbumEditId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          return;
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          closeAlbumModal();
+          await loadAlbums();
+        } else {
+          errorEl.textContent = result.error || 'Có lỗi xảy ra';
+          errorEl.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error submitting album:', error);
+        errorEl.textContent = 'Lỗi khi lưu album. Vui lòng thử lại.';
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    async function deleteAlbum(albumId) {
+      try {
+        const response = await fetch(`/api/albums/${albumId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: authenticatedPassword })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          if (selectedAlbumId === albumId) {
+            selectedAlbumId = null;
+          }
+          await loadAlbums();
+        } else {
+          alert(result.error || 'Có lỗi xảy ra khi xóa album');
+        }
+      } catch (error) {
+        console.error('Error deleting album:', error);
+        alert('Lỗi khi xóa album. Vui lòng thử lại.');
+      } finally {
+        pendingAction = null;
+        currentAlbumEditId = null;
+        authenticatedPassword = null;
+      }
+    }
+    
     // Gallery Album Functionality
     let galleryImages = [];
     let currentLightboxIndex = 0;
@@ -578,7 +1068,8 @@
         });
       }
       
-      // Load gallery after page loads
+      // Load albums and gallery after page loads
+      loadAlbums();
       loadGallery();
     });
   </script>

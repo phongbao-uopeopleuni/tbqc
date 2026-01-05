@@ -45,7 +45,7 @@ try:
 
     app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
     # Cấu hình session để kéo dài thời gian đăng nhập
-    from datetime import timedelta
+    from datetime import timedelta, datetime
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # Session kéo dài 24 giờ
     # Kiểm tra xem có đang chạy trên Railway (production) không
     is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true'
@@ -1354,6 +1354,282 @@ def api_gallery_anh1():
     except Exception as e:
         logger.error(f"Error listing gallery images: {e}")
         return jsonify({'success': False, 'error': f'Lỗi khi lấy danh sách ảnh: {str(e)}'}), 500
+
+def ensure_albums_table(cursor):
+    """
+    Đảm bảo bảng albums tồn tại trong database.
+    Tạo bảng nếu chưa có.
+    
+    Ensure the albums table exists in the database.
+    Creates the table if it doesn't exist.
+    
+    Args:
+        cursor: Database cursor để thực thi SQL queries
+                Database cursor to execute SQL queries
+    """
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS albums (
+            album_id INT PRIMARY KEY AUTO_INCREMENT,
+            name VARCHAR(500) NOT NULL,
+            theme VARCHAR(500),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            created_by VARCHAR(255),
+            INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+ALBUM_PASSWORD = 'tbqc@2026'
+
+def verify_album_password(password):
+    """
+    Xác thực mật khẩu để đăng ảnh vào album.
+    
+    Verify password to upload images to album.
+    
+    Args:
+        password: Mật khẩu cần kiểm tra
+        
+    Returns:
+        True nếu mật khẩu đúng, False nếu sai
+    """
+    return password == ALBUM_PASSWORD
+
+@app.route('/api/albums', methods=['GET'])
+def api_get_albums():
+    """
+    API lấy danh sách tất cả albums.
+    
+    API to get list of all albums.
+    
+    Returns:
+        JSON response với danh sách albums
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        conn.commit()
+        
+        cursor.execute("""
+            SELECT album_id, name, theme, created_at, created_by
+            FROM albums
+            ORDER BY created_at DESC
+        """)
+        albums = cursor.fetchall()
+        
+        # Convert datetime to string
+        for album in albums:
+            if album.get('created_at'):
+                if isinstance(album['created_at'], datetime):
+                    album['created_at'] = album['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'albums': albums
+        })
+    except Exception as e:
+        logger.error(f"Error getting albums: {e}")
+        return jsonify({'success': False, 'error': f'Lỗi khi lấy danh sách album: {str(e)}'}), 500
+
+@app.route('/api/albums', methods=['POST'])
+def api_create_album():
+    """
+    API tạo album mới.
+    Yêu cầu mật khẩu để xác thực.
+    
+    API to create a new album.
+    Requires password for authentication.
+    
+    Request body:
+        name: Tên album (required)
+        theme: Chủ đề album (optional)
+        created_by: Người đăng (optional)
+        password: Mật khẩu xác thực (required)
+    
+    Returns:
+        JSON response với thông tin album vừa tạo
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Thiếu dữ liệu'}), 400
+        
+        password = data.get('password')
+        if not password or not verify_album_password(password):
+            return jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401
+        
+        name = data.get('name')
+        if not name or not name.strip():
+            return jsonify({'success': False, 'error': 'Tên album không được để trống'}), 400
+        
+        theme = data.get('theme', '').strip()
+        created_by = data.get('created_by', '').strip()
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        
+        cursor.execute("""
+            INSERT INTO albums (name, theme, created_by)
+            VALUES (%s, %s, %s)
+        """, (name.strip(), theme if theme else None, created_by if created_by else None))
+        
+        album_id = cursor.lastrowid
+        conn.commit()
+        
+        cursor.execute("""
+            SELECT album_id, name, theme, created_at, created_by
+            FROM albums
+            WHERE album_id = %s
+        """, (album_id,))
+        album = cursor.fetchone()
+        
+        if album.get('created_at') and isinstance(album['created_at'], datetime):
+            album['created_at'] = album['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'album': album
+        }), 201
+    except Exception as e:
+        logger.error(f"Error creating album: {e}")
+        return jsonify({'success': False, 'error': f'Lỗi khi tạo album: {str(e)}'}), 500
+
+@app.route('/api/albums/<int:album_id>', methods=['PUT'])
+def api_update_album(album_id):
+    """
+    API cập nhật album.
+    Yêu cầu mật khẩu để xác thực.
+    
+    API to update an album.
+    Requires password for authentication.
+    
+    Request body:
+        name: Tên album (optional)
+        theme: Chủ đề album (optional)
+        created_by: Người đăng (optional)
+        password: Mật khẩu xác thực (required)
+    
+    Returns:
+        JSON response với thông tin album đã cập nhật
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'Thiếu dữ liệu'}), 400
+        
+        password = data.get('password')
+        if not password or not verify_album_password(password):
+            return jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        
+        # Check if album exists
+        cursor.execute("SELECT album_id FROM albums WHERE album_id = %s", (album_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Album không tồn tại'}), 404
+        
+        # Build update query
+        updates = []
+        values = []
+        
+        if 'name' in data and data['name']:
+            updates.append("name = %s")
+            values.append(data['name'].strip())
+        
+        if 'theme' in data:
+            updates.append("theme = %s")
+            values.append(data['theme'].strip() if data['theme'] else None)
+        
+        if 'created_by' in data:
+            updates.append("created_by = %s")
+            values.append(data['created_by'].strip() if data['created_by'] else None)
+        
+        if not updates:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Không có dữ liệu để cập nhật'}), 400
+        
+        values.append(album_id)
+        cursor.execute(f"UPDATE albums SET {', '.join(updates)} WHERE album_id = %s", values)
+        conn.commit()
+        
+        cursor.execute("""
+            SELECT album_id, name, theme, created_at, created_by
+            FROM albums
+            WHERE album_id = %s
+        """, (album_id,))
+        album = cursor.fetchone()
+        
+        if album.get('created_at') and isinstance(album['created_at'], datetime):
+            album['created_at'] = album['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'album': album
+        })
+    except Exception as e:
+        logger.error(f"Error updating album: {e}")
+        return jsonify({'success': False, 'error': f'Lỗi khi cập nhật album: {str(e)}'}), 500
+
+@app.route('/api/albums/<int:album_id>', methods=['DELETE'])
+def api_delete_album(album_id):
+    """
+    API xóa album.
+    Yêu cầu mật khẩu để xác thực.
+    
+    API to delete an album.
+    Requires password for authentication.
+    
+    Request body:
+        password: Mật khẩu xác thực (required)
+    
+    Returns:
+        JSON response xác nhận xóa thành công
+    """
+    try:
+        data = request.get_json() or {}
+        password = data.get('password')
+        if not password or not verify_album_password(password):
+            return jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401
+        
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        
+        # Check if album exists
+        cursor.execute("SELECT album_id FROM albums WHERE album_id = %s", (album_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Album không tồn tại'}), 404
+        
+        cursor.execute("DELETE FROM albums WHERE album_id = %s", (album_id,))
+        conn.commit()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Xóa album thành công'
+        })
+    except Exception as e:
+        logger.error(f"Error deleting album: {e}")
+        return jsonify({'success': False, 'error': f'Lỗi khi xóa album: {str(e)}'}), 500
 
 # Legacy route for backward compatibility
 @app.route('/images/<path:filename>')

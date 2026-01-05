@@ -347,8 +347,8 @@
     
     .tree-container-wrapper {
       position: relative;
-      height: 70vh;
-      min-height: 600px;
+      height: 85vh;
+      min-height: 800px;
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
       overflow: auto;
@@ -358,6 +358,71 @@
       max-width: 100%;
       /* Smooth scrolling */
       scroll-behavior: smooth;
+      transition: all 0.3s ease;
+    }
+    
+    /* Fullscreen mode */
+    .tree-container-wrapper.fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      min-height: 100vh;
+      z-index: 9999;
+      border-radius: 0;
+      border: none;
+    }
+    
+    .tree-container-wrapper.fullscreen ~ .tree-info-panel {
+      display: none;
+    }
+    
+    body.fullscreen-active {
+      overflow: hidden;
+    }
+    
+    /* Fullscreen hint */
+    .fullscreen-hint {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 15px;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      z-index: 10000;
+      display: none;
+      pointer-events: none;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .tree-container-wrapper.fullscreen .fullscreen-hint {
+      display: block;
+    }
+    
+    .fullscreen-hint kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 0.9em;
+      font-weight: bold;
+      margin: 0 2px;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     
     /* Custom scrollbar */
@@ -846,8 +911,8 @@
     /* Mobile responsive */
     @media (max-width: 1023px) {
       .tree-container-wrapper {
-        height: 60vh;
-        min-height: 500px;
+        height: 75vh;
+        min-height: 600px;
       }
       
       .tree-controls-row {
@@ -913,6 +978,7 @@
                 <button id="zoomOutBtn" class="btn btn-secondary" title="Thu nhỏ" onclick="if(typeof window.zoomOut === 'function') window.zoomOut();">🔍-</button>
                 <button id="resetZoomBtn" class="btn btn-secondary" title="Đặt lại zoom mặc định" onclick="if(typeof window.resetZoom === 'function') window.resetZoom();">⌂</button>
                 <button id="zoomInBtn" class="btn btn-secondary" title="Phóng to" onclick="if(typeof window.zoomIn === 'function') window.zoomIn();">🔍+</button>
+                <button id="fullscreenBtn" class="btn btn-secondary" title="Xem toàn màn hình" onclick="toggleFullscreen()">⛶</button>
               </div>
             </div>
             
@@ -922,6 +988,7 @@
           
           <!-- Tree Container -->
           <div class="tree-container-wrapper">
+            <div class="fullscreen-hint">Nhấn <kbd>Esc</kbd> để thoát chế độ toàn màn hình</div>
             <div id="treeContainer">
               <div class="tree-loading">Đang tải cây gia phả...</div>
             </div>
@@ -1625,6 +1692,60 @@
             handleSearch();
           }
         });
+      }
+    });
+    
+    /**
+     * Exit fullscreen mode for the family tree
+     */
+    function exitFullscreen() {
+      const treeWrapper = document.querySelector('.tree-container-wrapper');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
+      
+      if (!treeWrapper || !treeWrapper.classList.contains('fullscreen')) return;
+      
+      treeWrapper.classList.remove('fullscreen');
+      document.body.classList.remove('fullscreen-active');
+      if (fullscreenBtn) {
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.title = 'Xem toàn màn hình';
+      }
+    }
+    
+    /**
+     * Toggle fullscreen mode for the family tree
+     */
+    function toggleFullscreen() {
+      const treeWrapper = document.querySelector('.tree-container-wrapper');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
+      
+      if (!treeWrapper) return;
+      
+      if (treeWrapper.classList.contains('fullscreen')) {
+        // Exit fullscreen
+        exitFullscreen();
+      } else {
+        // Enter fullscreen
+        treeWrapper.classList.add('fullscreen');
+        document.body.classList.add('fullscreen-active');
+        if (fullscreenBtn) {
+          fullscreenBtn.textContent = '⤓';
+          fullscreenBtn.title = 'Thoát toàn màn hình';
+        }
+      }
+    }
+    
+    // Make toggleFullscreen globally accessible
+    window.toggleFullscreen = toggleFullscreen;
+    window.exitFullscreen = exitFullscreen;
+    
+    // Add Esc key listener to exit fullscreen
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        const treeWrapper = document.querySelector('.tree-container-wrapper');
+        if (treeWrapper && treeWrapper.classList.contains('fullscreen')) {
+          exitFullscreen();
+        }
       }
     });
   </script>
