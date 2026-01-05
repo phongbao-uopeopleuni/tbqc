@@ -558,7 +558,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>Xác thực mật khẩu</h3>
-        <span class="modal-close" onclick="closePasswordModal()">&times;</span>
+        <span class="modal-close" onclick="cancelAlbumAction()">&times;</span>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -568,7 +568,7 @@
         <div id="passwordError" style="color: var(--color-error); display: none; margin-top: var(--space-2);"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closePasswordModal()">Hủy</button>
+        <button class="btn btn-secondary" onclick="cancelAlbumAction()">Hủy</button>
         <button class="btn btn-primary" onclick="handlePasswordSubmit()">Xác nhận</button>
       </div>
     </div>
@@ -579,7 +579,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="albumModalTitle">Tạo album mới</h3>
-        <span class="modal-close" onclick="closeAlbumModal()">&times;</span>
+        <span class="modal-close" onclick="cancelAlbumAction()">&times;</span>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -597,7 +597,7 @@
         <div id="albumError" style="color: var(--color-error); display: none; margin-top: var(--space-2);"></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeAlbumModal()">Hủy</button>
+        <button class="btn btn-secondary" onclick="cancelAlbumAction()">Hủy</button>
         <button class="btn btn-primary" onclick="handleAlbumSubmit()">Lưu</button>
       </div>
     </div>
@@ -831,8 +831,13 @@
       if (modal) {
         modal.classList.remove('active');
       }
-      pendingAction = null;
-      currentAlbumEditId = null;
+      // Don't reset pendingAction here - it will be reset after successful submit or cancel
+    }
+    
+    function cancelAlbumAction() {
+      closeAlbumModal();
+      closePasswordModal();
+      resetAlbumState();
     }
     
     async function handlePasswordSubmit() {
@@ -878,6 +883,10 @@
       if (modal) {
         modal.classList.remove('active');
       }
+      // Don't reset password and pendingAction here - they will be reset after successful submit
+    }
+    
+    function resetAlbumState() {
       pendingAction = null;
       currentAlbumEditId = null;
       authenticatedPassword = null;
@@ -893,6 +902,25 @@
       if (!name) {
         errorEl.textContent = 'Tên album không được để trống';
         errorEl.style.display = 'block';
+        return;
+      }
+      
+      // Check if password is still available
+      if (!authenticatedPassword) {
+        errorEl.textContent = 'Mật khẩu đã hết hạn. Vui lòng thử lại.';
+        errorEl.style.display = 'block';
+        closeAlbumModal();
+        resetAlbumState();
+        showPasswordModal();
+        return;
+      }
+      
+      // Check if pendingAction is still set
+      if (!pendingAction || (pendingAction !== 'create' && pendingAction !== 'update')) {
+        errorEl.textContent = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
+        errorEl.style.display = 'block';
+        closeAlbumModal();
+        resetAlbumState();
         return;
       }
       
@@ -925,10 +953,20 @@
         
         if (result.success) {
           closeAlbumModal();
+          resetAlbumState();
           await loadAlbums();
         } else {
-          errorEl.textContent = result.error || 'Có lỗi xảy ra';
-          errorEl.style.display = 'block';
+          // If password error, reset and ask for password again
+          if (result.error && result.error.includes('mật khẩu')) {
+            errorEl.textContent = result.error;
+            errorEl.style.display = 'block';
+            closeAlbumModal();
+            resetAlbumState();
+            showPasswordModal();
+          } else {
+            errorEl.textContent = result.error || 'Có lỗi xảy ra';
+            errorEl.style.display = 'block';
+          }
         }
       } catch (error) {
         console.error('Error submitting album:', error);
