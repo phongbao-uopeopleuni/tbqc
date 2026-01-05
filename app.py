@@ -1107,18 +1107,52 @@ def api_activity_detail(activity_id):
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
     """
-    API upload ảnh vào static/images (chỉ admin)
+    API upload ảnh vào static/images (chỉ admin) hoặc vào album (yêu cầu mật khẩu)
     Hỗ trợ lưu vào Railway Volume nếu có cấu hình
+    Nếu có album_id, lưu ảnh vào album đó và yêu cầu mật khẩu
     
-    API to upload images to static/images (admin only)
+    API to upload images to static/images (admin only) or to album (requires password)
     Supports saving to Railway Volume if configured
+    If album_id is provided, save image to that album and require password
+    
+    Request form data:
+        image: File ảnh (required)
+        album_id: ID của album (optional, nếu có thì yêu cầu password)
+        password: Mật khẩu để upload vào album (required nếu có album_id)
     
     Returns:
         JSON response với url, filename nếu thành công
         JSON response with url, filename on success
     """
-    if not is_admin_user():
-        return jsonify({'success': False, 'error': 'Bạn không có quyền upload ảnh'}), 403
+    # Kiểm tra nếu có album_id thì cần password, nếu không thì cần admin
+    album_id = request.form.get('album_id')
+    password = request.form.get('password')
+    
+    if album_id:
+        # Upload vào album - yêu cầu password
+        try:
+            album_id = int(album_id)
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'error': 'Album ID không hợp lệ'}), 400
+        
+        if not password or not verify_album_password(password):
+            return jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401
+        
+        # Kiểm tra album có tồn tại không
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        cursor.execute("SELECT album_id FROM albums WHERE album_id = %s", (album_id,))
+        album = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not album:
+            return jsonify({'success': False, 'error': 'Album không tồn tại'}), 404
+    else:
+        # Upload thông thường - yêu cầu admin
+        if not is_admin_user():
+            return jsonify({'success': False, 'error': 'Bạn không có quyền upload ảnh'}), 403
     
     if 'image' not in request.files:
         return jsonify({'success': False, 'error': 'Không có file ảnh'}), 400
@@ -1146,10 +1180,16 @@ def upload_image():
         volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
         if volume_mount_path and os.path.exists(volume_mount_path):
             # Sử dụng Railway Volume nếu có
-            images_dir = volume_mount_path
+            base_images_dir = volume_mount_path
         else:
             # Dùng thư mục static/images mặc định
-            images_dir = os.path.join(BASE_DIR, 'static', 'images')
+            base_images_dir = os.path.join(BASE_DIR, 'static', 'images')
+        
+        # Nếu có album_id, lưu vào thư mục album
+        if album_id:
+            images_dir = os.path.join(base_images_dir, f'album_{album_id}')
+        else:
+            images_dir = base_images_dir
         
         # Đảm bảo thư mục tồn tại
         os.makedirs(images_dir, exist_ok=True)
@@ -1169,14 +1209,32 @@ def upload_image():
         logger.info(f"File exists: {os.path.exists(filepath)}")
         
         # Trả về URL
-        image_url = f"/static/images/{safe_filename}"
+        if album_id:
+            image_url = f"/static/images/album_{album_id}/{safe_filename}"
+        else:
+            image_url = f"/static/images/{safe_filename}"
+        
+        # Nếu có album_id, lưu thông tin vào database
+        if album_id:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            ensure_album_images_table(cursor)
+            cursor.execute("""
+                INSERT INTO album_images (album_id, filename, filepath, url)
+                VALUES (%s, %s, %s, %s)
+            """, (album_id, safe_filename, filepath, image_url))
+            conn.commit()
+            image_id = cursor.lastrowid
+            cursor.close()
+            conn.close()
         
         return jsonify({
             'success': True,
             'url': image_url,
             'filename': safe_filename,
             'filepath': filepath,  # Debug info
-            'images_dir': images_dir  # Debug info
+            'images_dir': images_dir,  # Debug info
+            'album_id': album_id if album_id else None
         })
     except Exception as e:
         logger.error(f"Error uploading image: {e}")
@@ -1242,14 +1300,16 @@ def serve_genealogy_js():
 def serve_image_static(filename):
     """
     Phục vụ ảnh từ static/images/ (từ git source) hoặc Railway Volume
+    Hỗ trợ cả ảnh trong thư mục album (album_X/filename)
     Ưu tiên Railway Volume nếu có, fallback về static/images
     
     Serve images from static/images/ (git source) or Railway Volume
+    Supports images in album folders (album_X/filename)
     Priority: Railway Volume if available, fallback to static/images
     
     Args:
-        filename: Tên file ảnh cần phục vụ
-                  Name of the image file to serve
+        filename: Tên file ảnh cần phục vụ (có thể là album_X/filename)
+                  Name of the image file to serve (can be album_X/filename)
     """
     from urllib.parse import unquote
     import os
@@ -1257,45 +1317,90 @@ def serve_image_static(filename):
     # Decode URL-encoded filename (handles spaces, special chars)
     filename = unquote(filename)
     
-    # Validate filename để chống path traversal
-    # Validate filename to prevent path traversal
-    try:
-        filename = validate_filename(filename)
-    except ValueError as e:
-        logger.warning(f"[Serve Image Static] Invalid filename: {e}")
-        from flask import abort
-        abort(400)  # Bad Request
-    
-    try:
-        # Kiểm tra Railway Volume trước (nếu có)
-        volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
-        if volume_mount_path and os.path.exists(volume_mount_path):
-            volume_filepath = os.path.join(volume_mount_path, filename)
-            if os.path.exists(volume_filepath):
-                logger.debug(f"[Serve Image] Serving from volume: {filename}")
-                return send_from_directory(volume_mount_path, filename)
+    # Kiểm tra nếu filename có chứa thư mục album (album_X/filename)
+    path_parts = filename.split('/')
+    if len(path_parts) > 1:
+        # Có thư mục con (ví dụ: album_1/image.jpg)
+        subfolder = path_parts[0]
+        actual_filename = '/'.join(path_parts[1:])
         
-        # Fallback về static/images trong git repo
-        static_images_path = os.path.join(BASE_DIR, 'static', 'images')
-        file_path = os.path.join(static_images_path, filename)
+        # Validate để chống path traversal
+        try:
+            validate_filename(subfolder)
+            validate_filename(actual_filename)
+        except ValueError as e:
+            logger.warning(f"[Serve Image Static] Invalid filename: {e}")
+            from flask import abort
+            abort(400)  # Bad Request
         
-        if os.path.exists(file_path):
-            logger.debug(f"[Serve Image] Serving from static/images: {filename}")
-            return send_from_directory('static/images', filename)
+        try:
+            # Kiểm tra Railway Volume trước (nếu có)
+            volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+            if volume_mount_path and os.path.exists(volume_mount_path):
+                volume_filepath = os.path.join(volume_mount_path, subfolder, actual_filename)
+                if os.path.exists(volume_filepath):
+                    logger.debug(f"[Serve Image] Serving from volume: {filename}")
+                    return send_from_directory(os.path.join(volume_mount_path, subfolder), actual_filename)
+            
+            # Fallback về static/images trong git repo
+            static_images_path = os.path.join(BASE_DIR, 'static', 'images', subfolder)
+            file_path = os.path.join(static_images_path, actual_filename)
+            
+            if os.path.exists(file_path):
+                logger.debug(f"[Serve Image] Serving from static/images/{subfolder}: {actual_filename}")
+                return send_from_directory(static_images_path, actual_filename)
+            
+            # File không tồn tại
+            logger.warning(f"[Serve Image] File không tồn tại: {filename}")
+            from flask import abort
+            abort(404)
+        except Exception as e:
+            if '404' in str(e) or 'not found' in str(e).lower():
+                logger.warning(f"[Serve Image] File không tìm thấy: {filename}")
+            else:
+                logger.error(f"[Serve Image] Flask's static serving failed: {e}")
+            from flask import abort
+            abort(404)
+    else:
+        # File trực tiếp trong static/images (không có thư mục con)
+        # Validate filename để chống path traversal
+        try:
+            filename = validate_filename(filename)
+        except ValueError as e:
+            logger.warning(f"[Serve Image Static] Invalid filename: {e}")
+            from flask import abort
+            abort(400)  # Bad Request
         
-        # File không tồn tại ở cả 2 nơi
-        logger.warning(f"[Serve Image] File không tồn tại: {filename}")
-        from flask import abort
-        abort(404)
-        
-    except Exception as e:
-        # Chỉ log warning cho các lỗi không nghiêm trọng (như file không tồn tại)
-        if '404' in str(e) or 'not found' in str(e).lower():
-            logger.warning(f"[Serve Image] File không tìm thấy: {filename}")
-        else:
-            logger.error(f"[Serve Image] Flask's static serving failed: {e}")
-        from flask import abort
-        abort(404)
+        try:
+            # Kiểm tra Railway Volume trước (nếu có)
+            volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+            if volume_mount_path and os.path.exists(volume_mount_path):
+                volume_filepath = os.path.join(volume_mount_path, filename)
+                if os.path.exists(volume_filepath):
+                    logger.debug(f"[Serve Image] Serving from volume: {filename}")
+                    return send_from_directory(volume_mount_path, filename)
+            
+            # Fallback về static/images trong git repo
+            static_images_path = os.path.join(BASE_DIR, 'static', 'images')
+            file_path = os.path.join(static_images_path, filename)
+            
+            if os.path.exists(file_path):
+                logger.debug(f"[Serve Image] Serving from static/images: {filename}")
+                return send_from_directory('static/images', filename)
+            
+            # File không tồn tại ở cả 2 nơi
+            logger.warning(f"[Serve Image] File không tồn tại: {filename}")
+            from flask import abort
+            abort(404)
+            
+        except Exception as e:
+            # Chỉ log warning cho các lỗi không nghiêm trọng (như file không tồn tại)
+            if '404' in str(e) or 'not found' in str(e).lower():
+                logger.warning(f"[Serve Image] File không tìm thấy: {filename}")
+            else:
+                logger.error(f"[Serve Image] Flask's static serving failed: {e}")
+            from flask import abort
+            abort(404)
 
 @app.route('/api/gallery/anh1', methods=['GET'])
 def api_gallery_anh1():
@@ -1375,6 +1480,32 @@ def ensure_albums_table(cursor):
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             created_by VARCHAR(255),
             INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    """)
+
+def ensure_album_images_table(cursor):
+    """
+    Đảm bảo bảng album_images tồn tại trong database.
+    Tạo bảng nếu chưa có.
+    
+    Ensure the album_images table exists in the database.
+    Creates the table if it doesn't exist.
+    
+    Args:
+        cursor: Database cursor để thực thi SQL queries
+                Database cursor to execute SQL queries
+    """
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS album_images (
+            image_id INT PRIMARY KEY AUTO_INCREMENT,
+            album_id INT NOT NULL,
+            filename VARCHAR(500) NOT NULL,
+            filepath VARCHAR(1000) NOT NULL,
+            url VARCHAR(1000) NOT NULL,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE CASCADE,
+            INDEX idx_album_id (album_id),
+            INDEX idx_uploaded_at (uploaded_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     """)
 
@@ -1609,6 +1740,7 @@ def api_delete_album(album_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         ensure_albums_table(cursor)
+        ensure_album_images_table(cursor)
         
         # Check if album exists
         cursor.execute("SELECT album_id FROM albums WHERE album_id = %s", (album_id,))
@@ -1617,6 +1749,7 @@ def api_delete_album(album_id):
             conn.close()
             return jsonify({'success': False, 'error': 'Album không tồn tại'}), 404
         
+        # Xóa album (cascade sẽ xóa các ảnh trong album_images)
         cursor.execute("DELETE FROM albums WHERE album_id = %s", (album_id,))
         conn.commit()
         
@@ -1630,6 +1763,55 @@ def api_delete_album(album_id):
     except Exception as e:
         logger.error(f"Error deleting album: {e}")
         return jsonify({'success': False, 'error': f'Lỗi khi xóa album: {str(e)}'}), 500
+
+@app.route('/api/albums/<int:album_id>/images', methods=['GET'])
+def api_get_album_images(album_id):
+    """
+    API lấy danh sách ảnh trong album.
+    
+    API to get list of images in an album.
+    
+    Returns:
+        JSON response với danh sách ảnh
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        ensure_album_images_table(cursor)
+        
+        # Kiểm tra album có tồn tại không
+        cursor.execute("SELECT album_id FROM albums WHERE album_id = %s", (album_id,))
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'error': 'Album không tồn tại'}), 404
+        
+        # Lấy danh sách ảnh
+        cursor.execute("""
+            SELECT image_id, album_id, filename, filepath, url, uploaded_at
+            FROM album_images
+            WHERE album_id = %s
+            ORDER BY uploaded_at DESC
+        """, (album_id,))
+        images = cursor.fetchall()
+        
+        # Convert datetime to string
+        for image in images:
+            if image.get('uploaded_at'):
+                if isinstance(image['uploaded_at'], datetime):
+                    image['uploaded_at'] = image['uploaded_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'images': images
+        })
+    except Exception as e:
+        logger.error(f"Error getting album images: {e}")
+        return jsonify({'success': False, 'error': f'Lỗi khi lấy danh sách ảnh: {str(e)}'}), 500
 
 # Legacy route for backward compatibility
 @app.route('/images/<path:filename>')

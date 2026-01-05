@@ -602,6 +602,41 @@
       </div>
     </div>
   </div>
+  
+  <!-- Upload Images Modal -->
+  <div id="uploadImagesModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="uploadImagesModalTitle">Upload ảnh vào album</h3>
+        <span class="modal-close" onclick="closeUploadImagesModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="imageFileInput">Chọn ảnh <span style="color: var(--color-error);">*</span></label>
+          <input type="file" id="imageFileInput" accept="image/*" multiple>
+          <small style="color: var(--color-text-muted); display: block; margin-top: var(--space-1);">
+            Có thể chọn nhiều ảnh cùng lúc (PNG, JPG, JPEG, GIF, WEBP)
+          </small>
+        </div>
+        <div id="uploadProgress" style="display: none; margin-top: var(--space-4);">
+          <div style="background: var(--color-bg); border-radius: var(--radius-md); padding: var(--space-3);">
+            <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">
+              Đang upload... <span id="uploadProgressText">0/0</span>
+            </div>
+            <div style="background: var(--color-border); height: 8px; border-radius: 4px; overflow: hidden;">
+              <div id="uploadProgressBar" style="background: var(--color-primary); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+            </div>
+          </div>
+        </div>
+        <div id="uploadError" style="color: var(--color-error); display: none; margin-top: var(--space-2);"></div>
+        <div id="uploadSuccess" style="color: #28a745; display: none; margin-top: var(--space-2);"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeUploadImagesModal()">Đóng</button>
+        <button class="btn btn-primary" onclick="handleUploadImages()">Upload ảnh</button>
+      </div>
+    </div>
+  </div>
 
   <script src="/static/js/common.js"></script>
   <script>
@@ -760,6 +795,7 @@
             </div>
             <div class="album-actions">
               <button class="btn btn-secondary" onclick="selectAlbum(${album.album_id})">Chọn</button>
+              <button class="btn btn-secondary" onclick="showUploadImagesModal(${album.album_id})">Upload ảnh</button>
               <button class="btn btn-secondary" onclick="showUpdateAlbumModal(${album.album_id})">Cập nhật</button>
               <button class="btn btn-secondary" onclick="showDeleteAlbumConfirm(${album.album_id})" style="background: var(--color-error); color: white;">Xóa</button>
             </div>
@@ -773,7 +809,6 @@
     function selectAlbum(albumId) {
       selectedAlbumId = albumId;
       renderAlbums(albums);
-      // TODO: Load images for selected album
       loadGallery();
     }
     
@@ -952,9 +987,21 @@
         const result = await response.json();
         
         if (result.success) {
+          const wasCreating = pendingAction === 'create';
+          const newAlbumId = result.album ? result.album.album_id : null;
+          const savedPassword = authenticatedPassword;
+          
           closeAlbumModal();
           resetAlbumState();
           await loadAlbums();
+          
+          // Sau khi tạo album thành công, tự động chọn album đó và hiển thị form upload ảnh
+          if (wasCreating && newAlbumId) {
+            selectedAlbumId = newAlbumId;
+            renderAlbums(albums);
+            authenticatedPassword = savedPassword; // Giữ lại mật khẩu để upload ảnh
+            showUploadImagesModal(newAlbumId);
+          }
         } else {
           // If password error, reset and ask for password again
           if (result.error && result.error.includes('mật khẩu')) {
@@ -1011,19 +1058,28 @@
       const galleryContainer = document.getElementById('galleryContainer');
       if (!galleryContainer) return;
       
-      try {
-        const response = await fetch('/api/gallery/anh1');
-        const data = await response.json();
-        
-        if (data.success && data.images && data.images.length > 0) {
-          galleryImages = data.images;
-          renderGallery(galleryImages);
-        } else {
-          galleryContainer.innerHTML = '<div class="gallery-error">Không có ảnh nào trong album</div>';
+      // Nếu có album được chọn, load ảnh từ album đó
+      if (selectedAlbumId) {
+        try {
+          const response = await fetch(`/api/albums/${selectedAlbumId}/images`);
+          const data = await response.json();
+          
+          if (data.success && data.images && data.images.length > 0) {
+            galleryImages = data.images.map(img => ({
+              url: img.url,
+              filename: img.filename
+            }));
+            renderGallery(galleryImages);
+          } else {
+            galleryContainer.innerHTML = '<div class="gallery-error">Album này chưa có ảnh nào. Hãy upload ảnh vào album!</div>';
+          }
+        } catch (error) {
+          console.error('Error loading gallery:', error);
+          galleryContainer.innerHTML = '<div class="gallery-error">Lỗi khi tải ảnh. Vui lòng thử lại sau.</div>';
         }
-      } catch (error) {
-        console.error('Error loading gallery:', error);
-        galleryContainer.innerHTML = '<div class="gallery-error">Lỗi khi tải ảnh. Vui lòng thử lại sau.</div>';
+      } else {
+        // Nếu chưa chọn album, hiển thị thông báo
+        galleryContainer.innerHTML = '<div class="gallery-error">Vui lòng chọn một album để xem ảnh</div>';
       }
     }
     
@@ -1108,8 +1164,128 @@
       
       // Load albums and gallery after page loads
       loadAlbums();
-      loadGallery();
+      // Không load gallery nếu chưa chọn album
+      // loadGallery();
     });
+    
+    // Upload Images Functionality
+    let currentUploadAlbumId = null;
+    
+    function showUploadImagesModal(albumId) {
+      currentUploadAlbumId = albumId;
+      const modal = document.getElementById('uploadImagesModal');
+      const album = albums.find(a => a.album_id === albumId);
+      const title = document.getElementById('uploadImagesModalTitle');
+      
+      if (modal && title) {
+        title.textContent = album ? `Upload ảnh vào album: ${escapeHtml(album.name)}` : 'Upload ảnh vào album';
+        document.getElementById('imageFileInput').value = '';
+        document.getElementById('uploadError').style.display = 'none';
+        document.getElementById('uploadSuccess').style.display = 'none';
+        document.getElementById('uploadProgress').style.display = 'none';
+        modal.classList.add('active');
+      }
+    }
+    
+    function closeUploadImagesModal() {
+      const modal = document.getElementById('uploadImagesModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+      currentUploadAlbumId = null;
+    }
+    
+    async function handleUploadImages() {
+      const fileInput = document.getElementById('imageFileInput');
+      const errorEl = document.getElementById('uploadError');
+      const successEl = document.getElementById('uploadSuccess');
+      const progressEl = document.getElementById('uploadProgress');
+      const progressBar = document.getElementById('uploadProgressBar');
+      const progressText = document.getElementById('uploadProgressText');
+      
+      if (!currentUploadAlbumId) {
+        errorEl.textContent = 'Không có album được chọn';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        errorEl.textContent = 'Vui lòng chọn ít nhất một ảnh';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      // Kiểm tra mật khẩu
+      if (!authenticatedPassword) {
+        errorEl.textContent = 'Mật khẩu đã hết hạn. Vui lòng tạo album lại hoặc nhập mật khẩu.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      const files = Array.from(fileInput.files);
+      const totalFiles = files.length;
+      let uploadedCount = 0;
+      let failedCount = 0;
+      
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+      progressEl.style.display = 'block';
+      progressBar.style.width = '0%';
+      progressText.textContent = `0/${totalFiles}`;
+      
+      // Upload từng file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('album_id', currentUploadAlbumId);
+        formData.append('password', authenticatedPassword);
+        
+        try {
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            uploadedCount++;
+          } else {
+            failedCount++;
+            console.error(`Failed to upload ${file.name}:`, result.error);
+          }
+        } catch (error) {
+          failedCount++;
+          console.error(`Error uploading ${file.name}:`, error);
+        }
+        
+        // Cập nhật progress
+        const progress = ((i + 1) / totalFiles) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `${i + 1}/${totalFiles}`;
+      }
+      
+      // Hiển thị kết quả
+      if (uploadedCount > 0) {
+        successEl.textContent = `Upload thành công ${uploadedCount} ảnh${uploadedCount > 1 ? '' : ''}`;
+        if (failedCount > 0) {
+          successEl.textContent += `. ${failedCount} ảnh thất bại.`;
+        }
+        successEl.style.display = 'block';
+        
+        // Reload gallery để hiển thị ảnh mới
+        await loadGallery();
+        
+        // Tự động đóng modal sau 2 giây
+        setTimeout(() => {
+          closeUploadImagesModal();
+        }, 2000);
+      } else {
+        errorEl.textContent = `Không thể upload ảnh. Vui lòng thử lại.`;
+        errorEl.style.display = 'block';
+      }
+    }
   </script>
   
   <!-- Floating Zalo Button -->
