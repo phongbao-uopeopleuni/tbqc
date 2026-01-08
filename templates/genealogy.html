@@ -1088,8 +1088,67 @@
                 <div id="graveInfoText" style="line-height: 1.8; color: var(--color-text); margin-bottom: var(--space-3);">
                   <!-- Thông tin mộ phần sẽ được điền bằng JavaScript -->
                 </div>
-                <div id="graveCoordinates" style="font-size: var(--font-size-sm); color: var(--color-text-muted); font-family: monospace;">
+                <div id="graveCoordinates" style="font-size: var(--font-size-sm); color: var(--color-text-muted); font-family: monospace; margin-bottom: var(--space-3);">
                   <!-- Tọa độ sẽ được hiển thị ở đây -->
+                </div>
+                
+                <!-- Phần hiển thị ảnh mộ phần -->
+                <div id="graveImageSection" style="margin-top: var(--space-4); display: none;">
+                  <h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">📷 Ảnh mộ phần</h5>
+                  <div id="graveImageContainer" style="margin-bottom: var(--space-3);">
+                    <img id="graveImage" src="" alt="Ảnh mộ phần" style="max-width: 100%; max-height: 400px; border-radius: var(--radius-md); border: 1px solid var(--color-border); cursor: pointer; display: none;" onclick="openGraveImageModal()">
+                  </div>
+                  <div style="display: flex; gap: var(--space-2);">
+                    <button id="btnUploadGraveImage" onclick="showGraveImageUpload()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border); flex: 1;">
+                      📤 Upload ảnh mộ phần
+                    </button>
+                    <button id="btnDeleteGraveImage" onclick="showDeleteGraveImageConfirm()" class="btn" style="background: var(--color-error, #dc3545); color: white; border: none; display: none;">
+                      🗑️ Xóa ảnh
+                    </button>
+                  </div>
+                </div>
+                
+                <!-- Form upload ảnh (ẩn mặc định) -->
+                <div id="graveImageUploadForm" style="display: none; margin-top: var(--space-3); padding: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                  <h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Upload ảnh mộ phần</h5>
+                  <p style="color: var(--color-text-muted); font-size: var(--font-size-sm); margin-bottom: var(--space-3);">
+                    Chọn ảnh để upload (PNG, JPG, JPEG, GIF, WEBP - tối đa 10MB)
+                  </p>
+                  <input type="file" id="graveImageInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style="margin-bottom: var(--space-3); width: 100%;">
+                  <div style="display: flex; gap: var(--space-2);">
+                    <button id="btnSubmitGraveImage" onclick="uploadGraveImage()" class="btn btn-primary" style="flex: 1;">
+                      📤 Upload
+                    </button>
+                    <button onclick="hideGraveImageUpload()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+                      Hủy
+                    </button>
+                  </div>
+                  <div id="graveImageUploadStatus" style="margin-top: var(--space-2); font-size: var(--font-size-sm); display: none;"></div>
+                </div>
+                
+                <!-- Modal xác nhận xóa ảnh -->
+                <div id="deleteGraveImageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10000; justify-content: center; align-items: center;">
+                  <div style="background: white; padding: var(--space-6); border-radius: var(--radius-lg); max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
+                    <h3 style="color: var(--color-error, #dc3545); margin-bottom: var(--space-4); font-size: var(--font-size-xl);">⚠️ Xác nhận xóa ảnh</h3>
+                    <p style="color: var(--color-text); margin-bottom: var(--space-4); line-height: 1.6;">
+                      Bạn có chắc chắn muốn xóa ảnh mộ phần này không? Hành động này không thể hoàn tác.
+                    </p>
+                    <div style="margin-bottom: var(--space-4);">
+                      <label for="deleteGraveImagePassword" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); color: var(--color-text);">
+                        🔒 Nhập mật khẩu để xác nhận:
+                      </label>
+                      <input type="password" id="deleteGraveImagePassword" placeholder="Nhập mật khẩu..." class="input" style="width: 100%;" onkeypress="if(event.key==='Enter') confirmDeleteGraveImage()">
+                    </div>
+                    <div id="deleteGraveImageStatus" style="margin-bottom: var(--space-3); font-size: var(--font-size-sm); display: none;"></div>
+                    <div style="display: flex; gap: var(--space-3); justify-content: flex-end;">
+                      <button onclick="hideDeleteGraveImageConfirm()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+                        Hủy
+                      </button>
+                      <button onclick="confirmDeleteGraveImage()" class="btn" style="background: var(--color-error, #dc3545); color: white; border: none;">
+                        🗑️ Xóa ảnh
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4011,7 +4070,22 @@
         // Thông tin mộ phần
         const graveInfo = person.grave_info || '';
         const coords = extractCoordinates(graveInfo);
-        const graveInfoText = graveInfo ? graveInfo.replace(/\s*\|\s*lat:[\d.]+,\s*lng:[\d.]+/g, '').trim() : '';
+        // Extract image_url từ grave_info nếu có
+        let graveImageUrl = person.grave_image_url || null;
+        if (!graveImageUrl && graveInfo) {
+          const imageUrlMatch = graveInfo.match(/image_url:([^\s|]+)/);
+          if (imageUrlMatch) {
+            graveImageUrl = imageUrlMatch[1];
+          }
+        }
+        // Loại bỏ image_url và coordinates khỏi graveInfoText để hiển thị
+        const graveInfoText = graveInfo 
+          ? graveInfo
+              .replace(/\s*\|\s*lat:[\d.]+,\s*lng:[\d.]+/g, '')
+              .replace(/\s*\|\s*image_url:[^\s|]+/g, '')
+              .replace(/image_url:[^\s|]+/g, '')
+              .trim() 
+          : '';
         
         if (graveInfoDiv) {
           if (graveInfoText) {
@@ -4030,6 +4104,39 @@
             coordinatesDiv.innerHTML = '⚠️ Chưa có tọa độ định vị. Nhấn "Cập nhật vị trí" để thêm.';
             coordinatesDiv.style.color = 'var(--color-text-muted)';
             coordinatesDiv.style.fontWeight = 'normal';
+          }
+        }
+        
+        // Hiển thị ảnh mộ phần nếu có
+        const graveImageSection = document.getElementById('graveImageSection');
+        const graveImage = document.getElementById('graveImage');
+        const btnUploadGraveImage = document.getElementById('btnUploadGraveImage');
+        const btnDeleteGraveImage = document.getElementById('btnDeleteGraveImage');
+        
+        if (graveImageSection) {
+          if (graveImageUrl) {
+            graveImageSection.style.display = 'block';
+            if (graveImage) {
+              graveImage.src = graveImageUrl;
+              graveImage.style.display = 'block';
+            }
+            if (btnUploadGraveImage) {
+              btnUploadGraveImage.textContent = '🔄 Thay đổi ảnh';
+            }
+            if (btnDeleteGraveImage) {
+              btnDeleteGraveImage.style.display = 'block';
+            }
+          } else {
+            graveImageSection.style.display = 'block';
+            if (graveImage) {
+              graveImage.style.display = 'none';
+            }
+            if (btnUploadGraveImage) {
+              btnUploadGraveImage.textContent = '📤 Upload ảnh mộ phần';
+            }
+            if (btnDeleteGraveImage) {
+              btnDeleteGraveImage.style.display = 'none';
+            }
           }
         }
         
@@ -4526,18 +4633,322 @@
       if (suggestionsDiv) {
         suggestionsDiv.style.display = 'none';
       }
+    }
+    
+    /**
+     * Show grave image upload form
+     */
+    function showGraveImageUpload() {
+      const uploadForm = document.getElementById('graveImageUploadForm');
+      if (uploadForm) {
+        uploadForm.style.display = 'block';
+      }
+    }
+    
+    /**
+     * Hide grave image upload form
+     */
+    function hideGraveImageUpload() {
+      const uploadForm = document.getElementById('graveImageUploadForm');
+      const imageInput = document.getElementById('graveImageInput');
+      const statusDiv = document.getElementById('graveImageUploadStatus');
       
-      // Remove click handler
-      if (graveMap) {
-        graveMap.off('click', onGraveMapClick);
+      if (uploadForm) {
+        uploadForm.style.display = 'none';
+      }
+      if (imageInput) {
+        imageInput.value = '';
+      }
+      if (statusDiv) {
+        statusDiv.style.display = 'none';
+        statusDiv.textContent = '';
+      }
+    }
+    
+    /**
+     * Upload grave image
+     */
+    async function uploadGraveImage() {
+      if (!currentGravePerson) {
+        alert('Vui lòng tìm kiếm mộ phần trước');
+        return;
       }
       
-      // Reload map to show original location
-      if (currentGravePerson) {
-        const graveInfo = currentGravePerson.grave_info || '';
-        const coords = extractCoordinates(graveInfo);
-        renderGraveMap(coords, currentGravePerson);
+      const imageInput = document.getElementById('graveImageInput');
+      const statusDiv = document.getElementById('graveImageUploadStatus');
+      const submitBtn = document.getElementById('btnSubmitGraveImage');
+      
+      if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
+        alert('Vui lòng chọn file ảnh');
+        return;
       }
+      
+      const file = imageInput.files[0];
+      
+      // Kiểm tra kích thước file (10MB)
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        alert('File quá lớn. Kích thước tối đa: 10MB');
+        return;
+      }
+      
+      // Kiểm tra định dạng file
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP');
+        return;
+      }
+      
+      // Disable button và hiển thị trạng thái
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Đang upload...';
+      }
+      
+      if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = '⏳ Đang upload ảnh...';
+        statusDiv.style.color = 'var(--color-text-muted)';
+      }
+      
+      try {
+        // Tạo FormData
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('person_id', currentGravePerson.person_id);
+        
+        // Gửi request
+        const response = await fetch('/api/grave/upload-image', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Lỗi khi upload ảnh');
+        }
+        
+        // Thành công
+        if (statusDiv) {
+          statusDiv.textContent = '✅ Upload thành công!';
+          statusDiv.style.color = 'var(--color-success, #28a745)';
+        }
+        
+        // Reload grave info để hiển thị ảnh mới
+        await displayGraveInfo(currentGravePerson.person_id);
+        
+        // Ẩn form upload sau 2 giây
+        setTimeout(() => {
+          hideGraveImageUpload();
+        }, 2000);
+        
+      } catch (err) {
+        console.error('Error uploading grave image:', err);
+        if (statusDiv) {
+          statusDiv.textContent = `❌ Lỗi: ${err.message}`;
+          statusDiv.style.color = 'var(--color-error, #dc3545)';
+        }
+        alert(`Lỗi khi upload ảnh: ${err.message}`);
+      } finally {
+        // Restore button
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '📤 Upload';
+        }
+      }
+    }
+    
+    /**
+     * Open grave image in modal
+     */
+    function openGraveImageModal() {
+      const graveImage = document.getElementById('graveImage');
+      if (!graveImage || !graveImage.src) return;
+      
+      // Tạo modal đơn giản
+      const modal = document.createElement('div');
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+        cursor: pointer;
+      `;
+      
+      const img = document.createElement('img');
+      img.src = graveImage.src;
+      img.style.cssText = `
+        max-width: 90%;
+        max-height: 90%;
+        object-fit: contain;
+        border-radius: 8px;
+      `;
+      
+      modal.appendChild(img);
+      document.body.appendChild(modal);
+      
+      // Đóng modal khi click
+      modal.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      
+      // Đóng modal khi nhấn ESC
+      const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+          document.body.removeChild(modal);
+          document.removeEventListener('keydown', handleEsc);
+        }
+      };
+      document.addEventListener('keydown', handleEsc);
+    }
+    
+    /**
+     * Show delete grave image confirmation modal
+     */
+    function showDeleteGraveImageConfirm() {
+      if (!currentGravePerson) {
+        alert('Vui lòng tìm kiếm mộ phần trước');
+        return;
+      }
+      
+      const modal = document.getElementById('deleteGraveImageModal');
+      const passwordInput = document.getElementById('deleteGraveImagePassword');
+      const statusDiv = document.getElementById('deleteGraveImageStatus');
+      
+      if (modal) {
+        modal.style.display = 'flex';
+      }
+      
+      // Clear password và status
+      if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
+      if (statusDiv) {
+        statusDiv.style.display = 'none';
+        statusDiv.textContent = '';
+      }
+    }
+    
+    /**
+     * Hide delete grave image confirmation modal
+     */
+    function hideDeleteGraveImageConfirm() {
+      const modal = document.getElementById('deleteGraveImageModal');
+      const passwordInput = document.getElementById('deleteGraveImagePassword');
+      const statusDiv = document.getElementById('deleteGraveImageStatus');
+      
+      if (modal) {
+        modal.style.display = 'none';
+      }
+      if (passwordInput) {
+        passwordInput.value = '';
+      }
+      if (statusDiv) {
+        statusDiv.style.display = 'none';
+        statusDiv.textContent = '';
+      }
+    }
+    
+    /**
+     * Confirm and delete grave image
+     */
+    async function confirmDeleteGraveImage() {
+      if (!currentGravePerson) {
+        alert('Vui lòng tìm kiếm mộ phần trước');
+        hideDeleteGraveImageConfirm();
+        return;
+      }
+      
+      const passwordInput = document.getElementById('deleteGraveImagePassword');
+      const statusDiv = document.getElementById('deleteGraveImageStatus');
+      
+      if (!passwordInput || !passwordInput.value.trim()) {
+        if (statusDiv) {
+          statusDiv.style.display = 'block';
+          statusDiv.textContent = '⚠️ Vui lòng nhập mật khẩu';
+          statusDiv.style.color = 'var(--color-error, #dc3545)';
+        }
+        return;
+      }
+      
+      const password = passwordInput.value.trim();
+      
+      // Disable input và hiển thị trạng thái
+      if (passwordInput) {
+        passwordInput.disabled = true;
+      }
+      if (statusDiv) {
+        statusDiv.style.display = 'block';
+        statusDiv.textContent = '⏳ Đang xóa ảnh...';
+        statusDiv.style.color = 'var(--color-text-muted)';
+      }
+      
+      try {
+        const response = await fetch('/api/grave/delete-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            person_id: currentGravePerson.person_id,
+            password: password
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Lỗi khi xóa ảnh');
+        }
+        
+        // Thành công
+        if (statusDiv) {
+          statusDiv.textContent = '✅ Đã xóa ảnh thành công!';
+          statusDiv.style.color = 'var(--color-success, #28a745)';
+        }
+        
+        // Đóng modal sau 1.5 giây
+        setTimeout(() => {
+          hideDeleteGraveImageConfirm();
+          
+          // Reload grave info để cập nhật UI
+          displayGraveInfo(currentGravePerson.person_id);
+        }, 1500);
+        
+      } catch (err) {
+        console.error('Error deleting grave image:', err);
+        if (statusDiv) {
+          statusDiv.textContent = `❌ ${err.message}`;
+          statusDiv.style.color = 'var(--color-error, #dc3545)';
+        }
+        
+        // Re-enable input để user có thể thử lại
+        if (passwordInput) {
+          passwordInput.disabled = false;
+          passwordInput.focus();
+          passwordInput.select();
+        }
+      }
+    }
+    
+    // Remove click handler
+    if (graveMap) {
+      graveMap.off('click', onGraveMapClick);
+    }
+    
+    // Reload map to show original location
+    if (currentGravePerson) {
+      const graveInfo = currentGravePerson.grave_info || '';
+      const coords = extractCoordinates(graveInfo);
+      renderGraveMap(coords, currentGravePerson);
     }
 
     // Handle Enter key in search inputs

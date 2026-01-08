@@ -601,6 +601,286 @@ def update_grave_location():
         if connection and connection.is_connected():
             connection.close()
 
+@app.route('/api/grave/upload-image', methods=['POST'])
+@limiter.limit("10 per hour") if limiter else lambda f: f
+def upload_grave_image():
+    """
+    API để upload ảnh mộ phần.
+    Yêu cầu person_id và file ảnh.
+    Rate limited (10 requests/hour) để bảo vệ khỏi abuse.
+    
+    API to upload grave image.
+    Requires person_id and image file.
+    Rate limited (10 requests/hour) to prevent abuse.
+    """
+    connection = None
+    cursor = None
+    try:
+        # Kiểm tra có file ảnh không
+        if 'image' not in request.files:
+            return jsonify({'success': False, 'error': 'Không có file ảnh'}), 400
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'Không có file được chọn'}), 400
+        
+        # Lấy person_id từ form data
+        person_id = request.form.get('person_id', '').strip()
+        if not person_id:
+            return jsonify({'success': False, 'error': 'Thiếu person_id'}), 400
+        
+        # Validate person_id format
+        try:
+            person_id = validate_person_id(person_id)
+        except ValueError as e:
+            return jsonify({'success': False, 'error': f'Invalid person_id format: {str(e)}'}), 400
+        
+        # Kiểm tra định dạng file
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            return jsonify({'success': False, 'error': 'Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP'}), 400
+        
+        # Kiểm tra kích thước file (tối đa 10MB)
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        max_size = 10 * 1024 * 1024  # 10MB
+        if file_size > max_size:
+            return jsonify({'success': False, 'error': 'File quá lớn. Kích thước tối đa: 10MB'}), 400
+        
+        # Kiểm tra person có tồn tại không
+        connection = get_db_connection()
+        if not connection:
+            logger.error("Không thể kết nối database trong upload_grave_image()")
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
+        person = cursor.fetchone()
+        if not person:
+            return jsonify({'success': False, 'error': f'Không tìm thấy người có ID: {person_id}'}), 404
+        
+        # Tạo tên file an toàn và unique
+        from datetime import datetime
+        import hashlib
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename_hash = hashlib.md5(f"{person_id}_{file.filename}".encode()).hexdigest()[:8]
+        extension = file.filename.rsplit('.', 1)[1].lower()
+        safe_filename = secure_filename(f"grave_{person_id}_{timestamp}_{filename_hash}.{extension}")
+        
+        # Xác định thư mục lưu ảnh (hỗ trợ Railway Volume)
+        volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+        if volume_mount_path and os.path.exists(volume_mount_path):
+            base_images_dir = volume_mount_path
+        else:
+            base_images_dir = os.path.join(BASE_DIR, 'static', 'images')
+        
+        # Tạo thư mục graves nếu chưa có
+        graves_dir = os.path.join(base_images_dir, 'graves')
+        os.makedirs(graves_dir, exist_ok=True)
+        
+        # Lưu file
+        filepath = os.path.join(graves_dir, safe_filename)
+        file.save(filepath)
+        
+        # Kiểm tra file đã được lưu chưa
+        if not os.path.exists(filepath):
+            logger.error(f"Failed to save grave image to {filepath}")
+            return jsonify({'success': False, 'error': 'Không thể lưu file ảnh'}), 500
+        
+        # Tạo URL để truy cập ảnh
+        # Nếu dùng Railway Volume, URL sẽ là /static/images/graves/...
+        image_url = f"/static/images/graves/{safe_filename}"
+        
+        # Cập nhật grave_image_url trong database
+        # Kiểm tra xem cột grave_image_url có tồn tại không
+        cursor.execute("SHOW COLUMNS FROM persons LIKE 'grave_image_url'")
+        has_grave_image_url = cursor.fetchone() is not None
+        
+        if has_grave_image_url:
+            cursor.execute("""
+                UPDATE persons 
+                SET grave_image_url = %s 
+                WHERE person_id = %s
+            """, (image_url, person_id))
+        else:
+            # Nếu cột chưa có, thêm vào grave_info dưới dạng JSON hoặc text
+            # Lấy grave_info hiện tại
+            cursor.execute("SELECT grave_info FROM persons WHERE person_id = %s", (person_id,))
+            current_grave_info = cursor.fetchone().get('grave_info', '') or ''
+            
+            # Thêm URL ảnh vào grave_info (format: "text | image_url:...")
+            if current_grave_info:
+                grave_info = f"{current_grave_info} | image_url:{image_url}"
+            else:
+                grave_info = f"image_url:{image_url}"
+            
+            cursor.execute("""
+                UPDATE persons 
+                SET grave_info = %s 
+                WHERE person_id = %s
+            """, (grave_info, person_id))
+        
+        connection.commit()
+        
+        logger.info(f"Uploaded grave image for {person_id}: {image_url}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Đã upload ảnh mộ phần thành công',
+            'person_id': person_id,
+            'image_url': image_url
+        }), 200
+        
+    except Error as e:
+        logger.error(f"Lỗi database trong upload_grave_image(): {e}", exc_info=True)
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'error': f'Lỗi database: {str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Lỗi không mong muốn trong upload_grave_image(): {e}", exc_info=True)
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'error': f'Lỗi server: {str(e)}'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection and connection.is_connected():
+            connection.close()
+
+@app.route('/api/grave/delete-image', methods=['POST'])
+@limiter.limit("10 per hour") if limiter else lambda f: f
+def delete_grave_image():
+    """
+    API để xóa ảnh mộ phần.
+    Yêu cầu person_id và password để xác nhận.
+    Rate limited (10 requests/hour) để bảo vệ khỏi abuse.
+    
+    API to delete grave image.
+    Requires person_id and password for confirmation.
+    Rate limited (10 requests/hour) to prevent abuse.
+    """
+    connection = None
+    cursor = None
+    try:
+        data = request.get_json() or {}
+        person_id = data.get('person_id', '').strip()
+        password = data.get('password', '').strip()
+        
+        if not person_id:
+            return jsonify({'success': False, 'error': 'Thiếu person_id'}), 400
+        
+        if not password:
+            return jsonify({'success': False, 'error': 'Thiếu mật khẩu xác nhận'}), 400
+        
+        # Validate password
+        if not verify_grave_image_delete_password(password):
+            return jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401
+        
+        # Validate person_id format
+        try:
+            person_id = validate_person_id(person_id)
+        except ValueError as e:
+            return jsonify({'success': False, 'error': f'Invalid person_id format: {str(e)}'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            logger.error("Không thể kết nối database trong delete_grave_image()")
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # Kiểm tra person có tồn tại không và lấy thông tin ảnh
+        cursor.execute("SELECT person_id, grave_image_url, grave_info FROM persons WHERE person_id = %s", (person_id,))
+        person = cursor.fetchone()
+        if not person:
+            return jsonify({'success': False, 'error': f'Không tìm thấy người có ID: {person_id}'}), 404
+        
+        # Lấy URL ảnh hiện tại
+        grave_image_url = person.get('grave_image_url', '').strip() if person.get('grave_image_url') else None
+        grave_info = person.get('grave_info', '') or ''
+        
+        # Nếu không có trong cột riêng, thử extract từ grave_info
+        if not grave_image_url and grave_info:
+            import re
+            image_url_match = re.search(r'image_url:([^\s|]+)', grave_info)
+            if image_url_match:
+                grave_image_url = image_url_match.group(1)
+        
+        if not grave_image_url:
+            return jsonify({'success': False, 'error': 'Không có ảnh mộ phần để xóa'}), 404
+        
+        # Xóa file ảnh từ filesystem
+        try:
+            # Extract filename từ URL
+            filename = grave_image_url.split('/')[-1]
+            
+            # Xác định đường dẫn file
+            volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+            if volume_mount_path and os.path.exists(volume_mount_path):
+                base_images_dir = volume_mount_path
+            else:
+                base_images_dir = os.path.join(BASE_DIR, 'static', 'images')
+            
+            filepath = os.path.join(base_images_dir, 'graves', filename)
+            
+            # Xóa file nếu tồn tại
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                logger.info(f"Deleted grave image file: {filepath}")
+        except Exception as e:
+            logger.warning(f"Could not delete image file: {e}. Continuing with database update.")
+        
+        # Cập nhật database
+        cursor.execute("SHOW COLUMNS FROM persons LIKE 'grave_image_url'")
+        has_grave_image_url = cursor.fetchone() is not None
+        
+        if has_grave_image_url:
+            # Xóa grave_image_url
+            cursor.execute("""
+                UPDATE persons 
+                SET grave_image_url = NULL 
+                WHERE person_id = %s
+            """, (person_id,))
+        else:
+            # Xóa image_url khỏi grave_info
+            import re
+            updated_grave_info = re.sub(r'\s*\|\s*image_url:[^\s|]+', '', grave_info)
+            updated_grave_info = re.sub(r'image_url:[^\s|]+', '', updated_grave_info)
+            updated_grave_info = updated_grave_info.strip()
+            
+            cursor.execute("""
+                UPDATE persons 
+                SET grave_info = %s 
+                WHERE person_id = %s
+            """, (updated_grave_info if updated_grave_info else None, person_id))
+        
+        connection.commit()
+        
+        logger.info(f"Deleted grave image for {person_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Đã xóa ảnh mộ phần thành công',
+            'person_id': person_id
+        }), 200
+        
+    except Error as e:
+        logger.error(f"Lỗi database trong delete_grave_image(): {e}", exc_info=True)
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'error': f'Lỗi database: {str(e)}'}), 500
+    except Exception as e:
+        logger.error(f"Lỗi không mong muốn trong delete_grave_image(): {e}", exc_info=True)
+        if connection:
+            connection.rollback()
+        return jsonify({'success': False, 'error': f'Lỗi server: {str(e)}'}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if connection and connection.is_connected():
+            connection.close()
+
 @app.route('/api/grave-search', methods=['GET', 'POST'])
 def search_grave():
     """
@@ -640,10 +920,13 @@ def search_grave():
         # Tìm theo tên hoặc person_id
         search_pattern = f'%{query}%'
         
-        # Nếu là autocomplete, trả về cả người chưa có grave_info
-        if autocomplete_only:
-            cursor.execute("""
-            SELECT 
+        # Kiểm tra xem cột grave_image_url có tồn tại không
+        cursor.execute("SHOW COLUMNS FROM persons LIKE 'grave_image_url'")
+        has_grave_image_url = cursor.fetchone() is not None
+        
+        # Xây dựng SELECT query với grave_image_url nếu có
+        if has_grave_image_url:
+            select_fields = """
                 p.person_id,
                 p.full_name,
                 p.alias,
@@ -652,8 +935,30 @@ def search_grave():
                 p.birth_date_solar,
                 p.death_date_solar,
                 p.grave_info,
+                p.grave_image_url,
                 p.place_of_death,
                 p.home_town
+            """
+        else:
+            select_fields = """
+                p.person_id,
+                p.full_name,
+                p.alias,
+                p.gender,
+                p.generation_level,
+                p.birth_date_solar,
+                p.death_date_solar,
+                p.grave_info,
+                NULL as grave_image_url,
+                p.place_of_death,
+                p.home_town
+            """
+        
+        # Nếu là autocomplete, trả về cả người chưa có grave_info
+        if autocomplete_only:
+            cursor.execute(f"""
+            SELECT 
+                {select_fields}
             FROM persons p
             WHERE p.status = 'Đã mất'
             AND (p.full_name LIKE %s OR p.person_id LIKE %s OR p.alias LIKE %s)
@@ -665,18 +970,9 @@ def search_grave():
         else:
             # Tìm kiếm chính thức: trả về cả người có và chưa có grave_info
             # Ưu tiên người có grave_info trước
-            cursor.execute("""
+            cursor.execute(f"""
                 SELECT 
-                    p.person_id,
-                    p.full_name,
-                    p.alias,
-                    p.gender,
-                    p.generation_level,
-                    p.birth_date_solar,
-                    p.death_date_solar,
-                    p.grave_info,
-                    p.place_of_death,
-                    p.home_town
+                    {select_fields}
                 FROM persons p
                 WHERE p.status = 'Đã mất'
                 AND (p.full_name LIKE %s OR p.person_id LIKE %s OR p.alias LIKE %s)
@@ -692,6 +988,15 @@ def search_grave():
         graves = []
         for row in results:
             grave_info = row.get('grave_info', '').strip()
+            grave_image_url = row.get('grave_image_url', '').strip() if row.get('grave_image_url') else None
+            
+            # Nếu không có grave_image_url từ cột riêng, thử extract từ grave_info
+            if not grave_image_url and grave_info:
+                import re
+                image_url_match = re.search(r'image_url:([^\s|]+)', grave_info)
+                if image_url_match:
+                    grave_image_url = image_url_match.group(1)
+            
             graves.append({
                     'person_id': row.get('person_id'),
                     'full_name': row.get('full_name'),
@@ -701,6 +1006,7 @@ def search_grave():
                     'birth_date': row.get('birth_date_solar'),
                     'death_date': row.get('death_date_solar'),
                     'grave_info': grave_info,
+                    'grave_image_url': grave_image_url,
                     'place_of_death': row.get('place_of_death'),
                 'home_town': row.get('home_town'),
                 'has_grave_info': bool(grave_info)
@@ -1510,6 +1816,7 @@ def ensure_album_images_table(cursor):
     """)
 
 ALBUM_PASSWORD = 'tbqc@2026'
+GRAVE_IMAGE_DELETE_PASSWORD = 'tbqc@2026'
 
 def verify_album_password(password):
     """
@@ -1524,6 +1831,20 @@ def verify_album_password(password):
         True nếu mật khẩu đúng, False nếu sai
     """
     return password == ALBUM_PASSWORD
+
+def verify_grave_image_delete_password(password):
+    """
+    Xác thực mật khẩu để xóa ảnh mộ phần.
+    
+    Verify password to delete grave image.
+    
+    Args:
+        password: Mật khẩu cần kiểm tra
+        
+    Returns:
+        True nếu mật khẩu đúng, False nếu sai
+    """
+    return password == GRAVE_IMAGE_DELETE_PASSWORD
 
 @app.route('/api/albums', methods=['GET'])
 def api_get_albums():
