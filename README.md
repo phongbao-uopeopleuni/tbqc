@@ -320,10 +320,15 @@ Script gom tất cả chức năng tạo admin user (thay thế các file trùng
 python create_admin_user.py
 
 # Tạo user cụ thể
-python create_admin_user.py --username tbqc_admin --password tbqc@2026
-python create_admin_user.py --username admin_tbqc --password Thienanh@107
-python create_admin_user.py --username phongb --password Thienanh@107
+python create_admin_user.py --username tbqc_admin --password your_password
+python create_admin_user.py --username admin_tbqc --password your_password
+python create_admin_user.py --username phongb --password your_password
 ```
+
+**⚠️ Lưu ý Bảo Mật:**
+- Thay thế `your_password` bằng mật khẩu mạnh của bạn
+- Không sử dụng mật khẩu mặc định trong production
+- Mật khẩu sẽ được hash bằng bcrypt trước khi lưu vào database
 
 ## 🚀 Cài Đặt và Chạy
 
