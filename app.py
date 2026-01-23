@@ -70,8 +70,6 @@ try:
     app.config['REMEMBER_COOKIE_HTTPONLY'] = True
     app.config['REMEMBER_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'
     app.config['REMEMBER_COOKIE_DOMAIN'] = cookie_domain
-    # Đảm bảo session được lưu mỗi khi có thay đổi
-    app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session mỗi request để kéo dài thời gian
     
     # CORS Configuration - Giới hạn origins cho bảo mật
     # CORS Configuration - Limit origins for security
