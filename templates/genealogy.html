@@ -5096,7 +5096,13 @@
   
   <!-- Passphrase Gate Script -->
   <script>
-    const CORRECT_PASSPHRASE = 'phutuybien2026';
+    const VALID_PASSPHRASES = [
+      'phutuybien2026',
+      'nhanh1@123',
+      'nhanh2@123',
+      'nhanh3@123',
+      'nhanh4@123'
+    ];
     const STORAGE_KEY = 'genealogy_unlocked';
     
     // Check if already unlocked on page load
@@ -5145,7 +5151,7 @@
       
       const enteredPassphrase = input.value.trim();
       
-      if (enteredPassphrase === CORRECT_PASSPHRASE) {
+      if (VALID_PASSPHRASES.includes(enteredPassphrase)) {
         // Correct passphrase
         unlockGenealogy();
         if (errorDiv) errorDiv.classList.remove('show');
