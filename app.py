@@ -1769,9 +1769,6 @@ def serve_image_static(filename):
     # Decode URL-encoded filename (handles spaces, special chars)
     filename = unquote(filename)
     
-    # Normalize filename: replace multiple spaces with single space, trim
-    filename = ' '.join(filename.split())
-    
     # Kiểm tra nếu filename có chứa thư mục album (album_X/filename)
     path_parts = filename.split('/')
     if len(path_parts) > 1:
@@ -1796,15 +1793,6 @@ def serve_image_static(filename):
                 if os.path.exists(volume_filepath):
                     logger.debug(f"[Serve Image] Serving from volume: {filename}")
                     return send_from_directory(os.path.join(volume_mount_path, subfolder), actual_filename)
-                # Thử tìm file với tên tương tự (case-insensitive, normalize spaces)
-                try:
-                    if os.path.exists(os.path.join(volume_mount_path, subfolder)):
-                        for f in os.listdir(os.path.join(volume_mount_path, subfolder)):
-                            if f.lower() == actual_filename.lower() or ' '.join(f.split()) == ' '.join(actual_filename.split()):
-                                logger.debug(f"[Serve Image] Found similar file in volume: {f} (requested: {actual_filename})")
-                                return send_from_directory(os.path.join(volume_mount_path, subfolder), f)
-                except Exception:
-                    pass
             
             # Fallback về static/images trong git repo
             static_images_path = os.path.join(BASE_DIR, 'static', 'images', subfolder)
@@ -1813,16 +1801,6 @@ def serve_image_static(filename):
             if os.path.exists(file_path):
                 logger.debug(f"[Serve Image] Serving from static/images/{subfolder}: {actual_filename}")
                 return send_from_directory(static_images_path, actual_filename)
-            
-            # Thử tìm file với tên tương tự (case-insensitive, normalize spaces)
-            try:
-                if os.path.exists(static_images_path):
-                    for f in os.listdir(static_images_path):
-                        if f.lower() == actual_filename.lower() or ' '.join(f.split()) == ' '.join(actual_filename.split()):
-                            logger.debug(f"[Serve Image] Found similar file: {f} (requested: {actual_filename})")
-                            return send_from_directory(static_images_path, f)
-            except Exception:
-                pass
             
             # File không tồn tại
             logger.warning(f"[Serve Image] File không tồn tại: {filename}")
@@ -1853,14 +1831,6 @@ def serve_image_static(filename):
                 if os.path.exists(volume_filepath):
                     logger.debug(f"[Serve Image] Serving from volume: {filename}")
                     return send_from_directory(volume_mount_path, filename)
-                # Thử tìm file với tên tương tự (case-insensitive, normalize spaces)
-                try:
-                    for f in os.listdir(volume_mount_path):
-                        if f.lower() == filename.lower() or ' '.join(f.split()) == ' '.join(filename.split()):
-                            logger.debug(f"[Serve Image] Found similar file in volume: {f} (requested: {filename})")
-                            return send_from_directory(volume_mount_path, f)
-                except Exception:
-                    pass
             
             # Fallback về static/images trong git repo
             static_images_path = os.path.join(BASE_DIR, 'static', 'images')
@@ -1869,16 +1839,6 @@ def serve_image_static(filename):
             if os.path.exists(file_path):
                 logger.debug(f"[Serve Image] Serving from static/images: {filename}")
                 return send_from_directory('static/images', filename)
-            
-            # Thử tìm file với tên tương tự (case-insensitive, normalize spaces)
-            try:
-                if os.path.exists(static_images_path):
-                    for f in os.listdir(static_images_path):
-                        if f.lower() == filename.lower() or ' '.join(f.split()) == ' '.join(filename.split()):
-                            logger.debug(f"[Serve Image] Found similar file: {f} (requested: {filename})")
-                            return send_from_directory('static/images', f)
-            except Exception:
-                pass
             
             # File không tồn tại ở cả 2 nơi
             logger.warning(f"[Serve Image] File không tồn tại: {filename}")
