@@ -22,6 +22,11 @@
       margin: 0;
     }
     
+    .admin-header .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
     .users-table {
       width: 100%;
       border-collapse: collapse;
@@ -137,32 +142,40 @@
       margin-top: var(--space-8);
     }
     
-    .logs-table {
-      width: 100%;
-      border-collapse: collapse;
+    #plainLogViewer {
       background: white;
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .logs-table th {
-      background: var(--color-primary);
-      color: white;
+      border: 1px solid var(--color-border, #e5e7eb);
+      border-radius: var(--radius-md, 8px);
       padding: var(--space-4);
-      text-align: left;
-      font-weight: var(--font-weight-semibold);
-      white-space: nowrap;
+      font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      max-height: 600px;
+      overflow-y: auto;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      color: #111827;
+      background-color: #ffffff;
     }
     
-    .logs-table td {
-      padding: var(--space-4);
-      border-bottom: 1px solid var(--color-border);
-      vertical-align: top;
+    #plainLogViewer::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
     }
     
-    .logs-table tr:hover {
-      background: var(--color-bg);
+    #plainLogViewer::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 6px;
+    }
+    
+    #plainLogViewer::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 6px;
+    }
+    
+    #plainLogViewer::-webkit-scrollbar-thumb:hover {
+      background: #555;
     }
     
     .log-action-badge {
@@ -256,7 +269,12 @@
 {% block content %}
     <div class="admin-header">
       <h1>👥 Quản lý Người dùng</h1>
-      <button class="btn btn-primary" onclick="openAddUserModal()">+ Thêm người dùng</button>
+      <div style="display: flex; gap: var(--space-3);">
+        <button class="btn btn-secondary" onclick="syncTbqcAccounts()" id="syncBtn">
+          🔄 Đồng bộ TBQC Accounts
+        </button>
+        <button class="btn btn-primary" onclick="openAddUserModal()">+ Thêm người dùng</button>
+      </div>
     </div>
 
     <div id="message" style="display: none;"></div>
@@ -287,15 +305,23 @@
 
     <!-- Bản log website -->
     <div class="card activity-logs-section" style="margin-top: var(--space-8);">
-      <div style="margin-bottom: var(--space-6);">
-        <h2>📋 Bản log website</h2>
-        <p style="color: var(--color-text-muted, #6b7280); margin-top: var(--space-2);">
-          Ghi lại tất cả các thay đổi và hoạt động trong website
-        </p>
+      <div style="margin-bottom: var(--space-6); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h2>📋 Bản log website</h2>
+          <p style="color: var(--color-text-muted, #6b7280); margin-top: var(--space-2);">
+            Ghi lại tất cả các thay đổi và hoạt động trong website
+          </p>
+        </div>
+        <div style="display: flex; gap: var(--space-2); align-items: center;">
+          <label style="display: flex; align-items: center; gap: var(--space-2); cursor: pointer;">
+            <input type="checkbox" id="autoRefreshCheckbox" onchange="toggleAutoRefresh()">
+            <span>Tự động làm mới (30s)</span>
+          </label>
+        </div>
       </div>
 
-      <!-- Filter Controls -->
-      <div class="filter-controls" style="display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-6); padding: var(--space-4); background: var(--color-bg, #f9fafb); border-radius: var(--radius-md, 8px);">
+      <!-- Simple Filter Controls -->
+      <div class="filter-controls" style="display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-4); padding: var(--space-4); background: var(--color-bg, #f9fafb); border-radius: var(--radius-md, 8px);">
         <div style="flex: 1; min-width: 200px;">
           <label for="filterAction" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold, 600);">Hành động:</label>
           <select id="filterAction" class="select" style="width: 100%;">
@@ -309,16 +335,6 @@
             <option value="DELETE_PERSON">DELETE_PERSON</option>
           </select>
         </div>
-        <div style="flex: 1; min-width: 200px;">
-          <label for="filterTargetType" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold, 600);">Loại đối tượng:</label>
-          <select id="filterTargetType" class="select" style="width: 100%;">
-            <option value="">Tất cả</option>
-            <option value="Person">Person</option>
-            <option value="User">User</option>
-            <option value="Spouse">Spouse</option>
-            <option value="Post">Post</option>
-          </select>
-        </div>
         <div style="flex: 1; min-width: 150px;">
           <label for="filterUserId" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold, 600);">User ID:</label>
           <input type="number" id="filterUserId" class="input" placeholder="Tất cả" style="width: 100%;">
@@ -329,55 +345,29 @@
         </div>
       </div>
 
-      <!-- Logs Table -->
-      <div style="overflow-x: auto;">
-        <table class="logs-table users-table">
-          <thead>
-            <tr>
-              <th>Thời gian</th>
-              <th>User</th>
-              <th>Hành động</th>
-              <th>Loại đối tượng</th>
-              <th>ID đối tượng</th>
-              <th>Thay đổi</th>
-              <th>IP Address</th>
-              <th class="hide-mobile">User Agent</th>
-            </tr>
-          </thead>
-          <tbody id="activityLogsList">
-            <tr>
-              <td colspan="8" style="text-align: center; padding: var(--space-8);">
-                <div class="loading">Đang tải...</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Plain Text Log Viewer -->
+      <div id="plainLogViewer" style="background: white; border: 1px solid var(--color-border, #e5e7eb); border-radius: var(--radius-md, 8px); padding: var(--space-4); font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; max-height: 600px; overflow-y: auto; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;">
+        <div style="text-align: center; padding: var(--space-8); color: var(--color-text-muted, #6b7280);">
+          Đang tải logs...
+        </div>
       </div>
 
       <!-- Pagination -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border, #e5e7eb);">
-        <div id="logsPaginationInfo" style="color: var(--color-text-muted, #6b7280);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border, #e5e7eb);">
+        <div id="logsPaginationInfo" style="color: var(--color-text-muted, #6b7280); font-size: var(--font-size-sm, 14px);">
           Đang tải...
         </div>
         <div style="display: flex; gap: var(--space-2); align-items: center;">
-          <label for="logsPerPage" style="margin-right: var(--space-2);">Số lượng mỗi trang:</label>
+          <label for="logsPerPage" style="margin-right: var(--space-2); font-size: var(--font-size-sm, 14px);">Số lượng:</label>
           <select id="logsPerPage" class="select" onchange="changeLogsPerPage()" style="width: auto;">
-            <option value="10">10</option>
-            <option value="25">25</option>
             <option value="50">50</option>
             <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="500">500</option>
           </select>
-          <button id="prevPageBtn" class="btn btn-secondary" onclick="previousPage()" disabled>Trước</button>
-          <button id="nextPageBtn" class="btn btn-secondary" onclick="nextPage()" disabled>Sau</button>
+          <button id="prevPageBtn" class="btn btn-secondary btn-sm" onclick="previousPage()" disabled>Trước</button>
+          <button id="nextPageBtn" class="btn btn-secondary btn-sm" onclick="nextPage()" disabled>Sau</button>
         </div>
-      </div>
-
-      <!-- Auto-refresh -->
-      <div style="margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--color-border, #e5e7eb);">
-        <label style="display: flex; align-items: center; gap: var(--space-2); cursor: pointer;">
-          <input type="checkbox" id="autoRefreshCheckbox" onchange="toggleAutoRefresh()">
-          <span>Tự động làm mới (30 giây)</span>
-        </label>
       </div>
     </div>
 
@@ -446,14 +436,14 @@
       return response.json();
     }
 
-    function showMessage(text, type = 'success') {
+    function showMessage(text, type = 'success', timeout = 5000) {
       const msgEl = document.getElementById('message');
-      msgEl.textContent = text;
+      msgEl.innerHTML = text; // Use innerHTML to support HTML content
       msgEl.className = `alert alert-${type}`;
       msgEl.style.display = 'block';
       setTimeout(() => {
         msgEl.style.display = 'none';
-      }, 5000);
+      }, timeout);
     }
 
     async function loadUsers() {
@@ -603,7 +593,7 @@
 
     // Load Activity Logs
     async function loadActivityLogs(limit = logsLimit, offset = logsOffset, filters = logsFilters) {
-      const listEl = document.getElementById('activityLogsList');
+      const logViewer = document.getElementById('plainLogViewer');
       const paginationInfo = document.getElementById('logsPaginationInfo');
       const prevBtn = document.getElementById('prevPageBtn');
       const nextBtn = document.getElementById('nextPageBtn');
@@ -619,7 +609,7 @@
         if (filters.target_type) params.append('target_type', filters.target_type);
         if (filters.user_id) params.append('user_id', filters.user_id.toString());
         
-        listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--space-8);"><div class="loading">Đang tải...</div></td></tr>';
+        logViewer.textContent = 'Đang tải logs...';
         
         const result = await fetchJson(`/api/admin/activity-logs?${params.toString()}`);
         
@@ -634,42 +624,60 @@
         const logs = result.logs || [];
         
         if (logs.length === 0) {
-          listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--space-8);">Chưa có log nào</td></tr>';
+          logViewer.textContent = 'Chưa có log nào';
           paginationInfo.textContent = 'Không có log nào';
           prevBtn.disabled = true;
           nextBtn.disabled = true;
           return;
         }
         
-        // Render logs
-        listEl.innerHTML = logs.map(log => {
-          const createdAt = log.created_at ? formatDateTime(log.created_at) : '-';
+        // Format logs as plain text (similar to system log viewer)
+        const logLines = logs.map(log => {
+          const timestamp = log.created_at ? formatLogTimestamp(log.created_at) : 'N/A';
           const username = log.username || log.full_name || 'Khách';
-          const action = log.action || '-';
-          const targetType = log.target_type || '-';
-          const targetId = log.target_id || '-';
-          const ipAddress = log.ip_address || '-';
-          const userAgent = log.user_agent || '-';
+          const action = log.action || 'UNKNOWN';
+          const targetType = log.target_type || '';
+          const targetId = log.target_id || '';
+          const ipAddress = log.ip_address || '';
           
-          const actionClass = `log-action-${action}`;
-          const actionBadge = `<span class="log-action-badge ${actionClass}">${escapeHtml(action)}</span>`;
+          // Build log line similar to system logs
+          let logLine = `${timestamp} [${action}] ${username}`;
           
-          // Format before/after data
-          const diffHtml = formatLogDiff(log.before_data, log.after_data);
+          if (targetType && targetId) {
+            logLine += `: ${action} ${targetType} ID=${targetId}`;
+          } else if (targetType) {
+            logLine += `: ${action} ${targetType}`;
+          } else {
+            logLine += `: ${action}`;
+          }
           
-          return `
-            <tr class="log-row">
-              <td>${createdAt}</td>
-              <td>${escapeHtml(username)}</td>
-              <td>${actionBadge}</td>
-              <td>${escapeHtml(targetType)}</td>
-              <td>${escapeHtml(String(targetId))}</td>
-              <td class="log-diff">${diffHtml}</td>
-              <td>${escapeHtml(ipAddress)}</td>
-              <td class="hide-mobile" style="font-size: var(--font-size-xs); max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(userAgent)}</td>
-            </tr>
-          `;
-        }).join('');
+          if (ipAddress) {
+            logLine += ` (IP: ${ipAddress})`;
+          }
+          
+          // Add additional info if available
+          if (log.before_data || log.after_data) {
+            const changes = [];
+            if (log.before_data && log.after_data) {
+              changes.push('updated');
+            } else if (log.after_data) {
+              changes.push('created');
+            } else if (log.before_data) {
+              changes.push('deleted');
+            }
+            if (changes.length > 0) {
+              logLine += ` [${changes.join(', ')}]`;
+            }
+          }
+          
+          return logLine;
+        });
+        
+        // Render as plain text
+        logViewer.textContent = logLines.join('\n');
+        
+        // Auto-scroll to top (newest logs at top)
+        logViewer.scrollTop = 0;
         
         // Update pagination info
         const start = offset + 1;
@@ -681,11 +689,26 @@
         nextBtn.disabled = offset + limit >= logsTotal;
         
       } catch (err) {
-        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">Lỗi: ${err.message}</td></tr>`;
+        logViewer.textContent = `Lỗi: ${err.message}`;
+        logViewer.style.color = '#ef4444';
         paginationInfo.textContent = 'Lỗi khi tải logs';
         prevBtn.disabled = true;
         nextBtn.disabled = true;
         showMessage('Lỗi khi tải logs: ' + err.message, 'error');
+      }
+    }
+    
+    function formatLogTimestamp(dateStr) {
+      try {
+        const date = new Date(dateStr);
+        const month = date.toLocaleString('en-US', { month: 'short' });
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${month} ${day} ${hours}:${minutes}:${seconds}`;
+      } catch (e) {
+        return dateStr;
       }
     }
 
@@ -749,12 +772,10 @@
 
     function applyFilters() {
       const action = document.getElementById('filterAction').value.trim();
-      const targetType = document.getElementById('filterTargetType').value.trim();
       const userId = document.getElementById('filterUserId').value.trim();
       
       logsFilters = {};
       if (action) logsFilters.action = action;
-      if (targetType) logsFilters.target_type = targetType;
       if (userId) logsFilters.user_id = parseInt(userId);
       
       logsOffset = 0;
@@ -763,7 +784,6 @@
 
     function clearFilters() {
       document.getElementById('filterAction').value = '';
-      document.getElementById('filterTargetType').value = '';
       document.getElementById('filterUserId').value = '';
       logsFilters = {};
       logsOffset = 0;
@@ -807,6 +827,58 @@
 
     // Initialize activity logs on page load
     loadActivityLogs();
+
+    // Sync TBQC Accounts function
+    async function syncTbqcAccounts() {
+      const syncBtn = document.getElementById('syncBtn');
+      const originalText = syncBtn.innerHTML;
+      
+      // Disable button and show loading
+      syncBtn.disabled = true;
+      syncBtn.innerHTML = '⏳ Đang đồng bộ...';
+      
+      try {
+        const response = await fetch('/api/admin/sync-tbqc-accounts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // Show success message
+          showMessage(`✅ ${data.message}`, 'success');
+          
+          // Show detailed results
+          if (data.results && data.results.length > 0) {
+            const resultsHtml = data.results.map(r => {
+              if (r.success) {
+                return `✓ ${r.username} (${r.full_name}): ${r.action} thành công (ID: ${r.user_id})`;
+              } else {
+                return `✗ ${r.username}: ${r.error || 'Lỗi không xác định'}`;
+              }
+            }).join('<br>');
+            
+            showMessage(`<strong>Chi tiết:</strong><br>${resultsHtml}`, 'info', 10000);
+          }
+          
+          // Reload users list
+          loadUsers();
+        } else {
+          showMessage(`❌ Lỗi: ${data.error || 'Không thể đồng bộ'}`, 'error');
+        }
+      } catch (error) {
+        console.error('Error syncing TBQC accounts:', error);
+        showMessage(`❌ Lỗi kết nối: ${error.message}`, 'error');
+      } finally {
+        // Re-enable button
+        syncBtn.disabled = false;
+        syncBtn.innerHTML = originalText;
+      }
+    }
   </script>
 {% endblock %}
 

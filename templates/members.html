@@ -693,6 +693,38 @@
           <label for="siblings_info">Thông tin anh chị em</label>
           <textarea id="siblings_info" name="siblings_info" rows="3" placeholder="Nhập tên anh chị em, phân cách bằng dấu chấm phẩy (;)"></textarea>
         </div>
+        <div class="form-group">
+          <label for="personal_image">Hình cá nhân</label>
+          <input type="file" id="personal_image" name="personal_image" accept="image/*" onchange="validateImageSize(this)">
+          <small style="color: #666; display: block; margin-top: 5px;">Chỉ chấp nhận file ảnh dưới 2MB (PNG, JPG, JPEG, GIF, WEBP)</small>
+          <div id="imagePreview" style="margin-top: 10px; display: none;">
+            <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #DAA520;">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="biography">Tiểu sử</label>
+          <textarea id="biography" name="biography" rows="4" placeholder="Nhập tiểu sử của thành viên"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="academic_rank">Học hàm</label>
+            <input type="text" id="academic_rank" name="academic_rank" placeholder="Ví dụ: Giáo sư, Phó Giáo sư">
+          </div>
+          <div class="form-group">
+            <label for="academic_degree">Học vị</label>
+            <input type="text" id="academic_degree" name="academic_degree" placeholder="Ví dụ: Tiến sĩ, Thạc sĩ, Cử nhân">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="phone">Điện thoại</label>
+            <input type="tel" id="phone" name="phone" placeholder="Nhập số điện thoại">
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" placeholder="Nhập địa chỉ email">
+          </div>
+        </div>
         <input type="hidden" id="person_id" name="person_id">
         <div class="modal-footer">
           <button type="button" class="btn-modal btn-modal-cancel" onclick="closeModal()">Hủy</button>
@@ -967,6 +999,14 @@
       html += '</tr></thead><tbody>';
       
       members.forEach((member, index) => {
+        // Ensure all new fields are available in member object
+        member.personal_image_url = member.personal_image_url || '';
+        member.biography = member.biography || '';
+        member.academic_rank = member.academic_rank || '';
+        member.academic_degree = member.academic_degree || '';
+        member.phone = member.phone || '';
+        member.email = member.email || '';
+        
         html += '<tr>';
         html += `<td class="checkbox-column"><input type="checkbox" class="row-checkbox" value="${member.person_id}" onchange="updateButtonStates()"></td>`;
         html += `<td style="text-align: center; font-weight: 600; color: #8B0000;">${escapeHtml(member.csv_id || member.person_id || '-')}</td>`;
@@ -1135,6 +1175,7 @@
       document.getElementById('modalTitle').textContent = 'Thêm thành viên mới';
       document.getElementById('memberForm').reset();
       document.getElementById('person_id').value = '';
+      document.getElementById('imagePreview').style.display = 'none';
       document.getElementById('memberModal').style.display = 'block';
     }
 
@@ -1172,6 +1213,24 @@
       document.getElementById('children_info').value = member.children || '';
       document.getElementById('spouse_info').value = member.spouses || '';
       document.getElementById('siblings_info').value = member.siblings || '';
+      // Populate new fields
+      document.getElementById('biography').value = member.biography || '';
+      document.getElementById('academic_rank').value = member.academic_rank || '';
+      document.getElementById('academic_degree').value = member.academic_degree || '';
+      document.getElementById('phone').value = member.phone || '';
+      document.getElementById('email').value = member.email || '';
+      
+      // Show existing image if available
+      if (member.personal_image_url) {
+        document.getElementById('previewImg').src = member.personal_image_url;
+        document.getElementById('imagePreview').style.display = 'block';
+      } else {
+        document.getElementById('imagePreview').style.display = 'none';
+      }
+      
+      // Reset file input
+      document.getElementById('personal_image').value = '';
+      
       document.getElementById('memberModal').style.display = 'block';
     }
 
@@ -1179,6 +1238,30 @@
     function closeModal() {
       document.getElementById('memberModal').style.display = 'none';
       document.getElementById('memberForm').reset();
+      document.getElementById('imagePreview').style.display = 'none';
+    }
+
+    // Validate image size
+    function validateImageSize(input) {
+      const file = input.files[0];
+      if (file) {
+        const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+        if (file.size > maxSize) {
+          alert('Kích thước file ảnh vượt quá 2MB. Vui lòng chọn file nhỏ hơn.');
+          input.value = '';
+          document.getElementById('imagePreview').style.display = 'none';
+          return false;
+        }
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          document.getElementById('previewImg').src = e.target.result;
+          document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      }
+      return true;
     }
 
     // Save member (add or update)
@@ -1186,9 +1269,16 @@
       event.preventDefault();
       
       const formData = new FormData(event.target);
-      const data = Object.fromEntries(formData);
-      const personId = data.person_id;
+      const personId = formData.get('person_id');
       const isUpdate = personId && personId !== '';
+      
+      // Validate image if exists
+      const imageFile = formData.get('personal_image');
+      if (imageFile && imageFile.size > 0) {
+        if (!validateImageSize(document.getElementById('personal_image'))) {
+          return;
+        }
+      }
 
       // Lấy password đã xác thực
       const authPassword = getAuthPassword();
@@ -1198,20 +1288,38 @@
         return;
       }
       
-      // Thêm password vào request
-      data.password = authPassword;
+      // Thêm password vào formData
+      formData.append('password', authPassword);
       
       try {
         const url = isUpdate ? `/api/persons/${personId}` : '/api/persons';
         const method = isUpdate ? 'PUT' : 'POST';
         
-        const response = await fetch(url, {
-          method: method,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data)
-        });
+        // If there's an image, use FormData, otherwise use JSON
+        const hasImage = imageFile && imageFile.size > 0;
+        
+        let response;
+        if (hasImage) {
+          // Use FormData for image upload
+          response = await fetch(url, {
+            method: method,
+            body: formData
+          });
+        } else {
+          // Convert FormData to JSON for the main request
+          const data = {};
+          for (let [key, value] of formData.entries()) {
+            data[key] = value;
+          }
+          
+          response = await fetch(url, {
+            method: method,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+          });
+        }
 
         const result = await response.json();
         

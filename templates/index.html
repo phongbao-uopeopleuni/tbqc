@@ -22,6 +22,13 @@
       background-attachment: fixed;
       position: relative;
       padding-top: 70px; /* Space for fixed navbar */
+      padding-left: 280px; /* Space for fixed sidebar on desktop */
+    }
+
+    @media (max-width: 1024px) {
+      body {
+        padding-left: 0;
+      }
     }
 
 
@@ -177,6 +184,150 @@
       margin-bottom: clamp(20px, 4vw, 30px);
       text-align: center;
       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+      scroll-margin-top: 80px; /* Offset for fixed navbar */
+    }
+
+    /* Fixed Sidebar Table of Contents */
+    .toc-sidebar {
+      position: fixed;
+      left: 0;
+      top: 70px; /* Below navbar */
+      width: 260px;
+      height: calc(100vh - 70px);
+      background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%);
+      border-right: 3px solid #DAA520;
+      padding: clamp(15px, 2vw, 20px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 998; /* Below navbar (z-index: 1000) */
+      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .toc-sidebar::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .toc-sidebar::-webkit-scrollbar-track {
+      background: rgba(218, 165, 32, 0.1);
+    }
+
+    .toc-sidebar::-webkit-scrollbar-thumb {
+      background: #DAA520;
+      border-radius: 4px;
+    }
+
+    .toc-sidebar::-webkit-scrollbar-thumb:hover {
+      background: #8B0000;
+    }
+
+    .toc-sidebar h3 {
+      color: #2563eb;
+      font-size: clamp(16px, 2.5vw, 18px);
+      margin-bottom: clamp(12px, 2vw, 15px);
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: clamp(8px, 1.5vw, 10px);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .toc-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .toc-list li {
+      margin-bottom: clamp(8px, 1.5vw, 10px);
+      padding-left: clamp(18px, 2.5vw, 22px);
+      position: relative;
+    }
+
+    .toc-list li::before {
+      content: "▶";
+      position: absolute;
+      left: 0;
+      color: #8B0000;
+      font-weight: bold;
+      font-size: clamp(10px, 1.5vw, 12px);
+    }
+
+    .toc-list a {
+      color: #8B0000;
+      text-decoration: none;
+      font-size: clamp(13px, 2vw, 14px);
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: block;
+      line-height: 1.5;
+      padding: clamp(4px, 1vw, 6px) 0;
+      word-wrap: break-word;
+    }
+
+    .toc-list a:hover {
+      color: #DAA520;
+      text-decoration: underline;
+      transform: translateX(3px);
+    }
+
+    .toc-list a:active {
+      color: #FFD700;
+    }
+
+    /* Mobile: Hide sidebar, show toggle button */
+    .toc-toggle {
+      display: none;
+      position: fixed;
+      left: 15px;
+      top: 85px;
+      z-index: 1001; /* Above navbar */
+      background: #8B0000;
+      color: white;
+      border: 2px solid #DAA520;
+      border-radius: 8px;
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .toc-toggle:hover {
+      background: #DAA520;
+      color: #8B0000;
+    }
+
+    @media (max-width: 1024px) {
+      .toc-sidebar {
+        transform: translateX(-100%);
+      }
+
+      .toc-sidebar.open {
+        transform: translateX(0);
+      }
+
+      .toc-toggle {
+        display: block;
+      }
+
+      body {
+        padding-left: 0;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .toc-sidebar {
+        width: 240px;
+      }
+
+      .toc-list a {
+        font-size: 12px;
+      }
+    }
+
+    /* Scroll offset for anchor links */
+    h3[id], h4[id] {
+      scroll-margin-top: 100px;
     }
 
     .about-content {
@@ -838,6 +989,24 @@
   </style>
 </head>
 <body>
+  <!-- TOC Toggle Button (Mobile) -->
+  <button class="toc-toggle" onclick="toggleTOC()" id="tocToggle">📑 Mục Lục</button>
+
+  <!-- Fixed Sidebar Table of Contents -->
+  <div class="toc-sidebar" id="tocSidebar">
+    <h3>📑 Mục Lục</h3>
+    <ul class="toc-list">
+      <li><a href="#gioi-thieu">Giới thiệu</a></li>
+      <li><a href="#de-he-thi">Từ Tầm Nhìn Của Vua Minh Mạng Đến Bài Thơ "Đế Hệ Thi"</a></li>
+      <li><a href="#tuy-bien-quan-cong">Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</a></li>
+      <li><a href="#phu-he-to-he">Phụ Hệ và Tổ Hệ của Tuy Biên Quận Công Nguyễn Phúc Miên Sủng</a></li>
+      <li><a href="#to-tien-dong-chua-nguyen">Tổ Tiên Dòng Chúa Nguyễn và Cao Tổ Đại Tộc</a></li>
+      <li><a href="#so-hoa-gia-pha">Số Hóa Gia Phả – Kết Nối Quá Khứ Đến Tương Lai</a></li>
+      <li><a href="#ket-tu">Kết Từ</a></li>
+      <li><a href="#hinh-anh-nha-tho">Hình Ảnh Bên Trong Nhà Thờ</a></li>
+    </ul>
+  </div>
+
   <!-- Navbar -->
   <nav class="navbar">
     <a href="#home" class="navbar-logo">Phòng Tuy Biên Quận Công</a>
@@ -866,7 +1035,8 @@
   <!-- Section: About -->
   <section id="about">
     <div class="section-container">
-      <h2 class="section-title">Giới Thiệu</h2>
+      <h2 class="section-title" id="gioi-thieu">Giới Thiệu</h2>
+      
       <div class="about-content">
         <div class="about-text">
           <h3>TUY BIÊN QUẬN CÔNG – DÒNG CHẢY HUY HOÀNG TRONG LÒNG NGUYỄN PHƯỚC TỘC</h3>
@@ -891,7 +1061,7 @@
             Chính trong tinh thần ấy, tư tưởng "gốc sâu thì cành lá mới bền vững" đã trở thành kim chỉ nam cho mọi cải cách của nhà vua, không chỉ ở bình diện quốc gia mà còn trong phạm vi huyết thống hoàng tộc.
           </p>
 
-          <h3>Từ Tầm Nhìn Của Vua Minh Mạng Đến Bài Thơ "Đế Hệ Thi"</h3>
+          <h3 id="de-he-thi">Từ Tầm Nhìn Của Vua Minh Mạng Đến Bài Thơ "Đế Hệ Thi"</h3>
           
           <p>
             Vua Minh Mạng không chỉ là một nhà chính trị quyết đoán mà còn là một học giả uyên thâm Nho học, thấu hiểu sâu sắc quy luật vận hành của xã hội và gia tộc. Với khát vọng để dòng dõi hoàng gia "trăm đời truyền nối, muôn năm không dứt", vào năm 1823, nhà vua đã ngự soạn bài thơ nổi tiếng mang tên <strong>Đế Hệ Thi</strong>.
@@ -921,7 +1091,7 @@
             <img src="/static/images/4. kinh-thanh-hue.jpg" alt="Kinh thành Huế" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
           </div>
 
-          <h3>Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</h3>
+          <h3 id="tuy-bien-quan-cong">Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</h3>
           
           <p>
             Trong hệ thống tôn phả đồ sộ của hoàng tộc Nguyễn Phước, mỗi phòng hệ đều mang trong mình một dấu ấn riêng, phản ánh vai trò, công đức và vị thế của người khai phòng. <strong>Nguyễn Phúc Miên Sủng (1831–1865)</strong> – hoàng tử thứ 53 của vua Minh Mạng – chính là vị khai phong của Phòng Tuy Biên Quận Công, mở đầu cho một nhánh diệp chi độc lập, có danh xưng, quy ước và truyền thống riêng trong đại gia đình Nguyễn Phước.
@@ -971,7 +1141,7 @@
             Trong đại tộc Nguyễn Phước, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng vì thế không chỉ được nhớ đến với tư cách một hoàng tử, mà còn là người đặt nền móng cho một dòng hậu duệ có căn cơ, danh phận và bản sắc riêng, góp phần làm phong phú và bền vững cho cấu trúc toàn thể của hoàng tộc triều Nguyễn.
           </p>
 
-          <h3>Phụ Hệ và Tổ Hệ của Tuy Biên Quận Công Nguyễn Phúc Miên Sủng</h3>
+          <h3 id="phu-he-to-he">Phụ Hệ và Tổ Hệ của Tuy Biên Quận Công Nguyễn Phúc Miên Sủng</h3>
           
           <p>
             Về phụ hệ trực tiếp, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng xuất thân từ dòng chính thống của hoàng tộc triều Nguyễn, kế thừa liên tục từ các đời chúa Nguyễn đến hoàng đế khai sáng vương triều.
@@ -993,7 +1163,7 @@
             Trước đó, <strong>ông sơ của ngài là Nguyễn Phúc Khoát</strong> (阮福濶, 1714–1765), được tôn hiệu Vũ Vương (武王), trị vì Đàng Trong từ năm 1738 đến 1765. Thời kỳ của Vũ Vương đánh dấu sự phát triển ổn định về chính trị, văn hóa và lễ chế, đặt tiền đề cho việc hình thành vương quyền về sau.
           </p>
           
-          <h4>Tổ Tiên Dòng Chúa Nguyễn và Cao Tổ Đại Tộc</h4>
+          <h4 id="to-tien-dong-chua-nguyen">Tổ Tiên Dòng Chúa Nguyễn và Cao Tổ Đại Tộc</h4>
           
           <p>
             Từ Nguyễn Phúc Khoát trở ngược lên, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng thuộc về chuỗi truyền thừa liên tục của các đời chúa Nguyễn, bắt đầu từ thời Nguyễn Hoàng vào Thuận Hóa:
@@ -1042,7 +1212,7 @@
             Khởi nguyên của toàn bộ dòng tộc là <strong>Nguyễn Bặc</strong> (阮匐, 924–979) – Đức Định Quốc Công, khai quốc công thần triều Đinh, người được tôn làm Thủy tổ của đại tộc Nguyễn, từ đó mở ra dòng truyền thừa kéo dài hơn một thiên niên kỷ trong lịch sử Việt Nam.
           </p>
 
-          <h3>Số Hóa Gia Phả – Kết Nối Quá Khứ Đến Tương Lai</h3>
+          <h3 id="so-hoa-gia-pha">Số Hóa Gia Phả – Kết Nối Quá Khứ Đến Tương Lai</h3>
           
           <p>
             Trải qua bao biến thiên của lịch sử, con cháu Phòng Tuy Biên Quận Công ngày nay đã tản cư, sinh sống và lập nghiệp ở nhiều vùng miền trong nước cũng như khắp năm châu. Trong bối cảnh ấy, việc bảo tồn những trang <strong>Ngọc phả</strong>, vốn được lưu giữ bằng kim sách hoặc bản in giấy truyền thống, đang đối mặt với thách thức lớn từ thời gian, môi trường và sự đứt gãy thế hệ.
@@ -1059,7 +1229,7 @@
             <li><strong>Lưu trữ bền vững:</strong> Thông tin về các thế hệ mới được cập nhật liên tục, bảo đảm dòng chảy của Phòng Tuy Biên Quận Công luôn được ghi chép đầy đủ, liền mạch cho mai sau.</li>
           </ul>
 
-          <h3>Kết Từ</h3>
+          <h3 id="ket-tu">Kết Từ</h3>
           
           <p>
             Sứ mệnh của con cháu hôm nay không chỉ dừng lại ở niềm tự hào về quá khứ, mà còn là trách nhiệm gìn giữ và tiếp nối niềm tự hào ấy trong kỷ nguyên số. Hệ thống gia phả điện tử chính là <strong>nén tâm nhang hiện đại</strong> mà thế hệ hôm nay kính dâng lên ngài Tuy Biên Quận Công và đức Thánh Tổ Minh Mạng – một lời khẳng định vững chắc rằng:
@@ -1098,7 +1268,7 @@
   <!-- Section: Temple Interior -->
   <section id="temple-interior">
     <div class="section-container">
-      <h2 class="section-title">Hình Ảnh Bên Trong Nhà Thờ</h2>
+      <h2 class="section-title" id="hinh-anh-nha-tho">Hình Ảnh Bên Trong Nhà Thờ</h2>
       <div class="about-content">
         <div class="about-text">
           <p>
@@ -1225,6 +1395,39 @@
         menu.classList.toggle('active');
       }
     }
+
+    function toggleTOC() {
+      const sidebar = document.getElementById('tocSidebar');
+      if (sidebar) {
+        sidebar.classList.toggle('open');
+      }
+    }
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+      const sidebar = document.getElementById('tocSidebar');
+      const toggleBtn = document.getElementById('tocToggle');
+      
+      if (window.innerWidth <= 1024 && sidebar && toggleBtn) {
+        if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
+          sidebar.classList.remove('open');
+        }
+      }
+    });
+
+    // Close sidebar when clicking on a link (mobile)
+    document.querySelectorAll('.toc-list a').forEach(link => {
+      link.addEventListener('click', function() {
+        if (window.innerWidth <= 1024) {
+          const sidebar = document.getElementById('tocSidebar');
+          if (sidebar) {
+            setTimeout(() => {
+              sidebar.classList.remove('open');
+            }, 300); // Delay to allow smooth scroll
+          }
+        }
+      });
+    });
 
     function setActive(element) {
       if (!element) return;

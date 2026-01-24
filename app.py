@@ -1234,6 +1234,173 @@ def admin_users_page():
     
     return render_template('admin_users.html')
 
+@app.route('/api/admin/sync-tbqc-accounts', methods=['POST'])
+@login_required
+def api_sync_tbqc_accounts():
+    """
+    API để đồng bộ 4 tài khoản TBQC vào database
+    Chỉ admin mới được gọi API này
+    
+    Sync 4 TBQC accounts to database
+    Only admin can call this API
+    """
+    # Check admin permission
+    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+        return jsonify({
+            'success': False,
+            'error': 'Bạn không có quyền thực hiện thao tác này'
+        }), 403
+    
+    try:
+        from folder_py.db_config import get_db_connection
+        from auth import hash_password
+        
+        accounts = [
+            {
+                'username': 'tbqcnhanh1',
+                'password': 'nhanh1@123',
+                'full_name': 'Nhánh 1',
+                'email': 'tbqcnhanh1@tbqc.local'
+            },
+            {
+                'username': 'tbqcnhanh2',
+                'password': 'nhanh2@123',
+                'full_name': 'Nhánh 2',
+                'email': 'tbqcnhanh2@tbqc.local'
+            },
+            {
+                'username': 'tbqcnhanh3',
+                'password': 'nhanh3@123',
+                'full_name': 'Nhánh 3',
+                'email': 'tbqcnhanh3@tbqc.local'
+            },
+            {
+                'username': 'tbqcnhanh4',
+                'password': 'nhanh4@123',
+                'full_name': 'Nhánh 4',
+                'email': 'tbqcnhanh4@tbqc.local'
+            }
+        ]
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({
+                'success': False,
+                'error': 'Không thể kết nối database'
+            }), 500
+        
+        results = []
+        success_count = 0
+        fail_count = 0
+        
+        cursor = connection.cursor(dictionary=True)
+        
+        # Ensure users table exists
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INT PRIMARY KEY AUTO_INCREMENT,
+                username VARCHAR(100) NOT NULL UNIQUE,
+                password_hash VARCHAR(255) NOT NULL,
+                role ENUM('admin', 'editor', 'user') NOT NULL DEFAULT 'user',
+                full_name VARCHAR(255),
+                email VARCHAR(255),
+                permissions JSON,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                last_login TIMESTAMP NULL,
+                INDEX idx_username (username),
+                INDEX idx_role (role)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        """)
+        connection.commit()
+        
+        for account in accounts:
+            try:
+                # Hash password
+                password_hash = hash_password(account['password'])
+                
+                # Check if user exists
+                cursor.execute("SELECT user_id, username, role FROM users WHERE username = %s", (account['username'],))
+                existing = cursor.fetchone()
+                
+                if existing:
+                    # Update existing user
+                    cursor.execute("""
+                        UPDATE users
+                        SET password_hash = %s,
+                            role = 'user',
+                            full_name = %s,
+                            email = %s,
+                            is_active = TRUE,
+                            updated_at = NOW()
+                        WHERE username = %s
+                    """, (password_hash, account['full_name'], account['email'], account['username']))
+                    action = "cập nhật"
+                else:
+                    # Create new user
+                    cursor.execute("""
+                        INSERT INTO users (username, password_hash, role, is_active, full_name, email)
+                        VALUES (%s, %s, 'user', TRUE, %s, %s)
+                    """, (account['username'], password_hash, account['full_name'], account['email']))
+                    action = "tạo mới"
+                
+                connection.commit()
+                
+                # Verify
+                cursor.execute("""
+                    SELECT user_id, username, role, is_active, full_name, email
+                    FROM users WHERE username = %s
+                """, (account['username'],))
+                user = cursor.fetchone()
+                
+                if user:
+                    results.append({
+                        'username': account['username'],
+                        'action': action,
+                        'success': True,
+                        'user_id': user['user_id'],
+                        'full_name': user['full_name']
+                    })
+                    success_count += 1
+                else:
+                    results.append({
+                        'username': account['username'],
+                        'action': action,
+                        'success': False,
+                        'error': 'Không thể verify sau khi ' + action
+                    })
+                    fail_count += 1
+                    
+            except Exception as e:
+                results.append({
+                    'username': account['username'],
+                    'action': 'lỗi',
+                    'success': False,
+                    'error': str(e)
+                })
+                fail_count += 1
+        
+        cursor.close()
+        connection.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Đồng bộ hoàn tất: {success_count} thành công, {fail_count} thất bại',
+            'success_count': success_count,
+            'fail_count': fail_count,
+            'results': results
+        })
+        
+    except Exception as e:
+        logger.error(f"Error syncing TBQC accounts: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Lỗi khi đồng bộ: {str(e)}'
+        }), 500
+
 def can_post_activities():
     """
     Kiểm tra xem user có quyền đăng bài Activities không.
@@ -2403,35 +2570,83 @@ def get_persons():
     try:
         cursor = connection.cursor(dictionary=True)
 
+        # Kiểm tra các cột mới có tồn tại không
+        cursor.execute("""
+            SELECT COLUMN_NAME 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'persons'
+            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email')
+        """)
+        available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
+        
+        # Build SELECT fields động
+        select_fields = [
+            "p.person_id",
+            "p.full_name",
+            "p.alias",
+            "p.gender",
+            "p.status",
+            "p.generation_level",
+            "p.home_town",
+            "p.nationality",
+            "p.religion",
+            "p.birth_date_solar",
+            "p.birth_date_lunar",
+            "p.death_date_solar",
+            "p.death_date_lunar",
+            "p.place_of_death",
+            "p.grave_info",
+            "p.contact",
+            "p.social",
+            "p.occupation",
+            "p.education",
+            "p.events",
+            "p.titles",
+            "p.blood_type",
+            "p.genetic_disease",
+            "p.note",
+            "p.father_mother_id"
+        ]
+        
+        # Thêm các cột mới nếu có
+        if 'personal_image_url' in available_columns:
+            select_fields.append("p.personal_image_url AS personal_image_url")
+        elif 'personal_image' in available_columns:
+            select_fields.append("p.personal_image AS personal_image_url")
+        else:
+            select_fields.append("NULL AS personal_image_url")
+        
+        if 'biography' in available_columns:
+            select_fields.append("p.biography")
+        else:
+            select_fields.append("NULL AS biography")
+        
+        if 'academic_rank' in available_columns:
+            select_fields.append("p.academic_rank")
+        else:
+            select_fields.append("NULL AS academic_rank")
+        
+        if 'academic_degree' in available_columns:
+            select_fields.append("p.academic_degree")
+        else:
+            select_fields.append("NULL AS academic_degree")
+        
+        if 'phone' in available_columns:
+            select_fields.append("p.phone")
+        else:
+            select_fields.append("NULL AS phone")
+        
+        if 'email' in available_columns:
+            select_fields.append("p.email")
+        else:
+            select_fields.append("NULL AS email")
+        
         # Query chính: lấy mỗi person 1 dòng, kèm thông tin cha/mẹ và danh sách tên con
         # Schema mới: person_id VARCHAR(50), relationships dùng parent_id/child_id với relation_type
-        cursor.execute("""
+        cursor.execute(f"""
             SELECT 
-                p.person_id,
-                p.full_name,
-                p.alias,
-                p.gender,
-                p.status,
-                p.generation_level,
-                p.home_town,
-                p.nationality,
-                p.religion,
-                p.birth_date_solar,
-                p.birth_date_lunar,
-                p.death_date_solar,
-                p.death_date_lunar,
-                p.place_of_death,
-                p.grave_info,
-                p.contact,
-                p.social,
-                p.occupation,
-                p.education,
-                p.events,
-                p.titles,
-                p.blood_type,
-                p.genetic_disease,
-                p.note,
-                p.father_mother_id,
+                {', '.join(select_fields)},
 
                 -- Cha từ relationships
                 father.person_id AS father_id,
@@ -5641,21 +5856,75 @@ def get_members():
             return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
         cursor = connection.cursor(dictionary=True)
         
-        # Lấy danh sách tất cả persons với thông tin đầy đủ (schema mới)
+        # Kiểm tra các cột mới có tồn tại không
         cursor.execute("""
+            SELECT COLUMN_NAME 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'persons'
+            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death')
+        """)
+        available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
+        
+        # Build SELECT fields động
+        select_fields = [
+            "p.person_id",
+            "p.father_mother_id AS fm_id",
+            "p.full_name",
+            "p.alias",
+            "p.gender",
+            "p.status",
+            "p.generation_level AS generation_number",
+            "p.birth_date_solar",
+            "p.birth_date_lunar",
+            "p.death_date_solar",
+            "p.death_date_lunar",
+            "p.grave_info AS grave"
+        ]
+        
+        # Thêm place_of_death nếu có
+        if 'place_of_death' in available_columns:
+            select_fields.append("p.place_of_death")
+        else:
+            select_fields.append("NULL AS place_of_death")
+        
+        # Thêm các cột mới nếu có
+        if 'personal_image_url' in available_columns:
+            select_fields.append("p.personal_image_url AS personal_image_url")
+        elif 'personal_image' in available_columns:
+            select_fields.append("p.personal_image AS personal_image_url")
+        else:
+            select_fields.append("NULL AS personal_image_url")
+        
+        if 'biography' in available_columns:
+            select_fields.append("p.biography")
+        else:
+            select_fields.append("NULL AS biography")
+        
+        if 'academic_rank' in available_columns:
+            select_fields.append("p.academic_rank")
+        else:
+            select_fields.append("NULL AS academic_rank")
+        
+        if 'academic_degree' in available_columns:
+            select_fields.append("p.academic_degree")
+        else:
+            select_fields.append("NULL AS academic_degree")
+        
+        if 'phone' in available_columns:
+            select_fields.append("p.phone")
+        else:
+            select_fields.append("NULL AS phone")
+        
+        if 'email' in available_columns:
+            select_fields.append("p.email")
+        else:
+            select_fields.append("NULL AS email")
+        
+        # Lấy danh sách tất cả persons với thông tin đầy đủ (schema mới)
+        cursor.execute(f"""
             SELECT 
-                p.person_id,
-                p.father_mother_id AS fm_id,
-                p.full_name,
-                p.alias,
-                p.gender,
-                p.status,
-                p.generation_level AS generation_number,
-                p.birth_date_solar,
-                p.birth_date_lunar,
-                p.death_date_solar,
-                p.death_date_lunar,
-                p.grave_info AS grave
+                {', '.join(select_fields)}
             FROM persons p
             ORDER BY 
                 COALESCE(p.generation_level, 999) ASC,
@@ -5733,11 +6002,20 @@ def get_members():
                 'death_date_solar': str(person['death_date_solar']) if person.get('death_date_solar') else None,
                 'death_date_lunar': str(person['death_date_lunar']) if person.get('death_date_lunar') else None,
                 'grave': person.get('grave'),  # grave_info
+                'grave_info': person.get('grave'),  # Alias for compatibility
+                'place_of_death': person.get('place_of_death'),
                 'father_name': rel.get('father_name'),
                 'mother_name': rel.get('mother_name'),
                 'spouses': '; '.join(spouse_names) if spouse_names else None,
                 'siblings': '; '.join(siblings) if siblings else None,
-                'children': '; '.join(children) if children else None
+                'children': '; '.join(children) if children else None,
+                # Các trường mới
+                'personal_image_url': person.get('personal_image_url'),
+                'biography': person.get('biography'),
+                'academic_rank': person.get('academic_rank'),
+                'academic_degree': person.get('academic_degree'),
+                'phone': person.get('phone'),
+                'email': person.get('email')
             }
             
             members.append(member)
@@ -5901,9 +6179,16 @@ def _process_children_spouse_siblings(cursor, person_id, data):
 @app.route('/api/persons', methods=['POST'])
 def create_person():
     """API thêm thành viên mới - Yêu cầu mật khẩu"""
-    # Kiểm tra mật khẩu
-    data = request.get_json() or {}
-    password = data.get('password', '').strip()
+    # Kiểm tra mật khẩu - hỗ trợ cả JSON và FormData
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        password = data.get('password', '').strip()
+        # Xử lý file upload nếu có
+        personal_image_file = request.files.get('personal_image')
+    else:
+        data = request.get_json() or {}
+        password = data.get('password', '').strip()
+        personal_image_file = None
     
     # Lấy mật khẩu từ helper function (tự động load từ env file nếu cần)
     correct_password = get_members_password()
@@ -6022,6 +6307,83 @@ def create_person():
             insert_fields.append('place_of_death')
             insert_values.append(data.get('place_of_death'))
         
+        # Xử lý các trường mới: biography, academic_rank, academic_degree, phone, email
+        if 'biography' in columns:
+            insert_fields.append('biography')
+            biography = data.get('biography', '').strip() if data.get('biography') else None
+            insert_values.append(biography if biography else None)
+        
+        if 'academic_rank' in columns:
+            insert_fields.append('academic_rank')
+            academic_rank = data.get('academic_rank', '').strip() if data.get('academic_rank') else None
+            insert_values.append(academic_rank if academic_rank else None)
+        
+        if 'academic_degree' in columns:
+            insert_fields.append('academic_degree')
+            academic_degree = data.get('academic_degree', '').strip() if data.get('academic_degree') else None
+            insert_values.append(academic_degree if academic_degree else None)
+        
+        if 'phone' in columns:
+            insert_fields.append('phone')
+            phone = data.get('phone', '').strip() if data.get('phone') else None
+            insert_values.append(phone if phone else None)
+        
+        if 'email' in columns:
+            insert_fields.append('email')
+            email = data.get('email', '').strip() if data.get('email') else None
+            # Validate email format nếu có
+            if email and '@' not in email:
+                return jsonify({'success': False, 'error': 'Email không hợp lệ'}), 400
+            insert_values.append(email if email else None)
+        
+        # Xử lý upload ảnh cá nhân nếu có
+        if personal_image_file and personal_image_file.filename:
+            # Validate file size (max 2MB)
+            personal_image_file.seek(0, os.SEEK_END)
+            file_size = personal_image_file.tell()
+            personal_image_file.seek(0)
+            
+            if file_size > 2 * 1024 * 1024:  # 2MB
+                return jsonify({'success': False, 'error': 'Kích thước file ảnh vượt quá 2MB'}), 400
+            
+            # Validate file extension
+            allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+            if '.' not in personal_image_file.filename or personal_image_file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+                return jsonify({'success': False, 'error': 'Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP'}), 400
+            
+            # Upload file
+            from datetime import datetime
+            import hashlib
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename_hash = hashlib.md5(f"{person_id}_{personal_image_file.filename}".encode()).hexdigest()[:8]
+            extension = personal_image_file.filename.rsplit('.', 1)[1].lower()
+            safe_filename = secure_filename(f"personal_{person_id}_{timestamp}_{filename_hash}.{extension}")
+            
+            # Xác định thư mục lưu ảnh
+            volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+            if volume_mount_path and os.path.exists(volume_mount_path):
+                base_images_dir = volume_mount_path
+            else:
+                base_images_dir = os.path.join(BASE_DIR, 'static', 'images')
+            
+            # Tạo thư mục personal nếu chưa có
+            personal_dir = os.path.join(base_images_dir, 'personal')
+            os.makedirs(personal_dir, exist_ok=True)
+            
+            file_path = os.path.join(personal_dir, safe_filename)
+            personal_image_file.save(file_path)
+            
+            # Tạo URL
+            image_url = f"/static/images/personal/{safe_filename}"
+            
+            # Thêm personal_image_url vào database nếu cột tồn tại
+            if 'personal_image_url' in columns:
+                insert_fields.append('personal_image_url')
+                insert_values.append(image_url)
+            elif 'personal_image' in columns:
+                insert_fields.append('personal_image')
+                insert_values.append(image_url)
+        
         # Thêm person
         placeholders = ','.join(['%s'] * len(insert_values))
         insert_query = f"INSERT INTO persons ({', '.join(insert_fields)}) VALUES ({placeholders})"
@@ -6079,9 +6441,16 @@ def create_person():
 @app.route('/api/persons/<person_id>', methods=['PUT'])
 def update_person_members(person_id):
     """API cập nhật thành viên từ trang members - Yêu cầu mật khẩu"""
-    # Kiểm tra mật khẩu
-    data = request.get_json() or {}
-    password = data.get('password', '').strip()
+    # Kiểm tra mật khẩu - hỗ trợ cả JSON và FormData
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        data = request.form.to_dict()
+        password = data.get('password', '').strip()
+        # Xử lý file upload nếu có
+        personal_image_file = request.files.get('personal_image')
+    else:
+        data = request.get_json() or {}
+        password = data.get('password', '').strip()
+        personal_image_file = None
     
     # Lấy mật khẩu từ helper function (tự động load từ env file nếu cần)
     correct_password = get_members_password()
@@ -6201,6 +6570,83 @@ def update_person_members(person_id):
         if 'place_of_death' in columns:
             update_fields.append('place_of_death = %s')
             update_values.append(data.get('place_of_death'))
+        
+        # Xử lý các trường mới: biography, academic_rank, academic_degree, phone, email
+        if 'biography' in columns:
+            update_fields.append('biography = %s')
+            biography = data.get('biography', '').strip() if data.get('biography') else None
+            update_values.append(biography if biography else None)
+        
+        if 'academic_rank' in columns:
+            update_fields.append('academic_rank = %s')
+            academic_rank = data.get('academic_rank', '').strip() if data.get('academic_rank') else None
+            update_values.append(academic_rank if academic_rank else None)
+        
+        if 'academic_degree' in columns:
+            update_fields.append('academic_degree = %s')
+            academic_degree = data.get('academic_degree', '').strip() if data.get('academic_degree') else None
+            update_values.append(academic_degree if academic_degree else None)
+        
+        if 'phone' in columns:
+            update_fields.append('phone = %s')
+            phone = data.get('phone', '').strip() if data.get('phone') else None
+            update_values.append(phone if phone else None)
+        
+        if 'email' in columns:
+            update_fields.append('email = %s')
+            email = data.get('email', '').strip() if data.get('email') else None
+            # Validate email format nếu có
+            if email and '@' not in email:
+                return jsonify({'success': False, 'error': 'Email không hợp lệ'}), 400
+            update_values.append(email if email else None)
+        
+        # Xử lý upload ảnh cá nhân nếu có
+        if personal_image_file and personal_image_file.filename:
+            # Validate file size (max 2MB)
+            personal_image_file.seek(0, os.SEEK_END)
+            file_size = personal_image_file.tell()
+            personal_image_file.seek(0)
+            
+            if file_size > 2 * 1024 * 1024:  # 2MB
+                return jsonify({'success': False, 'error': 'Kích thước file ảnh vượt quá 2MB'}), 400
+            
+            # Validate file extension
+            allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+            if '.' not in personal_image_file.filename or personal_image_file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+                return jsonify({'success': False, 'error': 'Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP'}), 400
+            
+            # Upload file
+            from datetime import datetime
+            import hashlib
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename_hash = hashlib.md5(f"{person_id}_{personal_image_file.filename}".encode()).hexdigest()[:8]
+            extension = personal_image_file.filename.rsplit('.', 1)[1].lower()
+            safe_filename = secure_filename(f"personal_{person_id}_{timestamp}_{filename_hash}.{extension}")
+            
+            # Xác định thư mục lưu ảnh
+            volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+            if volume_mount_path and os.path.exists(volume_mount_path):
+                base_images_dir = volume_mount_path
+            else:
+                base_images_dir = os.path.join(BASE_DIR, 'static', 'images')
+            
+            # Tạo thư mục personal nếu chưa có
+            personal_dir = os.path.join(base_images_dir, 'personal')
+            os.makedirs(personal_dir, exist_ok=True)
+            
+            file_path = os.path.join(personal_dir, safe_filename)
+            personal_image_file.save(file_path)
+            
+            # Tạo URL
+            image_url = f"/static/images/personal/{safe_filename}"
+            
+            # Cập nhật personal_image_url vào database nếu cột tồn tại
+            if 'personal_image_url' in columns:
+                update_fields.append('personal_image_url = %s')
+                update_values.append(image_url)
+            elif 'personal_image' in columns:
+                update_fields.append('personal_image = %s')
+                update_values.append(image_url)
         
         if 'generation_id' in columns and data.get('generation_number'):
             # Fallback: nếu có generation_id, tìm hoặc tạo
