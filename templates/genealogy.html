@@ -2575,6 +2575,7 @@
           <div style="margin-bottom: var(--space-3);">
             <strong>Tên đầy đủ:</strong> ${person.full_name || 'Chưa có thông tin'}
       </div>
+          ${person.personal_image_url ? `<div style="margin-bottom: var(--space-4); text-align: center;"><img src="${escapeHtml(person.personal_image_url)}" alt="Hình ${escapeHtml(person.full_name || '')}" style="max-width: 200px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>` : ''}
           ${person.alias ? `<div style="margin-bottom: var(--space-3);"><strong>Tên thường gọi:</strong> ${person.alias}</div>` : ''}
           <div style="margin-bottom: var(--space-3);">
             <strong>Đời:</strong> ${person.generation_number || person.generation_level || 'Chưa có thông tin'}
@@ -2582,6 +2583,9 @@
           <div style="margin-bottom: var(--space-3);">
             <strong>Giới tính:</strong> ${person.gender || 'Chưa có thông tin'}
   </div>
+          <div style="margin-bottom: var(--space-3);">
+            <strong>Trạng thái:</strong> ${person.status || 'Chưa có thông tin'}
+          </div>
           <div style="margin-bottom: var(--space-3);">
             <strong>Tên bố:</strong> ${person.father_name ? 'Ông ' + escapeHtml(person.father_name) : 'Chưa có thông tin'}
           </div>
@@ -2603,9 +2607,11 @@
           <div style="margin-bottom: var(--space-3);">
             <strong>Nhánh:</strong> ${person.branch_name || 'Chưa có thông tin'}
           </div>
-          <div style="margin-bottom: var(--space-3);">
-            <strong>Trạng thái:</strong> ${person.status || 'Chưa có thông tin'}
-          </div>
+          ${person.biography ? `<div style="margin-bottom: var(--space-3);"><strong>Tiểu sử:</strong><br><div style="margin-top: 4px; color: var(--color-text); white-space: pre-wrap; line-height: 1.6;">${escapeHtml(person.biography)}</div></div>` : ''}
+          ${person.academic_rank ? `<div style="margin-bottom: var(--space-3);"><strong>Học hàm:</strong> ${escapeHtml(person.academic_rank)}</div>` : ''}
+          ${person.academic_degree ? `<div style="margin-bottom: var(--space-3);"><strong>Học vị:</strong> ${escapeHtml(person.academic_degree)}</div>` : ''}
+          ${person.phone ? `<div style="margin-bottom: var(--space-3);"><strong>Điện thoại:</strong> ${escapeHtml(person.phone)}</div>` : ''}
+          ${person.email ? `<div style="margin-bottom: var(--space-3);"><strong>Email:</strong> <a href="mailto:${escapeHtml(person.email)}" style="color: var(--color-primary); text-decoration: none;">${escapeHtml(person.email)}</a></div>` : ''}
         </div>
       `;
       

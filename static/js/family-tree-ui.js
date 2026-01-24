@@ -1054,6 +1054,17 @@ function displayPersonInfo(personData) {
   html += `<h4 style="color: var(--color-primary); font-size: var(--font-size-lg); margin: 0;">${escapeHtml(fullName)}</h4>`;
   html += `</div>`;
   
+  // Hình cá nhân - ngay sau tên
+  if (personData.personal_image_url) {
+    html += `
+      <div style="margin-bottom: var(--space-4); text-align: center;">
+        <img src="${escapeHtml(personData.personal_image_url)}"
+             alt="Hình ${escapeHtml(fullName)}"
+             style="max-width: 200px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      </div>
+    `;
+  }
+  
   // Thông tin cơ bản - Thứ tự mới: Tên thường gọi, Nguyên quán, Ngày sinh, Ngày mất, Mộ phần
   html += `<div style="margin-bottom: var(--space-4);">`;
   
@@ -1155,6 +1166,18 @@ function displayPersonInfo(personData) {
     }
   });
   html += `</div>`;
+  
+  // Tiểu sử - sau phần "Thông tin bổ sung"
+  if (personData.biography) {
+    html += `
+      <div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">
+        <h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Tiểu sử</h5>
+        <div style="color: var(--color-text); white-space: pre-wrap; line-height: 1.6;">
+          ${escapeHtml(personData.biography)}
+        </div>
+      </div>
+    `;
+  }
   
   // Tên bố và tên mẹ
   html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
@@ -1261,6 +1284,51 @@ function displayPersonInfo(personData) {
       });
       html += `</ul></div>`;
     }
+  }
+  
+  // Thông tin liên hệ và học vấn - sau phần "Anh chị em"
+  const hasContactInfo = personData.academic_rank || personData.academic_degree || personData.phone || personData.email;
+  if (hasContactInfo) {
+    html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
+    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Thông tin liên hệ và học vấn</h5>`;
+    
+    if (personData.academic_rank) {
+      html += `
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 120px; color: var(--color-text-muted);">Học hàm:</strong>
+          <span style="color: var(--color-text);">${escapeHtml(personData.academic_rank)}</span>
+        </div>
+      `;
+    }
+    
+    if (personData.academic_degree) {
+      html += `
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 120px; color: var(--color-text-muted);">Học vị:</strong>
+          <span style="color: var(--color-text);">${escapeHtml(personData.academic_degree)}</span>
+        </div>
+      `;
+    }
+    
+    if (personData.phone) {
+      html += `
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 120px; color: var(--color-text-muted);">Điện thoại:</strong>
+          <span style="color: var(--color-text);">${escapeHtml(personData.phone)}</span>
+        </div>
+      `;
+    }
+    
+    if (personData.email) {
+      html += `
+        <div style="margin-bottom: var(--space-2); display: flex;">
+          <strong style="min-width: 120px; color: var(--color-text-muted);">Email:</strong>
+          <a href="mailto:${escapeHtml(personData.email)}" style="color: var(--color-primary); text-decoration: none;">${escapeHtml(personData.email)}</a>
+        </div>
+      `;
+    }
+    
+    html += `</div>`;
   }
   
   infoContent.innerHTML = html || '<div style="padding: 20px; color: var(--color-text-muted);">Không có thông tin chi tiết</div>';

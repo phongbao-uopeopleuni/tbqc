@@ -2941,35 +2941,82 @@ def get_person(person_id):
     try:
         cursor = connection.cursor(dictionary=True)
         
-        # Lấy thông tin đầy đủ từ persons (schema mới) - chỉ lấy các column chắc chắn có
-        # Sử dụng COALESCE để xử lý các cột có thể không tồn tại
+        # Kiểm tra các cột mới có tồn tại không
         cursor.execute("""
+            SELECT COLUMN_NAME 
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'persons'
+            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email')
+        """)
+        available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
+        
+        # Build SELECT fields động
+        select_fields = [
+            "p.person_id",
+            "p.full_name",
+            "p.alias",
+            "p.gender",
+            "p.status",
+            "p.generation_level",
+            "p.birth_date_solar",
+            "p.birth_date_lunar",
+            "p.death_date_solar",
+            "p.death_date_lunar",
+            "p.home_town",
+            "p.nationality",
+            "p.religion",
+            "p.place_of_death",
+            "p.grave_info",
+            "p.contact",
+            "p.social",
+            "p.occupation",
+            "p.education",
+            "p.events",
+            "p.titles",
+            "p.blood_type",
+            "p.genetic_disease",
+            "p.note",
+            "p.father_mother_id"
+        ]
+        
+        # Thêm các cột mới nếu có
+        if 'personal_image_url' in available_columns:
+            select_fields.append("p.personal_image_url AS personal_image_url")
+        elif 'personal_image' in available_columns:
+            select_fields.append("p.personal_image AS personal_image_url")
+        else:
+            select_fields.append("NULL AS personal_image_url")
+        
+        if 'biography' in available_columns:
+            select_fields.append("p.biography")
+        else:
+            select_fields.append("NULL AS biography")
+        
+        if 'academic_rank' in available_columns:
+            select_fields.append("p.academic_rank")
+        else:
+            select_fields.append("NULL AS academic_rank")
+        
+        if 'academic_degree' in available_columns:
+            select_fields.append("p.academic_degree")
+        else:
+            select_fields.append("NULL AS academic_degree")
+        
+        if 'phone' in available_columns:
+            select_fields.append("p.phone")
+        else:
+            select_fields.append("NULL AS phone")
+        
+        if 'email' in available_columns:
+            select_fields.append("p.email")
+        else:
+            select_fields.append("NULL AS email")
+        
+        # Lấy thông tin đầy đủ từ persons (schema mới)
+        cursor.execute(f"""
             SELECT 
-                p.person_id,
-                p.full_name,
-                p.alias,
-                p.gender,
-                p.status,
-                p.generation_level,
-                p.birth_date_solar,
-                p.birth_date_lunar,
-                p.death_date_solar,
-                p.death_date_lunar,
-                p.home_town,
-                p.nationality,
-                p.religion,
-                p.place_of_death,
-                p.grave_info,
-                p.contact,
-                p.social,
-                p.occupation,
-                p.education,
-                p.events,
-                p.titles,
-                p.blood_type,
-                p.genetic_disease,
-                p.note,
-                p.father_mother_id
+                {', '.join(select_fields)}
             FROM persons p
             WHERE p.person_id = %s
         """, (person_id,))
