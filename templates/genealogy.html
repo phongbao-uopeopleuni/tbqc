@@ -928,6 +928,91 @@
         max-width: 100%;
       }
     }
+    
+    /* Passphrase Gate Styles */
+    #genealogy-gate {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 200px);
+      padding: var(--space-8);
+    }
+    
+    .gate-container {
+      max-width: 400px;
+      width: 100%;
+      background: var(--color-surface, #fff);
+      padding: var(--space-6);
+      border-radius: var(--border-radius-lg, 8px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .gate-container h2 {
+      text-align: center;
+      margin-bottom: var(--space-4);
+      color: var(--color-primary, #2563eb);
+    }
+    
+    .gate-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    
+    .gate-form input {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border, #e5e7eb);
+      border-radius: var(--border-radius, 4px);
+      font-size: var(--font-size-base, 16px);
+    }
+    
+    .gate-form button {
+      width: 100%;
+      padding: var(--space-3);
+      background: var(--color-primary, #2563eb);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius, 4px);
+      font-size: var(--font-size-base, 16px);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .gate-form button:hover {
+      background: var(--color-primary-dark, #1d4ed8);
+    }
+    
+    .gate-error {
+      color: var(--color-error, #dc3545);
+      font-size: var(--font-size-sm, 14px);
+      margin-top: var(--space-2);
+      display: none;
+    }
+    
+    .gate-error.show {
+      display: block;
+    }
+    
+    .gate-note {
+      margin-top: var(--space-3);
+      font-size: var(--font-size-sm, 14px);
+      color: var(--color-text-muted, #6b7280);
+      text-align: center;
+      display: none;
+    }
+    
+    .gate-note.show {
+      display: block;
+    }
+    
+    #genealogy-content {
+      display: none;
+    }
+    
+    #genealogy-content.unlocked {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -946,7 +1031,22 @@
     </ul>
   </nav>
 
-  <div class="container genealogy-page">
+  <!-- Passphrase Gate -->
+  <div id="genealogy-gate">
+    <div class="gate-container">
+      <h2>Xác thực truy cập</h2>
+      <form class="gate-form" id="gateForm" onsubmit="handleGateSubmit(event)">
+        <input type="password" id="gatePassphrase" placeholder="Nhập chuỗi mật khẩu" required autofocus>
+        <button type="submit">Mở khóa</button>
+        <div class="gate-error" id="gateError">Chuỗi không đúng. Vui lòng nhập lại.</div>
+        <div class="gate-note" id="gateNote">Bạn có thể liên hệ nhóm Zalo BTS để được cung cấp thông tin.</div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Genealogy Content -->
+  <div id="genealogy-content">
+    <div class="container genealogy-page">
     <div class="page-header">
       <h1>Cây Gia Phả</h1>
       <p class="page-subtitle">Cây Gia Phả Tương Tác và Tra Cứu Chuỗi Phả Hệ</p>
@@ -1334,6 +1434,8 @@
         </div>
       </section>
     </div>
+  </div>
+  <!-- End of genealogy-content -->
 
   <!-- Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -4991,6 +5093,72 @@
   
   <!-- Floating Zalo Button -->
   <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  
+  <!-- Passphrase Gate Script -->
+  <script>
+    const CORRECT_PASSPHRASE = 'phutuybien2026';
+    const STORAGE_KEY = 'genealogy_unlocked';
+    
+    // Check if already unlocked on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const isUnlocked = sessionStorage.getItem(STORAGE_KEY) === 'true';
+      
+      if (isUnlocked) {
+        unlockGenealogy();
+      } else {
+        showGate();
+      }
+    });
+    
+    function showGate() {
+      const gate = document.getElementById('genealogy-gate');
+      const content = document.getElementById('genealogy-content');
+      
+      if (gate) gate.style.display = 'flex';
+      if (content) {
+        content.style.display = 'none';
+        content.classList.remove('unlocked');
+      }
+    }
+    
+    function unlockGenealogy() {
+      const gate = document.getElementById('genealogy-gate');
+      const content = document.getElementById('genealogy-content');
+      
+      if (gate) gate.style.display = 'none';
+      if (content) {
+        content.style.display = 'block';
+        content.classList.add('unlocked');
+      }
+      
+      sessionStorage.setItem(STORAGE_KEY, 'true');
+    }
+    
+    function handleGateSubmit(event) {
+      event.preventDefault();
+      
+      const input = document.getElementById('gatePassphrase');
+      const errorDiv = document.getElementById('gateError');
+      const noteDiv = document.getElementById('gateNote');
+      
+      if (!input) return;
+      
+      const enteredPassphrase = input.value.trim();
+      
+      if (enteredPassphrase === CORRECT_PASSPHRASE) {
+        // Correct passphrase
+        unlockGenealogy();
+        if (errorDiv) errorDiv.classList.remove('show');
+        if (noteDiv) noteDiv.classList.remove('show');
+      } else {
+        // Incorrect passphrase
+        if (errorDiv) errorDiv.classList.add('show');
+        if (noteDiv) noteDiv.classList.add('show');
+        input.value = '';
+        input.focus();
+      }
+    }
+  </script>
 </body>
 </html>
 

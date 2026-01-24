@@ -548,8 +548,22 @@
 
   <div class="container">
     <div class="page-header">
-      <h1>📋 Danh Sách Thành Viên</h1>
-      <p>Danh sách đầy đủ các thành viên trong dòng họ Nguyễn Phước Tộc - Tuy Biên Phòng</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+          <h1>📋 Danh Sách Thành Viên</h1>
+          <p>Danh sách đầy đủ các thành viên trong dòng họ Nguyễn Phước Tộc - Tuy Biên Phòng</p>
+          {% if gate_username %}
+          <p style="margin-top: 10px; font-size: 14px; color: #666;">
+            Đang đăng nhập với: <strong>{{ gate_username }}</strong>
+          </p>
+          {% endif %}
+        </div>
+        {% if gate_username %}
+        <a href="/members/logout" class="btn" style="background: #757575; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px;">
+          Đăng xuất (Members)
+        </a>
+        {% endif %}
+      </div>
     </div>
 
     <div class="controls">

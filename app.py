@@ -5,7 +5,7 @@ Flask API Server cho Gia Phả Nguyễn Phước Tộc
 Kết nối HTML với MySQL database
 """
 
-from flask import Flask, jsonify, send_from_directory, request, redirect, render_template
+from flask import Flask, jsonify, send_from_directory, request, redirect, render_template, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 import json
@@ -365,6 +365,14 @@ def secure_compare(a: str, b: str) -> bool:
         True if strings match, False otherwise
     """
     return secrets.compare_digest(a.encode('utf-8'), b.encode('utf-8'))
+
+# Members Gate Accounts - 4 tài khoản cố định để truy cập trang Members
+MEMBERS_GATE_ACCOUNTS = [
+    {"username": "tbqcnhanh1", "password": "nhanh1@123"},
+    {"username": "tbqcnhanh2", "password": "nhanh2@123"},
+    {"username": "tbqcnhanh3", "password": "nhanh3@123"},
+    {"username": "tbqcnhanh4", "password": "nhanh4@123"}
+]
 
 def get_members_password():
     """
@@ -1550,7 +1558,14 @@ def members():
     Trang danh sách thành viên - hiển thị danh sách tất cả thành viên trong gia phả
     
     Members page - displays list of all members in the genealogy
+    Kiểm tra session['members_gate_ok'] - nếu chưa có thì hiển thị trang cổng đăng nhập
     """
+    # Kiểm tra session gate
+    if not session.get('members_gate_ok'):
+        # Chưa đăng nhập qua cổng - hiển thị trang gate
+        return render_template('members_gate.html')
+    
+    # Đã đăng nhập - hiển thị trang Members đầy đủ
     # Lấy password từ helper function (tự động load từ env file nếu cần)
     members_password = get_members_password()
     
@@ -1560,7 +1575,56 @@ def members():
     else:
         logger.debug(f"Members password loaded: {'*' * len(members_password)}")
     
-    return render_template('members.html', members_password=members_password or '')
+    # Lấy username từ session để hiển thị
+    gate_username = session.get('members_gate_user', '')
+    
+    return render_template('members.html', members_password=members_password or '', gate_username=gate_username)
+
+@app.route('/members/verify', methods=['POST'])
+def members_verify():
+    """
+    API xác thực đăng nhập cho cổng Members
+    Kiểm tra username/password có trong 4 accounts cho phép không
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        if not username or not password:
+            return jsonify({'success': False, 'error': 'Tên đăng nhập và mật khẩu không được để trống'}), 400
+        
+        # Kiểm tra trong 4 accounts
+        is_valid = False
+        for account in MEMBERS_GATE_ACCOUNTS:
+            if account['username'] == username and account['password'] == password:
+                is_valid = True
+                break
+        
+        if is_valid:
+            # Đăng nhập thành công - set session
+            session['members_gate_ok'] = True
+            session['members_gate_user'] = username
+            logger.info(f"Members gate login successful: {username}")
+            return jsonify({'success': True, 'message': 'Đăng nhập thành công'})
+        else:
+            # Đăng nhập thất bại
+            logger.warning(f"Members gate login failed: username={username}")
+            return jsonify({'success': False, 'error': 'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.'}), 401
+            
+    except Exception as e:
+        logger.error(f"Error in members_verify: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Lỗi server: ' + str(e)}), 500
+
+@app.route('/members/logout', methods=['GET', 'POST'])
+def members_logout():
+    """
+    Đăng xuất khỏi cổng Members - xóa session và redirect về /members
+    """
+    session.pop('members_gate_ok', None)
+    session.pop('members_gate_user', None)
+    logger.info("Members gate logout")
+    return redirect('/members')
 
 # Route /gia-pha đã được thay thế bằng /genealogy
 
@@ -5417,7 +5481,14 @@ def get_members():
     Đây là database chuẩn nhất (được update thường xuyên).
     Các API khác (như /api/tree, /api/person) sẽ đối chiếu và sử dụng cùng logic query
     để đảm bảo thông tin trả về chính xác và nhất quán.
+    
+    Yêu cầu: Phải đăng nhập qua cổng Members (session['members_gate_ok'] = True)
     """
+    # Kiểm tra session gate
+    if not session.get('members_gate_ok'):
+        logger.warning("Unauthorized access to /api/members - members_gate_ok not set")
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    
     logger.info("📥 API /api/members được gọi (source of truth)")
     connection = None
     cursor = None
@@ -6609,6 +6680,146 @@ def verify_password_api():
     except Exception as e:
         logger.error(f"Error verifying password: {e}", exc_info=True)
         return jsonify({'success': False, 'error': f'Lỗi server: {str(e)}'}), 500
+
+@app.route('/api/admin/activity-logs', methods=['GET'])
+@login_required
+def api_admin_activity_logs():
+    """API lấy activity logs (admin only)"""
+    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+        return jsonify({'success': False, 'error': 'Không có quyền truy cập'}), 403
+    
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        
+        # Kiểm tra xem bảng activity_logs có tồn tại không
+        cursor.execute("SHOW TABLES LIKE 'activity_logs'")
+        table_exists = cursor.fetchone()
+        
+        if not table_exists:
+            return jsonify({'success': False, 'error': 'Activity logs table not found'}), 404
+        
+        # Lấy query parameters
+        limit = request.args.get('limit', default=100, type=int)
+        offset = request.args.get('offset', default=0, type=int)
+        action_filter = request.args.get('action', default=None, type=str)
+        target_type_filter = request.args.get('target_type', default=None, type=str)
+        user_id_filter = request.args.get('user_id', default=None, type=int)
+        
+        # Kiểm tra cấu trúc bảng để xác định tên cột ID
+        cursor.execute("SHOW COLUMNS FROM activity_logs LIKE 'log_id'")
+        has_log_id = cursor.fetchone()
+        id_column = 'log_id' if has_log_id else 'id'
+        
+        # Kiểm tra cột created_at hoặc timestamp
+        cursor.execute("SHOW COLUMNS FROM activity_logs LIKE 'created_at'")
+        has_created_at = cursor.fetchone()
+        time_column = 'created_at' if has_created_at else 'timestamp'
+        
+        # Xây dựng query với filters
+        query = f"""
+            SELECT 
+                al.{id_column} as log_id,
+                al.user_id,
+                al.action,
+                al.target_type,
+                al.target_id,
+                al.before_data,
+                al.after_data,
+                al.ip_address,
+                al.user_agent,
+                al.{time_column} as created_at,
+                u.username,
+                u.full_name
+            FROM activity_logs al
+            LEFT JOIN users u ON al.user_id = u.user_id
+            WHERE 1=1
+        """
+        params = []
+        
+        if action_filter:
+            query += " AND al.action = %s"
+            params.append(action_filter)
+        
+        if target_type_filter:
+            query += " AND al.target_type = %s"
+            params.append(target_type_filter)
+        
+        if user_id_filter:
+            query += " AND al.user_id = %s"
+            params.append(user_id_filter)
+        
+        # Đếm tổng số logs (trước khi áp dụng LIMIT/OFFSET)
+        count_query = f"""
+            SELECT COUNT(*) as total
+            FROM activity_logs al
+            LEFT JOIN users u ON al.user_id = u.user_id
+            WHERE 1=1
+        """
+        count_params = []
+        if action_filter:
+            count_query += " AND al.action = %s"
+            count_params.append(action_filter)
+        if target_type_filter:
+            count_query += " AND al.target_type = %s"
+            count_params.append(target_type_filter)
+        if user_id_filter:
+            count_query += " AND al.user_id = %s"
+            count_params.append(user_id_filter)
+        
+        cursor.execute(count_query, count_params)
+        total_result = cursor.fetchone()
+        total = total_result['total'] if total_result else 0
+        
+        # Thêm ORDER BY và LIMIT/OFFSET
+        query += f" ORDER BY al.{time_column} DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        
+        cursor.execute(query, params)
+        logs = cursor.fetchall()
+        
+        # Parse JSON trong before_data và after_data
+        for log in logs:
+            if log.get('before_data'):
+                try:
+                    log['before_data'] = json.loads(log['before_data']) if isinstance(log['before_data'], str) else log['before_data']
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            
+            if log.get('after_data'):
+                try:
+                    log['after_data'] = json.loads(log['after_data']) if isinstance(log['after_data'], str) else log['after_data']
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            
+            # Format created_at
+            if log.get('created_at'):
+                if hasattr(log['created_at'], 'isoformat'):
+                    log['created_at'] = log['created_at'].isoformat()
+                else:
+                    log['created_at'] = str(log['created_at'])
+        
+        return jsonify({
+            'success': True,
+            'logs': logs,
+            'total': total,
+            'limit': limit,
+            'offset': offset
+        })
+        
+    except Error as e:
+        logger.error(f"Error in activity logs API: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception as e:
+        logger.error(f"Unexpected error in activity logs API: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
 
 @app.route('/api/admin/backup', methods=['POST'])
 def create_backup_api():
