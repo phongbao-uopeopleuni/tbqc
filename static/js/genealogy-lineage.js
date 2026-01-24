@@ -848,12 +848,12 @@ function formatSuggestion(person) {
   } else if (mother) {
     parentInfo = `Con của Bà ${mother}`;
   } else {
-    parentInfo = 'Chưa có thông tin cha mẹ';
+    parentInfo = ''; // Bỏ dòng "Chưa có thông tin cha mẹ"
   }
   
   // Format theo yêu cầu: "Đời X – Con của Ông [Tên bố] & Bà [Tên mẹ]"
   // Thêm nhánh nếu có để phân biệt rõ hơn
-  let result = `Đời ${gen} – ${parentInfo}`;
+  let result = parentInfo ? `Đời ${gen} – ${parentInfo}` : `Đời ${gen}`;
   if (branch && branch !== 'Chưa có thông tin') {
     result += ` – Nhánh: ${branch}`;
   }
@@ -920,8 +920,8 @@ function formatLineageAsHTMLWithParents(lineage) {
     
     let parentInfo = '';
     if (isPlaceholder) {
-      // Placeholder: không có thông tin cha mẹ
-      parentInfo = '<div class="lineage-parents" style="color: #999; font-style: italic;">Chưa có dữ liệu</div>';
+      // Placeholder: không có thông tin cha mẹ - bỏ hiển thị
+      parentInfo = '';
     } else if (father && mother) {
       // Có cả cha và mẹ
       parentInfo = `<div class="lineage-parents">Con của: <strong>Ông ${father}</strong> & <strong>Bà ${mother}</strong></div>`;
@@ -931,10 +931,8 @@ function formatLineageAsHTMLWithParents(lineage) {
     } else if (mother) {
       // Chỉ có mẹ
       parentInfo = `<div class="lineage-parents">Con của: <strong>Bà ${mother}</strong></div>`;
-    } else {
-      // Không có thông tin cha mẹ (theo đúng dữ liệu)
-      parentInfo = '<div class="lineage-parents" style="color: #999; font-style: italic;">Chưa có thông tin cha mẹ</div>';
     }
+    // Bỏ hiển thị "Chưa có thông tin cha mẹ" khi không có cả cha lẫn mẹ
     
     const personIdAttr = person.person_id ? `data-person-id="${person.person_id}"` : '';
     

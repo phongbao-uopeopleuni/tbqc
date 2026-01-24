@@ -391,17 +391,8 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
     
     parentsDiv.textContent = parentText;
     nodeDiv.appendChild(parentsDiv);
-  } else {
-    // Nếu không có thông tin cha mẹ
-    const noParentsDiv = document.createElement("div");
-    noParentsDiv.className = "node-parents";
-    noParentsDiv.style.fontSize = "11px";
-    noParentsDiv.style.color = "#999";
-    noParentsDiv.style.fontStyle = "italic";
-    noParentsDiv.style.marginBottom = "6px";
-    noParentsDiv.textContent = "Chưa có thông tin cha mẹ";
-    nodeDiv.appendChild(noParentsDiv);
   }
+  // Bỏ hiển thị "Chưa có thông tin cha mẹ" khi không có thông tin cha mẹ
 
   // Badge Đời - đẹp hơn
   if (person.generation) {
@@ -636,7 +627,7 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
   }
 
   // Y = generation (dọc) - đời 1 ở trên, đời 8 ở dưới
-  const verticalGap = 220; // Tăng khoảng cách giữa các đời để tránh chồng lên nhau và thể hiện rẽ nhánh rõ hơn
+  const verticalGap = 120; // Giảm khoảng cách giữa các đời để đường đỏ ngắn lại, dễ nhìn
   const normalizedGeneration = generation - minGeneration;
   // Đảm bảo đời thấp nhất (minGeneration) ở trên cùng
   node.y = normalizedGeneration * verticalGap + 40;

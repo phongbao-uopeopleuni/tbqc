@@ -2371,9 +2371,8 @@
               parentInfo = `Con của: Ông ${escapeHtml(fatherName)}`;
             } else if (motherName) {
               parentInfo = `Con của: Bà ${escapeHtml(motherName)}`;
-            } else {
-              parentInfo = 'Chưa có thông tin cha mẹ';
             }
+            // Bỏ hiển thị "Chưa có thông tin cha mẹ" khi không có cả cha lẫn mẹ
             
             // Add FM_ID indicator if available to help distinguish duplicates
             const fmIdDisplay = person.father_mother_id || person.fm_id ? ` <span style="color: #999; font-size: 12px;">(FM: ${escapeHtml(person.father_mother_id || person.fm_id)})</span>` : '';
@@ -2383,9 +2382,7 @@
                 <div class="suggestion-name" style="font-weight: 600; color: #7b1a1a; font-size: 16px; margin-bottom: 4px;">
                   ${escapeHtml(name)} – Đời ${gen}${fmIdDisplay}
                 </div>
-                <div class="suggestion-details" style="color: #666; font-size: 14px;">
-                  ${parentInfo}
-                </div>
+                ${parentInfo ? `<div class="suggestion-details" style="color: #666; font-size: 14px;">${parentInfo}</div>` : ''}
               </div>
             `;
           }).join('');
@@ -2588,9 +2585,8 @@
                 parentInfo = `Con của: Ông ${escapeHtml(fatherName)}`;
               } else if (motherName) {
                 parentInfo = `Con của: Bà ${escapeHtml(motherName)}`;
-              } else {
-                parentInfo = 'Chưa có thông tin cha mẹ';
               }
+              // Bỏ hiển thị "Chưa có thông tin cha mẹ" khi không có cả cha lẫn mẹ
               
               // Add FM_ID indicator if available to help distinguish duplicates
               const fmIdDisplay = person.father_mother_id || person.fm_id ? ` <span style="color: #999; font-size: 12px;">(FM: ${escapeHtml(person.father_mother_id || person.fm_id)})</span>` : '';
@@ -2600,9 +2596,7 @@
                   <div class="suggestion-name" style="font-weight: 600; color: #7b1a1a; font-size: 16px; margin-bottom: 4px;">
                     ${escapeHtml(name)} – Đời ${gen}${fmIdDisplay}
                   </div>
-                  <div class="suggestion-details" style="color: #666; font-size: 14px;">
-                    ${parentInfo}
-                  </div>
+                  ${parentInfo ? `<div class="suggestion-details" style="color: #666; font-size: 14px;">${parentInfo}</div>` : ''}
                 </div>
               `;
             }).join('');
@@ -2950,12 +2944,11 @@
         if (fatherName && motherName) {
           parentInfo = `Con của Ông ${escapeHtml(fatherName)} và Bà ${escapeHtml(motherName)}`;
         } else if (fatherName) {
-          parentInfo = `Con của Ông ${escapeHtml(fatherName)} và Bà Chưa có thông tin`;
+          parentInfo = `Con của Ông ${escapeHtml(fatherName)}`;
         } else if (motherName) {
-          parentInfo = `Con của Ông Chưa có thông tin và Bà ${escapeHtml(motherName)}`;
-        } else {
-          parentInfo = 'Con của Ông Chưa có thông tin và Bà Chưa có thông tin';
+          parentInfo = `Con của Bà ${escapeHtml(motherName)}`;
         }
+        // Bỏ hiển thị "Chưa có thông tin" khi không có cả cha lẫn mẹ
         
         // Badge color by generation
         let badgeColor = '';
@@ -3015,7 +3008,7 @@
                 line-height: 1.4;
               ">${titleLine}</h3>
             </div>
-            <div style="
+            ${parentInfo ? `<div style="
               color: #333;
               font-size: 14px;
               line-height: 1.6;
@@ -3023,7 +3016,7 @@
               margin-top: 6px;
             ">
               ${parentInfo}
-            </div>
+            </div>` : ''}
           </div>
         `;
       }

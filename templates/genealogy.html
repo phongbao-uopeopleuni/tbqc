@@ -1969,18 +1969,15 @@
               parentInfo = `Con của: Ông ${escapeHtml(fatherName)}`;
             } else if (motherName) {
               parentInfo = `Con của: Bà ${escapeHtml(motherName)}`;
-            } else {
-              parentInfo = 'Chưa có thông tin cha mẹ';
             }
+            // Bỏ hiển thị "Chưa có thông tin cha mẹ" khi không có cả cha lẫn mẹ
             
             return `
               <div class="suggestion-item" onclick="selectSuggestionFromSearch('${person.person_id}')" style="cursor: pointer;">
                 <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
                   ${escapeHtml(name)} – Đời ${gen}
           </div>
-                <div style="color: var(--color-text-muted); font-size: 14px;">
-                  ${parentInfo}
-                </div>
+                ${parentInfo ? `<div style="color: var(--color-text-muted); font-size: 14px;">${parentInfo}</div>` : ''}
               </div>
             `;
           }).join('');
@@ -2058,18 +2055,15 @@
                 parentInfo = `Con của: Ông ${escapeHtml(fatherName)}`;
               } else if (motherName) {
                 parentInfo = `Con của: Bà ${escapeHtml(motherName)}`;
-              } else {
-                parentInfo = 'Chưa có thông tin cha mẹ';
               }
+              // Bỏ hiển thị "Chưa có thông tin cha mẹ" khi không có cả cha lẫn mẹ
               
               return `
                 <div class="suggestion-item" onclick="selectSuggestionFromSearch('${person.person_id}')" style="cursor: pointer;">
                   <div style="font-weight: 600; color: var(--color-primary); margin-bottom: 4px;">
                     ${escapeHtml(name)} – Đời ${gen}
         </div>
-                  <div style="color: var(--color-text-muted); font-size: 14px;">
-                    ${parentInfo}
-                  </div>
+                  ${parentInfo ? `<div style="color: var(--color-text-muted); font-size: 14px;">${parentInfo}</div>` : ''}
                 </div>
               `;
             }).join('');
@@ -2304,7 +2298,7 @@
         const genNum = parseInt(gen);
         
         if (genNum === 1 && personsInGen.length > 1) {
-          timelineHTML += '<div style="display: flex; flex-direction: row; gap: 16px; width: 100%; margin-bottom: 16px;">';
+          timelineHTML += '<div style="display: flex; flex-direction: row; gap: 8px; width: 100%; margin-bottom: 8px;">';
           personsInGen.forEach(p => {
             timelineHTML += generatePersonCard(p, genNum, false);
           });
@@ -2329,12 +2323,11 @@
         if (fatherName && motherName) {
           parentInfo = `Con của Ông ${escapeHtml(fatherName)} và Bà ${escapeHtml(motherName)}`;
         } else if (fatherName) {
-          parentInfo = `Con của Ông ${escapeHtml(fatherName)} và Bà Chưa có thông tin`;
+          parentInfo = `Con của Ông ${escapeHtml(fatherName)}`;
         } else if (motherName) {
-          parentInfo = `Con của Ông Chưa có thông tin và Bà ${escapeHtml(motherName)}`;
-        } else {
-          parentInfo = 'Con của Ông Chưa có thông tin và Bà Chưa có thông tin';
+          parentInfo = `Con của Bà ${escapeHtml(motherName)}`;
         }
+        // Bỏ hiển thị "Chưa có thông tin" khi không có cả cha lẫn mẹ
         
         let badgeColor = '';
         if (gen === 0) badgeColor = 'background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);'; // Màu xanh đậm cho Tổ tiên
@@ -2347,7 +2340,7 @@
         else badgeColor = 'background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);';
         
         const cardWidth = (!isFullWidth) ? 'calc(50% - 8px)' : '100%';
-        const cardMargin = (!isFullWidth) ? '0' : '0 0 16px 0';
+        const cardMargin = (!isFullWidth) ? '0' : '0 0 8px 0';
         
         return `
           <div style="
@@ -2389,7 +2382,7 @@
               padding-left: 0;
               margin-top: 6px;
             ">
-              ${parentInfo}
+              ${parentInfo ? `<div style="margin-top: 8px; font-size: 13px; color: #666;">${parentInfo}</div>` : ''}
         </div>
           </div>
         `;
