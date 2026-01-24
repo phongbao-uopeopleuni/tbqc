@@ -1,0 +1,255 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Dashboard - Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+  }
+
+  .stat-card {
+    background: white;
+    padding: var(--space-6);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+
+  .stat-card .icon {
+    font-size: 48px;
+    margin-bottom: var(--space-3);
+  }
+
+  .stat-card .value {
+    font-size: var(--font-size-3xl, 32px);
+    font-weight: var(--font-weight-bold, 700);
+    color: var(--color-primary, #2563eb);
+    margin-bottom: var(--space-2);
+  }
+
+  .stat-card .label {
+    color: var(--color-text-muted, #6b7280);
+    font-size: var(--font-size-sm, 14px);
+  }
+
+  .website-structure {
+    background: white;
+    padding: var(--space-6);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: var(--space-6);
+  }
+
+  .tree-structure {
+    font-family: 'Courier New', monospace;
+    font-size: var(--font-size-sm, 14px);
+    line-height: 1.8;
+    padding: var(--space-4);
+    background: #f9fafb;
+    border-radius: var(--radius, 6px);
+    overflow-x: auto;
+  }
+
+  .tree-structure .tree-item {
+    margin-left: 20px;
+  }
+
+  .tree-structure .tree-item.level-0 {
+    margin-left: 0;
+    font-weight: var(--font-weight-bold, 700);
+  }
+
+  .tree-structure .tree-item.level-1 {
+    margin-left: 20px;
+  }
+
+  .tree-structure .tree-item.level-2 {
+    margin-left: 40px;
+  }
+
+  .tree-structure .gate-badge {
+    display: inline-block;
+    background: #f59e0b;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    margin-left: 8px;
+  }
+
+  .system-info {
+    background: white;
+    padding: var(--space-6);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+  }
+
+  .info-row:last-child {
+    border-bottom: none;
+  }
+
+  .info-label {
+    font-weight: var(--font-weight-semibold, 600);
+    color: var(--color-text-muted, #6b7280);
+  }
+
+  .info-value {
+    color: var(--color-text, #111827);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+  <h1>📊 Dashboard</h1>
+  <p style="color: var(--color-text-muted, #6b7280); margin-bottom: var(--space-6);">
+    Tổng quan hệ thống và cấu trúc website
+  </p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="dashboard-grid">
+  <div class="stat-card">
+    <div class="icon">👥</div>
+    <div class="value" id="totalUsers">-</div>
+    <div class="label">Tổng số người dùng</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon">📝</div>
+    <div class="value" id="totalActivities">-</div>
+    <div class="label">Tổng số hoạt động</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon">👨‍👩‍👧‍👦</div>
+    <div class="value" id="totalMembers">-</div>
+    <div class="label">Tổng số thành viên</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon">📋</div>
+    <div class="value" id="totalLogs">-</div>
+    <div class="label">Tổng số logs</div>
+  </div>
+</div>
+
+<!-- Website Structure -->
+<div class="website-structure">
+  <h2>🌐 Cấu trúc Website</h2>
+  <div class="tree-structure">
+    <div class="tree-item level-0">Trang chủ (/)</div>
+    <div class="tree-item level-1">├── Gia phả (/genealogy) <span class="gate-badge">Cổng passphrase</span></div>
+    <div class="tree-item level-1">├── Hoạt động (/activities)</div>
+    <div class="tree-item level-1">├── Thành viên (/members) <span class="gate-badge">Cổng 4 accounts</span></div>
+    <div class="tree-item level-1">├── Liên hệ (/contact)</div>
+    <div class="tree-item level-1">├── Tài liệu (/documents)</div>
+    <div class="tree-item level-1">└── VR Tour (/vr-tour)</div>
+    <div class="tree-item level-0" style="margin-top: 15px;">Admin Panel (/admin/*)</div>
+    <div class="tree-item level-1">├── Dashboard (/admin/dashboard)</div>
+    <div class="tree-item level-1">├── Quản lý dữ liệu (/admin/data-management)</div>
+    <div class="tree-item level-1">├── Log (/admin/logs)</div>
+    <div class="tree-item level-1">├── Tài khoản (/admin/users)</div>
+    <div class="tree-item level-1">└── Hoạt động (/admin/activities) <span class="gate-badge">Cổng 4 accounts</span></div>
+  </div>
+</div>
+
+<!-- System Info -->
+<div class="system-info">
+  <h2>ℹ️ Thông tin hệ thống</h2>
+  <div class="info-row">
+    <span class="info-label">Database:</span>
+    <span class="info-value" id="dbName">-</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Số bảng:</span>
+    <span class="info-value" id="dbTables">-</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Server:</span>
+    <span class="info-value">Railway</span>
+  </div>
+</div>
+
+<script>
+  async function loadDashboardStats() {
+    try {
+      // Load users count
+      try {
+        const usersRes = await fetch('/api/admin/users', { credentials: 'include' });
+        if (usersRes.ok) {
+          const users = await usersRes.json();
+          document.getElementById('totalUsers').textContent = Array.isArray(users) ? users.length : '-';
+        }
+      } catch (e) {
+        console.error('Error loading users:', e);
+      }
+
+      // Load activities count
+      try {
+        const activitiesRes = await fetch('/api/activities', { credentials: 'include' });
+        if (activitiesRes.ok) {
+          const activities = await activitiesRes.json();
+          document.getElementById('totalActivities').textContent = Array.isArray(activities) ? activities.length : '-';
+        }
+      } catch (e) {
+        console.error('Error loading activities:', e);
+      }
+
+      // Load members count
+      try {
+        const membersRes = await fetch('/api/members', { credentials: 'include' });
+        if (membersRes.ok) {
+          const result = await membersRes.json();
+          if (result.success && Array.isArray(result.data)) {
+            document.getElementById('totalMembers').textContent = result.data.length;
+          }
+        }
+      } catch (e) {
+        console.error('Error loading members:', e);
+      }
+
+      // Load logs count
+      try {
+        const logsRes = await fetch('/api/admin/activity-logs?limit=1', { credentials: 'include' });
+        if (logsRes.ok) {
+          const result = await logsRes.json();
+          if (result.success) {
+            document.getElementById('totalLogs').textContent = result.total || '-';
+          }
+        }
+      } catch (e) {
+        console.error('Error loading logs:', e);
+      }
+
+      // Load database info
+      try {
+        const dbInfoRes = await fetch('/admin/api/db-info', { credentials: 'include' });
+        if (dbInfoRes.ok) {
+          const dbInfo = await dbInfoRes.json();
+          if (dbInfo.success) {
+            document.getElementById('dbName').textContent = dbInfo.database || '-';
+            document.getElementById('dbTables').textContent = dbInfo.tables_count || '-';
+          }
+        }
+      } catch (e) {
+        console.error('Error loading DB info:', e);
+      }
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadDashboardStats();
+  });
+</script>
+{% endblock %}

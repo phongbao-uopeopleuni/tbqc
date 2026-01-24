@@ -5,7 +5,7 @@ Admin Routes
 Routes cho trang quản trị
 """
 
-from flask import render_template_string, request, jsonify, redirect, url_for, flash, session
+from flask import render_template_string, render_template, request, jsonify, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 try:
     from folder_py.db_config import get_db_connection
@@ -103,13 +103,13 @@ def register_admin_routes(app):
     @app.route('/admin/dashboard')
     @login_required
     def admin_dashboard():
-        """Trang dashboard admin - redirect đến quản lý users"""
+        """Trang dashboard admin"""
         # Check admin permission
         if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
             return redirect('/admin/login')
         
-        # Redirect đến trang quản lý users
-        return redirect('/admin/users')
+        # Render dashboard template
+        return render_template('admin_dashboard.html', current_user=current_user)
     
     @app.route('/admin/requests')
     @permission_required('canViewDashboard')
@@ -548,10 +548,102 @@ def register_admin_routes(app):
     # =====================================================
     
     @app.route('/admin/data-management')
-    @permission_required('canViewDashboard')
+    @login_required
     def admin_data_management():
-        """Trang quản lý dữ liệu CSV"""
-        return render_template_string(DATA_MANAGEMENT_TEMPLATE, current_user=current_user)
+        """Trang quản lý dữ liệu"""
+        # Check admin permission
+        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+            return redirect('/admin/login')
+        
+        # Render data management template
+        return render_template('admin_data_management.html', current_user=current_user)
+    
+    @app.route('/admin/logs')
+    @login_required
+    def admin_logs():
+        """Trang xem logs"""
+        # Check admin permission
+        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+            return redirect('/admin/login')
+        
+        # Render logs template
+        return render_template('admin_logs.html', current_user=current_user)
+    
+    @app.route('/admin/api/db-info')
+    @login_required
+    def admin_api_db_info():
+        """API lấy thông tin database"""
+        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Get database name
+            cursor.execute("SELECT DATABASE() as db_name")
+            db_result = cursor.fetchone()
+            db_name = db_result['db_name'] if db_result else 'unknown'
+            
+            # Get tables count
+            cursor.execute("SHOW TABLES")
+            tables = cursor.fetchall()
+            tables_count = len(tables)
+            
+            return jsonify({
+                'success': True,
+                'database': db_name,
+                'tables_count': tables_count
+            })
+        except Error as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    @app.route('/admin/api/table-stats')
+    @login_required
+    def admin_api_table_stats():
+        """API lấy số lượng records của một bảng"""
+        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        
+        table_name = request.args.get('table')
+        if not table_name:
+            return jsonify({'success': False, 'error': 'Table name required'}), 400
+        
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        
+        try:
+            cursor = connection.cursor(dictionary=True)
+            
+            # Check if table exists
+            cursor.execute("SHOW TABLES LIKE %s", (table_name,))
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'error': 'Table not found'}), 404
+            
+            # Get count
+            cursor.execute(f"SELECT COUNT(*) as count FROM `{table_name}`")
+            result = cursor.fetchone()
+            count = result['count'] if result else 0
+            
+            return jsonify({
+                'success': True,
+                'table': table_name,
+                'count': count
+            })
+        except Error as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
     
     def get_csv_filename(sheet_name):
         """Lấy tên file CSV dựa trên sheet name"""

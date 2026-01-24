@@ -1,14 +1,9 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>Quản lý Người dùng - Admin - Gia Phả Nguyễn Phước Tộc</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/main.css">
-  <style>
+{% extends "admin_base.html" %}
+
+{% block title %}Quản lý Người dùng - Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}
+
+{% block extra_css %}
+<style>
     .admin-container {
       max-width: 1200px;
       margin: 0 auto;
@@ -256,24 +251,9 @@
       }
     }
   </style>
-</head>
-<body>
-  <nav class="navbar">
-    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công – Gia Phả Nguyễn Phước Tộc</a>
-    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
-    <ul class="navbar-menu" id="navbarMenu">
-      <li><a href="/">Trang chủ</a></li>
-      <li><a href="/genealogy">Gia phả</a></li>
-      <li><a href="/activities">Hoạt động</a></li>
-      <li><a href="/members">Thành viên</a></li>
-      <li><a href="/contact">Liên hệ</a></li>
-      <li><a href="/admin/activities">Quản lý Bài đăng</a></li>
-      <li><a href="/admin/users" class="active">Quản lý Người dùng</a></li>
-      <li><a href="/api/logout">Đăng xuất</a></li>
-    </ul>
-  </nav>
+{% endblock %}
 
-  <div class="admin-container">
+{% block content %}
     <div class="admin-header">
       <h1>👥 Quản lý Người dùng</h1>
       <button class="btn btn-primary" onclick="openAddUserModal()">+ Thêm người dùng</button>
@@ -400,7 +380,6 @@
         </label>
       </div>
     </div>
-  </div>
 
   <!-- Modal Thêm/Sửa User -->
   <div id="userModal" class="form-modal">
@@ -829,6 +808,5 @@
     // Initialize activity logs on page load
     loadActivityLogs();
   </script>
-</body>
-</html>
+{% endblock %}
 

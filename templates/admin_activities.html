@@ -1,10 +1,8 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>Quản lý Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+{% extends "admin_base.html" %}
+
+{% block title %}Quản lý Hoạt động - Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}
+
+{% block extra_css %}
   <!-- Quill Editor CSS -->
   <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
   <style>
@@ -224,20 +222,9 @@
       color: #666;
     }
   </style>
-</head>
-<body>
-  <nav class="navbar">
-    <a href="/" class="navbar-logo">Gia Phả Nguyễn Phước Tộc</a>
-    <ul class="navbar-menu">
-      <li><a href="/">Trang chủ</a></li>
-      <li><a href="/activities">Hoạt động</a></li>
-      <li><a href="/admin/dashboard">Dashboard</a></li>
-      <li><a href="/admin/activities" class="active">Quản lý Hoạt động</a></li>
-      <li><a href="/api/logout" onclick="event.preventDefault(); logout();">Đăng xuất</a></li>
-    </ul>
-  </nav>
+{% endblock %}
 
-  <div class="container">
+{% block content %}
     <div class="page-header">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
@@ -843,5 +830,4 @@
       }
     })();
   </script>
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,213 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Quản lý Dữ liệu - Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}
+
+{% block extra_css %}
+<style>
+  .tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+
+  .table-card {
+    background: white;
+    padding: var(--space-5);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--color-primary, #2563eb);
+  }
+
+  .table-card h3 {
+    color: var(--color-primary, #2563eb);
+    margin-bottom: var(--space-2);
+    font-size: var(--font-size-lg, 18px);
+  }
+
+  .table-card .description {
+    color: var(--color-text-muted, #6b7280);
+    font-size: var(--font-size-sm, 14px);
+    margin-bottom: var(--space-3);
+  }
+
+  .table-card .record-count {
+    font-size: var(--font-size-xl, 24px);
+    font-weight: var(--font-weight-bold, 700);
+    color: var(--color-primary, #2563eb);
+    margin-bottom: var(--space-2);
+  }
+
+  .table-card .actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+  }
+
+  .section-header {
+    background: white;
+    padding: var(--space-6);
+    border-radius: var(--radius-md, 8px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: var(--space-6);
+  }
+
+  .section-header h2 {
+    color: var(--color-primary, #2563eb);
+    margin-bottom: var(--space-2);
+  }
+
+  .section-header p {
+    color: var(--color-text-muted, #6b7280);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <h1>💾 Quản lý Dữ liệu</h1>
+  <p>Quản lý và xem thông tin các bảng trong database Gia phả</p>
+</div>
+
+<!-- Main Tables -->
+<div class="section-header">
+  <h2>📊 Bảng chính (Gia phả)</h2>
+</div>
+<div class="tables-grid" id="mainTables">
+  <div class="table-card">
+    <h3>persons</h3>
+    <div class="description">Danh sách thành viên trong gia phả</div>
+    <div class="record-count" id="personsCount">-</div>
+    <div class="actions">
+      <a href="/members" class="btn btn-sm btn-primary">Xem danh sách</a>
+    </div>
+  </div>
+  <div class="table-card">
+    <h3>relationships</h3>
+    <div class="description">Quan hệ cha mẹ - con cái</div>
+    <div class="record-count" id="relationshipsCount">-</div>
+  </div>
+  <div class="table-card">
+    <h3>spouse_sibling_children</h3>
+    <div class="description">Hôn phối, anh chị em, con cái</div>
+    <div class="record-count" id="spouseSiblingChildrenCount">-</div>
+  </div>
+</div>
+
+<!-- Supporting Tables -->
+<div class="section-header">
+  <h2>🔧 Bảng phụ trợ</h2>
+</div>
+<div class="tables-grid" id="supportTables">
+  <div class="table-card">
+    <h3>activities</h3>
+    <div class="description">Hoạt động / Tin tức</div>
+    <div class="record-count" id="activitiesCount">-</div>
+    <div class="actions">
+      <a href="/admin/activities" class="btn btn-sm btn-primary">Quản lý</a>
+    </div>
+  </div>
+  <div class="table-card">
+    <h3>users</h3>
+    <div class="description">Tài khoản admin</div>
+    <div class="record-count" id="usersCount">-</div>
+    <div class="actions">
+      <a href="/admin/users" class="btn btn-sm btn-primary">Quản lý</a>
+    </div>
+  </div>
+  <div class="table-card">
+    <h3>activity_logs</h3>
+    <div class="description">Logs hoạt động hệ thống</div>
+    <div class="record-count" id="activityLogsCount">-</div>
+    <div class="actions">
+      <a href="/admin/logs" class="btn btn-sm btn-primary">Xem logs</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function loadTableStats() {
+    try {
+      // Load persons count
+      try {
+        const membersRes = await fetch('/api/members', { credentials: 'include' });
+        if (membersRes.ok) {
+          const result = await membersRes.json();
+          if (result.success && Array.isArray(result.data)) {
+            document.getElementById('personsCount').textContent = result.data.length;
+          }
+        }
+      } catch (e) {
+        console.error('Error loading persons:', e);
+      }
+
+      // Load relationships count
+      try {
+        const relRes = await fetch('/admin/api/table-stats?table=relationships', { credentials: 'include' });
+        if (relRes.ok) {
+          const result = await relRes.json();
+          if (result.success) {
+            document.getElementById('relationshipsCount').textContent = result.count || '-';
+          }
+        }
+      } catch (e) {
+        console.error('Error loading relationships:', e);
+      }
+
+      // Load spouse_sibling_children count
+      try {
+        const sscRes = await fetch('/admin/api/table-stats?table=spouse_sibling_children', { credentials: 'include' });
+        if (sscRes.ok) {
+          const result = await sscRes.json();
+          if (result.success) {
+            document.getElementById('spouseSiblingChildrenCount').textContent = result.count || '-';
+          }
+        }
+      } catch (e) {
+        console.error('Error loading spouse_sibling_children:', e);
+      }
+
+      // Load activities count
+      try {
+        const activitiesRes = await fetch('/api/activities', { credentials: 'include' });
+        if (activitiesRes.ok) {
+          const activities = await activitiesRes.json();
+          document.getElementById('activitiesCount').textContent = Array.isArray(activities) ? activities.length : '-';
+        }
+      } catch (e) {
+        console.error('Error loading activities:', e);
+      }
+
+      // Load users count
+      try {
+        const usersRes = await fetch('/api/admin/users', { credentials: 'include' });
+        if (usersRes.ok) {
+          const users = await usersRes.json();
+          document.getElementById('usersCount').textContent = Array.isArray(users) ? users.length : '-';
+        }
+      } catch (e) {
+        console.error('Error loading users:', e);
+      }
+
+      // Load activity_logs count
+      try {
+        const logsRes = await fetch('/api/admin/activity-logs?limit=1', { credentials: 'include' });
+        if (logsRes.ok) {
+          const result = await logsRes.json();
+          if (result.success) {
+            document.getElementById('activityLogsCount').textContent = result.total || '-';
+          }
+        }
+      } catch (e) {
+        console.error('Error loading activity_logs:', e);
+      }
+    } catch (error) {
+      console.error('Error loading table stats:', error);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadTableStats();
+  });
+</script>
+{% endblock %}

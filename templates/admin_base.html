@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>{% block title %}Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f5f5f5;
+      min-height: 100vh;
+      padding-top: 70px;
+    }
+
+    /* Admin Navigation Bar */
+    .admin-navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #111827;
+      color: white;
+      padding: 0 30px;
+      height: 70px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .admin-navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .admin-navbar-logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: #FFD700;
+      text-decoration: none;
+    }
+
+    .admin-navbar-menu {
+      display: flex;
+      gap: 0;
+      list-style: none;
+      align-items: center;
+    }
+
+    .admin-navbar-menu li {
+      position: relative;
+    }
+
+    .admin-navbar-menu a {
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 10px 15px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      display: block;
+    }
+
+    .admin-navbar-menu a:hover {
+      background: rgba(255, 215, 0, 0.1);
+      color: #FFD700;
+    }
+
+    .admin-navbar-menu a.active {
+      background: rgba(255, 215, 0, 0.2);
+      color: #FFD700;
+      font-weight: 600;
+    }
+
+    .admin-navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .admin-user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+    }
+
+    .admin-user-info .username {
+      font-weight: 600;
+      color: #FFD700;
+    }
+
+    .admin-user-info .role {
+      font-size: 12px;
+      color: #ccc;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .admin-logout-btn {
+      background: #dc2626;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+
+    .admin-logout-btn:hover {
+      background: #b91c1c;
+    }
+
+    /* Admin Container */
+    .admin-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: var(--space-6);
+    }
+
+    /* Cards */
+    .admin-card {
+      background: white;
+      border-radius: var(--radius-md, 8px);
+      padding: var(--space-6);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: var(--space-6);
+    }
+
+    .admin-card h2 {
+      color: var(--color-primary, #2563eb);
+      margin-bottom: var(--space-4);
+      font-size: var(--font-size-xl, 20px);
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: var(--radius, 6px);
+      font-size: var(--font-size-base, 14px);
+      font-weight: var(--font-weight-semibold, 600);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: var(--color-primary, #2563eb);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--color-primary-dark, #1d4ed8);
+    }
+
+    .btn-secondary {
+      background: var(--color-secondary, #6b7280);
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: var(--color-secondary-dark, #4b5563);
+    }
+
+    .btn-danger {
+      background: #dc2626;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: var(--font-size-sm, 12px);
+    }
+
+    /* Tables */
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: var(--radius-md, 8px);
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .admin-table th {
+      background: var(--color-primary, #2563eb);
+      color: white;
+      padding: var(--space-4);
+      text-align: left;
+      font-weight: var(--font-weight-semibold, 600);
+    }
+
+    .admin-table td {
+      padding: var(--space-4);
+      border-bottom: 1px solid var(--color-border, #e5e7eb);
+    }
+
+    .admin-table tr:hover {
+      background: var(--color-bg, #f9fafb);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .admin-navbar {
+        flex-direction: column;
+        height: auto;
+        padding: 15px;
+      }
+
+      .admin-navbar-left {
+        width: 100%;
+        justify-content: space-between;
+        margin-bottom: 15px;
+      }
+
+      .admin-navbar-menu {
+        flex-direction: column;
+        width: 100%;
+        gap: 5px;
+      }
+
+      .admin-navbar-menu a {
+        width: 100%;
+        text-align: center;
+      }
+
+      .admin-navbar-right {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .admin-container {
+        padding: var(--space-4);
+      }
+    }
+
+    {% block extra_css %}{% endblock %}
+  </style>
+</head>
+<body>
+  <!-- Admin Navigation Bar -->
+  <nav class="admin-navbar">
+    <div class="admin-navbar-left">
+      <a href="/" class="admin-navbar-logo">Phòng Tuy Biên Quận Công</a>
+      <ul class="admin-navbar-menu">
+        <li><a href="/admin/dashboard" {% if request.path == '/admin/dashboard' %}class="active"{% endif %}>Dashboard</a></li>
+        <li><a href="/admin/data-management" {% if request.path == '/admin/data-management' %}class="active"{% endif %}>Quản lý dữ liệu</a></li>
+        <li><a href="/admin/logs" {% if request.path == '/admin/logs' %}class="active"{% endif %}>Log</a></li>
+        <li><a href="/admin/users" {% if request.path == '/admin/users' %}class="active"{% endif %}>Tài khoản</a></li>
+        <li><a href="/admin/activities" {% if request.path == '/admin/activities' %}class="active"{% endif %}>Hoạt động</a></li>
+        <li><a href="/">Trang chủ</a></li>
+      </ul>
+    </div>
+    <div class="admin-navbar-right">
+      {% if current_user.is_authenticated %}
+      <div class="admin-user-info">
+        <span class="username">{{ current_user.username }}</span>
+        {% if current_user.full_name %}
+        <span>({{ current_user.full_name }})</span>
+        {% endif %}
+        <span class="role">{{ current_user.role }}</span>
+      </div>
+      {% endif %}
+      <a href="/admin/logout" class="admin-logout-btn">Đăng xuất</a>
+    </div>
+  </nav>
+
+  <!-- Content Area -->
+  <div class="admin-container">
+    {% block content %}{% endblock %}
+  </div>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

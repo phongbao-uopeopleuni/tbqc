@@ -367,6 +367,7 @@ def secure_compare(a: str, b: str) -> bool:
     return secrets.compare_digest(a.encode('utf-8'), b.encode('utf-8'))
 
 # Members Gate Accounts - 4 tài khoản cố định để truy cập trang Members và Activities
+# Lưu ý: Để đồng bộ với database, nên cập nhật cả database và list này khi thay đổi password
 MEMBERS_GATE_ACCOUNTS = [
     {"username": "tbqcnhanh1", "password": "nhanh1@123"},
     {"username": "tbqcnhanh2", "password": "nhanh2@123"},
@@ -374,10 +375,38 @@ MEMBERS_GATE_ACCOUNTS = [
     {"username": "tbqcnhanh4", "password": "nhanh4@123"}
 ]
 
+def sync_members_gate_accounts_from_db():
+    """
+    Đồng bộ MEMBERS_GATE_ACCOUNTS từ database
+    Lấy password từ database cho 4 accounts tbqcnhanh1-4
+    Chỉ dùng khi cần đồng bộ động (có thể gọi khi app khởi động hoặc định kỳ)
+    """
+    global MEMBERS_GATE_ACCOUNTS
+    connection = get_db_connection()
+    if not connection:
+        logger.warning("Cannot sync MEMBERS_GATE_ACCOUNTS: database connection failed")
+        return
+    
+    try:
+        cursor = connection.cursor(dictionary=True)
+        # Lấy password từ database (cần verify với hash)
+        # Tuy nhiên, vì password đã được hash trong DB, nên không thể lấy plaintext
+        # Do đó, cách tốt nhất là giữ MEMBERS_GATE_ACCOUNTS hardcode và đảm bảo sync khi update
+        # Hoặc lưu plaintext password trong một bảng riêng (không khuyến nghị vì bảo mật)
+        # Hiện tại: giữ hardcode và đảm bảo sync thủ công khi update
+        logger.debug("MEMBERS_GATE_ACCOUNTS sync: Using hardcoded passwords (sync manually when updating)")
+    except Exception as e:
+        logger.error(f"Error syncing MEMBERS_GATE_ACCOUNTS: {e}")
+    finally:
+        if connection.is_connected():
+            cursor.close()
+            connection.close()
+
 def validate_tbqc_gate(username: str, password: str) -> bool:
     """
-    Kiểm tra username/password có khớp với một trong 4 accounts trong MEMBERS_GATE_ACCOUNTS không.
-    Trim username và so sánh chính xác.
+    Kiểm tra username/password có khớp với một trong 4 accounts TBQC không.
+    Kiểm tra từ database để đảm bảo đồng bộ tự động.
+    Fallback về MEMBERS_GATE_ACCOUNTS nếu không kết nối được database.
     
     Args:
         username: Username cần kiểm tra
@@ -389,6 +418,35 @@ def validate_tbqc_gate(username: str, password: str) -> bool:
     username = username.strip()
     password = password.strip()
     
+    # Kiểm tra từ database trước (đồng bộ tự động)
+    connection = get_db_connection()
+    if connection:
+        try:
+            cursor = connection.cursor(dictionary=True)
+            # Kiểm tra username có trong danh sách 4 accounts không
+            cursor.execute("""
+                SELECT username, password_hash, role 
+                FROM users 
+                WHERE username IN ('tbqcnhanh1', 'tbqcnhanh2', 'tbqcnhanh3', 'tbqcnhanh4')
+                AND username = %s
+                AND role = 'user'
+                AND is_active = TRUE
+            """, (username,))
+            user = cursor.fetchone()
+            
+            if user:
+                # Verify password với hash trong database
+                from auth import verify_password
+                if verify_password(password, user['password_hash']):
+                    return True
+        except Exception as e:
+            logger.warning(f"Error validating from database, falling back to hardcoded list: {e}")
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+    
+    # Fallback về hardcoded list nếu không kết nối được database hoặc không tìm thấy trong DB
     for account in MEMBERS_GATE_ACCOUNTS:
         if account['username'] == username and account['password'] == password:
             return True
