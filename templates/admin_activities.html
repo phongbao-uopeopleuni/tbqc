@@ -262,6 +262,18 @@
             <textarea id="summary" name="summary"></textarea>
           </div>
           <div class="form-group">
+            <label for="category">Chuyên mục</label>
+            <input type="text" id="category" name="category" list="categorySuggestions" placeholder="Ví dụ: Hoạt động Hội đồng NPT VN, Báo chí với Nguyễn Phúc, Nhúm Lửa Nhỏ, Lăng Bà Tài Nhân...">
+            <datalist id="categorySuggestions">
+              <option value="Hoạt động Hội đồng NPT VN">
+              <option value="Báo chí với Nguyễn Phúc">
+              <option value="Nhúm Lửa Nhỏ">
+              <option value="Lăng Bà Tài Nhân">
+              <option value="Tin tức chung">
+            </datalist>
+            <small style="display:block;margin-top:4px;color:#666;font-size:12px;">Nhập tên chuyên mục hoặc chọn từ danh sách gợi ý</small>
+          </div>
+          <div class="form-group">
             <label for="content">Nội dung *</label>
             <div id="contentEditor" style="min-height: 300px; background: white; border: 1px solid #ddd; border-radius: 4px;"></div>
             <textarea id="content" name="content" required style="display: none;"></textarea>
@@ -434,6 +446,7 @@
         document.getElementById('activityId').value = post.id;
         document.getElementById('title').value = post.title || '';
         document.getElementById('summary').value = post.summary || '';
+        document.getElementById('category').value = post.category || '';
         // Set content vào Quill editor
         if (quillEditor && post.content) {
           quillEditor.root.innerHTML = post.content;
@@ -788,6 +801,7 @@
       const data = {
         title: document.getElementById('title').value.trim(),
         summary: document.getElementById('summary').value.trim(),
+        category: document.getElementById('category').value.trim() || null,
         content: contentHtml,
         status: document.getElementById('status').value,
         thumbnail: document.getElementById('thumbnail').value.trim(),

@@ -21,6 +21,9 @@ import csv
 import sys
 import logging
 import re
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -374,6 +377,13 @@ MEMBERS_GATE_ACCOUNTS = [
     {"username": "tbqcnhanh3", "password": "nhanh3@123"},
     {"username": "tbqcnhanh4", "password": "nhanh4@123"}
 ]
+
+# Cache cho bài đăng từ nguyenphuoctoc.info
+external_posts_cache = {
+    'data': None,
+    'timestamp': None,
+    'cache_duration': timedelta(hours=6)  # Cache 6 giờ
+}
 
 def sync_members_gate_accounts_from_db():
     """
@@ -1203,11 +1213,11 @@ def activity_detail_page(activity_id):
 @app.route('/documents')
 def documents_page():
     """
-    Trang tài liệu - hiển thị các tài liệu PDF (gia phả, hoàng tộc...)
+    Trang tài liệu - redirect về trang chủ với anchor #tai-lieu
     
-    Documents page - displays PDF documents (genealogy, royal family records...)
+    Documents page - redirect to homepage with #tai-lieu anchor
     """
-    return render_template('documents.html')
+    return redirect(url_for('index') + '#tai-lieu')
 
 @app.route('/vr-tour')
 def vr_tour_page():
@@ -1477,6 +1487,20 @@ def ensure_activities_table(cursor):
             cursor.execute("ALTER TABLE activities ADD COLUMN images JSON AFTER thumbnail")
     except Exception as e:
         logger.debug(f"Column images check: {e}")
+    
+    # Thêm cột category nếu chưa có (migration)
+    try:
+        cursor.execute("SHOW COLUMNS FROM activities LIKE 'category'")
+        if not cursor.fetchone():
+            cursor.execute("""
+                ALTER TABLE activities 
+                ADD COLUMN category VARCHAR(100) NULL 
+                COMMENT 'Chuyên mục (Hoạt động Hội đồng, Báo chí, Nhúm Lửa Nhỏ, ...)' 
+                AFTER summary
+            """)
+            logger.info("Added category column to activities table")
+    except Exception as e:
+        logger.debug(f"Column category check: {e}")
 
 def activity_row_to_json(row):
     """
@@ -1519,6 +1543,7 @@ def activity_row_to_json(row):
         'id': row.get('activity_id'),
         'title': row.get('title'),
         'summary': row.get('summary'),
+        'category': row.get('category'),
         'content': row.get('content'),
         'status': row.get('status'),
         'thumbnail': row.get('thumbnail'),
@@ -1605,6 +1630,7 @@ def api_activities():
         if request.method == 'GET':
             status = request.args.get('status')
             limit = request.args.get('limit', type=int)
+            category = request.args.get('category')
 
             sql = "SELECT * FROM activities"
             params = []
@@ -1612,6 +1638,9 @@ def api_activities():
             if status:
                 conditions.append("status = %s")
                 params.append(status)
+            if category:
+                conditions.append("category = %s")
+                params.append(category)
             if conditions:
                 sql += " WHERE " + " AND ".join(conditions)
             sql += " ORDER BY created_at DESC"
@@ -1637,14 +1666,25 @@ def api_activities():
         status_val = data.get('status', 'draft')
         thumbnail = data.get('thumbnail')
         images = data.get('images', [])
+        category = data.get('category', '').strip() if data.get('category') else None
         
         # Convert images list to JSON string
         images_json = json.dumps(images) if images else None
 
-        cursor.execute("""
-            INSERT INTO activities (title, summary, content, status, thumbnail, images)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (title, summary, content, status_val, thumbnail, images_json))
+        # Kiểm tra cột category có tồn tại không
+        cursor.execute("SHOW COLUMNS FROM activities LIKE 'category'")
+        has_category = cursor.fetchone()
+        
+        if has_category:
+            cursor.execute("""
+                INSERT INTO activities (title, summary, category, content, status, thumbnail, images)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (title, summary, category, content, status_val, thumbnail, images_json))
+        else:
+            cursor.execute("""
+                INSERT INTO activities (title, summary, content, status, thumbnail, images)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (title, summary, content, status_val, thumbnail, images_json))
         connection.commit()
         new_id = cursor.lastrowid
 
@@ -1697,21 +1737,40 @@ def api_activity_detail(activity_id):
             status_val = data.get('status', 'draft')
             thumbnail = data.get('thumbnail')
             images = data.get('images', [])
+            category = data.get('category', '').strip() if data.get('category') else None
             
             # Convert images list to JSON string
             images_json = json.dumps(images) if images else None
 
-            cursor.execute("""
-                UPDATE activities
-                SET title = %s,
-                    summary = %s,
-                    content = %s,
-                    status = %s,
-                    thumbnail = %s,
-                    images = %s,
-                    updated_at = NOW()
-                WHERE activity_id = %s
-            """, (title, summary, content, status_val, thumbnail, images_json, activity_id))
+            # Kiểm tra cột category có tồn tại không
+            cursor.execute("SHOW COLUMNS FROM activities LIKE 'category'")
+            has_category = cursor.fetchone()
+            
+            if has_category:
+                cursor.execute("""
+                    UPDATE activities
+                    SET title = %s,
+                        summary = %s,
+                        category = %s,
+                        content = %s,
+                        status = %s,
+                        thumbnail = %s,
+                        images = %s,
+                        updated_at = NOW()
+                    WHERE activity_id = %s
+                """, (title, summary, category, content, status_val, thumbnail, images_json, activity_id))
+            else:
+                cursor.execute("""
+                    UPDATE activities
+                    SET title = %s,
+                        summary = %s,
+                        content = %s,
+                        status = %s,
+                        thumbnail = %s,
+                        images = %s,
+                        updated_at = NOW()
+                    WHERE activity_id = %s
+                """, (title, summary, content, status_val, thumbnail, images_json, activity_id))
             connection.commit()
 
             cursor.execute("SELECT * FROM activities WHERE activity_id = %s", (activity_id,))
@@ -1730,6 +1789,142 @@ def api_activity_detail(activity_id):
         if connection.is_connected():
             cursor.close()
             connection.close()
+
+@app.route('/api/external-posts')
+def get_external_posts():
+    """
+    Fetch bài đăng từ nguyenphuoctoc.info với caching
+    Tránh làm nặng website bằng cách cache và chỉ fetch lại sau một khoảng thời gian
+    """
+    global external_posts_cache
+    
+    # Kiểm tra cache
+    now = datetime.now()
+    if (external_posts_cache['data'] is not None and 
+        external_posts_cache['timestamp'] is not None and
+        now - external_posts_cache['timestamp'] < external_posts_cache['cache_duration']):
+        # Trả về cache
+        return jsonify({
+            'success': True,
+            'cached': True,
+            'data': external_posts_cache['data'],
+            'cached_at': external_posts_cache['timestamp'].isoformat()
+        })
+    
+    try:
+        # Fetch từ nguồn
+        url = 'https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/'
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+        
+        # Parse HTML
+        soup = BeautifulSoup(response.content, 'lxml')
+        posts = []
+        
+        # Tìm các bài đăng - thử nhiều selector để tìm đúng cấu trúc
+        # Tìm các tiêu đề bài viết (h2, h3 có link)
+        article_headers = soup.select('h2 a, h3 a, .post-title a, .news-title a, article h2 a, article h3 a, .entry-title a')
+        
+        # Nếu không tìm thấy, thử tìm trong các container phổ biến
+        if not article_headers:
+            articles = soup.select('article, .post, .news-item, .entry')
+            for article in articles[:10]:
+                header = article.find(['h2', 'h3', 'h4'])
+                if header:
+                    link_elem = header.find('a')
+                    if link_elem:
+                        article_headers.append(link_elem)
+        
+        for header in article_headers[:10]:  # Lấy 10 bài mới nhất
+            try:
+                title = header.get_text(strip=True)
+                link = header.get('href', '')
+                
+                if not title:
+                    continue
+                
+                # Nếu link là relative, chuyển thành absolute
+                if link and not link.startswith('http'):
+                    if link.startswith('/'):
+                        link = f'https://nguyenphuoctoc.info{link}'
+                    else:
+                        link = f'https://nguyenphuoctoc.info/{link}'
+                
+                # Tìm phần tử cha để lấy thêm thông tin
+                parent = header.find_parent(['article', 'div', 'li', 'section'])
+                if not parent:
+                    parent = header.parent
+                
+                # Extract ngày tháng
+                date_str = ''
+                if parent:
+                    # Tìm các element chứa ngày tháng
+                    date_elem = parent.find(string=lambda x: x and ('/' in str(x) or '202' in str(x) or '2023' in str(x) or '2024' in str(x) or '2025' in str(x)))
+                    if not date_elem:
+                        date_elem = parent.find(['span', 'time', 'div'], class_=lambda x: x and ('date' in str(x).lower() if x else False))
+                    if not date_elem:
+                        date_elem = parent.find('time')
+                    
+                    if date_elem:
+                        if hasattr(date_elem, 'get_text'):
+                            date_str = date_elem.get_text(strip=True)
+                        else:
+                            date_str = str(date_elem).strip()
+                
+                # Extract mô tả
+                description = ''
+                if parent:
+                    desc_elem = parent.find('p')
+                    if desc_elem:
+                        description = desc_elem.get_text(strip=True)[:200]
+                
+                posts.append({
+                    'title': title,
+                    'link': link if link else 'https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/',
+                    'date': date_str,
+                    'description': description,
+                    'source': 'nguyenphuoctoc.info'
+                })
+            except Exception as e:
+                logger.debug(f"Error parsing post item: {e}")
+                continue  # Bỏ qua item lỗi
+        
+        # Lưu vào cache
+        external_posts_cache['data'] = posts
+        external_posts_cache['timestamp'] = now
+        
+        return jsonify({
+            'success': True,
+            'cached': False,
+            'data': posts,
+            'fetched_at': now.isoformat()
+        })
+        
+    except requests.RequestException as e:
+        logger.error(f"Error fetching external posts: {e}")
+        # Nếu fetch lỗi, trả về cache cũ (nếu có)
+        if external_posts_cache['data']:
+            return jsonify({
+                'success': True,
+                'cached': True,
+                'error': 'Fetch failed, returning cached data',
+                'data': external_posts_cache['data'],
+                'cached_at': external_posts_cache['timestamp'].isoformat() if external_posts_cache['timestamp'] else None
+            })
+        
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+    except Exception as e:
+        logger.error(f"Error parsing external posts: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Parse error: {str(e)}'
+        }), 500
 
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
