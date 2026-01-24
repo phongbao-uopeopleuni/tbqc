@@ -243,7 +243,17 @@
         <div>
           <h1>📝 Quản lý Hoạt động</h1>
           <p>Tạo, chỉnh sửa và quản lý các bài viết hoạt động</p>
+          {% if gate_username and not is_admin %}
+          <p style="margin-top: 10px; font-size: 14px; color: #666;">
+            Đang đăng nhập với: <strong>{{ gate_username }}</strong>
+          </p>
+          {% endif %}
         </div>
+        {% if gate_username and not is_admin %}
+        <a href="/activities/post-logout" class="btn btn-sm" style="background: #757575; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px;">
+          Đăng xuất
+        </a>
+        {% endif %}
       </div>
     </div>
 
@@ -381,14 +391,16 @@
 
     async function checkAuth() {
       try {
-        const result = await fetchJson('/api/current-user');
-        if (!result.success || !result.user || result.user.role !== 'admin') {
-          window.location.href = '/admin/login?next=/admin/activities';
+        const result = await fetchJson('/api/activities/can-post');
+        if (!result.allowed) {
+          // Không có quyền - redirect về /admin/activities (sẽ hiện gate)
+          window.location.href = '/admin/activities';
           return false;
         }
         return true;
       } catch (e) {
-        window.location.href = '/admin/login?next=/admin/activities';
+        // Lỗi - redirect về /admin/activities (sẽ hiện gate)
+        window.location.href = '/admin/activities';
         return false;
       }
     }

@@ -366,13 +366,33 @@ def secure_compare(a: str, b: str) -> bool:
     """
     return secrets.compare_digest(a.encode('utf-8'), b.encode('utf-8'))
 
-# Members Gate Accounts - 4 tài khoản cố định để truy cập trang Members
+# Members Gate Accounts - 4 tài khoản cố định để truy cập trang Members và Activities
 MEMBERS_GATE_ACCOUNTS = [
     {"username": "tbqcnhanh1", "password": "nhanh1@123"},
     {"username": "tbqcnhanh2", "password": "nhanh2@123"},
     {"username": "tbqcnhanh3", "password": "nhanh3@123"},
     {"username": "tbqcnhanh4", "password": "nhanh4@123"}
 ]
+
+def validate_tbqc_gate(username: str, password: str) -> bool:
+    """
+    Kiểm tra username/password có khớp với một trong 4 accounts trong MEMBERS_GATE_ACCOUNTS không.
+    Trim username và so sánh chính xác.
+    
+    Args:
+        username: Username cần kiểm tra
+        password: Password cần kiểm tra
+    
+    Returns:
+        True nếu khớp một cặp, False nếu không
+    """
+    username = username.strip()
+    password = password.strip()
+    
+    for account in MEMBERS_GATE_ACCOUNTS:
+        if account['username'] == username and account['password'] == password:
+            return True
+    return False
 
 def get_members_password():
     """
@@ -1156,20 +1176,42 @@ def admin_users_page():
     
     return render_template('admin_users.html')
 
+def can_post_activities():
+    """
+    Kiểm tra xem user có quyền đăng bài Activities không.
+    Trả về True nếu:
+    - current_user.is_authenticated và current_user.role == 'admin', hoặc
+    - session.get('activities_post_ok') is True
+    
+    Returns:
+        True nếu có quyền, False nếu không
+    """
+    # Admin đăng nhập qua /admin/login
+    if current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin':
+        return True
+    # User đăng nhập qua gate 4 accounts
+    if session.get('activities_post_ok'):
+        return True
+    return False
+
 @app.route('/admin/activities')
 def admin_activities_page():
     """
     Trang quản lý hoạt động (cập nhật bài đăng)
-    Cho phép admin, editor và user có quyền đăng bài truy cập
+    Yêu cầu: admin đăng nhập hoặc đăng nhập qua gate 4 accounts
     
     Admin activities management page (update posts)
-    Allows admin, editor and users with post permission to access
+    Requires: admin login or login via gate 4 accounts
     """
-    # Cho phép vào trang ngay, template sẽ tự check auth và redirect nếu cần
-    # Cho phép admin, editor và user có quyền đăng bài truy cập trang này
-    # (Không giới hạn chỉ admin như trước)
-    
-    return render_template('admin_activities.html')
+    # Kiểm tra quyền truy cập
+    if can_post_activities():
+        # Có quyền - render trang đầy đủ
+        gate_username = session.get('activities_post_user', '')
+        is_admin = current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin'
+        return render_template('admin_activities.html', gate_username=gate_username, is_admin=is_admin)
+    else:
+        # Chưa đăng nhập - render trang gate
+        return render_template('admin_activities_gate.html')
 
 # ---------------------------------------------------------------------------
 # ACTIVITIES API (Hoạt động / Tin tức)
@@ -1275,11 +1317,58 @@ def is_admin_user():
     except Exception:
         return False
 
+@app.route('/api/activities/post-login', methods=['POST'])
+def api_activities_post_login():
+    """
+    API đăng nhập cho cổng Activities (dùng 4 accounts)
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        if not username or not password:
+            return jsonify({'success': False, 'error': 'Tên đăng nhập và mật khẩu không được để trống'}), 400
+        
+        # Kiểm tra bằng helper function
+        if validate_tbqc_gate(username, password):
+            # Đăng nhập thành công - set session
+            session['activities_post_ok'] = True
+            session['activities_post_user'] = username
+            logger.info(f"Activities gate login successful: {username}")
+            return jsonify({'success': True, 'message': 'Đăng nhập thành công'})
+        else:
+            # Đăng nhập thất bại
+            logger.warning(f"Activities gate login failed: username={username}")
+            return jsonify({'success': False, 'error': 'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.'}), 401
+            
+    except Exception as e:
+        logger.error(f"Error in api_activities_post_login: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Lỗi server: ' + str(e)}), 500
+
+@app.route('/api/activities/can-post', methods=['GET'])
+def api_activities_can_post():
+    """
+    API kiểm tra xem có quyền đăng bài Activities không
+    """
+    allowed = can_post_activities()
+    return jsonify({'allowed': allowed})
+
+@app.route('/activities/post-logout', methods=['GET', 'POST'])
+def activities_post_logout():
+    """
+    Đăng xuất khỏi cổng Activities - xóa session và redirect về /admin/activities
+    """
+    session.pop('activities_post_ok', None)
+    session.pop('activities_post_user', None)
+    logger.info("Activities gate logout")
+    return redirect('/admin/activities')
+
 @app.route('/api/activities', methods=['GET', 'POST'])
 def api_activities():
     """
     GET: Trả về danh sách activities (hỗ trợ status, limit)
-    POST: Tạo activity mới (admin)
+    POST: Tạo activity mới (admin hoặc user đăng nhập qua gate)
     """
     connection = get_db_connection()
     if not connection:
@@ -1309,8 +1398,8 @@ def api_activities():
             rows = cursor.fetchall()
             return jsonify([activity_row_to_json(r) for r in rows])
 
-        # POST (create) - admin only
-        if not is_admin_user():
+        # POST (create) - admin hoặc user đăng nhập qua gate
+        if not can_post_activities():
             return jsonify({'success': False, 'error': 'Bạn không có quyền tạo bài viết'}), 403
 
         data = request.get_json(silent=True) or {}
@@ -1369,7 +1458,8 @@ def api_activity_detail(activity_id):
         if request.method == 'GET':
             return jsonify(activity_row_to_json(row))
 
-        if not is_admin_user():
+        # PUT và DELETE - admin hoặc user đăng nhập qua gate
+        if not can_post_activities():
             return jsonify({'success': False, 'error': 'Bạn không có quyền chỉnh sửa/xóa bài viết'}), 403
 
         if request.method == 'PUT':
@@ -1594,14 +1684,8 @@ def members_verify():
         if not username or not password:
             return jsonify({'success': False, 'error': 'Tên đăng nhập và mật khẩu không được để trống'}), 400
         
-        # Kiểm tra trong 4 accounts
-        is_valid = False
-        for account in MEMBERS_GATE_ACCOUNTS:
-            if account['username'] == username and account['password'] == password:
-                is_valid = True
-                break
-        
-        if is_valid:
+        # Kiểm tra bằng helper function
+        if validate_tbqc_gate(username, password):
             # Đăng nhập thành công - set session
             session['members_gate_ok'] = True
             session['members_gate_user'] = username
