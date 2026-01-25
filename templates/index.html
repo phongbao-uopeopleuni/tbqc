@@ -431,11 +431,15 @@
     .external-post-item {
       background: #FFF8DC;
       border-radius: 8px;
-      padding: 20px;
+      padding: 0;
       margin-bottom: 20px;
       border-left: 4px solid #DAA520;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
+      overflow: hidden;
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
     }
 
     .external-post-item:hover {
@@ -443,10 +447,48 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 
+    .external-post-thumbnail {
+      flex-shrink: 0;
+      width: 200px;
+      min-height: 150px;
+      background: #f0f0f0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .external-post-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .external-post-thumbnail-placeholder {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #8B0000 0%, #DAA520 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 48px;
+      opacity: 0.3;
+    }
+
+    .external-post-content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
     .external-post-title {
       margin: 0 0 12px 0;
       font-size: 18px;
       color: #8B0000;
+      line-height: 1.4;
     }
 
     .external-post-title a {
@@ -473,11 +515,12 @@
       font-size: 14px;
       color: #555;
       line-height: 1.6;
-      margin: 0;
+      margin: 0 0 12px 0;
+      flex: 1;
     }
 
     .external-post-source {
-      margin-top: 12px;
+      margin-top: auto;
       padding-top: 12px;
       border-top: 1px solid #e0e0e0;
       font-size: 11px;
@@ -487,6 +530,16 @@
 
     @media (max-width: 768px) {
       .external-post-item {
+        flex-direction: column;
+        padding: 0;
+      }
+
+      .external-post-thumbnail {
+        width: 100%;
+        height: 180px;
+      }
+
+      .external-post-content {
         padding: 16px;
       }
 
@@ -596,6 +649,26 @@
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       border: 1px solid #E6D5B8;
+      transition: all 0.3s ease;
+    }
+
+    .hot-news-section:hover {
+      box-shadow: 0 4px 16px rgba(139, 0, 0, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .hot-news-title {
+      position: relative;
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        text-shadow: 0 0 5px rgba(139, 0, 0, 0.3);
+      }
+      50% {
+        text-shadow: 0 0 15px rgba(218, 165, 32, 0.6), 0 0 25px rgba(139, 0, 0, 0.4);
+      }
     }
 
     .hot-news-list {
@@ -787,61 +860,64 @@
     }
 
     .documents-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-top: 30px;
     }
 
     .document-card {
       background: #FFF8DC;
-      border-radius: 8px;
-      padding: 16px 20px;
+      border-radius: 12px;
+      padding: 24px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-      transition: background 0.3s ease, box-shadow 0.3s ease;
+      transition: all 0.3s ease;
       display: flex;
-      flex-direction: row;
-      align-items: center;
+      flex-direction: column;
+      align-items: flex-start;
       border: 1px solid #E6D5B8;
-      gap: 16px;
+      height: 100%;
     }
 
     .document-card:hover {
       background: #FFFEF5;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
     }
 
     .document-icon {
-      font-size: 32px;
+      font-size: 48px;
       color: #8B0000;
-      flex-shrink: 0;
-      width: 40px;
+      margin-bottom: 16px;
       text-align: center;
+      width: 100%;
     }
 
     .document-title {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 600;
       color: #8B0000;
-      margin: 0;
-      flex: 1;
+      margin: 0 0 12px 0;
       text-align: left;
+      line-height: 1.4;
     }
 
     .document-description {
       font-size: 14px;
       color: #6b7280;
-      line-height: 1.5;
-      margin: 0;
-      flex: 1;
+      line-height: 1.6;
+      margin: 0 0 20px 0;
       text-align: left;
+      flex: 1;
     }
 
     .document-actions {
       display: flex;
-      gap: 8px;
-      justify-content: flex-end;
+      gap: 10px;
+      justify-content: flex-start;
       flex-shrink: 0;
+      width: 100%;
+      margin-top: auto;
     }
 
     .btn-view {
@@ -894,40 +970,39 @@
       }
 
       .documents-grid {
-        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
       }
 
       .document-card {
-        padding: 12px 16px;
-        flex-wrap: wrap;
+        padding: 20px;
       }
 
       .document-icon {
-        font-size: 28px;
-        width: 32px;
+        font-size: 40px;
+        margin-bottom: 12px;
       }
 
       .document-title {
-        font-size: 15px;
-        width: 100%;
-        margin-bottom: 8px;
+        font-size: 17px;
+        margin-bottom: 10px;
       }
 
       .document-description {
         font-size: 13px;
-        width: 100%;
-        margin-bottom: 8px;
+        margin-bottom: 16px;
       }
 
       .document-actions {
         width: 100%;
         justify-content: flex-start;
+        flex-wrap: wrap;
       }
 
       .btn-view,
       .btn-download {
         font-size: 12px;
-        padding: 6px 12px;
+        padding: 8px 14px;
       }
     }
 
@@ -962,21 +1037,30 @@
       }
 
       .document-icon {
-        font-size: 48px;
+        font-size: 40px;
+        margin-bottom: 12px;
       }
 
       .document-title {
-        font-size: 18px;
+        font-size: 17px;
+        margin-bottom: 10px;
+      }
+
+      .document-description {
+        font-size: 13px;
+        margin-bottom: 16px;
       }
 
       .document-actions {
         flex-direction: column;
+        width: 100%;
       }
 
       .btn-view,
       .btn-download {
         width: 100%;
         justify-content: center;
+        padding: 10px 16px;
       }
     }
 
@@ -1096,7 +1180,7 @@
       color: #555;
       text-decoration: none;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: bold;
       transition: all 0.3s ease;
       display: block;
       line-height: 1.6;
@@ -1117,7 +1201,7 @@
     .toc-list a.active {
       color: #8B0000;
       background: rgba(218, 165, 32, 0.2);
-      font-weight: 600;
+      font-weight: bold;
       border-left: 3px solid #DAA520;
       padding-left: 17px;
     }
@@ -1844,7 +1928,7 @@
           <li><a href="#so-hoa-gia-pha">Số Hóa Gia Phả – Kết Nối Quá Khứ Đến Tương Lai</a></li>
           <li><a href="#ket-tu">Kết Từ</a></li>
           <li><a href="#hinh-anh-nha-tho">Hình Ảnh Bên Trong Nhà Thờ</a></li>
-          <li><a href="#noi-dung-chinh">Nội dung chính</a></li>
+          <li><a href="#noi-dung-chinh">Thông tin hoạt động Phủ Tuy Biên</a></li>
           <li><a href="#hoat-dong-npt-vn">Hoạt động Hội đồng NPT VN</a></li>
           <li><a href="#tai-lieu">Tài liệu</a></li>
         </ul>
@@ -2223,11 +2307,11 @@
   <!-- Section: News Feed / Nội dung chính -->
   <section id="news-feed">
     <div class="section-container">
-      <h2 class="section-title" id="noi-dung-chinh">Nội dung chính</h2>
+      <h2 class="section-title" id="noi-dung-chinh">Thông tin hoạt động Phủ Tuy Biên</h2>
       <div class="news-feed-container">
         <!-- Bài nổi bật -->
         <div class="featured-posts-section">
-          <h3 style="color: #8B0000; font-size: clamp(20px, 4vw, 24px); margin-bottom: var(--space-4); border-bottom: 2px solid #DAA520; padding-bottom: var(--space-2);">⭐ Bài nổi bật</h3>
+          <h3 style="color: #8B0000; font-size: clamp(20px, 4vw, 24px); margin-bottom: var(--space-4); border-bottom: 2px solid #DAA520; padding-bottom: var(--space-2);">Bài nổi bật</h3>
           <div id="featuredPosts" class="featured-posts">
             <div style="text-align: center; padding: var(--space-8); color: var(--color-text-muted, #6b7280);">
               Đang tải...
@@ -2237,7 +2321,7 @@
 
         <!-- Tin nổi bật -->
         <div class="hot-news-section">
-          <h3 style="color: #8B0000; font-size: clamp(20px, 4vw, 24px); margin-bottom: var(--space-4); border-bottom: 2px solid #DAA520; padding-bottom: var(--space-2);">🔥 TIN NỔI BẬT</h3>
+          <h3 class="hot-news-title" style="color: #8B0000; font-size: clamp(20px, 4vw, 24px); margin-bottom: var(--space-4); border-bottom: 2px solid #DAA520; padding-bottom: var(--space-2);">TIN NỔI BẬT</h3>
           <ul id="hotNewsList" class="hot-news-list">
             <li style="text-align: center; padding: var(--space-4); color: var(--color-text-muted, #6b7280);">Đang tải...</li>
           </ul>
@@ -2289,7 +2373,7 @@
       <div style="margin-bottom: 40px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h2 style="font-size: 24px; color: #8B0000; margin-bottom: 10px;">
-            📚 Phần 1: Tài liệu lịch sử chính
+            Phần 1: Tài liệu lịch sử chính
           </h2>
           <p style="color: #6b7280; font-size: 14px;">
             Các tài liệu quý giá về lịch sử và phả hệ hoàng tộc triều Nguyễn
@@ -2298,7 +2382,6 @@
         <div class="documents-grid">
           <!-- Document 1: Hoàng Tộc Biên Lược -->
           <div class="document-card">
-            <div class="document-icon">📜</div>
             <h2 class="document-title">Hoàng Tộc Biên Lược</h2>
             <p class="document-description">
               Tài liệu quý giá ghi chép về lịch sử và phả hệ của hoàng tộc triều Nguyễn, 
@@ -2306,17 +2389,16 @@
             </p>
             <div class="document-actions">
               <a href="https://nguyenphuoctoc.info/download/hoang-toc-luoc-bien.pdf" target="_blank" class="btn-view">
-                📖 Xem tài liệu
+                Xem tài liệu
               </a>
               <a href="https://nguyenphuoctoc.info/download/hoang-toc-luoc-bien.pdf" download class="btn-download">
-                ⬇ Tải xuống
+                Tải xuống
               </a>
             </div>
           </div>
 
           <!-- Document 2: Nguyễn Phúc Tộc Thế Phả -->
           <div class="document-card">
-            <div class="document-icon">📚</div>
             <h2 class="document-title">Nguyễn Phúc Tộc Thế Phả</h2>
             <p class="document-description">
               Bộ thế phả đầy đủ và chi tiết về dòng họ Nguyễn Phước, ghi chép đầy đủ 
@@ -2330,10 +2412,10 @@
             </p>
             <div class="document-actions">
               <a href="https://nguyenphuoctoc.info/download/NGUYEN-PHUC-TOC-THE-PHA.pdf" target="_blank" class="btn-view">
-                📖 Xem tài liệu
+                Xem tài liệu
               </a>
               <a href="https://nguyenphuoctoc.info/download/NGUYEN-PHUC-TOC-THE-PHA.pdf" download class="btn-download">
-                ⬇ Tải xuống
+                Tải xuống
               </a>
             </div>
           </div>
@@ -2344,7 +2426,7 @@
       <div style="margin-bottom: 40px;">
         <div style="text-align: center; margin-bottom: 30px;">
           <h2 style="font-size: 24px; color: #8B0000; margin-bottom: 10px;">
-            🏛️ Phần 2: Tài liệu Phòng Tuy Biên Quận Công
+            Phần 2: Tài liệu Phòng Tuy Biên Quận Công
           </h2>
           <p style="color: #6b7280; font-size: 14px;">
             Các tài liệu về thành viên và lăng mộ của Phòng Tuy Biên Quận Công
@@ -2354,30 +2436,28 @@
         <!-- 2.1: Tài liệu lưu trữ trước năm 2024 -->
         <div style="margin-bottom: 40px;">
           <h3 style="font-size: 20px; color: #8B0000; margin-bottom: 20px; text-align: center; padding-top: 20px; border-top: 2px solid #e0e0e0;">
-            📋 2.1. Tài liệu lưu trữ trước năm 2024
+            2.1. Tài liệu lưu trữ trước năm 2024
           </h3>
           <p style="text-align: center; color: #6b7280; margin-bottom: 15px; font-size: 14px; font-style: italic;">
             Do Ông Vĩnh Phong lưu trữ
           </p>
           <div style="text-align: center; margin-bottom: 25px;">
             <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=drive_link" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 8px; background: #8B0000; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: background 0.3s ease; font-size: 16px;">
-              <span>📁</span>
-              <span>Xem tài liệu trên Google Drive</span>
+              Xem tài liệu trên Google Drive
             </a>
           </div>
           <div class="documents-grid">
             <div class="document-card">
-              <div class="document-icon">📊</div>
               <h2 class="document-title">Danh sách con cháu Phòng Tuy Biên</h2>
               <p class="document-description">
                 Tài liệu Excel ghi chép danh sách con cháu Phòng Tuy Biên do Ông Vĩnh Phong lưu trữ từ trước năm 2024.
               </p>
               <div class="document-actions">
                 <a href="/static/documents/danh sach con chau phong Tuy Biên_VinhPhong.xls" target="_blank" class="btn-view">
-                  📖 Xem tài liệu
+                  Xem tài liệu
                 </a>
                 <a href="/static/documents/danh sach con chau phong Tuy Biên_VinhPhong.xls" download class="btn-download">
-                  ⬇ Tải xuống
+                  Tải xuống
                 </a>
               </div>
             </div>
@@ -2387,7 +2467,7 @@
         <!-- 2.2: Tài liệu từ năm 2024 -->
         <div style="margin-bottom: 40px;">
           <h3 style="font-size: 20px; color: #8B0000; margin-bottom: 20px; text-align: center; padding-top: 20px; border-top: 2px solid #e0e0e0;">
-            📋 2.2. Tài liệu từ năm 2024
+            2.2. Tài liệu từ năm 2024
           </h3>
           <p style="text-align: center; color: #6b7280; margin-bottom: 25px; font-size: 14px; font-style: italic;">
             Do con cháu Phòng Tuy Biên bổ sung
@@ -2396,90 +2476,85 @@
           <!-- 2.2.1: Danh sách thành viên -->
           <div style="margin-bottom: 30px;">
             <h4 style="font-size: 18px; color: #8B0000; margin-bottom: 20px; text-align: center; font-weight: 600;">
-              👥 Danh sách thành viên
+              Danh sách thành viên
             </h4>
             <div class="documents-grid">
               <!-- Excel: Danh sách thành viên 2024 -->
               <div class="document-card">
-                <div class="document-icon">📊</div>
                 <h2 class="document-title">Danh sách thành viên (Excel)</h2>
                 <p class="document-description">
                   Danh sách thành viên Phòng Tuy Biên Quận Công (Ngày xuất bản: 28/12/2024)
                 </p>
                 <div class="document-actions">
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-view">
-                    📖 Xem tài liệu
+                    Xem tài liệu
                   </a>
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-download">
-                    ⬇ Tải xuống
+                    Tải xuống
                   </a>
                 </div>
               </div>
 
               <!-- Word: Danh sách thành viên 1-300 -->
               <div class="document-card">
-                <div class="document-icon">📄</div>
                 <h2 class="document-title">Danh sách thành viên (1-300)</h2>
                 <p class="document-description">
                   Danh sách thành viên từ số 1 đến 300 (Ngày xuất bản: 08/02/2025)
                 </p>
                 <div class="document-actions">
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-view">
-                    📖 Xem tài liệu
+                    Xem tài liệu
                   </a>
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-download">
-                    ⬇ Tải xuống
+                    Tải xuống
                   </a>
                 </div>
               </div>
 
               <!-- Word: Danh sách thành viên 301-600 -->
               <div class="document-card">
-                <div class="document-icon">📄</div>
                 <h2 class="document-title">Danh sách thành viên (301-600)</h2>
                 <p class="document-description">
                   Danh sách thành viên từ số 301 đến 600 (Ngày xuất bản: 08/02/2025)
                 </p>
                 <div class="document-actions">
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-view">
-                    📖 Xem tài liệu
+                    Xem tài liệu
                   </a>
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-download">
-                    ⬇ Tải xuống
+                    Tải xuống
                   </a>
                 </div>
               </div>
 
               <!-- Word: Danh sách thành viên 601-900 -->
               <div class="document-card">
-                <div class="document-icon">📄</div>
                 <h2 class="document-title">Danh sách thành viên (601-900)</h2>
                 <p class="document-description">
                   Danh sách thành viên từ số 601 đến 900 (Ngày xuất bản: 08/02/2025)
                 </p>
                 <div class="document-actions">
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-view">
-                    📖 Xem tài liệu
+                    Xem tài liệu
                   </a>
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-download">
-                    ⬇ Tải xuống
+                    Tải xuống
                   </a>
                 </div>
               </div>
 
               <!-- Word: Danh sách thành viên 901-1200 -->
               <div class="document-card">
-                <div class="document-icon">📄</div>
                 <h2 class="document-title">Danh sách thành viên (901-1200)</h2>
                 <p class="document-description">
                   Danh sách thành viên từ số 901 đến 1200 (Ngày xuất bản: 08/02/2025)
                 </p>
                 <div class="document-actions">
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-view">
-                    📖 Xem tài liệu
+                    Xem tài liệu
                   </a>
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-download">
-                    ⬇ Tải xuống
+                    Tải xuống
                   </a>
                 </div>
               </div>
@@ -2489,37 +2564,35 @@
           <!-- 2.2.2: Danh sách lăng mộ -->
           <div style="margin-bottom: 30px;">
             <h4 style="font-size: 18px; color: #8B0000; margin-bottom: 20px; text-align: center; font-weight: 600;">
-              🏛️ Danh sách lăng mộ
+              Danh sách lăng mộ
             </h4>
             <div class="documents-grid">
               <div class="document-card">
-                <div class="document-icon">🏛️</div>
                 <h2 class="document-title">Danh sách lăng mộ (13/04/2016)</h2>
                 <p class="document-description">
                   Danh sách lăng mộ Phòng Tuy Biên Quận Công (Ngày: 13/04/2016)
                 </p>
                 <div class="document-actions">
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-view">
-                    📖 Xem tài liệu
+                    Xem tài liệu
                   </a>
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-download">
-                    ⬇ Tải xuống
+                    Tải xuống
                   </a>
                 </div>
               </div>
 
               <div class="document-card">
-                <div class="document-icon">🏛️</div>
                 <h2 class="document-title">Danh sách lăng mộ (16/03/2013)</h2>
                 <p class="document-description">
                   Danh sách lăng mộ Phòng Tuy Biên Quận Công (Ngày: 16/03/2013 - 97 format)
                 </p>
                 <div class="document-actions">
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-view">
-                    📖 Xem tài liệu
+                    Xem tài liệu
                   </a>
                   <a href="https://drive.google.com/drive/folders/157o0V4dWa7QKkf5t0hlLqjMnyQxAjf6s?usp=sharing" target="_blank" class="btn-download">
-                    ⬇ Tải xuống
+                    Tải xuống
                   </a>
                 </div>
               </div>
@@ -5602,28 +5675,37 @@
           result.data.forEach(post => {
             html += `
               <div class="external-post-item">
-                <h3 class="external-post-title">
-                  <a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer">
-                    ${escapeHtml(post.title)}
-                  </a>
-                </h3>
-                ${post.date ? `
-                  <div class="external-post-meta">
-                    <span>📅</span>
-                    <span>${escapeHtml(post.date)}</span>
+                <div class="external-post-thumbnail">
+                  ${post.thumbnail ? `
+                    <img src="${escapeHtml(post.thumbnail)}" alt="${escapeHtml(post.title)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'external-post-thumbnail-placeholder\\'>📰</div>'">
+                  ` : `
+                    <div class="external-post-thumbnail-placeholder">📰</div>
+                  `}
+                </div>
+                <div class="external-post-content">
+                  <h3 class="external-post-title">
+                    <a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer">
+                      ${escapeHtml(post.title)}
+                    </a>
+                  </h3>
+                  ${post.date ? `
+                    <div class="external-post-meta">
+                      <span>📅</span>
+                      <span>${escapeHtml(post.date)}</span>
+                    </div>
+                  ` : ''}
+                  ${post.description ? `
+                    <p class="external-post-description">${escapeHtml(post.description)}</p>
+                  ` : ''}
+                  <div class="external-post-source">
+                    <strong>Nguồn:</strong> 
+                    <a href="https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       style="color: #8B0000; text-decoration: underline;">
+                      nguyenphuoctoc.info
+                    </a>
                   </div>
-                ` : ''}
-                ${post.description ? `
-                  <p class="external-post-description">${escapeHtml(post.description)}</p>
-                ` : ''}
-                <div class="external-post-source">
-                  <strong>Nguồn:</strong> 
-                  <a href="https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/"
-                     target="_blank"
-                     rel="noopener noreferrer"
-                     style="color: #8B0000; text-decoration: underline;">
-                    nguyenphuoctoc.info
-                  </a>
                 </div>
               </div>
             `;
