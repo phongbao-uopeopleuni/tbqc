@@ -6267,7 +6267,7 @@ def get_members():
             FROM information_schema.COLUMNS 
             WHERE TABLE_SCHEMA = DATABASE() 
             AND TABLE_NAME = 'persons'
-            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death')
+            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death', 'occupation')
         """)
         available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
         
@@ -6325,6 +6325,11 @@ def get_members():
             select_fields.append("p.email")
         else:
             select_fields.append("NULL AS email")
+        
+        if 'occupation' in available_columns:
+            select_fields.append("p.occupation")
+        else:
+            select_fields.append("NULL AS occupation")
         
         # Lấy danh sách tất cả persons với thông tin đầy đủ (schema mới)
         cursor.execute(f"""
@@ -6741,6 +6746,11 @@ def create_person():
                 return jsonify({'success': False, 'error': 'Email không hợp lệ'}), 400
             insert_values.append(email if email else None)
         
+        if 'occupation' in columns:
+            insert_fields.append('occupation')
+            occupation = data.get('occupation', '').strip() if data.get('occupation') else None
+            insert_values.append(occupation if occupation else None)
+        
         # Xử lý upload ảnh cá nhân nếu có
         if personal_image_file and personal_image_file.filename:
             # Validate file size (max 2MB)
@@ -7004,6 +7014,11 @@ def update_person_members(person_id):
             if email and '@' not in email:
                 return jsonify({'success': False, 'error': 'Email không hợp lệ'}), 400
             update_values.append(email if email else None)
+        
+        if 'occupation' in columns:
+            update_fields.append('occupation = %s')
+            occupation = data.get('occupation', '').strip() if data.get('occupation') else None
+            update_values.append(occupation if occupation else None)
         
         # Xử lý upload ảnh cá nhân nếu có
         if personal_image_file and personal_image_file.filename:
@@ -8089,6 +8104,53 @@ def api_member_stats():
         total_with_degree_result = cursor.fetchone()
         total_with_degree = total_with_degree_result.get('total_with_degree', 0) if total_with_degree_result else 0
         
+        # Phân loại học vị và học hàm thành các nhóm
+        degree_categories = {
+            'Cử nhân': 0,
+            'Thạc sĩ': 0,
+            'Tiến sĩ': 0,
+            'Giáo sư': 0,
+            'Phó Giáo sư': 0
+        }
+        
+        # Đếm từ academic_degree_stats (học vị)
+        for stat in academic_degree_stats:
+            degree = stat.get('academic_degree', '').strip() if stat.get('academic_degree') else ''
+            count = stat.get('count', 0)
+            
+            if not degree:
+                continue
+            
+            degree_lower = degree.lower()
+            
+            # Kiểm tra Tiến sĩ trước (vì có thể chứa "tiến sĩ" trong các từ khác)
+            if any(kw in degree_lower for kw in ['tiến sĩ', 'tiến sỹ', 'doctor', 'phd', 'doctorate', 'ts.', 'ts ']):
+                degree_categories['Tiến sĩ'] += count
+            # Kiểm tra Thạc sĩ
+            elif any(kw in degree_lower for kw in ['thạc sĩ', 'thạc sỹ', 'master', 'masters', 'th.s', 'th.s.', 'thạc sĩ']):
+                degree_categories['Thạc sĩ'] += count
+            # Kiểm tra Cử nhân
+            elif any(kw in degree_lower for kw in ['cử nhân', 'bachelor', 'cử nhân', 'cn.', 'cn ']):
+                degree_categories['Cử nhân'] += count
+            # Nếu không khớp, có thể là cử nhân (mặc định) hoặc bỏ qua
+        
+        # Đếm từ academic_rank_stats (học hàm: Giáo sư, Phó Giáo sư)
+        for stat in academic_rank_stats:
+            rank = stat.get('academic_rank', '').strip() if stat.get('academic_rank') else ''
+            count = stat.get('count', 0)
+            
+            if not rank:
+                continue
+            
+            rank_lower = rank.lower()
+            
+            # Kiểm tra Phó Giáo sư trước (vì có thể chứa "phó giáo sư")
+            if any(kw in rank_lower for kw in ['phó giáo sư', 'phó giáo sư', 'associate professor', 'pgs.', 'pgs ', 'phó giáo sư']):
+                degree_categories['Phó Giáo sư'] += count
+            # Kiểm tra Giáo sư
+            elif any(kw in rank_lower for kw in ['giáo sư', 'professor', 'gs.', 'gs ', 'giáo sư']):
+                degree_categories['Giáo sư'] += count
+        
         return jsonify({
             'total_members': row.get('total_members', 0),
             'male_count': row.get('male_count', 0),
@@ -8099,7 +8161,9 @@ def api_member_stats():
             'academic_rank_stats': academic_rank_stats,
             'academic_degree_stats': academic_degree_stats,
             'total_with_rank': total_with_rank,
-            'total_with_degree': total_with_degree
+            'total_with_degree': total_with_degree,
+            # Thêm phân loại học vị/học hàm
+            'degree_categories': degree_categories
         })
     except Exception as e:
         print(f"ERROR: Loi khi lay thong ke thanh vien: {e}")

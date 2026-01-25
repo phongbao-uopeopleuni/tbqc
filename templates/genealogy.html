@@ -293,6 +293,18 @@
       .stats-charts {
         grid-template-columns: 1fr !important;
       }
+      
+      .degree-chart-container {
+        height: 300px !important;
+        padding: var(--space-3) !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .degree-chart-container {
+        height: 280px !important;
+        padding: var(--space-2) !important;
+      }
     }
 
     @media (max-width: 768px) {
@@ -1613,6 +1625,18 @@
                 <div class="stats-chart-card card">
                   <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Thành viên theo giới tính</h3>
                   <canvas id="genderBarChart"></canvas>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Biểu đồ Học vị và Học hàm -->
+            <div class="stats-charts-wrapper" style="margin-top: var(--space-6);">
+              <div class="stats-charts" style="display: grid; grid-template-columns: 1fr; gap: var(--space-5);">
+                <div class="stats-chart-card card" style="background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                  <h3 style="margin-bottom: var(--space-4); font-size: var(--font-size-lg); color: var(--color-primary); text-align: center; font-weight: 600; padding-bottom: var(--space-3); border-bottom: 2px solid #DAA520;">🎓 Học vị và Học hàm</h3>
+                  <div class="degree-chart-container" style="position: relative; height: 350px; padding: var(--space-4);">
+                    <canvas id="degreeRankChart"></canvas>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2972,6 +2996,11 @@
 
         renderGenderCharts({ male, female, unknown });
 
+        // Hiển thị biểu đồ học vị và học hàm
+        if (data.degree_categories) {
+          renderDegreeRankChart(data.degree_categories);
+        }
+
         // Hiển thị thống kê theo đời
         if (data.generation_counts && Array.isArray(data.generation_counts)) {
           const generationCounts = data.generation_counts;
@@ -3054,6 +3083,171 @@
               beginAtZero: true,
               ticks: { precision: 0 }
             }
+          }
+        }
+      });
+    }
+
+    function renderDegreeRankChart(degreeCategories) {
+      const ctx = document.getElementById('degreeRankChart')?.getContext('2d');
+      if (!ctx || typeof Chart === 'undefined') return;
+
+      // Chuẩn bị dữ liệu với icon
+      const labels = ['Cử nhân', 'Thạc sĩ', 'Tiến sĩ', 'Phó Giáo sư', 'Giáo sư'];
+      const icons = ['📜', '🎓', '👨‍🎓', '🏛️', '👑'];
+      const values = [
+        degreeCategories['Cử nhân'] || 0,
+        degreeCategories['Thạc sĩ'] || 0,
+        degreeCategories['Tiến sĩ'] || 0,
+        degreeCategories['Phó Giáo sư'] || 0,
+        degreeCategories['Giáo sư'] || 0
+      ];
+
+      // Màu sắc gradient cho từng loại (màu đẹp hơn, phù hợp theme)
+      const colors = [
+        'rgba(59, 130, 246, 0.8)', // Cử nhân - xanh dương nhạt
+        'rgba(139, 92, 246, 0.8)', // Thạc sĩ - tím nhạt
+        'rgba(239, 68, 68, 0.8)',  // Tiến sĩ - đỏ nhạt
+        'rgba(245, 158, 11, 0.8)', // Phó Giáo sư - cam nhạt
+        'rgba(16, 185, 129, 0.8)'  // Giáo sư - xanh lá nhạt
+      ];
+      
+      const borderColors = [
+        '#3b82f6', // Cử nhân
+        '#8b5cf6', // Thạc sĩ
+        '#ef4444', // Tiến sĩ
+        '#f59e0b', // Phó Giáo sư
+        '#10b981'  // Giáo sư
+      ];
+
+      // Chỉ hiển thị các nhãn có giá trị > 0
+      const filteredLabels = [];
+      const filteredValues = [];
+      const filteredColors = [];
+      const filteredBorderColors = [];
+      const filteredIcons = [];
+      
+      labels.forEach((label, index) => {
+        if (values[index] > 0) {
+          filteredLabels.push(`${icons[index]} ${label}`);
+          filteredValues.push(values[index]);
+          filteredColors.push(colors[index]);
+          filteredBorderColors.push(borderColors[index]);
+          filteredIcons.push(icons[index]);
+        }
+      });
+
+      // Nếu không có dữ liệu, hiển thị thông báo
+      if (filteredValues.length === 0) {
+        ctx.canvas.parentElement.innerHTML = '<div style="text-align: center; padding: 60px; color: var(--color-text-muted); font-size: var(--font-size-base);"><div style="font-size: 48px; margin-bottom: var(--space-3);">📚</div><div>Chưa có dữ liệu học vị và học hàm</div></div>';
+        return;
+      }
+
+      // Vẽ biểu đồ bar chart với styling đẹp hơn
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: filteredLabels,
+          datasets: [{
+            label: 'Số lượng',
+            data: filteredValues,
+            backgroundColor: filteredColors,
+            borderColor: filteredBorderColors,
+            borderWidth: 2,
+            borderRadius: 8,
+            borderSkipped: false,
+            barThickness: 'flex',
+            maxBarThickness: 60
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: {
+            duration: 1500,
+            easing: 'easeInOutQuart'
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 12,
+              titleFont: {
+                size: 14,
+                weight: 'bold'
+              },
+              bodyFont: {
+                size: 13
+              },
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 1,
+              cornerRadius: 8,
+              displayColors: true,
+              callbacks: {
+                title: function(context) {
+                  return context[0].label.replace(/^[^\s]+\s/, ''); // Bỏ icon khỏi title
+                },
+                label: function(context) {
+                  const value = context.parsed.y;
+                  const percentage = filteredValues.reduce((a, b) => a + b, 0) > 0 
+                    ? ((value / filteredValues.reduce((a, b) => a + b, 0)) * 100).toFixed(1)
+                    : 0;
+                  return [
+                    `Số lượng: ${value.toLocaleString('vi-VN')} người`,
+                    `Tỷ lệ: ${percentage}%`
+                  ];
+                },
+                labelColor: function(context) {
+                  return {
+                    borderColor: filteredBorderColors[context.dataIndex],
+                    backgroundColor: filteredColors[context.dataIndex],
+                    borderWidth: 2,
+                    borderRadius: 4
+                  };
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)',
+                drawBorder: false
+              },
+              ticks: {
+                precision: 0,
+                font: {
+                  size: 11,
+                  family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                },
+                color: '#666',
+                callback: function(value) {
+                  return value.toLocaleString('vi-VN');
+                },
+                padding: 8
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                font: {
+                  size: 13,
+                  weight: '500',
+                  family: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+                },
+                color: '#333',
+                padding: 10
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
           }
         }
       });

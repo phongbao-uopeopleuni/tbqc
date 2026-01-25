@@ -706,11 +706,24 @@
         <div class="form-row">
           <div class="form-group">
             <label for="academic_rank">Học hàm</label>
-            <input type="text" id="academic_rank" name="academic_rank" placeholder="Ví dụ: Giáo sư, Phó Giáo sư">
+            <select id="academic_rank" name="academic_rank" style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); background: white;">
+              <option value="">-- Chọn học hàm --</option>
+              <option value="Giáo sư">Giáo sư</option>
+              <option value="Phó Giáo sư">Phó Giáo sư</option>
+              <option value="Khác">Khác</option>
+            </select>
+            <input type="text" id="academic_rank_other" name="academic_rank_other" placeholder="Nhập học hàm khác" style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); margin-top: var(--space-2); display: none;">
           </div>
           <div class="form-group">
             <label for="academic_degree">Học vị</label>
-            <input type="text" id="academic_degree" name="academic_degree" placeholder="Ví dụ: Tiến sĩ, Thạc sĩ, Cử nhân">
+            <select id="academic_degree" name="academic_degree" style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); background: white;">
+              <option value="">-- Chọn học vị --</option>
+              <option value="Cử nhân">Cử nhân</option>
+              <option value="Thạc sĩ">Thạc sĩ</option>
+              <option value="Tiến sĩ">Tiến sĩ</option>
+              <option value="Khác">Khác</option>
+            </select>
+            <input type="text" id="academic_degree_other" name="academic_degree_other" placeholder="Nhập học vị khác" style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); margin-top: var(--space-2); display: none;">
           </div>
         </div>
         <div class="form-row">
@@ -722,6 +735,10 @@
             <label for="email">Email</label>
             <input type="email" id="email" name="email" placeholder="Nhập địa chỉ email">
           </div>
+        </div>
+        <div class="form-group">
+          <label for="occupation">Nghề nghiệp</label>
+          <input type="text" id="occupation" name="occupation" placeholder="Nhập nghề nghiệp của thành viên">
         </div>
         <input type="hidden" id="person_id" name="person_id">
         <div class="modal-footer">
@@ -1236,10 +1253,46 @@
       document.getElementById('siblings_info').value = member.siblings || '';
       // Populate new fields
       document.getElementById('biography').value = member.biography || '';
-      document.getElementById('academic_rank').value = member.academic_rank || '';
-      document.getElementById('academic_degree').value = member.academic_degree || '';
+      
+      // Xử lý Học hàm dropdown
+      const academicRankSelect = document.getElementById('academic_rank');
+      const academicRankOther = document.getElementById('academic_rank_other');
+      const academicRankValue = member.academic_rank || '';
+      if (academicRankValue && ['Giáo sư', 'Phó Giáo sư'].includes(academicRankValue)) {
+        academicRankSelect.value = academicRankValue;
+        academicRankOther.style.display = 'none';
+        academicRankOther.value = '';
+      } else if (academicRankValue) {
+        academicRankSelect.value = 'Khác';
+        academicRankOther.style.display = 'block';
+        academicRankOther.value = academicRankValue;
+      } else {
+        academicRankSelect.value = '';
+        academicRankOther.style.display = 'none';
+        academicRankOther.value = '';
+      }
+      
+      // Xử lý Học vị dropdown
+      const academicDegreeSelect = document.getElementById('academic_degree');
+      const academicDegreeOther = document.getElementById('academic_degree_other');
+      const academicDegreeValue = member.academic_degree || '';
+      if (academicDegreeValue && ['Cử nhân', 'Thạc sĩ', 'Tiến sĩ'].includes(academicDegreeValue)) {
+        academicDegreeSelect.value = academicDegreeValue;
+        academicDegreeOther.style.display = 'none';
+        academicDegreeOther.value = '';
+      } else if (academicDegreeValue) {
+        academicDegreeSelect.value = 'Khác';
+        academicDegreeOther.style.display = 'block';
+        academicDegreeOther.value = academicDegreeValue;
+      } else {
+        academicDegreeSelect.value = '';
+        academicDegreeOther.style.display = 'none';
+        academicDegreeOther.value = '';
+      }
+      
       document.getElementById('phone').value = member.phone || '';
       document.getElementById('email').value = member.email || '';
+      document.getElementById('occupation').value = member.occupation || '';
       
       // Show existing image if available
       if (member.personal_image_url) {
@@ -1260,6 +1313,23 @@
       document.getElementById('memberModal').style.display = 'none';
       document.getElementById('memberForm').reset();
       document.getElementById('imagePreview').style.display = 'none';
+      
+      // Reset dropdown và ẩn input "Khác"
+      const academicRankSelect = document.getElementById('academic_rank');
+      const academicRankOther = document.getElementById('academic_rank_other');
+      if (academicRankSelect && academicRankOther) {
+        academicRankSelect.value = '';
+        academicRankOther.value = '';
+        academicRankOther.style.display = 'none';
+      }
+      
+      const academicDegreeSelect = document.getElementById('academic_degree');
+      const academicDegreeOther = document.getElementById('academic_degree_other');
+      if (academicDegreeSelect && academicDegreeOther) {
+        academicDegreeSelect.value = '';
+        academicDegreeOther.value = '';
+        academicDegreeOther.style.display = 'none';
+      }
     }
 
     // Validate image size
@@ -1292,6 +1362,27 @@
       const formData = new FormData(event.target);
       const personId = formData.get('person_id');
       const isUpdate = personId && personId !== '';
+      
+      // Xử lý giá trị học hàm và học vị từ dropdown/input "Khác"
+      const academicRankSelect = document.getElementById('academic_rank');
+      const academicRankOther = document.getElementById('academic_rank_other');
+      if (academicRankSelect && academicRankOther) {
+        if (academicRankSelect.value === 'Khác' && academicRankOther.value.trim()) {
+          formData.set('academic_rank', academicRankOther.value.trim());
+        }
+      }
+      
+      const academicDegreeSelect = document.getElementById('academic_degree');
+      const academicDegreeOther = document.getElementById('academic_degree_other');
+      if (academicDegreeSelect && academicDegreeOther) {
+        if (academicDegreeSelect.value === 'Khác' && academicDegreeOther.value.trim()) {
+          formData.set('academic_degree', academicDegreeOther.value.trim());
+        }
+      }
+      
+      // Loại bỏ các field "other" khỏi formData (không cần gửi lên server)
+      formData.delete('academic_rank_other');
+      formData.delete('academic_degree_other');
       
       // Validate image if exists
       const imageFile = formData.get('personal_image');
@@ -1456,10 +1547,62 @@
       }
     }
 
+    // Xử lý dropdown Học hàm và Học vị
+    function initAcademicDropdowns() {
+      const academicRankSelect = document.getElementById('academic_rank');
+      const academicRankOther = document.getElementById('academic_rank_other');
+      const academicDegreeSelect = document.getElementById('academic_degree');
+      const academicDegreeOther = document.getElementById('academic_degree_other');
+      
+      if (academicRankSelect && academicRankOther) {
+        academicRankSelect.addEventListener('change', function() {
+          if (this.value === 'Khác') {
+            academicRankOther.style.display = 'block';
+            academicRankOther.focus();
+          } else {
+            academicRankOther.style.display = 'none';
+            academicRankOther.value = '';
+          }
+        });
+      }
+      
+      if (academicDegreeSelect && academicDegreeOther) {
+        academicDegreeSelect.addEventListener('change', function() {
+          if (this.value === 'Khác') {
+            academicDegreeOther.style.display = 'block';
+            academicDegreeOther.focus();
+          } else {
+            academicDegreeOther.style.display = 'none';
+            academicDegreeOther.value = '';
+          }
+        });
+      }
+    }
+    
+    // Cập nhật hàm submit để lấy giá trị từ input "Khác" nếu có
+    function getAcademicRankValue() {
+      const select = document.getElementById('academic_rank');
+      const other = document.getElementById('academic_rank_other');
+      if (select && select.value === 'Khác' && other && other.value.trim()) {
+        return other.value.trim();
+      }
+      return select ? select.value : '';
+    }
+    
+    function getAcademicDegreeValue() {
+      const select = document.getElementById('academic_degree');
+      const other = document.getElementById('academic_degree_other');
+      if (select && select.value === 'Khác' && other && other.value.trim()) {
+        return other.value.trim();
+      }
+      return select ? select.value : '';
+    }
+
     // Load data on page load
     document.addEventListener('DOMContentLoaded', () => {
       checkAuthState();
       loadMembers();
+      initAcademicDropdowns();
     });
 
     // Touch-friendly interactions for mobile
