@@ -626,8 +626,35 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
     levelPositions[generation] = [];
   }
 
+  // Detect device and adjust spacing for responsive layout
+  function getResponsiveSpacing() {
+    const width = window.innerWidth;
+    if (width <= 768) {
+      return {
+        verticalGap: 100,
+        horizontalSpacing: 150,
+        nodeWidth: 120
+      };
+    } else if (width <= 1024) {
+      return {
+        verticalGap: 160,
+        horizontalSpacing: 180,
+        nodeWidth: 130
+      };
+    } else {
+      return {
+        verticalGap: 120,
+        horizontalSpacing: 220,
+        nodeWidth: 140
+      };
+    }
+  }
+
+  const spacing = getResponsiveSpacing();
+  const verticalGap = spacing.verticalGap;
+  const horizontalSpacing = spacing.horizontalSpacing;
+  
   // Y = generation (dọc) - đời 1 ở trên, đời 8 ở dưới
-  const verticalGap = 120; // Giảm khoảng cách giữa các đời để đường đỏ ngắn lại, dễ nhìn
   const normalizedGeneration = generation - minGeneration;
   // Đảm bảo đời thấp nhất (minGeneration) ở trên cùng
   node.y = normalizedGeneration * verticalGap + 40;
@@ -635,11 +662,10 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
   // Tính vị trí cho children trước (bottom-up approach)
   if (node.children.length === 0) {
     // Leaf node: đặt ở vị trí tiếp theo trong generation
-    const horizontalSpacing = 220; // Tăng spacing giữa các nodes để tránh chồng lên nhau và thể hiện rẽ nhánh rõ hơn
     const currentCount = levelPositions[generation].length;
     node.x = currentCount * horizontalSpacing + 80;
     levelPositions[generation].push(node);
-    return { x: node.x, width: 140 }; // Node width
+    return { x: node.x, width: spacing.nodeWidth };
   }
 
   // Group children by fm_id để thể hiện rẽ nhánh hợp lý hơn

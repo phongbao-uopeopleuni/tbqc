@@ -3,12 +3,167 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Gia Phả - Gia Phả Nguyễn Phước Tộc</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
   <style>
+    /* CSS Variables - Desktop defaults */
+    :root {
+      --font-size-base: 16px;
+      --font-size-sm: 14px;
+      --font-size-lg: 18px;
+      --font-size-xl: 20px;
+      --font-size-2xl: 24px;
+      --font-size-3xl: 28px;
+      --font-size-4xl: 32px;
+      
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      
+      --navbar-height: 70px;
+    }
+
+    /* Mobile overrides */
+    @media (max-width: 768px) {
+      :root {
+        --font-size-base: 14px;
+        --font-size-sm: 12px;
+        --font-size-lg: 16px;
+        --font-size-xl: 18px;
+        --font-size-2xl: 20px;
+        --font-size-3xl: 24px;
+        --font-size-4xl: 28px;
+        
+        --space-1: 3px;
+        --space-2: 6px;
+        --space-3: 10px;
+        --space-4: 12px;
+        --space-5: 16px;
+        --space-6: 20px;
+        --space-8: 24px;
+        --space-10: 32px;
+        
+        --navbar-height: 60px;
+      }
+    }
+
+    /* Tablet overrides */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      :root {
+        --font-size-base: 15px;
+        --space-4: 14px;
+        --space-6: 22px;
+      }
+    }
+
+    /* Responsive Typography */
+    h1 {
+      font-size: clamp(24px, 6vw, 36px);
+      line-height: 1.3;
+    }
+
+    h2 {
+      font-size: clamp(20px, 5vw, 28px);
+      line-height: 1.3;
+    }
+
+    h3 {
+      font-size: clamp(18px, 4vw, 22px);
+      line-height: 1.3;
+    }
+
+    p, li {
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      p, li {
+        line-height: 1.5;
+      }
+    }
+
+    /* Responsive Images */
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      img {
+        border-radius: 6px;
+      }
+    }
+
+    /* Touch-friendly Buttons */
+    button, .btn, a.btn {
+      min-height: 44px;
+      min-width: 44px;
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-base);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      button, .btn, a.btn {
+        min-height: 44px;
+        padding: var(--space-3) var(--space-4);
+      }
+    }
+
+    /* Responsive Forms */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    textarea,
+    select {
+      width: 100%;
+      font-size: var(--font-size-base);
+      padding: var(--space-3);
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+
+    @media (max-width: 768px) {
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      input[type="search"],
+      textarea,
+      select {
+        font-size: 16px; /* Prevent zoom on iOS */
+        min-height: 44px;
+      }
+    }
+
+    /* Responsive Cards */
+    .card, .lineage-card {
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    @media (max-width: 768px) {
+      .card, .lineage-card {
+        padding: var(--space-3);
+        margin-bottom: var(--space-3);
+        border-radius: 8px;
+      }
+    }
+
     /* Page-specific styles */
     .genealogy-page {
       padding-top: var(--space-8);
@@ -85,6 +240,30 @@
         grid-column: 1;
         order: -1;
         max-height: 300px;
+        position: sticky;
+        top: var(--navbar-height, 70px);
+        z-index: 10;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .tree-panel {
+        gap: var(--space-2, 8px);
+      }
+
+      .tree-container-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      #treeContainer {
+        min-width: 600px; /* Ensure tree is scrollable horizontally */
+      }
+
+      .tree-info-panel {
+        max-height: 250px;
+        font-size: var(--font-size-sm, 14px);
+        padding: var(--space-3, 12px);
       }
     }
     
@@ -1447,6 +1626,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- Load genealogy scripts -->
+  <script src="/static/js/device-detection.js"></script>
   <script src="/static/js/common.js"></script>
   <script src="/static/js/family-tree-core.js"></script>
   <script src="/static/js/family-tree-graph-builder.js"></script>
@@ -5063,6 +5243,23 @@
       }
       
     });
+
+    // Touch-friendly interactions for mobile
+    if (window.DeviceDetection && window.DeviceDetection.detectDevice().isTouchDevice) {
+      // Add touch-friendly class
+      document.body.classList.add('touch-device');
+      
+      // Increase tap target sizes for buttons and links
+      document.querySelectorAll('button, .btn, a.btn, .navbar-menu a').forEach(el => {
+        if (el.offsetHeight < 44 || el.offsetWidth < 44) {
+          el.style.minHeight = '44px';
+          el.style.minWidth = '44px';
+          el.style.display = 'flex';
+          el.style.alignItems = 'center';
+          el.style.justifyContent = 'center';
+        }
+      });
+    }
     
     // Add event listener for address search when edit mode is enabled
     // Wrap original function to add event listener

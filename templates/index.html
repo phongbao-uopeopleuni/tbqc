@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Phòng Tuy Biên Quận Công - Gia Phả Nguyễn Phước Tộc| Hệ Thống Tra Cứu Gia Phả Nguyễn Phước Tộc</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -16,13 +19,70 @@
       scroll-behavior: smooth;
     }
 
+    /* CSS Variables - Desktop defaults */
+    :root {
+      --font-size-base: 16px;
+      --font-size-sm: 14px;
+      --font-size-lg: 18px;
+      --font-size-xl: 20px;
+      --font-size-2xl: 24px;
+      --font-size-3xl: 28px;
+      --font-size-4xl: 32px;
+      
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      
+      --navbar-height: 70px;
+      --sidebar-width: 280px;
+    }
+
+    /* Mobile overrides */
+    @media (max-width: 768px) {
+      :root {
+        --font-size-base: 14px;
+        --font-size-sm: 12px;
+        --font-size-lg: 16px;
+        --font-size-xl: 18px;
+        --font-size-2xl: 20px;
+        --font-size-3xl: 24px;
+        --font-size-4xl: 28px;
+        
+        --space-1: 3px;
+        --space-2: 6px;
+        --space-3: 10px;
+        --space-4: 12px;
+        --space-5: 16px;
+        --space-6: 20px;
+        --space-8: 24px;
+        --space-10: 32px;
+        
+        --navbar-height: 60px;
+        --sidebar-width: 0;
+      }
+    }
+
+    /* Tablet overrides */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      :root {
+        --font-size-base: 15px;
+        --space-4: 14px;
+        --space-6: 22px;
+      }
+    }
+
     body {
       font-family: 'Noto Serif TC', 'Playfair Display', serif;
       background: #ffffff;
       background-attachment: fixed;
       position: relative;
-      padding-top: 70px; /* Space for fixed navbar */
-      padding-left: 280px; /* Space for fixed sidebar on desktop */
+      padding-top: var(--navbar-height);
+      padding-left: var(--sidebar-width);
     }
 
     @media (max-width: 1024px) {
@@ -40,9 +100,10 @@
       top: 0;
       left: 0;
       right: 0;
+      height: var(--navbar-height);
       background: #111827;
       color: white;
-      padding: 15px 30px;
+      padding: 0 var(--space-4);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -51,10 +112,14 @@
     }
 
     .navbar-logo {
-      font-size: 24px;
+      font-size: clamp(14px, 4vw, 18px);
       font-weight: 700;
       color: #FFD700;
       text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
     }
 
     .navbar-menu {
@@ -66,7 +131,7 @@
     .navbar-menu a {
       color: white;
       text-decoration: none;
-      font-size: 16px;
+      font-size: var(--font-size-base);
       font-weight: 500;
       transition: color 0.3s;
       padding: 5px 10px;
@@ -86,6 +151,53 @@
       color: white;
       font-size: 24px;
       cursor: pointer;
+      padding: var(--space-2);
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    @media (max-width: 768px) {
+      .navbar {
+        padding: 0 var(--space-2);
+      }
+
+      .navbar-menu {
+        position: fixed;
+        top: var(--navbar-height);
+        left: 0;
+        right: 0;
+        background: #111827;
+        flex-direction: column;
+        padding: var(--space-4);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        max-height: calc(100vh - var(--navbar-height));
+        overflow-y: auto;
+        display: none;
+        gap: 0;
+      }
+
+      .navbar-menu.active {
+        display: flex;
+      }
+
+      .navbar-menu li {
+        width: 100%;
+        margin: var(--space-2) 0;
+      }
+
+      .navbar-menu a {
+        padding: var(--space-3) var(--space-4);
+        font-size: var(--font-size-base);
+        display: block;
+        width: 100%;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+      }
+
+      .navbar-toggle {
+        display: block;
+      }
     }
 
     /* ============================================
@@ -687,22 +799,49 @@
       }
     }
 
+    /* Typography - Responsive */
+    h1 {
+      font-size: clamp(24px, 6vw, 36px);
+      line-height: 1.3;
+    }
+
+    h2 {
+      font-size: clamp(20px, 5vw, 28px);
+      line-height: 1.3;
+    }
+
+    h3 {
+      font-size: clamp(18px, 4vw, 22px);
+      line-height: 1.3;
+    }
+
+    p, li {
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      p, li {
+        line-height: 1.5;
+      }
+    }
+
     .section-title {
       font-size: clamp(24px, 5vw, 36px);
       color: #8B0000;
       margin-bottom: clamp(20px, 4vw, 30px);
       text-align: center;
       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-      scroll-margin-top: 80px; /* Offset for fixed navbar */
+      scroll-margin-top: var(--navbar-height);
     }
 
     /* Fixed Sidebar Table of Contents */
     .toc-sidebar {
       position: fixed;
       left: 0;
-      top: 70px; /* Below navbar */
-      width: 260px;
-      height: calc(100vh - 70px);
+      top: var(--navbar-height);
+      width: var(--sidebar-width);
+      height: calc(100vh - var(--navbar-height));
       background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%);
       border-right: 3px solid #DAA520;
       padding: clamp(15px, 2vw, 20px);
@@ -710,7 +849,7 @@
       overflow-x: hidden;
       z-index: 998; /* Below navbar (z-index: 1000) */
       box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease;
+      transition: transform 0.3s ease, left 0.3s ease;
     }
 
     .toc-sidebar::-webkit-scrollbar {
@@ -806,13 +945,30 @@
       color: #8B0000;
     }
 
+    /* TOC Overlay for mobile */
+    .toc-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 997;
+    }
+
+    .toc-overlay.active {
+      display: block;
+    }
+
     @media (max-width: 1024px) {
       .toc-sidebar {
-        transform: translateX(-100%);
+        left: -280px;
+        width: 280px;
       }
 
       .toc-sidebar.open {
-        transform: translateX(0);
+        left: 0;
       }
 
       .toc-toggle {
@@ -820,23 +976,98 @@
       }
 
       body {
-        padding-left: 0;
+        padding-left: 0 !important;
       }
     }
 
     @media (max-width: 768px) {
       .toc-sidebar {
-        width: 240px;
+        width: 80vw;
+        max-width: 280px;
       }
 
       .toc-list a {
-        font-size: 12px;
+        font-size: var(--font-size-sm);
       }
     }
 
     /* Scroll offset for anchor links */
     h3[id], h4[id] {
-      scroll-margin-top: 100px;
+      scroll-margin-top: calc(var(--navbar-height) + 20px);
+    }
+
+    /* Responsive Images */
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      img {
+        border-radius: 6px;
+      }
+    }
+
+    /* Touch-friendly Buttons and Links */
+    button, .btn, a.btn {
+      min-height: 44px;
+      min-width: 44px;
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-base);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      button, .btn, a.btn {
+        min-height: 44px;
+        padding: var(--space-3) var(--space-4);
+      }
+    }
+
+    /* Responsive Forms */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="number"],
+    textarea,
+    select {
+      width: 100%;
+      font-size: var(--font-size-base);
+      padding: var(--space-3);
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+
+    @media (max-width: 768px) {
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      input[type="search"],
+      input[type="tel"],
+      input[type="number"],
+      textarea,
+      select {
+        font-size: 16px; /* Prevent zoom on iOS */
+        min-height: 44px;
+      }
+    }
+
+    /* Responsive Cards */
+    .card, .lineage-card, .document-card, .external-post-item {
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    @media (max-width: 768px) {
+      .card, .lineage-card, .document-card, .external-post-item {
+        padding: var(--space-3);
+        margin-bottom: var(--space-3);
+        border-radius: 8px;
+      }
     }
 
     .about-content {
@@ -1500,6 +1731,9 @@
 <body>
   <!-- TOC Toggle Button (Mobile) -->
   <button class="toc-toggle" onclick="toggleTOC()" id="tocToggle">📑 Mục Lục</button>
+
+  <!-- TOC Overlay -->
+  <div class="toc-overlay" id="tocOverlay" onclick="toggleTOC()"></div>
 
   <!-- Fixed Sidebar Table of Contents -->
   <div class="toc-sidebar" id="tocSidebar">
@@ -2230,10 +2464,48 @@
       }
     }
 
+    // Helper function để đóng TOC
+    function closeTOC() {
+      const sidebar = document.getElementById('tocSidebar');
+      const overlay = document.getElementById('tocOverlay');
+      
+      if (sidebar) {
+        sidebar.classList.remove('open');
+      }
+      
+      if (overlay) {
+        overlay.classList.remove('active');
+      }
+    }
+
+    // Helper function để mở TOC
+    function openTOC() {
+      const sidebar = document.getElementById('tocSidebar');
+      const overlay = document.getElementById('tocOverlay');
+      
+      if (sidebar) {
+        sidebar.classList.add('open');
+      }
+      
+      if (overlay) {
+        overlay.classList.add('active');
+      }
+    }
+
     function toggleTOC() {
       const sidebar = document.getElementById('tocSidebar');
+      const overlay = document.getElementById('tocOverlay');
+      
       if (sidebar) {
-        sidebar.classList.toggle('open');
+        const isOpen = sidebar.classList.contains('open');
+        
+        if (isOpen) {
+          // Đóng
+          closeTOC();
+        } else {
+          // Mở
+          openTOC();
+        }
       }
     }
 
@@ -2241,10 +2513,14 @@
     document.addEventListener('click', function(event) {
       const sidebar = document.getElementById('tocSidebar');
       const toggleBtn = document.getElementById('tocToggle');
+      const overlay = document.getElementById('tocOverlay');
       
       if (window.innerWidth <= 1024 && sidebar && toggleBtn) {
-        if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
-          sidebar.classList.remove('open');
+        // Nếu click bên ngoài sidebar, toggle button, và không phải overlay
+        if (!sidebar.contains(event.target) && 
+            !toggleBtn.contains(event.target) && 
+            event.target !== overlay) {
+          closeTOC();
         }
       }
     });
@@ -2253,6 +2529,13 @@
     document.querySelectorAll('.toc-list a').forEach(link => {
       link.addEventListener('click', function() {
         if (window.innerWidth <= 1024) {
+          // Đóng overlay ngay lập tức để không che màn hình
+          const overlay = document.getElementById('tocOverlay');
+          if (overlay) {
+            overlay.classList.remove('active');
+          }
+          
+          // Đóng sidebar sau delay để smooth scroll hoạt động tốt
           const sidebar = document.getElementById('tocSidebar');
           if (sidebar) {
             setTimeout(() => {
@@ -4345,6 +4628,7 @@
 
   <!-- Load genealogy scripts -->
   <!-- Family tree scripts đã di chuyển sang /genealogy -->
+  <script src="/static/js/device-detection.js"></script>
   <script src="/static/js/genealogy-lineage.js"></script>
 
   <script>
@@ -5164,10 +5448,32 @@
       }
     }
 
+    // Touch-friendly interactions for mobile
+    function initTouchFriendly() {
+      if (window.DeviceDetection && window.DeviceDetection.detectDevice().isTouchDevice) {
+        // Add touch-friendly class
+        document.body.classList.add('touch-device');
+        
+        // Increase tap target sizes for buttons and links
+        document.querySelectorAll('button, .btn, a.btn, .navbar-menu a, .toc-list a').forEach(el => {
+          if (el.offsetHeight < 44 || el.offsetWidth < 44) {
+            el.style.minHeight = '44px';
+            el.style.minWidth = '44px';
+            if (el.tagName === 'A' || el.classList.contains('btn')) {
+              el.style.display = 'flex';
+              el.style.alignItems = 'center';
+              el.style.justifyContent = 'center';
+            }
+          }
+        });
+      }
+    }
+
     // Load news feed khi DOM ready
     document.addEventListener('DOMContentLoaded', () => {
       loadNewsFeed();
       loadExternalPosts();
+      initTouchFriendly();
     });
   </script>
 

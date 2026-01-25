@@ -1439,7 +1439,20 @@
       checkAuthState();
       loadMembers();
     });
+
+    // Touch-friendly interactions for mobile
+    if (window.DeviceDetection && window.DeviceDetection.detectDevice().isTouchDevice) {
+      document.body.classList.add('touch-device');
+      document.querySelectorAll('button, .btn, a.btn, .navbar-menu a').forEach(el => {
+        if (el.offsetHeight < 44 || el.offsetWidth < 44) {
+          el.style.minHeight = '44px';
+          el.style.minWidth = '44px';
+        }
+      });
+    }
   </script>
+  
+  <script src="/static/js/device-detection.js"></script>
   
   <!-- Floating Zalo Button -->
   <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>

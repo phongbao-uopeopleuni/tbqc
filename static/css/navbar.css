@@ -96,6 +96,11 @@
   cursor: pointer;
   padding: var(--space-2);
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Mobile Menu */
@@ -129,6 +134,9 @@
     border-radius: var(--radius-md);
     display: block;
     text-align: left;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
   
   .navbar-menu a.active::after {
