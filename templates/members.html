@@ -934,9 +934,17 @@
       
       try {
         console.log('[Members] Fetching /api/members...');
-        const response = await fetch('/api/members');
+        const response = await fetch('/api/members', {
+          credentials: 'include'  // Quan trọng: gửi session cookie
+        });
         
         if (!response.ok) {
+          // Nếu là 403, có thể session đã hết hạn hoặc chưa đăng nhập
+          if (response.status === 403) {
+            console.warn('[Members] Session expired or not authenticated. Redirecting to login...');
+            window.location.href = '/members';
+            return;
+          }
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
@@ -962,6 +970,21 @@
         }
       } catch (error) {
         console.error('[Members] Error loading members:', error);
+        
+        // Nếu là 403, hiển thị thông báo đặc biệt
+        if (error.message && error.message.includes('403')) {
+          container.innerHTML = `
+            <div class="error">
+              ❌ Phiên đăng nhập đã hết hạn hoặc bạn chưa đăng nhập.<br>
+              <a href="/members" style="color: var(--color-primary, #8B0000); text-decoration: underline;">
+                Nhấn vào đây để đăng nhập lại
+              </a>
+            </div>
+          `;
+          return;
+        }
+        
+        // Error handling khác
         container.innerHTML = `<div class="error">❌ Lỗi kết nối: ${error.message}<br><small>Vui lòng kiểm tra console để biết thêm chi tiết</small></div>`;
       }
     }

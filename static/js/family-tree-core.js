@@ -97,7 +97,9 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
     // Load fm_id data từ /api/members để group siblings chính xác
     let membersDataMap = new Map(); // personId -> {fm_id, ...}
     try {
-      const membersResponse = await fetch(`${API_BASE_URL}/members`);
+      const membersResponse = await fetch(`${API_BASE_URL}/members`, {
+        credentials: 'include'  // Quan trọng: gửi session cookie
+      });
       if (membersResponse.ok) {
         const membersData = await membersResponse.json();
         if (membersData.success && membersData.data) {
@@ -115,8 +117,16 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
           });
           console.log('[Tree] Loaded fm_id data from /api/members:', membersDataMap.size, 'persons');
         }
+      } else {
+        // Nếu 403, có thể user chưa đăng nhập - không crash, chỉ log warning
+        if (membersResponse.status === 403) {
+          console.warn('[Tree] /api/members requires authentication. Skipping fm_id data load.');
+        } else {
+          console.warn('[Tree] Failed to load fm_id from /api/members:', membersResponse.status, membersResponse.statusText);
+        }
       }
     } catch (err) {
+      // Xử lý lỗi, không crash
       console.warn('[Tree] Could not load fm_id from /api/members:', err);
     }
 
@@ -136,7 +146,9 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
           
           // Load marriages data từ API (sử dụng cùng database như /api/members)
           try {
-            const marriagesResponse = await fetch(`${API_BASE_URL}/members`);
+            const marriagesResponse = await fetch(`${API_BASE_URL}/members`, {
+              credentials: 'include'  // Quan trọng: gửi session cookie
+            });
             if (marriagesResponse.ok) {
               const membersData = await marriagesResponse.json();
               if (membersData.success && membersData.data) {
@@ -163,8 +175,16 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
                 });
                 console.log('[Tree] Loaded marriages data from /api/members:', marriagesDataMap.size, 'persons with marriages');
               }
+            } else {
+              // Nếu 403, có thể user chưa đăng nhập - không crash, chỉ log warning
+              if (marriagesResponse.status === 403) {
+                console.warn('[Tree] /api/members requires authentication. Skipping marriages data load.');
+              } else {
+                console.warn('[Tree] Failed to load marriages from /api/members:', marriagesResponse.status, marriagesResponse.statusText);
+              }
             }
           } catch (err) {
+            // Xử lý lỗi, không crash
             console.warn('[Tree] Could not load marriages from /api/members:', err);
           }
           
