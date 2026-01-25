@@ -74,6 +74,35 @@
         --space-4: 14px;
         --space-6: 22px;
       }
+      
+      .navbar-menu {
+        gap: 10px;
+      }
+      
+      .navbar-menu a {
+        font-size: 14px;
+        padding: 5px 6px;
+      }
+      
+      .navbar-logo {
+        max-width: 150px;
+      }
+    }
+
+    /* Medium screens - điều chỉnh navbar */
+    @media (min-width: 1025px) and (max-width: 1200px) {
+      .navbar-menu {
+        gap: 12px;
+      }
+      
+      .navbar-menu a {
+        font-size: 15px;
+        padding: 5px 7px;
+      }
+      
+      .navbar-logo {
+        max-width: 160px;
+      }
     }
 
     body {
@@ -105,10 +134,18 @@
       color: white;
       padding: 0 var(--space-4);
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       z-index: 1000;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      gap: 10px;
+      min-width: 0;
+    }
+
+    @media (max-width: 768px) {
+      .navbar {
+        justify-content: space-between;
+      }
     }
 
     .navbar-logo {
@@ -119,23 +156,32 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 200px;
+      max-width: 180px;
+      flex-shrink: 0;
     }
 
     .navbar-menu {
       display: flex;
-      gap: 30px;
+      gap: 15px;
       list-style: none;
+      align-items: center;
+      flex-wrap: nowrap;
+      overflow: visible;
+    }
+
+    .navbar-menu li {
+      flex-shrink: 0;
     }
 
     .navbar-menu a {
       color: white;
       text-decoration: none;
-      font-size: var(--font-size-base);
+      font-size: clamp(14px, 1.5vw, 16px);
       font-weight: 500;
       transition: color 0.3s;
-      padding: 5px 10px;
+      padding: 5px 8px;
       border-radius: 4px;
+      white-space: nowrap;
     }
 
     .navbar-menu a:hover,
@@ -205,21 +251,27 @@
        ============================================ */
     section {
       min-height: auto;
-      padding: 40px 24px;
+      padding: 60px 24px;
       position: relative;
     }
     
     @media (max-width: 768px) {
       section {
-        padding: 24px 16px;
+        padding: 40px 16px;
         min-height: auto;
       }
     }
 
     .section-container {
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 0 auto;
-      padding: 32px 20px;
+      padding: 0 24px;
+    }
+
+    @media (max-width: 768px) {
+      .section-container {
+        padding: 0 16px;
+      }
     }
 
     /* Section activities-tree đã di chuyển sang /genealogy */
@@ -239,10 +291,12 @@
       background: linear-gradient(135deg, rgba(139, 0, 0, 0.95) 0%, rgba(220, 20, 60, 0.95) 100%);
       color: #FFD700;
       text-align: center;
+      padding: 80px 24px;
     }
 
     .hero-content {
-      max-width: 800px;
+      max-width: 900px;
+      margin: 0 auto;
     }
 
     .hero-content h1 {
@@ -285,16 +339,73 @@
        ============================================ */
     #about {
       background: #FAEBD7;
+      padding: 60px 24px;
+    }
+
+    .about-content {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .about-text {
+      font-size: var(--font-size-base);
+      line-height: 1.8;
+      color: #333;
+    }
+
+    .about-text p {
+      margin-bottom: 20px;
+      text-align: justify;
+    }
+
+    .about-text h3 {
+      color: #8B0000;
+      font-size: var(--font-size-2xl);
+      font-weight: 700;
+      margin-top: 40px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #DAA520;
+      padding-bottom: 12px;
+    }
+
+    .about-text h3:first-child {
+      margin-top: 0;
+    }
+
+    .about-image {
+      text-align: center;
+      margin: 30px 0;
+    }
+
+    .about-image img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    blockquote {
+      background: #FFF8DC;
+      border-left: 4px solid #DAA520;
+      padding: 20px;
+      margin: 24px 0;
+      border-radius: 4px;
+      font-style: italic;
+      color: #555;
     }
 
     #temple-interior {
       background: #FAEBD7;
       border-top: 1px solid rgba(139, 0, 0, 0.12);
+      padding: 60px 24px;
     }
 
     #news-feed {
       background: #FAEBD7;
-      padding: 40px 0;
+      padding: 60px 0;
       border-top: 1px solid rgba(139, 0, 0, 0.12);
     }
 
@@ -302,12 +413,19 @@
     #external-posts {
       background: #FAEBD7;
       border-top: 1px solid rgba(139, 0, 0, 0.12);
-      padding: 40px 0;
+      padding: 60px 24px;
     }
 
     .external-posts-container {
       max-width: 1000px;
       margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    @media (max-width: 768px) {
+      .external-posts-container {
+        padding: 0 16px;
+      }
     }
 
     .external-post-item {
@@ -383,9 +501,15 @@
     }
 
     .news-feed-container {
-      max-width: 1200px;
+      max-width: 1100px;
       margin: 0 auto;
-      padding: 0 20px;
+      padding: 0 24px;
+    }
+
+    @media (max-width: 768px) {
+      .news-feed-container {
+        padding: 0 16px;
+      }
     }
 
     /* Featured Posts */
@@ -634,7 +758,8 @@
     /* Documents Section */
     .documents-section {
       background: #FAEBD7;
-      padding: 60px 0;
+      padding: 60px 24px;
+      border-top: 1px solid rgba(139, 0, 0, 0.12);
     }
 
     .documents-section .page-header {
@@ -643,74 +768,95 @@
     }
 
     .documents-section .page-subtitle {
-      font-size: 18px;
+      font-size: var(--font-size-lg);
       color: #6b7280;
-      margin-top: 10px;
+      margin-top: 12px;
+      line-height: 1.6;
+    }
+
+    .documents-section .section-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    @media (max-width: 768px) {
+      .documents-section .section-container {
+        padding: 0 16px;
+      }
     }
 
     .documents-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-      gap: 24px;
-      margin-top: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 20px;
     }
 
     .document-card {
       background: #FFF8DC;
-      border-radius: 12px;
-      padding: 24px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-radius: 8px;
+      padding: 16px 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
+      align-items: center;
       border: 1px solid #E6D5B8;
+      gap: 16px;
     }
 
     .document-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+      background: #FFFEF5;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
     .document-icon {
-      font-size: 64px;
-      text-align: center;
-      margin-bottom: 20px;
+      font-size: 32px;
       color: #8B0000;
+      flex-shrink: 0;
+      width: 40px;
+      text-align: center;
     }
 
     .document-title {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: 600;
       color: #8B0000;
-      margin-bottom: 15px;
-      text-align: center;
+      margin: 0;
+      flex: 1;
+      text-align: left;
     }
 
     .document-description {
       font-size: 14px;
       color: #6b7280;
-      line-height: 1.6;
-      margin-bottom: 25px;
-      flex-grow: 1;
+      line-height: 1.5;
+      margin: 0;
+      flex: 1;
+      text-align: left;
     }
 
     .document-actions {
       display: flex;
-      gap: 12px;
-      justify-content: center;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-shrink: 0;
     }
 
     .btn-view {
       background: #8B0000;
       color: white;
-      padding: 12px 24px;
-      border-radius: 8px;
+      padding: 8px 16px;
+      border-radius: 6px;
       text-decoration: none;
       font-weight: 600;
+      font-size: 13px;
       transition: background 0.3s ease;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
+      white-space: nowrap;
     }
 
     .btn-view:hover {
@@ -719,19 +865,21 @@
 
     .btn-download {
       background: #DAA520;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 8px;
+      color: #8B0000;
+      padding: 8px 16px;
+      border-radius: 6px;
       text-decoration: none;
       font-weight: 600;
+      font-size: 13px;
       transition: background 0.3s ease;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
+      white-space: nowrap;
     }
 
     .btn-download:hover {
-      background: #b8860b;
+      background: #c4951f;
     }
 
     .source-reference:hover {
@@ -746,7 +894,40 @@
       }
 
       .documents-grid {
-        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .document-card {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+      }
+
+      .document-icon {
+        font-size: 28px;
+        width: 32px;
+      }
+
+      .document-title {
+        font-size: 15px;
+        width: 100%;
+        margin-bottom: 8px;
+      }
+
+      .document-description {
+        font-size: 13px;
+        width: 100%;
+        margin-bottom: 8px;
+      }
+
+      .document-actions {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .btn-view,
+      .btn-download {
+        font-size: 12px;
+        padding: 6px 12px;
       }
     }
 
@@ -844,7 +1025,7 @@
       height: calc(100vh - var(--navbar-height));
       background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%);
       border-right: 3px solid #DAA520;
-      padding: clamp(15px, 2vw, 20px);
+      padding: 20px 16px;
       overflow-y: auto;
       overflow-x: hidden;
       z-index: 998; /* Below navbar (z-index: 1000) */
@@ -870,13 +1051,15 @@
     }
 
     .toc-sidebar h3 {
-      color: #2563eb;
-      font-size: clamp(16px, 2.5vw, 18px);
-      margin-bottom: clamp(12px, 2vw, 15px);
-      border-bottom: 2px solid #2563eb;
-      padding-bottom: clamp(8px, 1.5vw, 10px);
+      color: #8B0000;
+      font-size: 18px;
+      margin-bottom: 20px;
+      border-bottom: 3px solid #DAA520;
+      padding-bottom: 12px;
       text-align: center;
       font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .toc-list {
@@ -886,40 +1069,68 @@
     }
 
     .toc-list li {
-      margin-bottom: clamp(8px, 1.5vw, 10px);
-      padding-left: clamp(18px, 2.5vw, 22px);
+      margin-bottom: 8px;
       position: relative;
     }
 
     .toc-list li::before {
-      content: "▶";
+      content: "▸";
       position: absolute;
       left: 0;
+      top: 50%;
+      transform: translateY(-50%);
       color: #8B0000;
       font-weight: bold;
-      font-size: clamp(10px, 1.5vw, 12px);
+      font-size: 12px;
+      opacity: 0.6;
+      transition: all 0.3s ease;
+    }
+
+    .toc-list li:hover::before {
+      opacity: 1;
+      color: #DAA520;
+      transform: translateY(-50%) translateX(3px);
     }
 
     .toc-list a {
-      color: #8B0000;
+      color: #555;
       text-decoration: none;
-      font-size: clamp(13px, 2vw, 14px);
+      font-size: 14px;
       font-weight: 500;
       transition: all 0.3s ease;
       display: block;
-      line-height: 1.5;
-      padding: clamp(4px, 1vw, 6px) 0;
+      line-height: 1.6;
+      padding: 10px 12px 10px 20px;
+      border-radius: 6px;
       word-wrap: break-word;
+      position: relative;
+      background: transparent;
     }
 
     .toc-list a:hover {
-      color: #DAA520;
-      text-decoration: underline;
-      transform: translateX(3px);
+      color: #8B0000;
+      background: rgba(218, 165, 32, 0.1);
+      transform: translateX(4px);
+      padding-left: 24px;
     }
 
-    .toc-list a:active {
-      color: #FFD700;
+    .toc-list a.active {
+      color: #8B0000;
+      background: rgba(218, 165, 32, 0.2);
+      font-weight: 600;
+      border-left: 3px solid #DAA520;
+      padding-left: 17px;
+    }
+
+    .toc-list a.active::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #DAA520;
+      border-radius: 0 3px 3px 0;
     }
 
     /* Mobile: Hide sidebar, show toggle button */
@@ -991,10 +1202,22 @@
       .toc-sidebar {
         width: 80vw;
         max-width: 280px;
+        padding: 16px 12px;
+      }
+
+      .toc-sidebar h3 {
+        font-size: 16px;
+        margin-bottom: 16px;
+        padding-bottom: 10px;
       }
 
       .toc-list a {
-        font-size: var(--font-size-sm);
+        font-size: 13px;
+        padding: 8px 10px 8px 18px;
+      }
+
+      .toc-list li {
+        margin-bottom: 6px;
       }
     }
 
@@ -1077,139 +1300,6 @@
       }
     }
 
-    .about-content {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 40px;
-      align-items: start;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .about-text {
-      font-size: 18px;
-      line-height: 1.8;
-      color: #333;
-    }
-
-    .about-text p {
-      margin-bottom: 20px;
-    }
-
-    .about-text h3 {
-      color: #8B0000;
-      font-size: 24px;
-      font-weight: 700;
-      margin-top: 30px;
-      margin-bottom: 15px;
-      border-bottom: 2px solid #DAA520;
-      padding-bottom: 10px;
-    }
-
-    .about-text h3:first-of-type {
-      margin-top: 0;
-    }
-
-    .about-text h4 {
-      color: #8B0000;
-      font-size: 20px;
-      font-weight: 700;
-      margin-top: 25px;
-      margin-bottom: 12px;
-      border-bottom: 2px solid #DAA520;
-      padding-bottom: 8px;
-    }
-
-    .about-text blockquote {
-      border-left: 4px solid #8B0000;
-      padding-left: 20px;
-      margin: 20px 0;
-      font-style: italic;
-      color: #555;
-      background: #FFF8DC;
-      padding: 15px 20px;
-      border-radius: 4px;
-    }
-
-    .about-text ul {
-      margin: 15px 0;
-      padding-left: 30px;
-    }
-
-    .about-text ul li {
-      margin-bottom: 10px;
-      line-height: 1.6;
-    }
-
-    .about-text strong {
-      color: #8B0000;
-      font-weight: 700;
-    }
-
-    .about-text em {
-      color: #666;
-      font-style: italic;
-    }
-
-    .about-image {
-      text-align: center;
-      margin: 40px 0;
-    }
-
-    .about-image img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-    }
-
-    .about-image img:hover {
-      transform: scale(1.02);
-    }
-
-    @media (max-width: 768px) {
-      .about-image {
-        margin: 30px 0;
-      }
-      
-      .about-image img {
-        border-radius: 8px;
-      }
-    }
-
-    .about-image {
-      text-align: center;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .about-image img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-      border: 4px solid #DAA520;
-      background: white;
-      padding: 10px;
-      transition: transform 0.3s;
-    }
-
-    .about-image img:hover {
-      transform: scale(1.05);
-    }
-
-    @media (max-width: 768px) {
-      .about-content {
-        grid-template-columns: 1fr;
-      }
-      
-      .about-image {
-        order: -1;
-        margin-bottom: 30px;
-      }
-    }
 
     /* ============================================
        GENEALOGY TREE SECTION - Đã di chuyển sang /genealogy
@@ -1762,7 +1852,6 @@
 
   <!-- Navbar -->
   <nav class="navbar">
-    <a href="#home" class="navbar-logo">Phòng Tuy Biên Quận Công</a>
     <button class="navbar-toggle" onclick="toggleMenu()">☰</button>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/" onclick="setActive(this)">Trang chủ</a></li>
@@ -2553,9 +2642,26 @@
       }
     });
 
-    // Close sidebar when clicking on a link (mobile)
+    // Close sidebar when clicking on a link (mobile) and smooth scroll
     document.querySelectorAll('.toc-list a').forEach(link => {
-      link.addEventListener('click', function() {
+      link.addEventListener('click', function(e) {
+        const href = this.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          e.preventDefault();
+          const targetId = href.substring(1);
+          const targetElement = document.getElementById(targetId) || document.querySelector(`[id="${targetId}"]`);
+          
+          if (targetElement) {
+            const navbarHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70;
+            const targetPosition = targetElement.offsetTop - navbarHeight - 20;
+            
+            window.scrollTo({
+              top: targetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
+        
         if (window.innerWidth <= 1024) {
           // Đóng overlay ngay lập tức để không che màn hình
           const overlay = document.getElementById('tocOverlay');
@@ -2592,7 +2698,72 @@
       }
     }
 
-    // Set active on scroll
+    // Update TOC active state on scroll
+    function updateTOCActiveState() {
+      const tocLinks = document.querySelectorAll('.toc-list a');
+      const sections = document.querySelectorAll('section[id], h2[id], h3[id], h4[id]');
+      
+      let currentSection = '';
+      const navbarHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70;
+      const scrollPosition = window.scrollY + navbarHeight + 100;
+      
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop;
+        const sectionHeight = section.offsetHeight;
+        const sectionId = section.getAttribute('id');
+        
+        if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+          currentSection = sectionId;
+        }
+      });
+      
+      // Update TOC links
+      tocLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href.startsWith('#')) {
+          const targetId = href.substring(1);
+          if (targetId === currentSection) {
+            link.classList.add('active');
+            // Scroll TOC item into view if needed
+            const tocItem = link.closest('li');
+            if (tocItem) {
+              const tocSidebar = document.getElementById('tocSidebar');
+              if (tocSidebar) {
+                const itemTop = tocItem.offsetTop;
+                const itemHeight = tocItem.offsetHeight;
+                const sidebarTop = tocSidebar.scrollTop;
+                const sidebarHeight = tocSidebar.clientHeight;
+                
+                if (itemTop < sidebarTop || itemTop + itemHeight > sidebarTop + sidebarHeight) {
+                  tocSidebar.scrollTo({
+                    top: itemTop - 20,
+                    behavior: 'smooth'
+                  });
+                }
+              }
+            }
+          } else {
+            link.classList.remove('active');
+          }
+        }
+      });
+    }
+
+    // Throttle scroll event
+    let scrollTimeout;
+    window.addEventListener('scroll', () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        updateTOCActiveState();
+      }, 100);
+    });
+
+    // Update on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      updateTOCActiveState();
+    });
+
+    // Set active on scroll (for navbar)
     window.addEventListener('scroll', () => {
       const sections = ['home', 'about', 'temple-interior', 'genealogy', 'login'];
       const scrollPos = window.scrollY + 100;

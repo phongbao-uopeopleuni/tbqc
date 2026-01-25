@@ -7876,12 +7876,67 @@ def api_member_stats():
                 'count': generation_dict.get(i, 0)
             })
         
+        # Thống kê học hàm (academic_rank)
+        cursor.execute("""
+            SELECT 
+                academic_rank,
+                COUNT(*) AS count
+            FROM persons
+            WHERE academic_rank IS NOT NULL 
+                AND academic_rank != ''
+                AND TRIM(academic_rank) != ''
+            GROUP BY academic_rank
+            ORDER BY count DESC, academic_rank ASC
+        """)
+        academic_rank_stats = cursor.fetchall()
+        
+        # Thống kê học vị (academic_degree)
+        cursor.execute("""
+            SELECT 
+                academic_degree,
+                COUNT(*) AS count
+            FROM persons
+            WHERE academic_degree IS NOT NULL 
+                AND academic_degree != ''
+                AND TRIM(academic_degree) != ''
+            GROUP BY academic_degree
+            ORDER BY count DESC, academic_degree ASC
+        """)
+        academic_degree_stats = cursor.fetchall()
+        
+        # Tổng số người có học hàm
+        cursor.execute("""
+            SELECT COUNT(*) AS total_with_rank
+            FROM persons
+            WHERE academic_rank IS NOT NULL 
+                AND academic_rank != ''
+                AND TRIM(academic_rank) != ''
+        """)
+        total_with_rank_result = cursor.fetchone()
+        total_with_rank = total_with_rank_result.get('total_with_rank', 0) if total_with_rank_result else 0
+        
+        # Tổng số người có học vị
+        cursor.execute("""
+            SELECT COUNT(*) AS total_with_degree
+            FROM persons
+            WHERE academic_degree IS NOT NULL 
+                AND academic_degree != ''
+                AND TRIM(academic_degree) != ''
+        """)
+        total_with_degree_result = cursor.fetchone()
+        total_with_degree = total_with_degree_result.get('total_with_degree', 0) if total_with_degree_result else 0
+        
         return jsonify({
             'total_members': row.get('total_members', 0),
             'male_count': row.get('male_count', 0),
             'female_count': row.get('female_count', 0),
             'unknown_gender_count': row.get('unknown_gender_count', 0),
-            'generation_counts': generation_counts
+            'generation_counts': generation_counts,
+            # Thêm thống kê học hàm và học vị
+            'academic_rank_stats': academic_rank_stats,
+            'academic_degree_stats': academic_degree_stats,
+            'total_with_rank': total_with_rank,
+            'total_with_degree': total_with_degree
         })
     except Exception as e:
         print(f"ERROR: Loi khi lay thong ke thanh vien: {e}")

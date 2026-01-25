@@ -266,6 +266,50 @@
         padding: var(--space-3, 12px);
       }
     }
+
+    /* Stats Layout Responsive */
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-4);
+    }
+
+    .stats-card {
+      padding: var(--space-4);
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stats-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    @media (max-width: 1024px) {
+      .stats-summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stats-charts {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .stats-summary {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+      }
+
+      .stats-card {
+        padding: var(--space-3);
+      }
+
+      .stats-layout {
+        gap: var(--space-6) !important;
+      }
+    }
+
     
     /* Phần dưới: Tra cứu */
     .lineage-panel {
@@ -1196,7 +1240,6 @@
 </head>
 <body>
   <nav class="navbar">
-    <a href="/" class="navbar-logo">Phòng Tuy Biên Quận Công</a>
     <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
@@ -1531,34 +1574,46 @@
             Thống kê nhanh số lượng thành viên trong gia phả Tuy Biên Phòng – Nam, Nữ và các trường hợp chưa rõ.
           </p>
 
-          <div class="stats-layout" style="display: grid; grid-template-columns: 1.2fr 2fr; gap: var(--space-8); align-items: stretch;">
-            <div class="stats-summary" style="display: grid; grid-template-columns: 1fr; gap: var(--space-4);">
-              <div class="stats-card card" style="border-left: 5px solid var(--color-primary);">
+          <div class="stats-layout" style="display: grid; grid-template-columns: 1fr; gap: var(--space-8);">
+            <!-- Stats Summary Cards - Grid 3 cột -->
+            <div class="stats-summary" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
+              <div class="stats-card card" style="border-left: 5px solid var(--color-primary); padding: var(--space-4); text-align: center;">
                 <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Tổng thành viên</div>
                 <div class="stats-value" id="statsTotalMembers" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
               </div>
-              <div class="stats-card card" style="border-left: 5px solid var(--color-primary);">
+              <div class="stats-card card" style="border-left: 5px solid var(--color-primary); padding: var(--space-4); text-align: center;">
                 <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Số Nam</div>
                 <div class="stats-value" id="statsMaleCount" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
               </div>
-              <div class="stats-card card" style="border-left: 5px solid var(--color-primary);">
+              <div class="stats-card card" style="border-left: 5px solid var(--color-primary); padding: var(--space-4); text-align: center;">
                 <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Số Nữ</div>
                 <div class="stats-value" id="statsFemaleCount" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
               </div>
-              <div class="stats-card card" style="border-left: 5px solid var(--color-primary);">
+              <div class="stats-card card" style="border-left: 5px solid var(--color-primary); padding: var(--space-4); text-align: center;">
                 <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Không rõ / khác</div>
                 <div class="stats-value" id="statsUnknownCount" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
               </div>
+              <div class="stats-card card" style="border-left: 5px solid #2563eb; padding: var(--space-4); text-align: center;">
+                <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Có học hàm</div>
+                <div class="stats-value" id="statsTotalWithRank" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: #2563eb;">–</div>
+              </div>
+              <div class="stats-card card" style="border-left: 5px solid #7c3aed; padding: var(--space-4); text-align: center;">
+                <div class="stats-label" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">Có học vị</div>
+                <div class="stats-value" id="statsTotalWithDegree" style="font-size: var(--font-size-2xl); font-weight: var(--font-weight-bold); color: #7c3aed;">–</div>
+              </div>
             </div>
 
-            <div class="stats-charts" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);">
-              <div class="stats-chart-card card">
-                <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Cơ cấu giới tính</h3>
-                <canvas id="genderPieChart"></canvas>
-              </div>
-              <div class="stats-chart-card card">
-                <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Thành viên theo giới tính</h3>
-                <canvas id="genderBarChart"></canvas>
+            <!-- Stats Charts - Grid 2 cột -->
+            <div class="stats-charts-wrapper">
+              <div class="stats-charts" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);">
+                <div class="stats-chart-card card">
+                  <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Cơ cấu giới tính</h3>
+                  <canvas id="genderPieChart"></canvas>
+                </div>
+                <div class="stats-chart-card card">
+                  <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Thành viên theo giới tính</h3>
+                  <canvas id="genderBarChart"></canvas>
+                </div>
               </div>
             </div>
           </div>
@@ -1600,9 +1655,10 @@
                 <div class="generation-stat-value" id="gen8Count" style="font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); color: var(--color-primary);">–</div>
               </div>
             </div>
-            <div class="generation-chart-container card" style="padding: var(--space-5);">
-              <h3 style="margin-bottom: var(--space-4); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Biểu đồ số người theo đời</h3>
-              <canvas id="generationBarChart"></canvas>
+              <div class="generation-chart-container card" style="padding: var(--space-5);">
+                <h3 style="margin-bottom: var(--space-4); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Biểu đồ số người theo đời</h3>
+                <canvas id="generationBarChart"></canvas>
+              </div>
             </div>
           </div>
 
@@ -2901,6 +2957,19 @@
         document.getElementById('statsFemaleCount').textContent = female.toLocaleString('vi-VN');
         document.getElementById('statsUnknownCount').textContent = unknown.toLocaleString('vi-VN');
 
+        // Hiển thị tổng số có học hàm và học vị
+        const totalWithRank = data.total_with_rank || 0;
+        const totalWithDegree = data.total_with_degree || 0;
+        const totalWithRankEl = document.getElementById('statsTotalWithRank');
+        const totalWithDegreeEl = document.getElementById('statsTotalWithDegree');
+        if (totalWithRankEl) {
+          totalWithRankEl.textContent = totalWithRank.toLocaleString('vi-VN');
+        }
+        if (totalWithDegreeEl) {
+          totalWithDegreeEl.textContent = totalWithDegree.toLocaleString('vi-VN');
+        }
+
+
         renderGenderCharts({ male, female, unknown });
 
         // Hiển thị thống kê theo đời
@@ -2932,6 +3001,16 @@
         // On error, populate dropdown with default range
         populateGenerationFilter([]);
       }
+    }
+
+    /**
+     * Helper function để escape HTML
+     */
+    function escapeHtml(text) {
+      if (!text) return '';
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     function renderGenderCharts({ male, female, unknown }) {
