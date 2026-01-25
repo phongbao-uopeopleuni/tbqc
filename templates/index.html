@@ -934,10 +934,16 @@
       border: 2px solid #DAA520;
       border-radius: 8px;
       padding: 10px 15px;
+      min-width: 44px; /* Touch target tối thiểu */
+      min-height: 44px;
       cursor: pointer;
       font-size: 18px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
       transition: all 0.3s ease;
+      /* Quan trọng: bỏ 300ms delay trên mobile, tránh ghost click */
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(255, 215, 0, 0.2);
+      user-select: none;
     }
 
     .toc-toggle:hover {
@@ -959,6 +965,7 @@
 
     .toc-overlay.active {
       display: block;
+      touch-action: manipulation;
     }
 
     @media (max-width: 1024px) {
@@ -1733,7 +1740,7 @@
   <button class="toc-toggle" onclick="toggleTOC()" id="tocToggle">📑 Mục Lục</button>
 
   <!-- TOC Overlay -->
-  <div class="toc-overlay" id="tocOverlay" onclick="toggleTOC()"></div>
+  <div class="toc-overlay" id="tocOverlay"></div>
 
   <!-- Fixed Sidebar Table of Contents -->
   <div class="toc-sidebar" id="tocSidebar">
@@ -2464,6 +2471,10 @@
       }
     }
 
+    // Guard để tránh ghost click trên overlay
+    var _tocLastOpenedAt = 0;
+    var _TOC_OPEN_GUARD_MS = 400;
+
     // Helper function để đóng TOC
     function closeTOC() {
       const sidebar = document.getElementById('tocSidebar');
@@ -2490,6 +2501,9 @@
       if (overlay) {
         overlay.classList.add('active');
       }
+      
+      // Ghi lại thời điểm mở để guard ghost click
+      _tocLastOpenedAt = Date.now();
     }
 
     function toggleTOC() {
@@ -2507,6 +2521,20 @@
           openTOC();
         }
       }
+    }
+
+    // Khởi tạo event listener cho overlay với guard ghost click
+    function initTOCOverlay() {
+      var overlay = document.getElementById('tocOverlay');
+      if (!overlay) return;
+      
+      overlay.addEventListener('click', function() {
+        // Guard: không đóng nếu vừa mở TOC (< 400ms)
+        if (Date.now() - _tocLastOpenedAt < _TOC_OPEN_GUARD_MS) {
+          return;
+        }
+        toggleTOC();
+      });
     }
 
     // Close sidebar when clicking outside on mobile
@@ -5474,6 +5502,7 @@
       loadNewsFeed();
       loadExternalPosts();
       initTouchFriendly();
+      initTOCOverlay(); // Khởi tạo overlay với guard ghost click
     });
   </script>
 
