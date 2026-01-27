@@ -50,8 +50,17 @@ try:
     # Cấu hình session để kéo dài thời gian đăng nhập
     from datetime import timedelta, datetime
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)  # Session kéo dài 24 giờ
-    # Kiểm tra xem có đang chạy trên Railway (production) không
-    is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true'
+    # Kiểm tra xem có đang chạy trên production không (Railway hoặc Render)
+    # Check if running on production (Railway or Render)
+    is_production = (
+        os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or 
+        os.environ.get('RAILWAY') == 'true' or
+        os.environ.get('RENDER') == 'true' or  # Thêm hỗ trợ Render
+        os.environ.get('ENVIRONMENT') == 'production' or  # Generic production check
+        # Fallback: Detect production bằng cách kiểm tra domain/protocol
+        # Nếu có COOKIE_DOMAIN được set, có thể là production
+        (os.environ.get('COOKIE_DOMAIN') is not None and os.environ.get('COOKIE_DOMAIN') != '')
+    )
     
     # Tắt debug mode trên production để bảo mật
     # Disable debug mode on production for security
@@ -59,19 +68,26 @@ try:
     
     # IMPORTANT: don't hard-code domain; set COOKIE_DOMAIN explicitly if you need cross-subdomain cookies.
     cookie_domain = os.environ.get('COOKIE_DOMAIN') if is_production else None
-    app.config['SESSION_COOKIE_SECURE'] = is_production  # HTTPS only trên production
+    
+    # Đảm bảo SameSite=None luôn đi kèm Secure=True
+    # Ensure if SameSite=None then Secure=True
+    use_samesite_none = is_production
+    
+    # CRITICAL: SameSite=None REQUIRES Secure=True (chỉ HTTPS)
+    # CRITICAL: SameSite=None REQUIRES Secure=True (HTTPS only)
+    app.config['SESSION_COOKIE_SECURE'] = use_samesite_none  # Phải True nếu SameSite=None
     app.config['SESSION_COOKIE_HTTPONLY'] = True  # Bảo vệ khỏi XSS
-    # Sử dụng 'None' cho SameSite trên HTTPS để đảm bảo cookie được gửi trong mọi trường hợp
-    # Nếu không phải production, dùng 'Lax' để tránh warning
-    app.config['SESSION_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'
+    app.config['SESSION_COOKIE_SAMESITE'] = 'None' if use_samesite_none else 'Lax'
     app.config['SESSION_COOKIE_NAME'] = 'tbqc_session'  # Tên cookie rõ ràng
-    app.config['SESSION_COOKIE_DOMAIN'] = cookie_domain  # Dùng domain chung để tránh mất session khi có/không www
+    app.config['SESSION_COOKIE_DOMAIN'] = cookie_domain  # Chỉ set nếu có COOKIE_DOMAIN
     app.config['SESSION_REFRESH_EACH_REQUEST'] = True  # Refresh session mỗi request
+    
     # Cấu hình cookie cho Flask-Login remember_token
+    # Configuration for Flask-Login remember_token cookie
     app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=7)
-    app.config['REMEMBER_COOKIE_SECURE'] = is_production
+    app.config['REMEMBER_COOKIE_SECURE'] = use_samesite_none
     app.config['REMEMBER_COOKIE_HTTPONLY'] = True
-    app.config['REMEMBER_COOKIE_SAMESITE'] = 'None' if is_production else 'Lax'
+    app.config['REMEMBER_COOKIE_SAMESITE'] = 'None' if use_samesite_none else 'Lax'
     app.config['REMEMBER_COOKIE_DOMAIN'] = cookie_domain
     
     # CORS Configuration - Giới hạn origins cho bảo mật
@@ -6346,10 +6362,13 @@ def get_members():
     
     Caching: Cache 5 phút để giảm tải database. Cache sẽ được invalidate khi có thay đổi dữ liệu.
     """
+    # Debug logging để kiểm tra session và cookie configuration
+    logger.debug(f"Session check - members_gate_ok: {session.get('members_gate_ok')}, Session keys: {list(session.keys())}, Cookie domain: {app.config.get('SESSION_COOKIE_DOMAIN')}, Secure: {app.config.get('SESSION_COOKIE_SECURE')}, SameSite: {app.config.get('SESSION_COOKIE_SAMESITE')}")
+    
     # Kiểm tra session gate
     if not session.get('members_gate_ok'):
-        logger.warning("Unauthorized access to /api/members - members_gate_ok not set")
-        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        logger.warning(f"Unauthorized access to /api/members - members_gate_ok not set. Session keys: {list(session.keys())}, Remote addr: {request.remote_addr}")
+        return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
     
     # Kiểm tra cache (chỉ cache khi đã authenticated)
     cache_key = 'api_members_data'
