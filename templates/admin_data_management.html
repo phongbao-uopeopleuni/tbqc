@@ -388,10 +388,10 @@
   function formatDateTime(dateStr) {
     try {
       const date = new Date(dateStr);
-      // Convert sang Vietnam timezone (UTC+7)
+      // Tự động sử dụng timezone của hệ thống laptop/browser
       // Format: HH:MM:SS DD/MM/YYYY
       const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Ho_Chi_Minh',
+        // Không chỉ định timeZone để tự động dùng timezone của browser
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
