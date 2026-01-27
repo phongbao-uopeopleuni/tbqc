@@ -414,9 +414,15 @@ def sync_members_gate_accounts_from_db():
 
 def validate_tbqc_gate(username: str, password: str) -> bool:
     """
-    Kiểm tra username/password có khớp với một trong 4 accounts TBQC không.
-    Kiểm tra từ database để đảm bảo đồng bộ tự động.
-    Fallback về MEMBERS_GATE_ACCOUNTS nếu không kết nối được database.
+    Kiểm tra username/password có khớp với BẤT KỲ account nào có role='user' và is_active=TRUE trong database.
+    Kiểm tra từ database để đảm bảo đồng bộ tự động với TẤT CẢ các account được quản lý tại /admin/users.
+    Fallback về MEMBERS_GATE_ACCOUNTS CHỈ KHI KHÔNG THỂ kết nối database.
+    
+    Logic:
+    - Nếu có kết nối database: Kiểm tra TẤT CẢ user có role='user' và is_active=TRUE trong database
+      * Nếu user tồn tại: verify password với hash → return True/False
+      * Nếu user KHÔNG tồn tại: return False (KHÔNG fallback về hardcoded)
+    - Chỉ fallback về hardcoded list khi KHÔNG THỂ kết nối database (connection = None hoặc exception khi query)
     
     Args:
         username: Username cần kiểm tra
@@ -428,17 +434,17 @@ def validate_tbqc_gate(username: str, password: str) -> bool:
     username = username.strip()
     password = password.strip()
     
-    # Kiểm tra từ database trước (đồng bộ tự động)
+    # Kiểm tra từ database trước (đồng bộ tự động với TẤT CẢ accounts)
     connection = get_db_connection()
     if connection:
         try:
             cursor = connection.cursor(dictionary=True)
-            # Kiểm tra username có trong danh sách 4 accounts không
+            # Kiểm tra TẤT CẢ user có role='user' và is_active=TRUE trong database
+            # Không giới hạn chỉ 4 accounts cụ thể
             cursor.execute("""
                 SELECT username, password_hash, role 
                 FROM users 
-                WHERE username IN ('tbqcnhanh1', 'tbqcnhanh2', 'tbqcnhanh3', 'tbqcnhanh4')
-                AND username = %s
+                WHERE username = %s
                 AND role = 'user'
                 AND is_active = TRUE
             """, (username,))
@@ -448,17 +454,31 @@ def validate_tbqc_gate(username: str, password: str) -> bool:
                 # Verify password với hash trong database
                 from auth import verify_password
                 if verify_password(password, user['password_hash']):
+                    logger.info(f"Gate validation successful from database: {username}")
                     return True
+                else:
+                    logger.info(f"Gate validation failed: password mismatch for {username}")
+                    return False
+            else:
+                # User không tồn tại trong database hoặc không có role='user' hoặc không active
+                # → return False (KHÔNG fallback về hardcoded)
+                logger.info(f"Gate validation failed: user not found or not eligible (username: {username}, must be role='user' and is_active=TRUE)")
+                return False
         except Exception as e:
+            # Lỗi khi query database → fallback về hardcoded list
             logger.warning(f"Error validating from database, falling back to hardcoded list: {e}")
         finally:
             if connection.is_connected():
                 cursor.close()
                 connection.close()
+    else:
+        # Không thể kết nối database → fallback về hardcoded list
+        logger.warning("Cannot connect to database, falling back to hardcoded list for gate validation")
     
-    # Fallback về hardcoded list nếu không kết nối được database hoặc không tìm thấy trong DB
+    # Fallback về hardcoded list CHỈ KHI KHÔNG THỂ kết nối database
     for account in MEMBERS_GATE_ACCOUNTS:
         if account['username'] == username and account['password'] == password:
+            logger.info(f"Gate validation successful from hardcoded list: {username}")
             return True
     return False
 
@@ -7610,6 +7630,7 @@ def api_admin_user_detail(user_id):
                 password_hash = hash_password(data['password'])
                 updates.append("password_hash = %s")
                 params.append(password_hash)
+                logger.info(f"Password updated for user_id {user_id} (username: {user.get('username', 'unknown')})")
             
             if 'full_name' in data:
                 updates.append("full_name = %s")

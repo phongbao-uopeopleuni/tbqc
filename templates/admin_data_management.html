@@ -60,6 +60,94 @@
   .section-header p {
     color: var(--color-text-muted, #6b7280);
   }
+
+  /* Logs Table Styles */
+  .logs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-top: var(--space-4);
+  }
+
+  .logs-table th {
+    background: var(--color-primary, #2563eb);
+    color: white;
+    padding: var(--space-4);
+    text-align: left;
+    font-weight: var(--font-weight-semibold, 600);
+    white-space: nowrap;
+  }
+
+  .logs-table td {
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+    vertical-align: top;
+  }
+
+  .logs-table tr:hover {
+    background: var(--color-bg, #f9fafb);
+  }
+
+  .log-action-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: var(--font-size-xs, 12px);
+    font-weight: var(--font-weight-semibold, 600);
+    white-space: nowrap;
+  }
+
+  .log-action-LOGIN,
+  .log-action-CREATE_PERSON {
+    background: #10b981;
+    color: white;
+  }
+
+  .log-action-UPDATE_PERSON,
+  .log-action-UPDATE_SPOUSE,
+  .log-action-UPDATE_USER_ROLE {
+    background: #f59e0b;
+    color: white;
+  }
+
+  .log-action-DELETE_PERSON {
+    background: #ef4444;
+    color: white;
+  }
+
+  .log-action-LOGIN_FAILED {
+    background: #dc2626;
+    color: white;
+  }
+
+  .log-diff {
+    max-width: 300px;
+    font-size: var(--font-size-sm, 14px);
+  }
+
+  .log-diff details {
+    cursor: pointer;
+  }
+
+  .log-diff summary {
+    color: var(--color-primary, #2563eb);
+    font-weight: var(--font-weight-semibold, 600);
+    padding: var(--space-2);
+  }
+
+  .log-diff pre {
+    background: var(--color-bg, #f9fafb);
+    padding: var(--space-3);
+    border-radius: var(--radius-sm, 4px);
+    overflow-x: auto;
+    font-size: var(--font-size-xs, 12px);
+    margin-top: var(--space-2);
+    max-height: 200px;
+    overflow-y: auto;
+  }
 </style>
 {% endblock %}
 
@@ -123,6 +211,36 @@
       <a href="/admin/logs" class="btn btn-sm btn-primary">Xem logs</a>
     </div>
   </div>
+</div>
+
+<!-- Recent Activity Logs -->
+<div class="section-header">
+  <div style="display: flex; justify-content: space-between; align-items: center;">
+    <h2>📋 Log hoạt động gần đây</h2>
+    <a href="/admin/logs" class="btn btn-sm btn-primary">Xem tất cả logs</a>
+  </div>
+</div>
+<div style="overflow-x: auto;">
+  <table class="logs-table">
+    <thead>
+      <tr>
+        <th>Thời gian</th>
+        <th>User</th>
+        <th>Hành động</th>
+        <th>Loại đối tượng</th>
+        <th>ID đối tượng</th>
+        <th>Thay đổi</th>
+        <th>IP Address</th>
+      </tr>
+    </thead>
+    <tbody id="recentLogsList">
+      <tr>
+        <td colspan="7" style="text-align: center; padding: var(--space-8);">
+          <div class="loading">Đang tải...</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 </div>
 
 <script>
@@ -206,8 +324,135 @@
     }
   }
 
+  // Load Recent Activity Logs
+  async function loadRecentLogs() {
+    const listEl = document.getElementById('recentLogsList');
+    
+    try {
+      listEl.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: var(--space-8);"><div class="loading">Đang tải...</div></td></tr>';
+      
+      const result = await fetch('/api/admin/activity-logs?limit=20&offset=0', {
+        credentials: 'include'
+      });
+      
+      if (!result.ok) {
+        throw new Error(`HTTP ${result.status}: ${result.statusText}`);
+      }
+      
+      const data = await result.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Không thể tải logs');
+      }
+      
+      const logs = data.logs || [];
+      
+      if (logs.length === 0) {
+        listEl.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: var(--space-8);">Chưa có log nào</td></tr>';
+        return;
+      }
+      
+      // Render logs
+      listEl.innerHTML = logs.map(log => {
+        const createdAt = log.created_at ? formatDateTime(log.created_at) : '-';
+        const username = log.username || log.full_name || 'Khách';
+        const action = log.action || '-';
+        const targetType = log.target_type || '-';
+        const targetId = log.target_id || '-';
+        const ipAddress = log.ip_address || '-';
+        
+        const actionClass = `log-action-${action}`;
+        const actionBadge = `<span class="log-action-badge ${actionClass}">${escapeHtml(action)}</span>`;
+        
+        // Format before/after data
+        const diffHtml = formatLogDiff(log.before_data, log.after_data);
+        
+        return `
+          <tr class="log-row">
+            <td>${createdAt}</td>
+            <td>${escapeHtml(username)}</td>
+            <td>${actionBadge}</td>
+            <td>${escapeHtml(targetType)}</td>
+            <td>${escapeHtml(String(targetId))}</td>
+            <td class="log-diff">${diffHtml}</td>
+            <td>${escapeHtml(ipAddress)}</td>
+          </tr>
+        `;
+      }).join('');
+      
+    } catch (err) {
+      listEl.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: var(--space-8); color: #ef4444;">Lỗi: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function formatDateTime(dateStr) {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleString('vi-VN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  }
+
+  function formatLogDiff(beforeData, afterData) {
+    if (!beforeData && !afterData) {
+      return '<span style="color: var(--color-text-muted, #6b7280);">Không có thay đổi</span>';
+    }
+    
+    if (!beforeData && afterData) {
+      return `<details>
+        <summary>Tạo mới</summary>
+        <pre>${escapeHtml(JSON.stringify(afterData, null, 2))}</pre>
+      </details>`;
+    }
+    
+    if (beforeData && !afterData) {
+      return `<details>
+        <summary>Xóa</summary>
+        <pre>${escapeHtml(JSON.stringify(beforeData, null, 2))}</pre>
+      </details>`;
+    }
+    
+    // Both exist - show diff
+    const beforeStr = JSON.stringify(beforeData, null, 2);
+    const afterStr = JSON.stringify(afterData, null, 2);
+    
+    if (beforeStr === afterStr) {
+      return '<span style="color: var(--color-text-muted, #6b7280);">Không có thay đổi</span>';
+    }
+    
+    return `<details>
+      <summary>Xem thay đổi</summary>
+      <div>
+        <div style="margin-bottom: var(--space-2);">
+          <strong style="color: #ef4444;">Trước:</strong>
+          <pre class="diff-removed">${escapeHtml(beforeStr)}</pre>
+        </div>
+        <div>
+          <strong style="color: #10b981;">Sau:</strong>
+          <pre class="diff-added">${escapeHtml(afterStr)}</pre>
+        </div>
+      </div>
+    </details>`;
+  }
+
+  function escapeHtml(text) {
+    if (!text) return '-';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     loadTableStats();
+    loadRecentLogs();
   });
 </script>
 {% endblock %}

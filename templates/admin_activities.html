@@ -331,22 +331,143 @@
     let quillEditor = null;
     
     document.addEventListener('DOMContentLoaded', function() {
-      quillEditor = new Quill('#contentEditor', {
-        theme: 'snow',
-        modules: {
-          toolbar: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-            [{ 'align': [] }],
-            ['link', 'image'],
-            ['clean']
-          ]
-        },
-        placeholder: 'Nhập nội dung bài viết...'
-      });
+      const editorElement = document.getElementById('contentEditor');
+      if (!editorElement) {
+        console.error('Quill Editor: Element #contentEditor not found');
+        return;
+      }
+      
+      try {
+        quillEditor = new Quill('#contentEditor', {
+          theme: 'snow',
+          modules: {
+            toolbar: [
+              [{ 'header': [1, 2, 3, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ 'color': [] }, { 'background': [] }],
+              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+              [{ 'align': [] }],
+              ['link', 'image'],
+              ['clean']
+            ]
+          },
+          placeholder: 'Nhập nội dung bài viết...'
+        });
+        console.log('Quill Editor initialized successfully');
+      } catch (error) {
+        console.error('Quill Editor initialization error:', error);
+        showMessage('Lỗi khởi tạo editor. Vui lòng tải lại trang.', 'error');
+      }
     });
+
+    /**
+     * Clean text - Loại bỏ TẤT CẢ các ký tự không hợp lệ và chỉ giữ lại printable characters
+     */
+    function cleanText(text) {
+      if (!text || typeof text !== 'string') {
+        return '';
+      }
+      
+      // Chỉ giữ lại các ký tự printable và whitespace hợp lệ
+      // Bao gồm: letters, digits, punctuation, và một số whitespace (\n, \r, \t, space)
+      return text.replace(/[^\x20-\x7E\u00A0-\uFFFF\n\r\t]/g, '')
+        // Loại bỏ các ký tự zero-width
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        // Loại bỏ các ký tự hình vuông và tam giác đen (25A0-25FF)
+        .replace(/[\u25A0-\u25FF]/g, '')
+        // Loại bỏ các ký tự control còn sót lại
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+    }
+
+    /**
+     * Sanitize HTML content để load vào Quill Editor
+     * Sử dụng cách tiếp cận mạnh mẽ: extract text và rebuild HTML
+     */
+    function sanitizeHtmlForQuill(html) {
+      if (!html || typeof html !== 'string') {
+        return '';
+      }
+      
+      try {
+        // Bước 1: Loại bỏ các ký tự không hợp lệ ngay từ đầu
+        let cleaned = cleanText(html);
+        
+        // Bước 2: Tạo một div tạm để parse HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = cleaned;
+        
+        // Bước 3: Loại bỏ các script tags và các thẻ không an toàn
+        const scripts = tempDiv.querySelectorAll('script, style, iframe, object, embed, form, input, button');
+        scripts.forEach(el => el.remove());
+        
+        // Bước 4: Loại bỏ các event handlers
+        const allElements = tempDiv.querySelectorAll('*');
+        allElements.forEach(el => {
+          Array.from(el.attributes).forEach(attr => {
+            if (attr.name.toLowerCase().startsWith('on')) {
+              el.removeAttribute(attr.name);
+            }
+          });
+        });
+        
+        // Bước 5: Clean TẤT CẢ text nodes một cách triệt để
+        const walker = document.createTreeWalker(
+          tempDiv,
+          NodeFilter.SHOW_TEXT,
+          null,
+          false
+        );
+        
+        let node;
+        while (node = walker.nextNode()) {
+          // Clean text node một cách triệt để
+          node.textContent = cleanText(node.textContent);
+        }
+        
+        // Bước 6: Clean tất cả attribute values
+        allElements.forEach(el => {
+          Array.from(el.attributes).forEach(attr => {
+            const cleanedValue = cleanText(attr.value);
+            if (cleanedValue !== attr.value) {
+              el.setAttribute(attr.name, cleanedValue);
+            }
+          });
+        });
+        
+        // Bước 7: Lấy HTML đã được sanitize
+        let sanitized = tempDiv.innerHTML;
+        
+        // Bước 8: Clean lại một lần nữa để đảm bảo
+        sanitized = cleanText(sanitized);
+        
+        // Bước 9: Normalize HTML entities một cách an toàn
+        sanitized = sanitized
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+        
+        // Bước 10: Clean lại sau khi decode entities
+        sanitized = cleanText(sanitized);
+        
+        console.log('Sanitized HTML - Original length:', html.length, 'Cleaned length:', sanitized.length);
+        
+        // Bước 11: Kiểm tra xem có còn ký tự đặc biệt không
+        const hasSpecialChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF\u25A0-\u25FF]/.test(sanitized);
+        if (hasSpecialChars) {
+          console.warn('Still contains special characters after sanitization, cleaning again...');
+          sanitized = cleanText(sanitized);
+        }
+        
+        return sanitized;
+      } catch (error) {
+        console.error('Error sanitizing HTML for Quill:', error);
+        // Fallback: trả về text thuần đã được clean
+        return cleanText(html);
+      }
+    }
 
     // Generic JSON fetch helper
     async function fetchJson(url, options) {
@@ -447,12 +568,166 @@
         document.getElementById('title').value = post.title || '';
         document.getElementById('summary').value = post.summary || '';
         document.getElementById('category').value = post.category || '';
-        // Set content vào Quill editor
-        if (quillEditor && post.content) {
-          quillEditor.root.innerHTML = post.content;
+        
+        // Set content vào Quill editor với sanitization
+        const content = post.content || '';
+        console.log('Loading content into Quill Editor, length:', content.length);
+        console.log('Content preview (first 200 chars):', content.substring(0, 200));
+        
+        if (quillEditor) {
+          try {
+            // Kiểm tra quillEditor đã được khởi tạo
+            if (!quillEditor.root) {
+              console.error('Quill Editor root not available');
+              document.getElementById('content').value = content;
+            } else {
+              // Xử lý các trường hợp edge cases
+              if (!content || content.trim() === '') {
+                // Content rỗng → clear editor
+                quillEditor.setContents([]);
+                console.log('Quill Editor: Set empty content');
+              } else {
+                // Sanitize HTML content trước khi load
+                const sanitizedContent = sanitizeHtmlForQuill(content);
+                console.log('Quill Editor: Sanitized content length:', sanitizedContent.length);
+                console.log('Sanitized content preview (first 200 chars):', sanitizedContent.substring(0, 200));
+                
+                // Kiểm tra xem có ký tự đặc biệt không mong muốn không
+                const hasSpecialChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF\u25A0-\u25FF]/.test(sanitizedContent);
+                if (hasSpecialChars) {
+                  console.warn('Quill Editor: Still contains special characters after sanitization');
+                }
+                
+                // Sử dụng cách tiếp cận mạnh mẽ: Clean triệt để và rebuild
+                try {
+                  // Clear editor trước khi load
+                  quillEditor.setContents([]);
+                  
+                  // Bước 1: Sanitize HTML một cách triệt để
+                  const finalCleanHtml = sanitizeHtmlForQuill(sanitizedContent);
+                  
+                  // Bước 2: Convert HTML sang Delta format
+                  let delta = quillEditor.clipboard.convert({ html: finalCleanHtml });
+                  
+                  // Bước 3: Clean Delta ops một cách triệt để
+                  if (delta && delta.ops) {
+                    delta.ops = delta.ops.map(op => {
+                      if (op.insert && typeof op.insert === 'string') {
+                        // Clean text trong insert
+                        op.insert = cleanText(op.insert);
+                      }
+                      // Clean attributes nếu có
+                      if (op.attributes) {
+                        Object.keys(op.attributes).forEach(key => {
+                          if (typeof op.attributes[key] === 'string') {
+                            op.attributes[key] = cleanText(op.attributes[key]);
+                          }
+                        });
+                      }
+                      return op;
+                    }).filter(op => {
+                      // Loại bỏ các ops rỗng hoặc chỉ chứa ký tự không hợp lệ
+                      if (op.insert && typeof op.insert === 'string') {
+                        const cleaned = cleanText(op.insert);
+                        return cleaned.length > 0;
+                      }
+                      return true;
+                    });
+                  }
+                  
+                  // Bước 4: Set Delta vào editor
+                  quillEditor.setContents(delta);
+                  
+                  // Bước 5: Verify và clean lại nếu cần
+                  const loadedContent = quillEditor.root.innerHTML;
+                  const loadedText = quillEditor.getText();
+                  
+                  // Kiểm tra xem có còn ký tự đặc biệt không
+                  const hasSpecialChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u200B-\u200D\uFEFF\u25A0-\u25FF]/.test(loadedContent);
+                  
+                  if (hasSpecialChars) {
+                    console.warn('Quill Editor: Still contains special characters, performing deep clean...');
+                    
+                    // Deep clean: Extract text thuần và rebuild
+                    const cleanTextOnly = cleanText(loadedText);
+                    
+                    // Clear và set text thuần trước
+                    quillEditor.setText('');
+                    
+                    // Nếu có HTML hợp lệ, thử paste lại
+                    if (finalCleanHtml && finalCleanHtml.trim().length > 0) {
+                      // Parse lại HTML và clean
+                      const tempDiv = document.createElement('div');
+                      tempDiv.innerHTML = finalCleanHtml;
+                      
+                      // Clean tất cả text nodes
+                      const walker = document.createTreeWalker(
+                        tempDiv,
+                        NodeFilter.SHOW_TEXT,
+                        null,
+                        false
+                      );
+                      
+                      let node;
+                      while (node = walker.nextNode()) {
+                        node.textContent = cleanText(node.textContent);
+                      }
+                      
+                      const reCleanHtml = cleanText(tempDiv.innerHTML);
+                      
+                      // Convert lại sang Delta
+                      try {
+                        const reDelta = quillEditor.clipboard.convert({ html: reCleanHtml });
+                        if (reDelta && reDelta.ops) {
+                          reDelta.ops = reDelta.ops.map(op => {
+                            if (op.insert && typeof op.insert === 'string') {
+                              op.insert = cleanText(op.insert);
+                            }
+                            return op;
+                          }).filter(op => {
+                            if (op.insert && typeof op.insert === 'string') {
+                              return cleanText(op.insert).length > 0;
+                            }
+                            return true;
+                          });
+                        }
+                        quillEditor.setContents(reDelta);
+                        console.log('Quill Editor: Content reloaded after deep clean');
+                      } catch (e) {
+                        console.warn('Quill Editor: Deep clean failed, using text only:', e);
+                        quillEditor.setText(cleanTextOnly);
+                      }
+                    } else {
+                      quillEditor.setText(cleanTextOnly);
+                    }
+                  } else {
+                    console.log('Quill Editor: Content loaded successfully, no special characters detected');
+                  }
+                  
+                  console.log('Quill Editor: Final HTML length:', quillEditor.root.innerHTML.length);
+                  console.log('Quill Editor: Final text length:', quillEditor.getText().length);
+                  
+                } catch (deltaError) {
+                  console.error('Quill Editor: Error loading content:', deltaError);
+                  // Fallback: Set text thuần đã được clean
+                  const cleanTextOnly = cleanText(sanitizedContent);
+                  quillEditor.setText(cleanTextOnly);
+                  console.log('Quill Editor: Fallback to text-only mode');
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Quill Editor: Error setting content:', error);
+            // Fallback về textarea nếu có lỗi
+            document.getElementById('content').value = content;
+            showMessage('Lỗi khi load nội dung vào editor. Đã fallback về textarea.', 'error');
+          }
         } else {
-          document.getElementById('content').value = post.content || '';
+          // Quill Editor chưa được khởi tạo → dùng textarea
+          console.warn('Quill Editor not initialized, using textarea');
+          document.getElementById('content').value = content;
         }
+        
         document.getElementById('thumbnail').value = post.thumbnail || '';
         document.getElementById('status').value = post.status || 'draft';
         document.getElementById('formTitle').textContent = 'Chỉnh sửa bài đăng';
@@ -474,6 +749,7 @@
         
         document.getElementById('activityForm').scrollIntoView({ behavior: 'smooth' });
       } catch (err) {
+        console.error('Error in editPost:', err);
         showMessage('Lỗi: ' + err.message, 'error');
       }
     }
@@ -503,6 +779,28 @@
       uploadedImages = [];
       updateImagesPreview();
       updateImagesCount();
+      
+      // Reset Quill Editor về trạng thái rỗng
+      if (quillEditor) {
+        try {
+          // Sử dụng setContents với Delta rỗng để reset editor
+          quillEditor.setContents([]);
+          console.log('Quill Editor: Reset to empty state');
+        } catch (error) {
+          console.error('Quill Editor: Error resetting editor:', error);
+          // Fallback: clear root HTML
+          try {
+            if (quillEditor.root) {
+              quillEditor.root.innerHTML = '';
+            }
+          } catch (fallbackError) {
+            console.error('Quill Editor: Fallback reset failed:', fallbackError);
+          }
+        }
+      }
+      
+      // Reset hidden textarea
+      document.getElementById('content').value = '';
     }
 
     async function publishNow() {
@@ -791,11 +1089,17 @@
           showMessage('Vui lòng nhập nội dung', 'error');
           return;
         }
+        
+        // Clean content trước khi submit để đảm bảo không có ký tự đặc biệt
+        contentHtml = sanitizeHtmlForQuill(contentHtml);
+        console.log('Form submit: Cleaned content length:', contentHtml.length);
       } else {
         contentHtml = document.getElementById('content').value.trim();
+        // Clean content từ textarea cũng
+        contentHtml = sanitizeHtmlForQuill(contentHtml);
       }
       
-      // Set vào hidden textarea để submit
+      // Set vào hidden textarea để submit (đã được clean)
       document.getElementById('content').value = contentHtml;
       
       const data = {

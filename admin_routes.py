@@ -18,6 +18,9 @@ import mysql.connector
 from mysql.connector import Error
 import csv
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 def register_admin_routes(app):
     """Đăng ký các routes cho admin"""
@@ -362,7 +365,13 @@ def register_admin_routes(app):
             return jsonify({'error': 'Không thể kết nối database'}), 500
         
         try:
-            cursor = connection.cursor()
+            cursor = connection.cursor(dictionary=True)
+            
+            # Lấy username để logging
+            cursor.execute("SELECT username FROM users WHERE user_id = %s", (user_id,))
+            user = cursor.fetchone()
+            if not user:
+                return jsonify({'error': 'Không tìm thấy user'}), 404
             
             # Build update query
             updates = []
@@ -379,6 +388,14 @@ def register_admin_routes(app):
             if role:
                 updates.append("role = %s")
                 params.append(role)
+            
+            # Xử lý password nếu có
+            if 'password' in data and data['password']:
+                from auth import hash_password
+                password_hash = hash_password(data['password'])
+                updates.append("password_hash = %s")
+                params.append(password_hash)
+                logger.info(f"Password updated for user_id {user_id} (username: {user['username']}) via admin_routes")
             
             # Cập nhật permissions nếu có và cột tồn tại
             cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
