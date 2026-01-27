@@ -99,6 +99,24 @@ try:
         ]
     
     CORS(app, origins=allowed_origins, supports_credentials=True)
+    
+    # Initialize Flask-Caching for API response caching
+    try:
+        from flask_caching import Cache
+        cache_config = {
+            'CACHE_TYPE': 'simple',  # Simple in-memory cache (có thể nâng cấp lên Redis sau)
+            'CACHE_DEFAULT_TIMEOUT': 300,  # 5 phút default
+            'CACHE_THRESHOLD': 1000  # Max 1000 items trong cache
+        }
+        cache = Cache(app, config=cache_config)
+        print("OK: Flask-Caching da duoc khoi tao")
+    except ImportError:
+        print("WARNING: Flask-Caching chua duoc cai dat, caching se bi vo hieu")
+        cache = None
+    except Exception as e:
+        print(f"WARNING: Loi khi khoi tao cache: {e}")
+        cache = None
+    
     print("OK: Flask app da duoc khoi tao")
     print(f"   Static folder: {app.static_folder}")
     print(f"   Template folder: {app.template_folder}")
@@ -1652,6 +1670,19 @@ def api_activities():
             limit = request.args.get('limit', type=int)
             category = request.args.get('category')
 
+            # Tạo cache key dựa trên query parameters
+            cache_key = f'api_activities_{status or "all"}_{category or "all"}_{limit or "all"}'
+            
+            # Kiểm tra cache
+            if cache:
+                try:
+                    cached_data = cache.get(cache_key)
+                    if cached_data is not None:
+                        logger.debug(f"API /api/activities: Serving from cache (key: {cache_key})")
+                        return jsonify(cached_data)
+                except Exception as e:
+                    logger.warning(f"Cache get error (continuing without cache): {e}")
+
             sql = "SELECT * FROM activities"
             params = []
             conditions = []
@@ -1670,7 +1701,17 @@ def api_activities():
 
             cursor.execute(sql, tuple(params))
             rows = cursor.fetchall()
-            return jsonify([activity_row_to_json(r) for r in rows])
+            result = [activity_row_to_json(r) for r in rows]
+            
+            # Cache response (2 phút cho activities vì có thể thay đổi thường xuyên hơn)
+            if cache:
+                try:
+                    cache.set(cache_key, result, timeout=120)  # 2 phút
+                    logger.debug(f"API /api/activities: Cached response (key: {cache_key})")
+                except Exception as e:
+                    logger.warning(f"Cache set error (continuing): {e}")
+            
+            return jsonify(result)
 
         # POST (create) - admin hoặc user đăng nhập qua gate
         if not can_post_activities():
@@ -1707,6 +1748,17 @@ def api_activities():
             """, (title, summary, content, status_val, thumbnail, images_json))
         connection.commit()
         new_id = cursor.lastrowid
+
+        # Invalidate cache khi có thay đổi
+        if cache:
+            try:
+                # Xóa tất cả cache keys liên quan đến activities
+                # Vì Flask-Caching simple backend không hỗ trợ pattern matching tốt,
+                # ta sẽ xóa tất cả cache (đơn giản và đảm bảo consistency)
+                cache.clear()
+                logger.debug("API /api/activities: Cache invalidated after POST")
+            except Exception as e:
+                logger.warning(f"Cache invalidation error (continuing): {e}")
 
         cursor.execute("SELECT * FROM activities WHERE activity_id = %s", (new_id,))
         row = cursor.fetchone()
@@ -1793,6 +1845,14 @@ def api_activity_detail(activity_id):
                 """, (title, summary, content, status_val, thumbnail, images_json, activity_id))
             connection.commit()
 
+            # Invalidate cache khi có thay đổi
+            if cache:
+                try:
+                    cache.clear()  # Xóa tất cả cache để đảm bảo consistency
+                    logger.debug("API /api/activities: Cache invalidated after PUT")
+                except Exception as e:
+                    logger.warning(f"Cache invalidation error (continuing): {e}")
+
             cursor.execute("SELECT * FROM activities WHERE activity_id = %s", (activity_id,))
             updated = cursor.fetchone()
             return jsonify({'success': True, 'data': activity_row_to_json(updated)})
@@ -1800,6 +1860,15 @@ def api_activity_detail(activity_id):
         if request.method == 'DELETE':
             cursor.execute("DELETE FROM activities WHERE activity_id = %s", (activity_id,))
             connection.commit()
+            
+            # Invalidate cache khi xóa
+            if cache:
+                try:
+                    cache.clear()
+                    logger.debug("API /api/activities: Cache invalidated after DELETE")
+                except Exception as e:
+                    logger.warning(f"Cache invalidation error (continuing): {e}")
+
             return jsonify({'success': True, 'message': 'Đã xóa thành công'})
 
     except Error as e:
@@ -2405,13 +2474,13 @@ def serve_image_static(filename):
                 logger.debug(f"[Serve Image] Serving from static/images/{subfolder}: {actual_filename}")
                 return send_from_directory(static_images_path, actual_filename)
             
-            # File không tồn tại
-            logger.warning(f"[Serve Image] File không tồn tại: {filename}")
+            # File không tồn tại - chỉ log ở debug level để giảm noise
+            logger.debug(f"[Serve Image] File không tồn tại: {filename}")
             from flask import abort
             abort(404)
         except Exception as e:
             if '404' in str(e) or 'not found' in str(e).lower():
-                logger.warning(f"[Serve Image] File không tìm thấy: {filename}")
+                logger.debug(f"[Serve Image] File không tìm thấy: {filename}")  # Giảm từ warning xuống debug
             else:
                 logger.error(f"[Serve Image] Flask's static serving failed: {e}")
             from flask import abort
@@ -2443,15 +2512,15 @@ def serve_image_static(filename):
                 logger.debug(f"[Serve Image] Serving from static/images: {filename}")
                 return send_from_directory('static/images', filename)
             
-            # File không tồn tại ở cả 2 nơi
-            logger.warning(f"[Serve Image] File không tồn tại: {filename}")
+            # File không tồn tại ở cả 2 nơi - chỉ log ở debug level
+            logger.debug(f"[Serve Image] File không tồn tại: {filename}")
             from flask import abort
             abort(404)
             
         except Exception as e:
-            # Chỉ log warning cho các lỗi không nghiêm trọng (như file không tồn tại)
+            # Chỉ log ở debug level cho các lỗi không nghiêm trọng (như file không tồn tại)
             if '404' in str(e) or 'not found' in str(e).lower():
-                logger.warning(f"[Serve Image] File không tìm thấy: {filename}")
+                logger.debug(f"[Serve Image] File không tìm thấy: {filename}")  # Giảm từ warning xuống debug
             else:
                 logger.error(f"[Serve Image] Flask's static serving failed: {e}")
             from flask import abort
@@ -2931,7 +3000,8 @@ def serve_image(filename):
         if file_path.startswith(os.path.normpath(static_images_path)):
             return send_from_directory(static_images_path, filename)
     
-    # Nếu không tìm thấy, trả về 404
+    # Nếu không tìm thấy, log ở debug level và trả về 404
+    logger.debug(f"[Serve Image] File không tìm thấy: {filename}")
     abort(404)
 
 # Test route removed - không cần thiết
@@ -5558,6 +5628,14 @@ def delete_person(person_id):
         cursor.execute("DELETE FROM persons WHERE person_id = %s", (person_id,))
         connection.commit()
         
+        # Invalidate cache khi có thay đổi dữ liệu persons
+        if cache:
+            try:
+                cache.delete('api_members_data')  # Xóa cache của /api/members
+                logger.debug("Cache invalidated after delete_person")
+            except Exception as e:
+                logger.warning(f"Cache invalidation error (continuing): {e}")
+        
         return jsonify({
             'success': True,
             'message': f'Đã xóa người: {person["full_name"]} (Đời {person["generation_number"]})',
@@ -6265,11 +6343,24 @@ def get_members():
     để đảm bảo thông tin trả về chính xác và nhất quán.
     
     Yêu cầu: Phải đăng nhập qua cổng Members (session['members_gate_ok'] = True)
+    
+    Caching: Cache 5 phút để giảm tải database. Cache sẽ được invalidate khi có thay đổi dữ liệu.
     """
     # Kiểm tra session gate
     if not session.get('members_gate_ok'):
         logger.warning("Unauthorized access to /api/members - members_gate_ok not set")
         return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    
+    # Kiểm tra cache (chỉ cache khi đã authenticated)
+    cache_key = 'api_members_data'
+    if cache:
+        try:
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                logger.debug("📥 API /api/members: Serving from cache")
+                return jsonify(cached_data)
+        except Exception as e:
+            logger.warning(f"Cache get error (continuing without cache): {e}")
     
     logger.info("📥 API /api/members được gọi (source of truth)")
     connection = None
@@ -6451,7 +6542,19 @@ def get_members():
             members.append(member)
         
         logger.info(f"✅ API /api/members trả về {len(members)} thành viên")
-        return jsonify({'success': True, 'data': members})
+        
+        # Chuẩn bị response data
+        response_data = {'success': True, 'data': members}
+        
+        # Cache response (5 phút)
+        if cache:
+            try:
+                cache.set('api_members_data', response_data, timeout=300)  # 5 phút
+                logger.debug("📥 API /api/members: Cached response")
+            except Exception as e:
+                logger.warning(f"Cache set error (continuing): {e}")
+        
+        return jsonify(response_data)
         
     except Error as e:
         logger.error(f"❌ Lỗi trong /api/members: {e}", exc_info=True)
@@ -6580,30 +6683,71 @@ def _process_children_spouse_siblings(cursor, person_id, data):
         # Xử lý siblings: siblings được tính tự động từ relationships (cùng parent)
         # Lưu vào spouse_sibling_children table nếu tồn tại để tham khảo
         if 'siblings_info' in data:
-            cursor.execute("""
-                SELECT TABLE_NAME 
-                FROM information_schema.TABLES 
-                WHERE TABLE_SCHEMA = DATABASE() 
-                AND TABLE_NAME = 'spouse_sibling_children'
-            """)
-            if cursor.fetchone():
-                # Xóa siblings cũ
+            try:
+                # Kiểm tra bảng có tồn tại không
                 cursor.execute("""
-                    DELETE FROM spouse_sibling_children 
-                    WHERE person_id = %s
-                """, (person_id,))
+                    SELECT TABLE_NAME 
+                    FROM information_schema.TABLES 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'spouse_sibling_children'
+                """)
+                table_exists = cursor.fetchone()
                 
-                # Thêm siblings mới
-                if data.get('siblings_info'):
-                    siblings_names = [name.strip() for name in data['siblings_info'].split(';') if name.strip()]
-                    if siblings_names:
-                        siblings_str = '; '.join(siblings_names)
+                if table_exists:
+                    # Kiểm tra cột siblings_infor có tồn tại không
+                    cursor.execute("""
+                        SELECT COLUMN_NAME 
+                        FROM information_schema.COLUMNS 
+                        WHERE TABLE_SCHEMA = DATABASE() 
+                        AND TABLE_NAME = 'spouse_sibling_children'
+                        AND COLUMN_NAME = 'siblings_infor'
+                    """)
+                    column_exists = cursor.fetchone()
+                    
+                    if not column_exists:
+                        logger.warning(f"Column 'siblings_infor' does not exist in spouse_sibling_children table for person_id {person_id}")
+                        # Không xử lý nếu cột không tồn tại
+                        return
+                    
+                    # Xóa siblings cũ cho person_id này
+                    try:
                         cursor.execute("""
-                            INSERT INTO spouse_sibling_children (person_id, sibling_name)
-                            VALUES (%s, %s)
-                        """, (person_id, siblings_str))
+                            DELETE FROM spouse_sibling_children 
+                            WHERE person_id = %s
+                        """, (person_id,))
+                        logger.debug(f"Deleted old siblings data for person_id {person_id}")
+                    except Exception as delete_error:
+                        logger.warning(f"Error deleting old siblings for person_id {person_id}: {delete_error}")
+                        # Tiếp tục xử lý dù có lỗi khi xóa
+                    
+                    # Thêm siblings mới
+                    if data.get('siblings_info'):
+                        siblings_names = [name.strip() for name in data['siblings_info'].split(';') if name.strip()]
+                        if siblings_names:
+                            siblings_str = '; '.join(siblings_names)
+                            try:
+                                # Sử dụng đúng tên cột: siblings_infor (không phải sibling_name)
+                                cursor.execute("""
+                                    INSERT INTO spouse_sibling_children (person_id, siblings_infor)
+                                    VALUES (%s, %s)
+                                """, (person_id, siblings_str))
+                                logger.debug(f"Inserted siblings data for person_id {person_id}: {siblings_str}")
+                            except Exception as insert_error:
+                                error_code = insert_error.errno if hasattr(insert_error, 'errno') else None
+                                error_msg = str(insert_error)
+                                logger.error(f"Error inserting siblings into spouse_sibling_children for person_id {person_id}: [{error_code}] {error_msg}")
+                                # Không throw exception để không làm gián đoạn quá trình lưu chính
+                else:
+                    logger.debug(f"Table spouse_sibling_children does not exist, skipping siblings data save for person_id {person_id}")
+            except Exception as siblings_error:
+                error_code = siblings_error.errno if hasattr(siblings_error, 'errno') else None
+                error_msg = str(siblings_error)
+                logger.warning(f"Error processing siblings for person_id {person_id}: [{error_code}] {error_msg}")
+                # Không throw exception để không làm gián đoạn quá trình lưu chính
     except Exception as e:
-        logger.warning(f"Error processing children/spouse/siblings for {person_id}: {e}")
+        error_code = e.errno if hasattr(e, 'errno') else None
+        error_msg = str(e)
+        logger.warning(f"Error processing children/spouse/siblings for {person_id}: [{error_code}] {error_msg}")
         # Không throw exception để không làm gián đoạn quá trình lưu chính
 
 @app.route('/api/persons', methods=['POST'])
@@ -6860,6 +7004,15 @@ def create_person():
         _process_children_spouse_siblings(cursor, person_id, data)
         
         connection.commit()
+        
+        # Invalidate cache khi có thay đổi dữ liệu persons
+        if cache:
+            try:
+                cache.delete('api_members_data')  # Xóa cache của /api/members
+                logger.debug("Cache invalidated after create_person")
+            except Exception as e:
+                logger.warning(f"Cache invalidation error (continuing): {e}")
+        
         return jsonify({'success': True, 'message': 'Thêm thành viên thành công', 'person_id': person_id})
         
     except Error as e:
@@ -7155,6 +7308,15 @@ def update_person_members(person_id):
         _process_children_spouse_siblings(cursor, person_id, data)
         
         connection.commit()
+        
+        # Invalidate cache khi có thay đổi dữ liệu persons
+        if cache:
+            try:
+                cache.delete('api_members_data')  # Xóa cache của /api/members
+                logger.debug("Cache invalidated after update_person_members")
+            except Exception as e:
+                logger.warning(f"Cache invalidation error (continuing): {e}")
+        
         return jsonify({'success': True, 'message': 'Cập nhật thành viên thành công'})
         
     except Error as e:
@@ -7714,8 +7876,14 @@ def verify_password_api():
 @login_required
 def api_admin_activity_logs():
     """API lấy activity logs (admin only)"""
-    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-        return jsonify({'success': False, 'error': 'Không có quyền truy cập'}), 403
+    # Kiểm tra authentication và authorization
+    if not current_user.is_authenticated:
+        logger.warning(f"Activity logs API: Unauthenticated request from {request.remote_addr}")
+        return jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401
+    
+    if getattr(current_user, 'role', '') != 'admin':
+        logger.warning(f"Activity logs API: Unauthorized access attempt by user {current_user.username} (role: {getattr(current_user, 'role', 'none')})")
+        return jsonify({'success': False, 'error': 'Không có quyền truy cập. Chỉ admin mới có thể xem logs.'}), 403
     
     connection = get_db_connection()
     if not connection:
@@ -7729,7 +7897,37 @@ def api_admin_activity_logs():
         table_exists = cursor.fetchone()
         
         if not table_exists:
-            return jsonify({'success': False, 'error': 'Activity logs table not found'}), 404
+            logger.warning("Activity logs API: Table 'activity_logs' does not exist in database, attempting to create it")
+            # Tự động tạo bảng nếu chưa tồn tại
+            try:
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS activity_logs (
+                        log_id INT AUTO_INCREMENT PRIMARY KEY,
+                        user_id INT NULL COMMENT 'ID của user thực hiện hành động',
+                        action VARCHAR(100) NOT NULL COMMENT 'Hành động',
+                        target_type VARCHAR(50) NULL COMMENT 'Loại đối tượng',
+                        target_id VARCHAR(255) NULL COMMENT 'ID của đối tượng',
+                        before_data JSON NULL COMMENT 'Dữ liệu trước khi thay đổi',
+                        after_data JSON NULL COMMENT 'Dữ liệu sau khi thay đổi',
+                        ip_address VARCHAR(45) NULL COMMENT 'IP address',
+                        user_agent TEXT NULL COMMENT 'User agent',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian tạo log',
+                        INDEX idx_user_id (user_id),
+                        INDEX idx_action (action),
+                        INDEX idx_target_type (target_type),
+                        INDEX idx_target_id (target_id),
+                        INDEX idx_created_at (created_at)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng lưu log hoạt động hệ thống'
+                """)
+                connection.commit()
+                logger.info("Activity logs API: Successfully created 'activity_logs' table")
+                # Tiếp tục với query bình thường sau khi tạo bảng
+            except Exception as create_error:
+                logger.error(f"Activity logs API: Failed to create 'activity_logs' table: {create_error}")
+                return jsonify({
+                    'success': False, 
+                    'error': f'Bảng activity_logs không tồn tại và không thể tự động tạo. Lỗi: {str(create_error)}. Vui lòng chạy script migration: folder_sql/create_activity_logs_table.sql'
+                }), 404
         
         # Lấy query parameters
         limit = request.args.get('limit', default=100, type=int)

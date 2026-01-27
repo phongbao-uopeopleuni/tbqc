@@ -13,6 +13,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Global connection pool
+_db_pool = None
+
 
 def load_env_file(env_file_path: str) -> dict:
     """
@@ -138,11 +141,66 @@ def get_db_config() -> dict:
     return config
 
 
+def _init_db_pool():
+    """
+    Initialize database connection pool.
+    Called automatically on first get_db_connection() call.
+    """
+    global _db_pool
+    if _db_pool is not None:
+        return
+    
+    try:
+        import mysql.connector.pooling
+        from mysql.connector import Error
+        
+        config = get_db_config()
+        
+        # Create connection pool
+        # pool_size: số lượng connections trong pool (2-10 tùy vào traffic)
+        # pool_reset_session: reset session state khi trả connection về pool
+        _db_pool = mysql.connector.pooling.MySQLConnectionPool(
+            pool_name="tbqc_pool",
+            pool_size=5,  # Có thể tăng lên 10 nếu traffic cao
+            pool_reset_session=True,
+            **config
+        )
+        logger.info(f"Database connection pool initialized: pool_size=5")
+    except Error as e:
+        logger.error(f"Failed to initialize connection pool: {e}")
+        logger.warning("Falling back to single connection mode")
+        _db_pool = None
+    except Exception as e:
+        logger.error(f"Unexpected error initializing pool: {e}")
+        logger.warning("Falling back to single connection mode")
+        _db_pool = None
+
+
 def get_db_connection():
     """
     Create and return a database connection using unified config.
+    Uses connection pooling for better performance.
+    Falls back to single connection if pool initialization fails.
+    
     This is the standard function all modules should use.
     """
+    global _db_pool
+    
+    # Initialize pool if not already done
+    if _db_pool is None:
+        _init_db_pool()
+    
+    # Try to get connection from pool
+    if _db_pool is not None:
+        try:
+            connection = _db_pool.get_connection()
+            logger.debug(f"Got connection from pool")
+            return connection
+        except Exception as e:
+            logger.warning(f"Failed to get connection from pool: {e}, falling back to single connection")
+            # Fall through to single connection mode
+    
+    # Fallback: create single connection (backward compatibility)
     import mysql.connector
     from mysql.connector import Error
     
@@ -150,7 +208,7 @@ def get_db_connection():
     
     try:
         connection = mysql.connector.connect(**config)
-        logger.debug(f"Database connection established to {config['database']}")
+        logger.debug(f"Database connection established (single mode) to {config['database']}")
         return connection
     except Error as e:
         logger.error(f"Database connection failed: {e}")

@@ -270,14 +270,95 @@
       listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--space-8);"><div class="loading">Đang tải...</div></td></tr>';
       
       const result = await fetch(`/api/admin/activity-logs?${params.toString()}`, {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
       
-      if (!result.ok) {
-        throw new Error(`HTTP ${result.status}: ${result.statusText}`);
+      // Xử lý các status codes khác nhau
+      if (result.status === 401) {
+        // Unauthorized - chưa đăng nhập hoặc session hết hạn
+        const errorText = await result.text();
+        let errorMsg = 'Chưa đăng nhập hoặc session đã hết hạn. Vui lòng đăng nhập lại.';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+          // Nếu không parse được JSON, dùng message mặc định
+        }
+        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">
+          <div style="margin-bottom: 10px;"><strong>Lỗi 401: ${errorMsg}</strong></div>
+          <a href="/admin/login" class="btn btn-primary" style="text-decoration: none; display: inline-block; padding: 8px 16px;">Đăng nhập lại</a>
+        </td></tr>`;
+        paginationInfo.textContent = 'Lỗi xác thực';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
       }
       
-      const data = await result.json();
+      if (result.status === 403) {
+        // Forbidden - không có quyền truy cập
+        const errorText = await result.text();
+        let errorMsg = 'Bạn không có quyền truy cập trang này.';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+          // Nếu không parse được JSON, dùng message mặc định
+        }
+        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">
+          <div><strong>Lỗi 403: ${errorMsg}</strong></div>
+        </td></tr>`;
+        paginationInfo.textContent = 'Không có quyền truy cập';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
+      }
+      
+      if (result.status === 404) {
+        // Not Found - bảng activity_logs không tồn tại
+        const errorText = await result.text();
+        let errorMsg = 'Bảng activity_logs không tồn tại trong database.';
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+          // Nếu không parse được JSON, dùng message mặc định
+        }
+        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">
+          <div><strong>Lỗi 404: ${errorMsg}</strong></div>
+          <div style="margin-top: 10px; font-size: 14px; color: #666;">Vui lòng kiểm tra database hoặc liên hệ quản trị viên.</div>
+        </td></tr>`;
+        paginationInfo.textContent = 'Bảng không tồn tại';
+        prevBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
+      }
+      
+      if (!result.ok) {
+        // Các lỗi khác
+        const errorText = await result.text();
+        let errorMsg = `HTTP ${result.status}: ${result.statusText}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMsg = errorData.error || errorMsg;
+        } catch (e) {
+          // Nếu không parse được JSON, dùng status text
+        }
+        throw new Error(errorMsg);
+      }
+      
+      // Parse JSON response
+      let data;
+      try {
+        const responseText = await result.text();
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing JSON response:', parseError);
+        throw new Error('Phản hồi từ server không hợp lệ. Vui lòng thử lại.');
+      }
       
       if (!data.success) {
         throw new Error(data.error || 'Không thể tải logs');
