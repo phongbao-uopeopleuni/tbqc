@@ -24,6 +24,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from audit_log import log_person_update
 
 logger = logging.getLogger(__name__)
 
@@ -7099,6 +7100,16 @@ def update_person_members(person_id):
         if not existing_person:
             return jsonify({'success': False, 'error': f'Không tìm thấy person_id: {person_id}'}), 404
         
+        # Lấy dữ liệu cũ để log
+        cursor.execute("""
+            SELECT full_name, gender, status, generation_level, birth_date_solar,
+                   death_date_solar, place_of_death, biography, academic_rank,
+                   academic_degree, phone, email, occupation
+            FROM persons 
+            WHERE person_id = %s
+        """, (person_id,))
+        before_data = cursor.fetchone()
+        
         # Kiểm tra csv_id trùng (nếu thay đổi) - chỉ nếu cột csv_id tồn tại
         if data.get('csv_id'):
             # Kiểm tra xem cột csv_id có tồn tại không
@@ -7327,6 +7338,25 @@ def update_person_members(person_id):
         _process_children_spouse_siblings(cursor, person_id, data)
         
         connection.commit()
+        
+        # Ghi log activity sau khi update thành công
+        try:
+            # Lấy dữ liệu mới để log
+            cursor.execute("""
+                SELECT full_name, gender, status, generation_level, birth_date_solar,
+                       death_date_solar, place_of_death, biography, academic_rank,
+                       academic_degree, phone, email, occupation
+                FROM persons 
+                WHERE person_id = %s
+            """, (person_id,))
+            after_data = cursor.fetchone()
+            
+            # Ghi log
+            if before_data and after_data:
+                log_person_update(person_id, dict(before_data), dict(after_data))
+        except Exception as log_error:
+            # Log lỗi nhưng không crash ứng dụng
+            logger.warning(f"Failed to log person update for {person_id}: {log_error}")
         
         # Invalidate cache khi có thay đổi dữ liệu persons
         if cache:

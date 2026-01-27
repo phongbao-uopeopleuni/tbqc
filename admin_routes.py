@@ -13,7 +13,7 @@ except ImportError:
     from db_config import get_db_connection
 from auth import (get_user_by_username, verify_password, hash_password,
                   admin_required, permission_required, role_required)
-from audit_log import log_activity, log_login, log_user_update
+from audit_log import log_activity, log_login, log_user_update, log_person_update
 import mysql.connector
 from mysql.connector import Error
 import csv
@@ -1118,6 +1118,15 @@ def register_admin_routes(app):
             if not cursor.fetchone():
                 return jsonify({'success': False, 'error': f'Không tìm thấy person_id: {person_id}'}), 404
             
+            # Lấy dữ liệu cũ để log
+            cursor.execute("""
+                SELECT full_name, gender, status, generation_level, birth_date_solar,
+                       death_date_solar, place_of_death
+                FROM persons 
+                WHERE person_id = %s
+            """, (person_id,))
+            before_data = cursor.fetchone()
+            
             # Kiểm tra các cột có tồn tại không
             cursor.execute("""
                 SELECT COLUMN_NAME 
@@ -1209,6 +1218,25 @@ def register_admin_routes(app):
             _process_children_spouse_siblings(cursor, person_id, data)
             
             connection.commit()
+            
+            # Ghi log activity sau khi update thành công
+            try:
+                # Lấy dữ liệu mới để log
+                cursor.execute("""
+                    SELECT full_name, gender, status, generation_level, birth_date_solar,
+                           death_date_solar, place_of_death
+                    FROM persons 
+                    WHERE person_id = %s
+                """, (person_id,))
+                after_data = cursor.fetchone()
+                
+                # Ghi log
+                if before_data and after_data:
+                    log_person_update(person_id, dict(before_data), dict(after_data))
+            except Exception as log_error:
+                # Log lỗi nhưng không crash ứng dụng
+                logger.warning(f"Failed to log person update for {person_id}: {log_error}")
+            
             return jsonify({'success': True, 'message': 'Cập nhật thành viên thành công'})
             
         except Error as e:

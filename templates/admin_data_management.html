@@ -388,14 +388,28 @@
   function formatDateTime(dateStr) {
     try {
       const date = new Date(dateStr);
-      return date.toLocaleString('vi-VN', {
+      // Convert sang Vietnam timezone (UTC+7)
+      // Format: HH:MM:SS DD/MM/YYYY
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Ho_Chi_Minh',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
+        hour12: false
       });
+      
+      const parts = formatter.formatToParts(date);
+      const hours = parts.find(p => p.type === 'hour').value;
+      const minutes = parts.find(p => p.type === 'minute').value;
+      const seconds = parts.find(p => p.type === 'second').value;
+      const day = parts.find(p => p.type === 'day').value;
+      const month = parts.find(p => p.type === 'month').value;
+      const year = parts.find(p => p.type === 'year').value;
+      
+      return `${hours}:${minutes}:${seconds} ${day}/${month}/${year}`;
     } catch (e) {
       return dateStr;
     }
