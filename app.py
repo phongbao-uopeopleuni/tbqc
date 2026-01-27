@@ -8071,12 +8071,20 @@ def api_admin_activity_logs():
                 except (json.JSONDecodeError, TypeError):
                     pass
             
-            # Format created_at
+            # Format created_at - Đảm bảo trả về UTC với timezone indicator
             if log.get('created_at'):
-                if hasattr(log['created_at'], 'isoformat'):
-                    log['created_at'] = log['created_at'].isoformat()
+                if isinstance(log['created_at'], datetime):
+                    # Format với timezone UTC để frontend parse đúng
+                    log['created_at'] = log['created_at'].isoformat() + 'Z' if log['created_at'].tzinfo is None else log['created_at'].isoformat()
+                elif hasattr(log['created_at'], 'isoformat'):
+                    log['created_at'] = log['created_at'].isoformat() + 'Z'
                 else:
-                    log['created_at'] = str(log['created_at'])
+                    # Nếu là string từ MySQL TIMESTAMP (UTC), thêm 'Z' để chỉ định UTC
+                    created_at_str = str(log['created_at'])
+                    if 'T' in created_at_str and not created_at_str.endswith('Z') and '+' not in created_at_str[-6:]:
+                        log['created_at'] = created_at_str + 'Z'
+                    else:
+                        log['created_at'] = created_at_str
         
         return jsonify({
             'success': True,
