@@ -78,7 +78,7 @@
       overflow: hidden;
       border-radius: 8px;
       margin-bottom: 15px;
-      background: var(--color-bg);
+      background: #FAEBD7;
     }
     
     .activity-thumbnail img {
@@ -161,6 +161,658 @@
         padding: 5px 8px;
       }
     }
+    
+    /* Gallery Album Styles */
+    .gallery-section {
+      margin-top: var(--space-10);
+      padding-top: var(--space-8);
+      border-top: 2px solid var(--color-border);
+    }
+    
+    .gallery-header {
+      text-align: center;
+      margin-bottom: var(--space-8);
+    }
+    
+    .gallery-header h2 {
+      font-size: var(--font-size-3xl);
+      margin-bottom: var(--space-2);
+      color: var(--color-primary);
+    }
+    
+    .gallery-header p {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-lg);
+    }
+    
+    /* Albums Grid Container */
+    .albums-grid-container {
+      margin-top: var(--space-8);
+      background: #FFF8DC;
+      padding: var(--space-6);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(139, 0, 0, 0.15);
+    }
+    
+    .albums-grid-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-6);
+      padding-bottom: var(--space-5);
+      border-bottom: 2px solid #e8e8e8;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+    }
+    
+    .albums-grid-title h3 {
+      margin: 0;
+      font-size: var(--font-size-2xl);
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+    
+    .albums-grid-title p {
+      margin: var(--space-2) 0 0 0;
+      color: var(--color-text-muted);
+      font-size: var(--font-size-base);
+    }
+    
+    .btn-create-album {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-6);
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(139, 0, 0, 0.25);
+      text-decoration: none;
+    }
+    
+    .btn-create-album:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(139, 0, 0, 0.35);
+    }
+    
+    .btn-create-album:active {
+      transform: translateY(0);
+    }
+    
+    .btn-create-album .btn-icon {
+      font-size: var(--font-size-xl);
+      font-weight: bold;
+      line-height: 1;
+    }
+    
+    /* Albums Grid */
+    .albums-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-6);
+      margin-top: var(--space-6);
+    }
+    
+    /* Gallery View */
+    .gallery-view {
+      margin-top: var(--space-8);
+      background: #FFF8DC;
+      padding: var(--space-6);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+      animation: fadeIn 0.4s ease;
+      border: 1px solid rgba(139, 0, 0, 0.15);
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .gallery-view-header {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+      padding-bottom: var(--space-5);
+      border-bottom: 2px solid #e8e8e8;
+      flex-wrap: wrap;
+    }
+    
+    .btn-back {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-5);
+      background: #FFF8DC;
+      color: var(--color-text);
+      border: 2px solid rgba(139, 0, 0, 0.2);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+    
+    .btn-back:hover {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+      transform: translateX(-4px);
+    }
+    
+    .btn-back span {
+      font-size: var(--font-size-xl);
+      line-height: 1;
+    }
+    
+    .gallery-view-info {
+      flex: 1;
+    }
+    
+    .gallery-view-info h3 {
+      margin: 0;
+      font-size: var(--font-size-2xl);
+      color: var(--color-primary);
+      font-weight: 700;
+    }
+    
+    .gallery-view-info p {
+      margin: var(--space-2) 0 0 0;
+      color: #666;
+      font-size: var(--font-size-base);
+    }
+    
+    .gallery-container {
+      min-height: 300px;
+    }
+    
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: var(--space-4);
+      margin-top: var(--space-6);
+    }
+    
+    .gallery-item {
+      position: relative;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #FAEBD7;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      aspect-ratio: 1;
+      border: 1px solid rgba(139, 0, 0, 0.1);
+    }
+    
+    .gallery-item:hover {
+      transform: translateY(-6px) scale(1.02);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+    }
+    
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+    
+    .gallery-item:hover img {
+      transform: scale(1.1);
+    }
+    
+    .gallery-item-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      display: flex;
+      align-items: flex-start;
+      justify-content: flex-end;
+      padding: var(--space-2);
+    }
+    
+    .gallery-item:hover .gallery-item-overlay {
+      opacity: 1;
+    }
+    
+    .gallery-item-number {
+      background: rgba(255, 255, 255, 0.9);
+      color: var(--color-primary);
+      padding: var(--space-1) var(--space-2);
+      border-radius: 12px;
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+    }
+    
+    .gallery-loading {
+      text-align: center;
+      padding: var(--space-8);
+      color: var(--color-text-muted);
+    }
+    
+    .gallery-error {
+      text-align: center;
+      padding: var(--space-8);
+      color: var(--color-error);
+    }
+    
+    /* Album Card Styles */
+    .album-card {
+      background: #FFF8DC;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      border: 2px solid rgba(139, 0, 0, 0.15);
+      position: relative;
+      height: 100%;
+    }
+    
+    .album-card:hover {
+      transform: translateY(-12px) scale(1.02);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+      border-color: var(--color-primary);
+    }
+    
+    .album-card.selected {
+      border-color: var(--color-primary);
+      border-width: 3px;
+      box-shadow: 0 12px 32px rgba(139, 0, 0, 0.25);
+    }
+    
+    .album-card-thumbnail {
+      width: 100%;
+      height: 240px;
+      background: linear-gradient(135deg, #FAEBD7 0%, #FFF8DC 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .album-card-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .album-card:hover .album-card-thumbnail img {
+      transform: scale(1.1);
+    }
+    
+    .album-card-thumbnail-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      color: rgba(139, 0, 0, 0.3);
+      background: linear-gradient(135deg, #FAEBD7 0%, #FFF8DC 100%);
+    }
+    
+    .album-card-thumbnail-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to bottom, rgba(139, 0, 0, 0.7) 0%, rgba(139, 0, 0, 0.5) 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: var(--font-size-xl);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .album-card:hover .album-card-thumbnail-overlay {
+      opacity: 1;
+    }
+    
+    .album-card-content {
+      padding: var(--space-5);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      flex: 1;
+      min-height: 140px;
+    }
+    
+    .album-card-header {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    
+    .album-name {
+      font-weight: 700;
+      font-size: var(--font-size-lg);
+      color: #1a1a1a;
+      line-height: 1.4;
+      margin: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: color 0.3s ease;
+    }
+    
+    .album-card:hover .album-name {
+      color: var(--color-primary);
+    }
+    
+    .album-theme {
+      color: #666;
+      font-size: var(--font-size-sm);
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .album-card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--space-4);
+      border-top: 2px solid #f5f5f5;
+      margin-top: auto;
+    }
+    
+    .album-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      font-size: var(--font-size-xs);
+      color: #888;
+    }
+    
+    .album-meta-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+      white-space: nowrap;
+    }
+    
+    .album-image-count {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      padding: var(--space-2) var(--space-3);
+      background: linear-gradient(135deg, rgba(139, 0, 0, 0.1) 0%, rgba(220, 20, 60, 0.1) 100%);
+      color: var(--color-primary);
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: var(--font-size-xs);
+      border: 1px solid rgba(139, 0, 0, 0.2);
+    }
+    
+    .album-card-actions {
+      display: flex;
+      gap: var(--space-2);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .album-card:hover .album-card-actions {
+      opacity: 1;
+    }
+    
+    .album-card-action-btn {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      background: #FFF8DC;
+      border: 1px solid rgba(139, 0, 0, 0.2);
+      border-radius: 8px;
+      font-size: var(--font-size-base);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .album-card-action-btn:hover {
+      background: var(--color-primary);
+      color: white;
+      border-color: var(--color-primary);
+      transform: scale(1.1);
+    }
+    
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      overflow: auto;
+    }
+    
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-content {
+      background-color: #FFF8DC;
+      margin: auto;
+      padding: var(--space-6);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      position: relative;
+      border: 1px solid rgba(139, 0, 0, 0.2);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+    }
+    
+    .modal-header h3 {
+      margin: 0;
+      color: var(--color-primary);
+    }
+    
+    .modal-close {
+      font-size: 28px;
+      font-weight: bold;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      line-height: 1;
+    }
+    
+    .modal-close:hover {
+      color: var(--color-text);
+    }
+    
+    .modal-body {
+      margin-bottom: var(--space-4);
+    }
+    
+    .modal-footer {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: flex-end;
+    }
+    
+    .form-group {
+      margin-bottom: var(--space-4);
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: var(--space-2);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+    }
+    
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-family: inherit;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: 2px solid rgba(139, 0, 0, 0.25);
+      border-color: var(--color-primary);
+    }
+    
+    /* Lightbox Modal */
+    .lightbox-modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      overflow: auto;
+    }
+    
+    .lightbox-modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .lightbox-content {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+    }
+    
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 40px;
+      color: white;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 10000;
+    }
+    
+    .lightbox-close:hover {
+      color: #ccc;
+    }
+    
+    .lightbox-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      color: white;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 20px;
+      user-select: none;
+      z-index: 10000;
+    }
+    
+    .lightbox-nav:hover {
+      color: #ccc;
+    }
+    
+    .lightbox-prev {
+      left: 20px;
+    }
+    
+    .lightbox-next {
+      right: 20px;
+    }
+    
+    @media (max-width: 1200px) {
+      .albums-grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: var(--space-5);
+      }
+    }
+    
+    @media (max-width: 1024px) {
+      .albums-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: var(--space-4);
+      }
+      
+      .albums-grid-container {
+        padding: var(--space-4);
+      }
+    }
+    
+    @media (max-width: 767px) {
+      .albums-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+      }
+      
+      .albums-grid-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .albums-grid-container {
+        padding: var(--space-3);
+      }
+      
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: var(--space-3);
+      }
+      
+      .album-card-thumbnail {
+        height: 200px;
+      }
+      
+      .gallery-view {
+        padding: var(--space-4);
+      }
+    }
   </style>
 </head>
 <body>
@@ -187,6 +839,145 @@
     
     <div id="message" class="loading">Đang tải dữ liệu...</div>
     <div id="list" style="display:none;"></div>
+    
+    <!-- Gallery Album Section -->
+    <section class="gallery-section" id="albums">
+      <div class="container section">
+        <div class="gallery-header">
+          <h2>📷 Album Ảnh</h2>
+          <p>Bộ sưu tập hình ảnh từ các hoạt động và sự kiện</p>
+        </div>
+        
+        <!-- Album Grid Layout -->
+        <div class="albums-grid-container">
+          <!-- Header với nút tạo album -->
+          <div class="albums-grid-header">
+            <div class="albums-grid-title">
+              <h3>Danh sách Album</h3>
+              <p>Chọn album để xem ảnh</p>
+            </div>
+            <button class="btn-create-album" onclick="showCreateAlbumModal()">
+              <span class="btn-icon">+</span>
+              <span>Tạo album mới</span>
+            </button>
+          </div>
+          
+          <!-- Grid Albums -->
+          <div id="albumsList" class="albums-grid">
+            <div class="gallery-loading">Đang tải danh sách album...</div>
+          </div>
+        </div>
+        
+        <!-- Gallery View - Hiển thị khi chọn album -->
+        <div id="galleryView" class="gallery-view" style="display: none;">
+          <div class="gallery-view-header">
+            <button class="btn-back" onclick="closeGalleryView()">
+              <span>←</span> Quay lại danh sách
+            </button>
+            <div class="gallery-view-info">
+              <h3 id="selectedAlbumTitle">Ảnh trong album</h3>
+              <p id="selectedAlbumInfo"></p>
+            </div>
+          </div>
+          <div id="galleryContainer" class="gallery-container">
+            <!-- Ảnh sẽ được render ở đây -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <!-- Lightbox Modal -->
+  <div id="lightboxModal" class="lightbox-modal">
+    <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+    <span class="lightbox-nav lightbox-prev" onclick="changeLightboxImage(-1)">&#10094;</span>
+    <span class="lightbox-nav lightbox-next" onclick="changeLightboxImage(1)">&#10095;</span>
+    <img id="lightboxImage" class="lightbox-content" src="" alt="Gallery Image">
+  </div>
+  
+  <!-- Password Modal -->
+  <div id="passwordModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Xác thực mật khẩu</h3>
+        <span class="modal-close" onclick="cancelAlbumAction()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="passwordInput">Nhập mật khẩu để tiếp tục:</label>
+          <input type="password" id="passwordInput" placeholder="Mật khẩu" onkeypress="if(event.key==='Enter') handlePasswordSubmit()">
+        </div>
+        <div id="passwordError" style="color: var(--color-error); display: none; margin-top: var(--space-2);"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="cancelAlbumAction()">Hủy</button>
+        <button class="btn btn-primary" onclick="handlePasswordSubmit()">Xác nhận</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Create/Update Album Modal -->
+  <div id="albumModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="albumModalTitle">Tạo album mới</h3>
+        <span class="modal-close" onclick="cancelAlbumAction()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="albumNameInput">Tên album <span style="color: var(--color-error);">*</span></label>
+          <input type="text" id="albumNameInput" placeholder="Nhập tên album" required>
+        </div>
+        <div class="form-group">
+          <label for="albumThemeInput">Chủ đề</label>
+          <input type="text" id="albumThemeInput" placeholder="Nhập chủ đề (tùy chọn)">
+        </div>
+        <div class="form-group">
+          <label for="albumCreatedByInput">Người đăng</label>
+          <input type="text" id="albumCreatedByInput" placeholder="Nhập tên người đăng (tùy chọn)">
+        </div>
+        <div id="albumError" style="color: var(--color-error); display: none; margin-top: var(--space-2);"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="cancelAlbumAction()">Hủy</button>
+        <button class="btn btn-primary" onclick="handleAlbumSubmit()">Lưu</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Upload Images Modal -->
+  <div id="uploadImagesModal" class="modal">
+    <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3 id="uploadImagesModalTitle">Upload ảnh vào album</h3>
+        <span class="modal-close" onclick="closeUploadImagesModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="imageFileInput">Chọn ảnh <span style="color: var(--color-error);">*</span></label>
+          <input type="file" id="imageFileInput" accept="image/*" multiple>
+          <small style="color: var(--color-text-muted); display: block; margin-top: var(--space-1);">
+            Có thể chọn nhiều ảnh cùng lúc (PNG, JPG, JPEG, GIF, WEBP)
+          </small>
+        </div>
+        <div id="uploadProgress" style="display: none; margin-top: var(--space-4);">
+          <div style="background: var(--color-bg); border-radius: var(--radius-md); padding: var(--space-3);">
+            <div style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: var(--space-2);">
+              Đang upload... <span id="uploadProgressText">0/0</span>
+            </div>
+            <div style="background: var(--color-border); height: 8px; border-radius: 4px; overflow: hidden;">
+              <div id="uploadProgressBar" style="background: var(--color-primary); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+            </div>
+          </div>
+        </div>
+        <div id="uploadError" style="color: var(--color-error); display: none; margin-top: var(--space-2);"></div>
+        <div id="uploadSuccess" style="color: #28a745; display: none; margin-top: var(--space-2);"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeUploadImagesModal()">Đóng</button>
+        <button class="btn btn-primary" onclick="handleUploadImages()">Upload ảnh</button>
+      </div>
+    </div>
   </div>
 
   <script src="/static/js/device-detection.js"></script>
@@ -293,6 +1084,659 @@
     }
 
     initPage();
+  </script>
+  
+  <script>
+    // Album Management Functionality
+    let albums = [];
+    let selectedAlbumId = null;
+    let currentAlbumEditId = null;
+    let authenticatedPassword = null;
+    let pendingAction = null; // 'create', 'update', 'delete'
+    
+    async function loadAlbums() {
+      const albumsListEl = document.getElementById('albumsList');
+      if (!albumsListEl) return;
+      
+      try {
+        const response = await fetch('/api/albums');
+        const data = await response.json();
+        
+        if (data.success && data.albums) {
+          albums = data.albums;
+          renderAlbums(albums);
+        } else {
+          albumsListEl.innerHTML = '<div class="gallery-error">Không thể tải danh sách album</div>';
+        }
+      } catch (error) {
+        console.error('Error loading albums:', error);
+        albumsListEl.innerHTML = '<div class="gallery-error">Lỗi khi tải danh sách album</div>';
+      }
+    }
+    
+    async function renderAlbums(albumsList) {
+      const albumsListEl = document.getElementById('albumsList');
+      if (!albumsListEl) return;
+      
+      if (!albumsList || albumsList.length === 0) {
+        albumsListEl.innerHTML = '<div class="gallery-error">Chưa có album nào. Hãy tạo album mới!</div>';
+        return;
+      }
+      
+      // Load thumbnail cho mỗi album (chỉ lấy ảnh đầu tiên)
+      const albumsWithThumbnails = await Promise.all(albumsList.map(async (album) => {
+        try {
+          const response = await fetch(`/api/albums/${album.album_id}/images`);
+          const data = await response.json();
+          if (data.success && data.images && data.images.length > 0) {
+            album.thumbnail = data.images[0].url; // Lấy ảnh đầu tiên làm thumbnail
+            album.imageCount = data.images.length;
+          } else {
+            album.thumbnail = null;
+            album.imageCount = 0;
+          }
+        } catch (error) {
+          console.error(`Error loading thumbnail for album ${album.album_id}:`, error);
+          album.thumbnail = null;
+          album.imageCount = 0;
+        }
+        return album;
+      }));
+      
+      const html = albumsWithThumbnails.map(album => {
+        const isSelected = selectedAlbumId === album.album_id;
+        const dateStr = album.created_at ? formatDate(album.created_at) : '';
+        return `
+          <div class="album-card ${isSelected ? 'selected' : ''}" data-album-id="${album.album_id}" onclick="selectAlbum(${album.album_id})">
+            <div class="album-card-thumbnail">
+              ${album.thumbnail ? `
+                <img src="${escapeHtml(album.thumbnail)}" alt="${escapeHtml(album.name || 'Album')}" loading="lazy">
+              ` : `
+                <div class="album-card-thumbnail-placeholder">📷</div>
+              `}
+              <div class="album-card-thumbnail-overlay">
+                Xem album
+              </div>
+            </div>
+            <div class="album-card-content">
+              <div class="album-card-header">
+                <h4 class="album-name">${escapeHtml(album.name || 'Không có tên')}</h4>
+                ${album.theme ? `<div class="album-theme">${escapeHtml(album.theme)}</div>` : ''}
+              </div>
+              <div class="album-card-footer">
+                <div class="album-meta">
+                  ${album.imageCount > 0 ? `
+                    <div class="album-image-count">
+                      📷 ${album.imageCount}
+                    </div>
+                  ` : ''}
+                  ${dateStr ? `
+                    <div class="album-meta-item">
+                      📅 ${dateStr}
+                    </div>
+                  ` : ''}
+                  ${album.created_by ? `
+                    <div class="album-meta-item">
+                      👤 ${escapeHtml(album.created_by)}
+                    </div>
+                  ` : ''}
+                </div>
+                <div class="album-card-actions" onclick="event.stopPropagation()">
+                  <button class="album-card-action-btn" onclick="showUploadImagesModal(${album.album_id})" title="Upload ảnh">
+                    ⬆️
+                  </button>
+                  <button class="album-card-action-btn" onclick="showUpdateAlbumModal(${album.album_id})" title="Cập nhật">
+                    ✏️
+                  </button>
+                  <button class="album-card-action-btn" onclick="showDeleteAlbumConfirm(${album.album_id})" title="Xóa" style="color: var(--color-error);">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      albumsListEl.innerHTML = html;
+    }
+    
+    function selectAlbum(albumId) {
+      selectedAlbumId = albumId;
+      
+      // Ẩn grid albums, hiện gallery view
+      const albumsGridContainer = document.querySelector('.albums-grid-container');
+      const galleryView = document.getElementById('galleryView');
+      
+      if (albumsGridContainer) albumsGridContainer.style.display = 'none';
+      if (galleryView) galleryView.style.display = 'block';
+      
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      renderAlbums(albums);
+      loadGallery();
+    }
+    
+    function closeGalleryView() {
+      selectedAlbumId = null;
+      
+      // Hiện grid albums, ẩn gallery view
+      const albumsGridContainer = document.querySelector('.albums-grid-container');
+      const galleryView = document.getElementById('galleryView');
+      
+      if (albumsGridContainer) albumsGridContainer.style.display = 'block';
+      if (galleryView) galleryView.style.display = 'none';
+      
+      renderAlbums(albums);
+      
+      // Clear gallery
+      const galleryContainer = document.getElementById('galleryContainer');
+      if (galleryContainer) {
+        galleryContainer.innerHTML = '';
+      }
+    }
+    
+    function showCreateAlbumModal() {
+      pendingAction = 'create';
+      currentAlbumEditId = null;
+      document.getElementById('albumModalTitle').textContent = 'Tạo album mới';
+      document.getElementById('albumNameInput').value = '';
+      document.getElementById('albumThemeInput').value = '';
+      document.getElementById('albumCreatedByInput').value = '';
+      document.getElementById('albumError').style.display = 'none';
+      showPasswordModal();
+    }
+    
+    function showUpdateAlbumModal(albumId) {
+      const album = albums.find(a => a.album_id === albumId);
+      if (!album) return;
+      
+      pendingAction = 'update';
+      currentAlbumEditId = albumId;
+      document.getElementById('albumModalTitle').textContent = 'Cập nhật album';
+      document.getElementById('albumNameInput').value = album.name || '';
+      document.getElementById('albumThemeInput').value = album.theme || '';
+      document.getElementById('albumCreatedByInput').value = album.created_by || '';
+      document.getElementById('albumError').style.display = 'none';
+      showPasswordModal();
+    }
+    
+    function showDeleteAlbumConfirm(albumId) {
+      const album = albums.find(a => a.album_id === albumId);
+      if (!album) return;
+      
+      if (confirm(`Bạn có chắc chắn muốn xóa album "${album.name}"?`)) {
+        pendingAction = 'delete';
+        currentAlbumEditId = albumId;
+        showPasswordModal();
+      }
+    }
+    
+    function showPasswordModal() {
+      const modal = document.getElementById('passwordModal');
+      const input = document.getElementById('passwordInput');
+      const errorEl = document.getElementById('passwordError');
+      
+      if (modal) {
+        modal.classList.add('active');
+        input.value = '';
+        errorEl.style.display = 'none';
+        setTimeout(() => input.focus(), 100);
+      }
+    }
+    
+    function closePasswordModal() {
+      const modal = document.getElementById('passwordModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+    }
+    
+    function cancelAlbumAction() {
+      closeAlbumModal();
+      closePasswordModal();
+      resetAlbumState();
+    }
+    
+    async function handlePasswordSubmit() {
+      const input = document.getElementById('passwordInput');
+      const errorEl = document.getElementById('passwordError');
+      const password = input.value.trim();
+      
+      if (!password) {
+        errorEl.textContent = 'Vui lòng nhập mật khẩu';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      try {
+        authenticatedPassword = password;
+        closePasswordModal();
+        
+        if (pendingAction === 'create') {
+          showAlbumModal();
+        } else if (pendingAction === 'update') {
+          showAlbumModal();
+        } else if (pendingAction === 'delete') {
+          await deleteAlbum(currentAlbumEditId);
+        }
+      } catch (error) {
+        errorEl.textContent = 'Mật khẩu không đúng';
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    function showAlbumModal() {
+      const modal = document.getElementById('albumModal');
+      if (modal) {
+        modal.classList.add('active');
+        document.getElementById('albumNameInput').focus();
+      }
+    }
+    
+    function closeAlbumModal() {
+      const modal = document.getElementById('albumModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+    }
+    
+    function resetAlbumState() {
+      pendingAction = null;
+      currentAlbumEditId = null;
+      authenticatedPassword = null;
+    }
+    
+    async function handleAlbumSubmit() {
+      const nameInput = document.getElementById('albumNameInput');
+      const themeInput = document.getElementById('albumThemeInput');
+      const createdByInput = document.getElementById('albumCreatedByInput');
+      const errorEl = document.getElementById('albumError');
+      
+      const name = nameInput.value.trim();
+      if (!name) {
+        errorEl.textContent = 'Tên album không được để trống';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      if (!authenticatedPassword) {
+        errorEl.textContent = 'Mật khẩu đã hết hạn. Vui lòng thử lại.';
+        errorEl.style.display = 'block';
+        closeAlbumModal();
+        resetAlbumState();
+        showPasswordModal();
+        return;
+      }
+      
+      if (!pendingAction || (pendingAction !== 'create' && pendingAction !== 'update')) {
+        errorEl.textContent = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
+        errorEl.style.display = 'block';
+        closeAlbumModal();
+        resetAlbumState();
+        return;
+      }
+      
+      const data = {
+        name: name,
+        theme: themeInput.value.trim(),
+        created_by: createdByInput.value.trim(),
+        password: authenticatedPassword
+      };
+      
+      try {
+        let response;
+        if (pendingAction === 'create') {
+          response = await fetch('/api/albums', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else if (pendingAction === 'update') {
+          response = await fetch(`/api/albums/${currentAlbumEditId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          });
+        } else {
+          return;
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          const wasCreating = pendingAction === 'create';
+          const newAlbumId = result.album ? result.album.album_id : null;
+          const savedPassword = authenticatedPassword;
+          
+          closeAlbumModal();
+          resetAlbumState();
+          await loadAlbums();
+          
+          if (wasCreating && newAlbumId) {
+            selectedAlbumId = newAlbumId;
+            authenticatedPassword = savedPassword;
+            // Hiển thị gallery view và load album mới
+            const albumsGridContainer = document.querySelector('.albums-grid-container');
+            const galleryView = document.getElementById('galleryView');
+            if (albumsGridContainer) albumsGridContainer.style.display = 'none';
+            if (galleryView) galleryView.style.display = 'block';
+            await loadGallery();
+            showUploadImagesModal(newAlbumId);
+          }
+        } else {
+          if (result.error && result.error.includes('mật khẩu')) {
+            errorEl.textContent = result.error;
+            errorEl.style.display = 'block';
+            closeAlbumModal();
+            resetAlbumState();
+            showPasswordModal();
+          } else {
+            errorEl.textContent = result.error || 'Có lỗi xảy ra';
+            errorEl.style.display = 'block';
+          }
+        }
+      } catch (error) {
+        console.error('Error submitting album:', error);
+        errorEl.textContent = 'Lỗi khi lưu album. Vui lòng thử lại.';
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    async function deleteAlbum(albumId) {
+      try {
+        const response = await fetch(`/api/albums/${albumId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: authenticatedPassword })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          if (selectedAlbumId === albumId) {
+            // Nếu đang xem album bị xóa, quay lại danh sách
+            closeGalleryView();
+          }
+          await loadAlbums();
+        } else {
+          alert(result.error || 'Có lỗi xảy ra khi xóa album');
+        }
+      } catch (error) {
+        console.error('Error deleting album:', error);
+        alert('Lỗi khi xóa album. Vui lòng thử lại.');
+      } finally {
+        pendingAction = null;
+        currentAlbumEditId = null;
+        authenticatedPassword = null;
+      }
+    }
+    
+    // Gallery Album Functionality
+    let galleryImages = [];
+    let currentLightboxIndex = 0;
+    
+    async function loadGallery() {
+      const galleryContainer = document.getElementById('galleryContainer');
+      const selectedAlbumTitle = document.getElementById('selectedAlbumTitle');
+      const selectedAlbumInfo = document.getElementById('selectedAlbumInfo');
+      
+      if (!galleryContainer) return;
+      
+      if (selectedAlbumId) {
+        try {
+          const response = await fetch(`/api/albums/${selectedAlbumId}/images`);
+          const data = await response.json();
+          
+          if (data.success && data.images && data.images.length > 0) {
+            galleryImages = data.images.map(img => ({
+              url: img.url,
+              filename: img.filename
+            }));
+            renderGallery(galleryImages);
+          } else {
+            renderGallery([]);
+          }
+        } catch (error) {
+          console.error('Error loading gallery:', error);
+          galleryContainer.innerHTML = '<div class="gallery-error">Lỗi khi tải ảnh. Vui lòng thử lại sau.</div>';
+        }
+      }
+    }
+    
+    function renderGallery(images) {
+      const galleryContainer = document.getElementById('galleryContainer');
+      const selectedAlbumTitle = document.getElementById('selectedAlbumTitle');
+      const selectedAlbumInfo = document.getElementById('selectedAlbumInfo');
+      
+      if (!galleryContainer) return;
+      
+      // Hiển thị thông tin album đã chọn
+      const selectedAlbum = albums.find(a => a.album_id === selectedAlbumId);
+      if (selectedAlbum && selectedAlbumTitle && selectedAlbumInfo) {
+        selectedAlbumTitle.textContent = selectedAlbum.name || 'Album không có tên';
+        
+        let infoParts = [];
+        if (selectedAlbum.theme) {
+          infoParts.push(`Chủ đề: ${selectedAlbum.theme}`);
+        }
+        if (selectedAlbum.created_by) {
+          infoParts.push(`Người đăng: ${selectedAlbum.created_by}`);
+        }
+        infoParts.push(`Tổng cộng: ${images.length} ảnh`);
+        
+        selectedAlbumInfo.textContent = infoParts.join(' • ');
+      }
+      
+      if (images.length === 0) {
+        galleryContainer.innerHTML = `
+          <div style="text-align: center; padding: var(--space-10); color: var(--color-text-muted);">
+            <div style="font-size: 64px; margin-bottom: var(--space-4);">📷</div>
+            <p style="font-size: var(--font-size-lg); margin-bottom: var(--space-2);">Album này chưa có ảnh</p>
+            <p style="font-size: var(--font-size-base);">Hãy upload ảnh vào album để bắt đầu</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const html = `
+        <div class="gallery-grid">
+          ${images.map((image, index) => `
+            <div class="gallery-item" onclick="openLightbox(${index})">
+              <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.filename)}" loading="lazy"
+                   onerror="this.parentElement.style.display='none';">
+              <div class="gallery-item-overlay">
+                <span class="gallery-item-number">${index + 1}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      galleryContainer.innerHTML = html;
+    }
+    
+    function openLightbox(index) {
+      currentLightboxIndex = index;
+      const lightboxModal = document.getElementById('lightboxModal');
+      const lightboxImage = document.getElementById('lightboxImage');
+      
+      if (lightboxModal && lightboxImage && galleryImages[index]) {
+        lightboxImage.src = galleryImages[index].url;
+        lightboxImage.alt = galleryImages[index].filename;
+        lightboxModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+    
+    function closeLightbox() {
+      const lightboxModal = document.getElementById('lightboxModal');
+      if (lightboxModal) {
+        lightboxModal.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+    
+    function changeLightboxImage(direction) {
+      if (galleryImages.length === 0) return;
+      
+      currentLightboxIndex += direction;
+      if (currentLightboxIndex < 0) {
+        currentLightboxIndex = galleryImages.length - 1;
+      } else if (currentLightboxIndex >= galleryImages.length) {
+        currentLightboxIndex = 0;
+      }
+      
+      const lightboxImage = document.getElementById('lightboxImage');
+      if (lightboxImage && galleryImages[currentLightboxIndex]) {
+        lightboxImage.src = galleryImages[currentLightboxIndex].url;
+        lightboxImage.alt = galleryImages[currentLightboxIndex].filename;
+      }
+    }
+    
+    // Upload Images Functionality
+    let currentUploadAlbumId = null;
+    
+    function showUploadImagesModal(albumId) {
+      currentUploadAlbumId = albumId;
+      const modal = document.getElementById('uploadImagesModal');
+      const album = albums.find(a => a.album_id === albumId);
+      const title = document.getElementById('uploadImagesModalTitle');
+      
+      if (modal && title) {
+        title.textContent = album ? `Upload ảnh vào album: ${escapeHtml(album.name)}` : 'Upload ảnh vào album';
+        document.getElementById('imageFileInput').value = '';
+        document.getElementById('uploadError').style.display = 'none';
+        document.getElementById('uploadSuccess').style.display = 'none';
+        document.getElementById('uploadProgress').style.display = 'none';
+        modal.classList.add('active');
+      }
+    }
+    
+    function closeUploadImagesModal() {
+      const modal = document.getElementById('uploadImagesModal');
+      if (modal) {
+        modal.classList.remove('active');
+      }
+      currentUploadAlbumId = null;
+    }
+    
+    async function handleUploadImages() {
+      const fileInput = document.getElementById('imageFileInput');
+      const errorEl = document.getElementById('uploadError');
+      const successEl = document.getElementById('uploadSuccess');
+      const progressEl = document.getElementById('uploadProgress');
+      const progressBar = document.getElementById('uploadProgressBar');
+      const progressText = document.getElementById('uploadProgressText');
+      
+      if (!currentUploadAlbumId) {
+        errorEl.textContent = 'Không có album được chọn';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      if (!fileInput.files || fileInput.files.length === 0) {
+        errorEl.textContent = 'Vui lòng chọn ít nhất một ảnh';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      if (!authenticatedPassword) {
+        errorEl.textContent = 'Mật khẩu đã hết hạn. Vui lòng tạo album lại hoặc nhập mật khẩu.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      const files = Array.from(fileInput.files);
+      const totalFiles = files.length;
+      let uploadedCount = 0;
+      let failedCount = 0;
+      
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+      progressEl.style.display = 'block';
+      progressBar.style.width = '0%';
+      progressText.textContent = `0/${totalFiles}`;
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('album_id', currentUploadAlbumId);
+        formData.append('password', authenticatedPassword);
+        
+        try {
+          const response = await fetch('/api/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+          
+          const result = await response.json();
+          
+          if (result.success) {
+            uploadedCount++;
+          } else {
+            failedCount++;
+            console.error(`Failed to upload ${file.name}:`, result.error);
+          }
+        } catch (error) {
+          failedCount++;
+          console.error(`Error uploading ${file.name}:`, error);
+        }
+        
+        const progress = ((i + 1) / totalFiles) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressText.textContent = `${i + 1}/${totalFiles}`;
+      }
+      
+      if (uploadedCount > 0) {
+        successEl.textContent = `Upload thành công ${uploadedCount} ảnh${uploadedCount > 1 ? '' : ''}`;
+        if (failedCount > 0) {
+          successEl.textContent += `. ${failedCount} ảnh thất bại.`;
+        }
+        successEl.style.display = 'block';
+        
+        // Reload albums và gallery sau khi upload thành công
+        await loadAlbums();
+        if (selectedAlbumId === currentUploadAlbumId) {
+          await loadGallery();
+        }
+        
+        setTimeout(() => {
+          closeUploadImagesModal();
+        }, 2000);
+      } else {
+        errorEl.textContent = `Không thể upload ảnh. Vui lòng thử lại.`;
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    // Initialize gallery on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const lightboxModal = document.getElementById('lightboxModal');
+      if (lightboxModal) {
+        lightboxModal.addEventListener('click', function(e) {
+          if (e.target === lightboxModal || e.target.classList.contains('lightbox-content')) {
+            closeLightbox();
+          }
+        });
+        
+        document.addEventListener('keydown', function(e) {
+          if (lightboxModal.classList.contains('active')) {
+            if (e.key === 'Escape') {
+              closeLightbox();
+            } else if (e.key === 'ArrowLeft') {
+              changeLightboxImage(-1);
+            } else if (e.key === 'ArrowRight') {
+              changeLightboxImage(1);
+            }
+          }
+        });
+      }
+      
+      // Tự động load và hiển thị tất cả albums khi trang load
+      loadAlbums();
+    });
   </script>
   
   <!-- Floating Zalo Button -->
