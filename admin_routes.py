@@ -322,6 +322,17 @@ def register_admin_routes(app):
                     VALUES (%s, %s, %s, %s, %s)
                 """, (username, password_hash, full_name or None, email or None, role))
             connection.commit()
+            new_user_id = cursor.lastrowid
+            
+            # Ghi log activity sau khi create thành công
+            try:
+                cursor.execute("SELECT user_id, username, role, full_name, email FROM users WHERE user_id = %s", (new_user_id,))
+                user_data = cursor.fetchone()
+                if user_data:
+                    log_activity('CREATE_USER', target_type='User', target_id=new_user_id,
+                               after_data=dict(user_data))
+            except Exception as log_error:
+                logger.warning(f"Failed to log user create for {new_user_id}: {log_error}")
             
             return jsonify({'success': True, 'message': 'Đã tạo tài khoản thành công'})
         except Error as e:
@@ -531,26 +542,33 @@ def register_admin_routes(app):
             return jsonify({'error': 'Không thể kết nối database'}), 500
         
         try:
-            cursor = connection.cursor()
+            cursor = connection.cursor(dictionary=True)
             
-            # Kiểm tra role của user cần xóa
-            cursor.execute("SELECT role FROM users WHERE user_id = %s", (user_id,))
-            result = cursor.fetchone()
-            if not result:
+            # Lấy dữ liệu user trước khi xóa để log
+            cursor.execute("SELECT user_id, username, role, full_name, email FROM users WHERE user_id = %s", (user_id,))
+            user_data = cursor.fetchone()
+            if not user_data:
                 return jsonify({'error': 'Không tìm thấy user'}), 404
             
-            user_role = result[0]
+            user_role = user_data['role']
             
             # Nếu là admin, kiểm tra còn admin khác không
             if user_role == 'admin':
                 cursor.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND user_id != %s", (user_id,))
-                admin_count = cursor.fetchone()[0]
+                admin_count = cursor.fetchone()['count']
                 if admin_count == 0:
                     return jsonify({'error': 'Không thể xóa admin cuối cùng'}), 400
             
             # Xóa user
             cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
             connection.commit()
+            
+            # Ghi log activity sau khi delete thành công
+            try:
+                log_activity('DELETE_USER', target_type='User', target_id=user_id,
+                           before_data=dict(user_data), after_data=None)
+            except Exception as log_error:
+                logger.warning(f"Failed to log user delete for {user_id}: {log_error}")
             
             return jsonify({'success': True, 'message': 'Đã xóa tài khoản thành công'})
         except Error as e:
@@ -1087,6 +1105,26 @@ def register_admin_routes(app):
             _process_children_spouse_siblings(cursor, person_id, data)
             
             connection.commit()
+            
+            # Ghi log activity sau khi create thành công
+            try:
+                # Lấy dữ liệu person vừa tạo để log
+                cursor.execute("""
+                    SELECT full_name, gender, status, generation_level, birth_date_solar,
+                           death_date_solar, place_of_death
+                    FROM persons 
+                    WHERE person_id = %s
+                """, (person_id,))
+                person_data = cursor.fetchone()
+                
+                # Ghi log
+                if person_data:
+                    from audit_log import log_person_create
+                    log_person_create(person_id, dict(person_data))
+            except Exception as log_error:
+                # Log lỗi nhưng không crash ứng dụng
+                logger.warning(f"Failed to log person create for {person_id}: {log_error}")
+            
             return jsonify({'success': True, 'message': 'Thêm thành viên thành công', 'person_id': person_id})
             
         except Error as e:
@@ -1259,12 +1297,21 @@ def register_admin_routes(app):
             return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
         
         try:
-            cursor = connection.cursor()
+            cursor = connection.cursor(dictionary=True)
             
-            # Kiểm tra person có tồn tại không
+            # Kiểm tra person có tồn tại không và lấy dữ liệu để log
             cursor.execute("SELECT person_id FROM persons WHERE person_id = %s", (person_id,))
             if not cursor.fetchone():
                 return jsonify({'success': False, 'error': 'Không tìm thấy thành viên'}), 404
+            
+            # Lấy dữ liệu đầy đủ để log trước khi xóa
+            cursor.execute("""
+                SELECT full_name, gender, status, generation_level, birth_date_solar,
+                       death_date_solar, place_of_death
+                FROM persons 
+                WHERE person_id = %s
+            """, (person_id,))
+            before_data = cursor.fetchone()
             
             # Xóa các quan hệ trước (foreign key constraints)
             cursor.execute("DELETE FROM relationships WHERE parent_id = %s OR child_id = %s", (person_id, person_id))
@@ -1277,6 +1324,16 @@ def register_admin_routes(app):
             # Xóa person
             cursor.execute("DELETE FROM persons WHERE person_id = %s", (person_id,))
             connection.commit()
+            
+            # Ghi log activity sau khi delete thành công
+            try:
+                if before_data:
+                    from audit_log import log_activity
+                    log_activity('DELETE_PERSON', target_type='Person', target_id=person_id,
+                               before_data=dict(before_data), after_data=None)
+            except Exception as log_error:
+                # Log lỗi nhưng không crash ứng dụng
+                logger.warning(f"Failed to log person delete for {person_id}: {log_error}")
             
             return jsonify({'success': True, 'message': 'Đã xóa thành viên thành công'})
         except Error as e:

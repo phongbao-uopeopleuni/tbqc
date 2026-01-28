@@ -24,7 +24,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
-from audit_log import log_person_update
+from audit_log import log_person_update, log_person_create, log_activity
 
 logger = logging.getLogger(__name__)
 
@@ -1765,6 +1765,16 @@ def api_activities():
             """, (title, summary, content, status_val, thumbnail, images_json))
         connection.commit()
         new_id = cursor.lastrowid
+        
+        # Ghi log activity sau khi create thành công
+        try:
+            cursor.execute("SELECT * FROM activities WHERE activity_id = %s", (new_id,))
+            activity_data = cursor.fetchone()
+            if activity_data:
+                log_activity('CREATE_ACTIVITY', target_type='Activity', target_id=new_id,
+                           after_data=activity_row_to_json(activity_data))
+        except Exception as log_error:
+            logger.warning(f"Failed to log activity create for {new_id}: {log_error}")
 
         # Invalidate cache khi có thay đổi
         if cache:
@@ -1861,6 +1871,20 @@ def api_activity_detail(activity_id):
                     WHERE activity_id = %s
                 """, (title, summary, content, status_val, thumbnail, images_json, activity_id))
             connection.commit()
+            
+            # Ghi log activity sau khi update thành công
+            try:
+                # Lấy dữ liệu cũ và mới để log
+                before_data = activity_row_to_json(row)
+                cursor.execute("SELECT * FROM activities WHERE activity_id = %s", (activity_id,))
+                updated = cursor.fetchone()
+                after_data = activity_row_to_json(updated) if updated else None
+                
+                if before_data and after_data:
+                    log_activity('UPDATE_ACTIVITY', target_type='Activity', target_id=activity_id,
+                               before_data=before_data, after_data=after_data)
+            except Exception as log_error:
+                logger.warning(f"Failed to log activity update for {activity_id}: {log_error}")
 
             # Invalidate cache khi có thay đổi
             if cache:
@@ -1875,8 +1899,19 @@ def api_activity_detail(activity_id):
             return jsonify({'success': True, 'data': activity_row_to_json(updated)})
 
         if request.method == 'DELETE':
+            # Lấy dữ liệu trước khi xóa để log
+            before_data = activity_row_to_json(row)
+            
             cursor.execute("DELETE FROM activities WHERE activity_id = %s", (activity_id,))
             connection.commit()
+            
+            # Ghi log activity sau khi delete thành công
+            try:
+                if before_data:
+                    log_activity('DELETE_ACTIVITY', target_type='Activity', target_id=activity_id,
+                               before_data=before_data, after_data=None)
+            except Exception as log_error:
+                logger.warning(f"Failed to log activity delete for {activity_id}: {log_error}")
             
             # Invalidate cache khi xóa
             if cache:
@@ -5634,16 +5669,35 @@ def delete_person(person_id):
         
         cursor = connection.cursor(dictionary=True)
         
-        # Kiểm tra person có tồn tại không
+        # Kiểm tra person có tồn tại không và lấy dữ liệu để log
         cursor.execute("SELECT full_name, generation_number FROM persons WHERE person_id = %s", (person_id,))
         person = cursor.fetchone()
         
         if not person:
             return jsonify({'error': 'Không tìm thấy người với ID này'}), 404
         
+        # Lấy dữ liệu đầy đủ để log trước khi xóa
+        cursor.execute("""
+            SELECT full_name, gender, status, generation_level, birth_date_solar,
+                   death_date_solar, place_of_death, biography, academic_rank,
+                   academic_degree, phone, email, occupation
+            FROM persons 
+            WHERE person_id = %s
+        """, (person_id,))
+        before_data = cursor.fetchone()
+        
         # Xóa person (CASCADE sẽ tự động xóa các bảng liên quan)
         cursor.execute("DELETE FROM persons WHERE person_id = %s", (person_id,))
         connection.commit()
+        
+        # Ghi log activity sau khi delete thành công
+        try:
+            if before_data:
+                log_activity('DELETE_PERSON', target_type='Person', target_id=person_id,
+                           before_data=dict(before_data), after_data=None)
+        except Exception as log_error:
+            # Log lỗi nhưng không crash ứng dụng
+            logger.warning(f"Failed to log person delete for {person_id}: {log_error}")
         
         # Invalidate cache khi có thay đổi dữ liệu persons
         if cache:
@@ -7025,6 +7079,25 @@ def create_person():
         
         connection.commit()
         
+        # Ghi log activity sau khi create thành công
+        try:
+            # Lấy dữ liệu person vừa tạo để log
+            cursor.execute("""
+                SELECT full_name, gender, status, generation_level, birth_date_solar,
+                       death_date_solar, place_of_death, biography, academic_rank,
+                       academic_degree, phone, email, occupation
+                FROM persons 
+                WHERE person_id = %s
+            """, (person_id,))
+            person_data = cursor.fetchone()
+            
+            # Ghi log
+            if person_data:
+                log_person_create(person_id, dict(person_data))
+        except Exception as log_error:
+            # Log lỗi nhưng không crash ứng dụng
+            logger.warning(f"Failed to log person create for {person_id}: {log_error}")
+        
         # Invalidate cache khi có thay đổi dữ liệu persons
         if cache:
             try:
@@ -7677,14 +7750,34 @@ def delete_persons_batch():
                 logger.warning(f"⚠️ Không thể tạo backup: {backup_error}")
                 # Không dừng quá trình xóa nếu backup thất bại
         
-        cursor = connection.cursor()
+        cursor = connection.cursor(dictionary=True)
+        
+        # Lấy dữ liệu trước khi xóa để log
+        placeholders = ','.join(['%s'] * len(person_ids))
+        cursor.execute(f"""
+            SELECT person_id, full_name, gender, status, generation_level, birth_date_solar,
+                   death_date_solar, place_of_death, biography, academic_rank,
+                   academic_degree, phone, email, occupation
+            FROM persons 
+            WHERE person_id IN ({placeholders})
+        """, tuple(person_ids))
+        before_data_list = cursor.fetchall()
         
         # Xóa theo batch (cascade sẽ tự động xóa relationships, marriages, etc.)
-        placeholders = ','.join(['%s'] * len(person_ids))
         cursor.execute(f"DELETE FROM persons WHERE person_id IN ({placeholders})", tuple(person_ids))
         
         deleted_count = cursor.rowcount
         connection.commit()
+        
+        # Ghi log activity cho từng person đã xóa
+        try:
+            for before_data in before_data_list:
+                person_id = before_data['person_id']
+                log_activity('DELETE_PERSON', target_type='Person', target_id=person_id,
+                           before_data=dict(before_data), after_data=None)
+        except Exception as log_error:
+            # Log lỗi nhưng không crash ứng dụng
+            logger.warning(f"Failed to log batch delete: {log_error}")
         
         response = {
             'success': True,
@@ -8480,7 +8573,20 @@ def api_login():
     
     # Xác thực mật khẩu
     if not verify_password(password, user_data['password_hash']):
+        # Log login failed
+        try:
+            from audit_log import log_login
+            log_login(success=False, username=username)
+        except:
+            pass
         return jsonify({'success': False, 'error': 'Sai mật khẩu'}), 401
+    
+    # Log login successful
+    try:
+        from audit_log import log_login
+        log_login(success=True, username=username)
+    except:
+        pass
     
     # Tạo user object và đăng nhập
     permissions = user_data.get('permissions', {})
