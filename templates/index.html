@@ -7102,24 +7102,20 @@
           return;
         }
         
-        // Chỉ tìm và hiển thị ảnh từ album "Ảnh khuôn viên"
-        const khuonVienAlbum = albumsData.albums.find(album => 
-          album.name && (
-            album.name.toLowerCase().includes('khuôn viên') || 
-            album.name.toLowerCase().includes('khuon vien') ||
-            album.name.toLowerCase().includes('khuonvien')
-          )
+        // Chỉ hiển thị ảnh từ album "Phủ Tuy Biên Quận Công - Ảnh khuôn viên"
+        const targetAlbum = albumsData.albums.find(album => 
+          album.name && album.name.includes('Phủ Tuy Biên') && album.name.includes('khuôn viên')
         );
         
-        if (!khuonVienAlbum) {
-          carouselEl.innerHTML = '<div class="carousel-loading">Không tìm thấy album "Ảnh khuôn viên"</div>';
+        if (!targetAlbum) {
+          carouselEl.innerHTML = '<div class="carousel-loading">Không tìm thấy album "Phủ Tuy Biên Quận Công - Ảnh khuôn viên"</div>';
           return;
         }
         
-        // Load ảnh chỉ từ album "Ảnh khuôn viên"
+        // Load tất cả ảnh từ album này
         const allImages = [];
         try {
-          const imagesResponse = await fetch(`/api/albums/${khuonVienAlbum.album_id}/images`);
+          const imagesResponse = await fetch(`/api/albums/${targetAlbum.album_id}/images`);
           const imagesData = await imagesResponse.json();
           
           if (imagesData.success && imagesData.images && imagesData.images.length > 0) {
@@ -7127,17 +7123,17 @@
             const albumImages = imagesData.images.map(img => ({
               url: img.url,
               filename: img.filename,
-              albumName: khuonVienAlbum.name,
-              albumTheme: khuonVienAlbum.theme
+              albumName: targetAlbum.name,
+              albumTheme: targetAlbum.theme
             }));
             allImages.push(...albumImages);
           } else {
-            carouselEl.innerHTML = '<div class="carousel-loading">Album "Ảnh khuôn viên" chưa có ảnh</div>';
+            carouselEl.innerHTML = '<div class="carousel-loading">Album này chưa có ảnh</div>';
             return;
           }
         } catch (error) {
-          console.error(`Error loading images for album ${khuonVienAlbum.album_id}:`, error);
-          carouselEl.innerHTML = '<div class="carousel-loading">Lỗi khi tải ảnh từ album "Ảnh khuôn viên"</div>';
+          console.error(`Error loading images for album ${targetAlbum.album_id}:`, error);
+          carouselEl.innerHTML = '<div class="carousel-loading">Lỗi khi tải ảnh từ album</div>';
           return;
         }
         
