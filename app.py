@@ -2231,6 +2231,7 @@ def clear_external_posts_cache():
     })
 
 @app.route('/api/upload-image', methods=['POST'])
+@limiter.exempt if limiter else lambda f: f
 def upload_image():
     """
     API upload ảnh vào static/images (chỉ admin) hoặc vào album (yêu cầu mật khẩu)
@@ -2478,6 +2479,7 @@ def serve_genealogy_js():
 
 # Image routes - serve from static/images/ or Railway Volume
 @app.route('/static/images/<path:filename>')
+@limiter.exempt if limiter else lambda f: f
 def serve_image_static(filename):
     """
     Phục vụ ảnh từ static/images/ (từ git source) hoặc Railway Volume
