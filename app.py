@@ -2309,13 +2309,22 @@ def upload_image():
         
         # Xác định thư mục lưu ảnh (hỗ trợ Railway Volume)
         # Railway Volume mount path (nếu có) hoặc dùng static/images mặc định
+        # Chỉ dùng Railway Volume khi chạy trên production (có RAILWAY_ENVIRONMENT hoặc RENDER)
+        is_production_env = (
+            os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or
+            os.environ.get('RENDER') == 'true' or
+            os.environ.get('ENVIRONMENT') == 'production'
+        )
+        
         volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
-        if volume_mount_path and os.path.exists(volume_mount_path):
-            # Sử dụng Railway Volume nếu có
+        if volume_mount_path and os.path.exists(volume_mount_path) and is_production_env:
+            # Sử dụng Railway Volume chỉ khi chạy trên production
             base_images_dir = volume_mount_path
+            logger.info(f"Using Railway Volume: {base_images_dir}")
         else:
-            # Dùng thư mục static/images mặc định
+            # Dùng thư mục static/images mặc định (local development)
             base_images_dir = os.path.join(BASE_DIR, 'static', 'images')
+            logger.info(f"Using local static/images: {base_images_dir}")
         
         # Nếu có album_id, lưu vào thư mục album
         if album_id:
