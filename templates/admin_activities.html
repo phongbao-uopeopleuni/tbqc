@@ -859,8 +859,8 @@
           <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 Hủy</button>
         </div>
         <div class="action-bar-right">
-          <button type="submit" form="activityForm" class="btn btn-primary" id="submitBtn">💾 Lưu nháp</button>
-          <button type="button" class="btn btn-primary" onclick="publishNow()" id="publishBtn" style="display:none;">🚀 Đăng bài</button>
+          <button type="submit" form="activityForm" class="btn btn-secondary" id="submitBtn">💾 Lưu nháp</button>
+          <button type="button" class="btn btn-primary" onclick="publishNow()" id="publishBtn">🚀 Đăng bài</button>
         </div>
       </div>
     </div>
@@ -1159,7 +1159,7 @@
         document.getElementById('status').value = post.status || 'draft';
         document.getElementById('formTitle').textContent = 'Chỉnh sửa bài đăng';
         document.getElementById('submitBtn').textContent = 'Cập nhật';
-        document.getElementById('publishBtn').style.display = 'inline-flex';
+        // Nút Đăng bài luôn hiển thị
         
         uploadedImages = post.images || [];
         updateImagesPreview();
@@ -1200,7 +1200,7 @@
       currentPostId = null;
       document.getElementById('formTitle').textContent = 'Tạo bài đăng mới';
       document.getElementById('submitBtn').textContent = 'Lưu nháp';
-      document.getElementById('publishBtn').style.display = 'none';
+      // Nút Đăng bài luôn hiển thị
       document.getElementById('thumbnailPreview').style.display = 'none';
       document.getElementById('thumbnailFile').value = '';
       uploadedImages = [];
@@ -1229,11 +1229,25 @@
 
     async function publishNow() {
       const form = document.getElementById('activityForm');
-      const id = document.getElementById('activityId').value;
-      if (!id) {
-        showMessage('Vui lòng lưu bài viết trước', 'error');
+      const title = document.getElementById('title').value.trim();
+      const contentText = quillEditor ? quillEditor.getText().trim() : document.getElementById('content').value.trim();
+      
+      // Validate trước khi đăng
+      if (!title) {
+        showMessage('Vui lòng nhập tiêu đề', 'error');
+        document.getElementById('title').focus();
         return;
       }
+      
+      if (!contentText) {
+        showMessage('Vui lòng nhập nội dung', 'error');
+        if (quillEditor) {
+          quillEditor.focus();
+        }
+        return;
+      }
+      
+      // Set status thành published và submit form
       document.getElementById('status').value = 'published';
       form.dispatchEvent(new Event('submit'));
     }
