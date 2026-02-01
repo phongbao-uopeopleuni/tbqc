@@ -2276,9 +2276,14 @@ def upload_image():
         if not album:
             return jsonify({'success': False, 'error': 'Album không tồn tại'}), 404
     else:
-        # Upload thông thường - yêu cầu admin
-        if not is_admin_user():
-            return jsonify({'success': False, 'error': 'Bạn không có quyền upload ảnh'}), 403
+        # Upload thông thường - yêu cầu admin hoặc gate user (activities_post_ok)
+        # Kiểm tra admin trước
+        is_admin = is_admin_user()
+        # Kiểm tra gate user (activities_post_ok) - giống như can_post_activities()
+        has_gate_access = session.get('activities_post_ok', False)
+        
+        if not is_admin and not has_gate_access:
+            return jsonify({'success': False, 'error': 'Bạn không có quyền upload ảnh. Vui lòng đăng nhập.'}), 403
     
     if 'image' not in request.files:
         return jsonify({'success': False, 'error': 'Không có file ảnh'}), 400
