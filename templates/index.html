@@ -6,7 +6,12 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="Gia Phả Nguyễn Phước Tộc - Phòng Tuy Biên Quận Công, Hậu duệ Vua Minh Mạng. Tra cứu, lưu trữ và quản lý gia phả dòng họ Nguyễn Phước Tộc.">
+  <meta name="keywords" content="gia phả, Nguyễn Phước Tộc, Tuy Biên Quận Công, Minh Mạng, dòng họ">
   <title>Phòng Tuy Biên Quận Công - Gia Phả Nguyễn Phước Tộc</title>
+  <!-- Preload critical fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     * {
@@ -19,8 +24,20 @@
       scroll-behavior: smooth;
     }
 
-    /* CSS Variables - Desktop defaults */
+    /* CSS Variables - Color Palette (Original) */
     :root {
+      /* Color Palette - Giữ nguyên bảng màu ban đầu */
+      --color-bg-primary: #FAEBD7;      /* Antique white - background chính */
+      --color-bg-card: #FFF8DC;         /* Cream - cards và containers */
+      --color-primary: #8B0000;         /* Dark red - primary color */
+      --color-accent: #DAA520;          /* Gold - accent color */
+      --color-gold: #FFD700;            /* Gold yellow - highlights */
+      --color-text: #333333;            /* Dark gray - text chính */
+      --color-text-muted: #666666;      /* Medium gray - text phụ */
+      --color-border: rgba(139, 0, 0, 0.15); /* Border color */
+      --color-shadow: rgba(0, 0, 0, 0.1);   /* Shadow color */
+      
+      /* Typography */
       --font-size-base: 16px;
       --font-size-sm: 14px;
       --font-size-lg: 18px;
@@ -29,6 +46,7 @@
       --font-size-3xl: 28px;
       --font-size-4xl: 32px;
       
+      /* Spacing */
       --space-1: 4px;
       --space-2: 8px;
       --space-3: 12px;
@@ -37,9 +55,14 @@
       --space-6: 24px;
       --space-8: 32px;
       --space-10: 40px;
+      --space-12: 48px;
+      --space-16: 64px;
       
+      /* Layout */
       --navbar-height: 70px;
       --sidebar-width: 280px;
+      --content-max-width: 1400px;
+      --section-padding: 80px;
     }
 
     /* Mobile overrides */
@@ -107,17 +130,16 @@
 
     body {
       font-family: 'Noto Serif TC', 'Playfair Display', serif;
-      background: #FAEBD7;
+      background: var(--color-bg-primary);
       background-attachment: fixed;
       position: relative;
       padding-top: var(--navbar-height);
-      padding-left: var(--sidebar-width);
-    }
-
-    @media (max-width: 1024px) {
-      body {
-        padding-left: 0;
-      }
+      padding-left: 0; /* No sidebar - content only */
+      min-width: 100vw;
+      box-sizing: border-box;
+      overflow-x: hidden;
+      color: var(--color-text);
+      line-height: 1.7;
     }
 
 
@@ -247,31 +269,106 @@
     }
 
     /* ============================================
-       SECTIONS
+       MAIN CONTENT WRAPPER - Centered Content Area
+       ============================================ */
+    main {
+      max-width: var(--content-max-width);
+      margin: 0 auto;
+      padding: 0 var(--space-8);
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        max-width: 100%;
+        padding: 0 var(--space-6);
+      }
+    }
+
+    @media (max-width: 768px) {
+      main {
+        padding: 0 var(--space-4);
+      }
+    }
+
+    /* ============================================
+       SECTIONS - Centered in Content Area
        ============================================ */
     section {
       min-height: auto;
-      padding: 60px 24px;
+      padding: var(--section-padding) 0;
       position: relative;
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--color-bg-primary);
+    }
+    
+    /* First section (home) has its own background */
+    section:first-child {
+      background: transparent;
+    }
+    
+    @media (max-width: 1024px) {
+      section {
+        padding: 60px 0;
+      }
     }
     
     @media (max-width: 768px) {
       section {
-        padding: 40px 16px;
-        min-height: auto;
+        padding: 40px 0;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      section {
+        padding: 40px 0;
       }
     }
 
     .section-container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 0 var(--space-8);
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    @media (max-width: 1024px) {
+      .section-container {
+        padding: 0 var(--space-6);
+      }
     }
 
     @media (max-width: 768px) {
       .section-container {
-        padding: 0 16px;
+        padding: 0 var(--space-4);
       }
+    }
+    
+    @media (max-width: 480px) {
+      .section-container {
+        padding: 0 var(--space-4);
+      }
+    }
+    
+    /* Subtle section separators */
+    section:not(:first-child)::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100px;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, rgba(139, 0, 0, 0.15) 50%, transparent);
+      border-radius: 0 0 2px 2px;
+    }
+    
+    /* Remove separator from home section */
+    #home::before {
+      display: none !important;
     }
 
     /* Section activities-tree đã di chuyển sang /genealogy */
@@ -281,18 +378,9 @@
     }
 
     /* ============================================
-       HOME SECTION (#home)
+       HOME SECTION (#home) - Base styles
        ============================================ */
-    #home {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, rgba(139, 0, 0, 0.95) 0%, rgba(220, 20, 60, 0.95) 100%);
-      color: #FFD700;
-      text-align: center;
-      padding: 80px 24px;
-    }
+    /* Note: Enhanced styles are defined later in ENHANCED HERO SECTION */
 
     .hero-content {
       max-width: 900px;
@@ -300,24 +388,33 @@
     }
 
     .hero-content h1 {
-      font-size: clamp(26px, 6.5vw, 48px);
-      margin-bottom: clamp(20px, 5vw, 28px);
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-      color: #FFD700;
-      line-height: 1.4;
+      font-size: clamp(28px, 7vw, 52px);
+      margin-bottom: clamp(24px, 5vw, 32px);
+      text-shadow: 2px 2px 8px rgba(255, 255, 255, 0.6), 0 0 20px rgba(255, 255, 255, 0.4), 3px 3px 10px rgba(0, 0, 0, 0.2);
+      color: #8B0000;
+      line-height: 1.3;
       font-weight: 700;
+      letter-spacing: -0.5px;
+      text-align: center;
+      width: 100%;
     }
 
     .hero-content p {
-      font-size: clamp(18px, 4.5vw, 24px);
-      margin-bottom: clamp(24px, 6vw, 36px);
-      line-height: 1.7;
-      color: #FFD700;
-      text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+      font-size: clamp(18px, 4.5vw, 26px);
+      margin-bottom: clamp(32px, 6vw, 48px);
+      line-height: 1.75;
+      color: #8B0000;
+      text-shadow: 1px 1px 6px rgba(255, 255, 255, 0.5), 0 0 15px rgba(255, 255, 255, 0.3), 2px 2px 8px rgba(0, 0, 0, 0.2);
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
     }
 
     .cta-button {
-      display: inline-block;
+      display: block;
+      width: fit-content;
+      margin: 0 auto;
       padding: clamp(12px, 3vw, 15px) clamp(32px, 8vw, 40px);
       background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
       color: #8B0000;
@@ -325,13 +422,32 @@
       border-radius: 50px;
       font-size: clamp(16px, 4vw, 18px);
       font-weight: 700;
-      transition: all 0.3s;
+      transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .cta-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .cta-button:hover::before {
+      left: 100%;
     }
 
     .cta-button:hover {
       transform: translateY(-3px);
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
     }
 
     /* ============================================
@@ -340,6 +456,12 @@
     #about {
       background: #FAEBD7;
       padding: 60px 24px;
+    }
+    
+    @media (max-width: 768px) {
+      #about {
+        padding: 40px 16px;
+      }
     }
 
     .about-content {
@@ -357,18 +479,26 @@
     }
 
     .about-text p {
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       text-align: justify;
+      line-height: 1.85;
+      color: var(--color-text);
+    }
+    
+    .about-text p:last-child {
+      margin-bottom: 0;
     }
 
     .about-text h3 {
       color: #8B0000;
-      font-size: var(--font-size-2xl);
+      font-size: clamp(22px, 4vw, 28px);
       font-weight: 700;
-      margin-top: 40px;
-      margin-bottom: 20px;
-      border-bottom: 2px solid #DAA520;
-      padding-bottom: 12px;
+      margin-top: 48px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 3px solid #DAA520;
+      line-height: 1.3;
+      letter-spacing: -0.3px;
     }
 
     .about-text h3:first-child {
@@ -377,7 +507,13 @@
 
     .about-image {
       text-align: center;
-      margin: 30px 0;
+      margin: 40px 0;
+    }
+    
+    @media (max-width: 768px) {
+      .about-image {
+        margin: 32px 0;
+      }
     }
 
     .about-image img {
@@ -388,13 +524,23 @@
     }
 
     blockquote {
-      background: #FFF8DC;
-      border-left: 4px solid #DAA520;
-      padding: 20px;
-      margin: 24px 0;
-      border-radius: 4px;
+      background: linear-gradient(135deg, #FFF8DC 0%, #FFFEF9 100%);
+      border-left: 5px solid #DAA520;
+      padding: 28px 32px;
+      margin: 32px 0;
+      border-radius: 8px;
       font-style: italic;
-      color: #555;
+      color: var(--color-text);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      line-height: 1.7;
+      font-size: clamp(15px, 2vw, 17px);
+    }
+    
+    @media (max-width: 768px) {
+      blockquote {
+        padding: 20px 24px;
+        margin: 24px 0;
+      }
     }
     
     /* Đồng bộ màu nền cho các phần tử */
@@ -422,12 +568,25 @@
     }
 
     .external-posts-container {
-      max-width: 1000px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 0 20px;
+      padding: 0 32px;
+      box-sizing: border-box;
+    }
+    
+    @media (max-width: 1024px) {
+      .external-posts-container {
+        padding: 0 24px;
+      }
     }
 
     @media (max-width: 768px) {
+      .external-posts-container {
+        padding: 0 20px;
+      }
+    }
+    
+    @media (max-width: 480px) {
       .external-posts-container {
         padding: 0 16px;
       }
@@ -519,7 +678,7 @@
 
     .external-post-description {
       font-size: 14px;
-      color: #555;
+      color: var(--color-text-muted);
       line-height: 1.6;
       margin: 0 0 12px 0;
       flex: 1;
@@ -530,7 +689,7 @@
       padding-top: 12px;
       border-top: 1px solid #e0e0e0;
       font-size: 11px;
-      color: #888;
+      color: var(--color-text-muted);
       font-style: italic;
     }
 
@@ -560,12 +719,25 @@
     }
 
     .news-feed-container {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 0 32px;
+      box-sizing: border-box;
+    }
+    
+    @media (max-width: 1024px) {
+      .news-feed-container {
+        padding: 0 24px;
+      }
     }
 
     @media (max-width: 768px) {
+      .news-feed-container {
+        padding: 0 20px;
+      }
+    }
+    
+    @media (max-width: 480px) {
       .news-feed-container {
         padding: 0 16px;
       }
@@ -1073,55 +1245,82 @@
 
     /* Typography - Responsive */
     h1 {
-      font-size: clamp(24px, 6vw, 36px);
-      line-height: 1.3;
+      font-size: clamp(28px, 6vw, 42px);
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 1em;
     }
 
     h2 {
-      font-size: clamp(20px, 5vw, 28px);
+      font-size: clamp(24px, 5vw, 32px);
       line-height: 1.3;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      margin-bottom: 0.8em;
     }
 
     h3 {
-      font-size: clamp(18px, 4vw, 22px);
-      line-height: 1.3;
+      font-size: clamp(20px, 4vw, 26px);
+      line-height: 1.35;
+      font-weight: 600;
+      margin-bottom: 0.7em;
+    }
+    
+    h4 {
+      font-size: clamp(18px, 3.5vw, 22px);
+      line-height: 1.4;
+      font-weight: 600;
+      margin-bottom: 0.6em;
     }
 
     p, li {
       font-size: var(--font-size-base);
-      line-height: 1.6;
+      line-height: 1.75;
+      color: var(--color-text);
+      margin-bottom: 1em;
+    }
+    
+    p:last-child {
+      margin-bottom: 0;
     }
 
     @media (max-width: 768px) {
       p, li {
-        line-height: 1.5;
+        line-height: 1.65;
       }
     }
 
     .section-title {
-      font-size: clamp(24px, 5vw, 36px);
+      font-size: clamp(28px, 5.5vw, 42px);
       color: #8B0000;
-      margin-bottom: clamp(20px, 4vw, 30px);
+      margin-bottom: clamp(24px, 5vw, 40px);
+      margin-top: 0;
       text-align: center;
       text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-      scroll-margin-top: var(--navbar-height);
+      scroll-margin-top: calc(var(--navbar-height) + 20px);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      position: relative;
+      padding-bottom: 20px;
+    }
+    
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 4px;
+      background: linear-gradient(90deg, #8B0000, #DAA520);
+      border-radius: 2px;
     }
 
-    /* Fixed Sidebar Table of Contents */
+    /* TOC Sidebar - Hidden (removed per user request) */
     .toc-sidebar {
-      position: fixed;
-      left: 0;
-      top: var(--navbar-height);
-      width: var(--sidebar-width);
-      height: calc(100vh - var(--navbar-height));
-      background: #FAEBD7;
-      border-right: 3px solid #DAA520;
-      padding: 20px 16px;
-      overflow-y: auto;
-      overflow-x: hidden;
-      z-index: 998; /* Below navbar (z-index: 1000) */
-      box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-      transition: transform 0.3s ease, left 0.3s ease;
+      display: none !important;
     }
 
     .toc-sidebar::-webkit-scrollbar {
@@ -1142,10 +1341,10 @@
     }
 
     .toc-sidebar h3 {
-      color: #8B0000;
+      color: var(--color-primary);
       font-size: 18px;
       margin-bottom: 20px;
-      border-bottom: 3px solid #DAA520;
+      border-bottom: 3px solid var(--color-accent);
       padding-bottom: 12px;
       text-align: center;
       font-weight: 700;
@@ -1170,7 +1369,7 @@
       left: 0;
       top: 50%;
       transform: translateY(-50%);
-      color: #8B0000;
+      color: var(--color-primary);
       font-weight: bold;
       font-size: 12px;
       opacity: 0.6;
@@ -1179,7 +1378,7 @@
 
     .toc-list li:hover::before {
       opacity: 1;
-      color: #DAA520;
+      color: var(--color-accent);
       transform: translateY(-50%) translateX(3px);
     }
 
@@ -1199,17 +1398,17 @@
     }
 
     .toc-list a:hover {
-      color: #8B0000;
+      color: var(--color-primary);
       background: rgba(218, 165, 32, 0.1);
       transform: translateX(4px);
       padding-left: 24px;
     }
 
     .toc-list a.active {
-      color: #8B0000;
+      color: var(--color-primary);
       background: rgba(218, 165, 32, 0.2);
       font-weight: bold;
-      border-left: 3px solid #DAA520;
+      border-left: 3px solid var(--color-accent);
       padding-left: 17px;
     }
 
@@ -1220,96 +1419,18 @@
       top: 0;
       bottom: 0;
       width: 3px;
-      background: #DAA520;
+      background: var(--color-accent);
       border-radius: 0 3px 3px 0;
     }
 
-    /* Mobile: Hide sidebar, show toggle button */
+    /* TOC Toggle Button - Hidden (removed per user request) */
     .toc-toggle {
-      display: none;
-      position: fixed;
-      left: 15px;
-      top: 85px;
-      z-index: 1001; /* Above navbar */
-      background: #8B0000;
-      color: white;
-      border: 2px solid #DAA520;
-      border-radius: 8px;
-      padding: 10px 15px;
-      min-width: 44px; /* Touch target tối thiểu */
-      min-height: 44px;
-      cursor: pointer;
-      font-size: 18px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-      transition: all 0.3s ease;
-      /* Quan trọng: bỏ 300ms delay trên mobile, tránh ghost click */
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: rgba(255, 215, 0, 0.2);
-      user-select: none;
+      display: none !important;
     }
 
-    .toc-toggle:hover {
-      background: #DAA520;
-      color: #8B0000;
-    }
-
-    /* TOC Overlay for mobile */
+    /* TOC Overlay - Hidden (removed per user request) */
     .toc-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 997;
-    }
-
-    .toc-overlay.active {
-      display: block;
-      touch-action: manipulation;
-    }
-
-    @media (max-width: 1024px) {
-      .toc-sidebar {
-        left: -280px;
-        width: 280px;
-      }
-
-      .toc-sidebar.open {
-        left: 0;
-      }
-
-      .toc-toggle {
-        display: block;
-      }
-
-      body {
-        padding-left: 0 !important;
-      }
-    }
-
-    @media (max-width: 768px) {
-      .toc-sidebar {
-        width: 80vw;
-        max-width: 280px;
-        padding: 16px 12px;
-      }
-
-      .toc-sidebar h3 {
-        font-size: 16px;
-        margin-bottom: 16px;
-        padding-bottom: 10px;
-      }
-
-      .toc-list a {
-        font-size: 13px;
-        padding: 8px 10px 8px 18px;
-      }
-
-      .toc-list li {
-        margin-bottom: 6px;
-      }
+      display: none !important;
     }
 
     /* Scroll offset for anchor links */
@@ -1440,7 +1561,7 @@
     }
 
     .lineage-header p {
-      color: #666;
+      color: var(--color-text-muted);
       font-size: 16px;
       font-style: italic;
     }
@@ -2927,37 +3048,723 @@
         right: 10px;
       }
     }
+
+    /* ============================================
+       SCROLL TO TOP BUTTON
+       ============================================ */
+    .scroll-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: white;
+      border: 2px solid #DAA520;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 999;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      font-size: 24px;
+      font-weight: bold;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .scroll-to-top:hover {
+      background: linear-gradient(135deg, #DAA520 0%, #FFD700 100%);
+      color: #8B0000;
+      transform: translateY(-5px) scale(1.1);
+      box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
+    }
+
+    .scroll-to-top:active {
+      transform: translateY(-3px) scale(1.05);
+    }
+
+    .scroll-to-top.visible {
+      display: flex;
+      animation: fadeInUp 0.5s ease-out;
+    }
+
+    @media (max-width: 768px) {
+      .scroll-to-top {
+        width: 44px;
+        height: 44px;
+        bottom: 20px;
+        right: 20px;
+        font-size: 20px;
+      }
+    }
+
+    /* ============================================
+       READING PROGRESS INDICATOR
+       ============================================ */
+    .reading-progress {
+      position: fixed;
+      top: var(--navbar-height);
+      left: 0;
+      right: 0;
+      width: auto;
+      height: 3px;
+      background: rgba(139, 0, 0, 0.1);
+      z-index: 998;
+      box-shadow: 0 2px 4px rgba(139, 0, 0, 0.3);
+    }
+    
+    /* Reading progress - full width (no sidebar) */
+    .reading-progress {
+      left: 0;
+      right: 0;
+    }
+    
+    .reading-progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--progress-width, 0%);
+      height: 100%;
+      background: linear-gradient(90deg, #8B0000, #DAA520, #FFD700);
+      transition: width 0.1s ease;
+    }
+
+    /* Reading progress always full width */
+
+    /* ============================================
+       ENHANCED ANIMATIONS
+       ============================================ */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+    }
+
+    /* Apply animations to sections - but don't override layout */
+    section {
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    section:nth-child(even) {
+      animation: slideInLeft 0.6s ease-out;
+    }
+    
+    /* Ensure section layout styles take precedence */
+    section {
+      /* Layout styles are defined above, this is just for animation */
+    }
+
+    /* Reduce animations on mobile for performance */
+    @media (max-width: 768px) {
+      * {
+        animation-duration: 0.3s !important;
+      }
+    }
+
+    /* ============================================
+       ENHANCED HERO SECTION (#home)
+       ============================================ */
+    #home {
+      min-height: 85vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%);
+      background-attachment: scroll;
+      position: relative;
+      color: #8B0000;
+      text-align: center;
+      padding: var(--section-padding) 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    @media (min-width: 1025px) {
+      #home {
+        min-height: 90vh;
+      }
+    }
+    
+    @media (max-width: 1024px) {
+      #home {
+        padding: 60px 0;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      #home {
+        padding: 40px 0;
+        min-height: 75vh;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      #home {
+        padding: 40px 0;
+        min-height: 70vh;
+      }
+    }
+
+    /* Overlay removed for cleaner dark red background */
+    
+    /* Remove section separator from home */
+    #home::before {
+      display: none !important;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      animation: fadeInUp 1s ease-out;
+      /* Ensure content is visible even if animation fails */
+      opacity: 1;
+      transform: translateY(0);
+      padding: 0 var(--space-8);
+      box-sizing: border-box;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    @media (max-width: 1024px) {
+      .hero-content {
+        padding: 0 var(--space-6);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .hero-content {
+        padding: 0 var(--space-4);
+      }
+    }
+
+    /* ============================================
+       FLOATING TABLE OF CONTENTS BUTTON
+       ============================================ */
+    .floating-toc-btn {
+      position: fixed;
+      bottom: 90px;
+      right: 30px;
+      z-index: 10001;
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: #FFFFFF;
+      border: 2px solid #DAA520;
+      border-radius: 50px;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: 'Noto Serif TC', 'Playfair Display', serif;
+      box-shadow: 0 6px 20px rgba(139, 0, 0, 0.35), 0 0 0 0 rgba(218, 165, 32, 0.4);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: rgba(255, 215, 0, 0.2);
+      letter-spacing: 0.3px;
+    }
+    
+    .floating-toc-btn:hover {
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 8px 25px rgba(139, 0, 0, 0.45), 0 0 0 4px rgba(218, 165, 32, 0.2);
+      background: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
+    }
+    
+    .floating-toc-btn:active {
+      transform: translateY(-2px) scale(0.98);
+    }
+    
+    .floating-toc-btn.active {
+      background: linear-gradient(135deg, #DAA520 0%, #FFD700 100%);
+      color: #8B0000;
+      border-color: #8B0000;
+      box-shadow: 0 6px 20px rgba(218, 165, 32, 0.4), 0 0 0 4px rgba(139, 0, 0, 0.2);
+    }
+    
+    .floating-toc-btn.active:hover {
+      box-shadow: 0 8px 25px rgba(218, 165, 32, 0.5), 0 0 0 4px rgba(139, 0, 0, 0.3);
+    }
+    
+    .toc-icon {
+      font-size: 20px;
+      font-weight: 700;
+      transition: transform 0.3s ease;
+      display: inline-block;
+    }
+    
+    .floating-toc-btn:hover .toc-icon {
+      transform: rotate(90deg);
+    }
+    
+    .floating-toc-btn.active .toc-icon {
+      transform: rotate(180deg);
+    }
+    
+    .toc-text {
+      font-size: 15px;
+      letter-spacing: 0.5px;
+    }
+    
+    @media (max-width: 768px) {
+      .floating-toc-btn {
+        bottom: 80px;
+        right: 20px;
+        padding: 10px 16px;
+      }
+      
+      .toc-text {
+        display: none;
+      }
+      
+      .toc-icon {
+        font-size: 24px;
+      }
+    }
+    
+    /* Floating TOC Menu */
+    .floating-toc-menu {
+      position: fixed;
+      top: 50%;
+      right: 30px;
+      transform: translateY(-50%) translateX(20px) scale(0.95);
+      z-index: 10000;
+      background: var(--color-bg-card);
+      border: 2px solid var(--color-accent);
+      border-radius: 16px;
+      box-shadow: 0 15px 50px rgba(139, 0, 0, 0.35), 0 0 0 1px rgba(218, 165, 32, 0.15);
+      min-width: 300px;
+      max-width: 340px;
+      max-height: 80vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      backdrop-filter: blur(10px);
+    }
+    
+    /* Ensure menu is scrollable on mobile */
+    @media (max-width: 768px) {
+      .floating-toc-menu {
+        max-height: 70vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+    
+    .floating-toc-menu.active {
+      transform: translateY(-50%) translateX(0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    .toc-menu-header {
+      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
+      color: #FFFFFF;
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 14px 14px 0 0;
+      box-shadow: 0 2px 8px rgba(139, 0, 0, 0.2);
+    }
+    
+    .toc-menu-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    .toc-close-btn {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: #FFFFFF;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+      font-weight: 300;
+    }
+    
+    .toc-close-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: rotate(90deg) scale(1.1);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .toc-menu-list {
+      list-style: none;
+      padding: 8px 0;
+      margin: 0;
+      background: var(--color-bg-card);
+    }
+    
+    .toc-menu-list > li:first-child {
+      border-top: 1px solid rgba(139, 0, 0, 0.08);
+    }
+    
+    /* ============================================
+       TOC ITEM STRUCTURE - Tối ưu phân cấp
+       ============================================ */
+    .toc-menu-list .toc-item {
+      list-style: none;
+      margin: 0;
+      border-bottom: 1px solid rgba(139, 0, 0, 0.1);
+    }
+    
+    .toc-menu-list .toc-item:last-child {
+      border-bottom: none;
+    }
+    
+    /* TOC Parent Container (H2 - Mục chính) */
+    .toc-parent {
+      display: flex;
+      align-items: stretch;
+      position: relative;
+    }
+    
+    .toc-parent > a {
+      flex: 1;
+      display: block;
+      padding: 14px 20px;
+      color: var(--color-primary);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 700;
+      transition: background-color 0.2s ease, color 0.2s ease, border-left-color 0.2s ease, box-shadow 0.2s ease;
+      border-left: 4px solid transparent;
+      background-color: rgba(250, 235, 215, 0.4);
+      font-family: 'Noto Serif TC', 'Playfair Display', serif;
+      line-height: 1.6;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      min-width: 0;
+    }
+    
+    /* TOC Toggle Button (Mobile only) */
+    .toc-toggle {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--color-primary);
+      font-size: 20px;
+      font-weight: 300;
+      width: 40px;
+      min-width: 40px;
+      height: 100%;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+      transition: background-color 0.2s ease;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      border-left: 1px solid rgba(139, 0, 0, 0.15);
+    }
+    
+    .toc-toggle:hover {
+      background: rgba(139, 0, 0, 0.1);
+    }
+    
+    .toc-toggle span {
+      display: block;
+      line-height: 1;
+      transition: transform 0.2s ease;
+    }
+    
+    /* Hover state cho H2 - không làm chữ nhảy */
+    .toc-parent > a:hover {
+      background-color: rgba(218, 165, 32, 0.2);
+      color: var(--color-primary);
+      border-left-color: var(--color-accent);
+      box-shadow: inset 3px 0 6px rgba(218, 165, 32, 0.15);
+    }
+    
+    /* Active state cho H2 */
+    .toc-parent > a.active {
+      background-color: rgba(139, 0, 0, 0.15);
+      color: var(--color-primary);
+      border-left-color: var(--color-primary);
+      box-shadow: inset 3px 0 6px rgba(139, 0, 0, 0.2);
+    }
+    
+    /* TOC Submenu (H3 - Mục con) */
+    .toc-submenu {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+      opacity: 0;
+      background: rgba(255, 255, 255, 0.6);
+    }
+    
+    /* Đảm bảo submenu không bị tràn */
+    .toc-submenu {
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    
+    /* Desktop: Show submenu on hover */
+    @media (min-width: 769px) {
+      .toc-item:hover .toc-submenu,
+      .toc-item.expanded .toc-submenu {
+        max-height: 800px;
+        opacity: 1;
+      }
+    }
+    
+    /* Mobile: Show submenu when expanded */
+    @media (max-width: 768px) {
+      .toc-item.expanded .toc-submenu {
+        max-height: 600px;
+        opacity: 1;
+      }
+      
+      .toc-toggle {
+        display: flex;
+      }
+      
+      /* Đảm bảo submenu scroll được trên mobile */
+      .toc-submenu {
+        max-height: 400px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .toc-item.expanded .toc-submenu {
+        max-height: 400px;
+      }
+    }
+    
+    /* Submenu items (H3) - Thụt vào, font nhỏ hơn, màu nhạt hơn */
+    .toc-submenu li {
+      list-style: none;
+      margin: 0;
+    }
+    
+    .toc-submenu .toc-link {
+      display: block;
+      padding: 10px 20px 10px 36px;
+      color: #666666;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 400;
+      transition: background-color 0.2s ease, color 0.2s ease, border-left-color 0.2s ease, box-shadow 0.2s ease;
+      border-left: 3px solid transparent;
+      font-family: 'Noto Serif TC', 'Playfair Display', serif;
+      line-height: 1.6;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+      position: relative;
+      min-width: 0;
+    }
+    
+    /* Hover state cho submenu links - không làm chữ nhảy */
+    .toc-submenu .toc-link:hover {
+      background-color: rgba(218, 165, 32, 0.12);
+      color: #8B0000;
+      border-left-color: var(--color-accent);
+      box-shadow: inset 2px 0 4px rgba(218, 165, 32, 0.1);
+    }
+    
+    /* Active state cho submenu links */
+    .toc-submenu .toc-link.active {
+      background-color: rgba(139, 0, 0, 0.1);
+      color: #8B0000;
+      border-left-color: var(--color-primary);
+      font-weight: 500;
+      box-shadow: inset 2px 0 4px rgba(139, 0, 0, 0.1);
+    }
+    
+    /* TOC Overlay - Fixed để hiển thị đúng */
+    .toc-overlay {
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(3px);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease, backdrop-filter 0.3s ease;
+      display: block !important;
+    }
+    
+    .toc-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    @media (max-width: 768px) {
+      .floating-toc-menu {
+        top: 50%;
+        right: 20px;
+        left: 20px;
+        max-width: none;
+        min-width: auto;
+        max-height: 70vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        transform: translateY(-50%) translateX(20px) scale(0.95);
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      .floating-toc-menu.active {
+        transform: translateY(-50%) translateX(0) scale(1);
+      }
+      
+      /* Disable hover on mobile - chỉ dùng click */
+      .toc-item:hover .toc-submenu {
+        max-height: 0;
+        opacity: 0;
+      }
+      
+      /* Đảm bảo text không bị tràn trên mobile */
+      .toc-parent > a,
+      .toc-submenu .toc-link {
+        word-break: break-word;
+        hyphens: auto;
+      }
+    }
+    
+    /* Custom scrollbar for TOC menu */
+    .floating-toc-menu::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .floating-toc-menu::-webkit-scrollbar-track {
+      background: rgba(139, 0, 0, 0.05);
+      border-radius: 4px;
+      margin: 8px 0;
+    }
+    
+    .floating-toc-menu::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #DAA520 0%, #8B0000 100%);
+      border-radius: 4px;
+      border: 2px solid var(--color-bg-card);
+    }
+    
+    .floating-toc-menu::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #FFD700 0%, #DC143C 100%);
+    }
+
+    /* ============================================
+       ENHANCED SECTION TITLES
+       ============================================ */
+    /* Note: .section-title styles are already defined earlier in the file */
+
+    /* ============================================
+       ENHANCED IMAGE STYLING
+       ============================================ */
+    .about-image img,
+    section img {
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .about-image img:hover,
+    section img:hover {
+      transform: scale(1.02);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Lazy loading image styles */
+    img[loading="lazy"] {
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    img[loading="lazy"].loaded {
+      opacity: 1;
+    }
+
+    /* TOC Sidebar enhancements removed - sidebar is hidden */
+
+    /* ============================================
+       ACCESSIBILITY IMPROVEMENTS
+       ============================================ */
+    /* Skip to content link removed per user request */
+
+    /* Enhanced focus states */
+    *:focus {
+      outline: 3px solid #DAA520;
+      outline-offset: 2px;
+    }
+
+    button:focus,
+    a:focus {
+      outline: 3px solid #DAA520;
+      outline-offset: 2px;
+    }
+
   </style>
 </head>
 <body>
-  <!-- TOC Toggle Button (Mobile) -->
-  <button class="toc-toggle" onclick="toggleTOC()" id="tocToggle">📑 Mục Lục</button>
-
-  <!-- TOC Overlay -->
-  <div class="toc-overlay" id="tocOverlay"></div>
-
-  <!-- Fixed Sidebar Table of Contents -->
-  <div class="toc-sidebar" id="tocSidebar">
-    <h3>📑 Mục Lục</h3>
-    <ul class="toc-list">
-      <li><a href="#gioi-thieu">Giới thiệu</a></li>
-      <li><a href="#de-he-thi">Từ Tầm Nhìn Của Vua Minh Mạng Đến Bài Thơ "Đế Hệ Thi"</a></li>
-      <li><a href="#tuy-bien-quan-cong">Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</a></li>
-      <li><a href="#phu-he-to-he">Phụ Hệ và Tổ Hệ của Tuy Biên Quận Công Nguyễn Phúc Miên Sủng</a></li>
-      <li><a href="#to-tien-dong-chua-nguyen">Tổ Tiên Dòng Chúa Nguyễn và Cao Tổ Đại Tộc</a></li>
-          <li><a href="#so-hoa-gia-pha">Số Hóa Gia Phả – Kết Nối Quá Khứ Đến Tương Lai</a></li>
-          <li><a href="#ket-tu">Kết Từ</a></li>
-          <li><a href="#hinh-anh-nha-tho">Hình Ảnh Bên Trong Nhà Thờ</a></li>
-          <li><a href="#album-anh">📷 Album Ảnh</a></li>
-          <li><a href="#noi-dung-chinh">Thông tin hoạt động Phủ Tuy Biên</a></li>
-          <li><a href="#hoat-dong-npt-vn">Hoạt động Hội đồng NPT VN</a></li>
-          <li><a href="#tai-lieu">Tài liệu</a></li>
-        </ul>
-      </div>
+  <!-- TOC Sidebar removed per user request - content only -->
 
   <!-- Navbar -->
-  <nav class="navbar">
-    <button class="navbar-toggle" onclick="toggleMenu()">☰</button>
+  <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <button class="navbar-toggle" onclick="toggleMenu()" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/" onclick="setActive(this)">Trang chủ</a></li>
       <li><a href="/genealogy" onclick="setActive(this)">Gia phả</a></li>
@@ -2968,6 +3775,8 @@
     </ul>
   </nav>
 
+  <!-- Main Content Area -->
+  <main>
   <!-- Section: Home -->
   <section id="home">
     <div class="hero-content">
@@ -2976,6 +3785,24 @@
       <a href="/genealogy" class="cta-button">Xem Gia Phả</a>
     </div>
   </section>
+
+  <!-- Floating Table of Contents Button -->
+  <button class="floating-toc-btn" id="floatingTocBtn" aria-label="Mục lục" aria-expanded="false">
+    <span class="toc-icon">☰</span>
+    <span class="toc-text">Mục lục</span>
+  </button>
+  
+  <div class="floating-toc-menu" id="floatingTocMenu">
+    <div class="toc-menu-header">
+      <h3>Mục Lục</h3>
+      <button class="toc-close-btn" id="tocCloseBtn" aria-label="Đóng mục lục">&times;</button>
+    </div>
+    <ul class="toc-menu-list" id="dynamicTocList">
+      <!-- Dynamic TOC items will be generated here by JavaScript -->
+    </ul>
+  </div>
+  
+  <div class="toc-overlay" id="tocOverlay"></div>
 
   <!-- Section: About -->
   <section id="about">
@@ -2991,7 +3818,7 @@
           </p>
           
           <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
-            <img src="/static/images/1. vua-gia-long.jpg" alt="Vua Gia Long" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <img src="/static/images/1. vua-gia-long.jpg" alt="Vua Gia Long" loading="lazy" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
           </div>
           
           <p>
@@ -2999,7 +3826,7 @@
           </p>
           
           <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
-            <img src="/static/images/2. vua-minh-mang.jpg" alt="Vua Minh Mạng" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <img src="/static/images/2. vua-minh-mang.jpg" alt="Vua Minh Mạng" loading="lazy" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
           </div>
           
           <p>
@@ -3025,7 +3852,7 @@
           </blockquote>
           
           <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
-            <img src="/static/images/3. kim sach de he thi.jpg" alt="Kim sách Đế Hệ Thi" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <img src="/static/images/3. kim sach de he thi.jpg" alt="Kim sách Đế Hệ Thi" loading="lazy" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
           </div>
           
           <p>
@@ -3033,7 +3860,7 @@
           </p>
           
           <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
-            <img src="/static/images/4. kinh-thanh-hue.jpg" alt="Kinh thành Huế" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <img src="/static/images/4. kinh-thanh-hue.jpg" alt="Kinh thành Huế" loading="lazy" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
           </div>
 
           <h3 id="tuy-bien-quan-cong">Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</h3>
@@ -3185,7 +4012,7 @@
           </blockquote>
           
           <div class="about-image" style="text-align: center; margin: var(--space-6) 0;">
-            <img src="/static/images/5. phu-tuy-bien.jpg" alt="Phủ Tuy Biên" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <img src="/static/images/5. phu-tuy-bien.jpg" alt="Phủ Tuy Biên" loading="lazy" style="max-width: 100%; height: auto; border-radius: var(--radius-md); box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
           </div>
           
           <!-- Google Maps -->
@@ -3650,6 +4477,9 @@
     </div>
   </section>
 
+  </main>
+  <!-- End Main Content Area -->
+
   <!-- Section: Interactive Genealogy Tree -->
   <!-- Section: Cây Gia Phả Tương Tác - Đã di chuyển sang /genealogy -->
 
@@ -3662,8 +4492,10 @@
     // Navbar functionality
     function toggleMenu() {
       const menu = document.getElementById('navbarMenu');
-      if (menu) {
-        menu.classList.toggle('active');
+      const toggleBtn = document.querySelector('.navbar-toggle');
+      if (menu && toggleBtn) {
+        const isActive = menu.classList.toggle('active');
+        toggleBtn.setAttribute('aria-expanded', isActive);
       }
     }
 
@@ -3671,10 +4503,14 @@
     var _tocLastOpenedAt = 0;
     var _TOC_OPEN_GUARD_MS = 400;
 
-    // Helper function để đóng TOC
+    // Helper function để đóng TOC (mobile only)
     function closeTOC() {
+      // Only work on mobile
+      if (window.innerWidth > 1024) return;
+      
       const sidebar = document.getElementById('tocSidebar');
       const overlay = document.getElementById('tocOverlay');
+      const toggleBtn = document.getElementById('tocToggle');
       
       if (sidebar) {
         sidebar.classList.remove('open');
@@ -3683,12 +4519,21 @@
       if (overlay) {
         overlay.classList.remove('active');
       }
+      
+      if (toggleBtn) {
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        toggleBtn.classList.remove('active');
+      }
     }
 
-    // Helper function để mở TOC
+    // Helper function để mở TOC (mobile only)
     function openTOC() {
+      // Only work on mobile
+      if (window.innerWidth > 1024) return;
+      
       const sidebar = document.getElementById('tocSidebar');
       const overlay = document.getElementById('tocOverlay');
+      const toggleBtn = document.getElementById('tocToggle');
       
       if (sidebar) {
         sidebar.classList.add('open');
@@ -3698,13 +4543,20 @@
         overlay.classList.add('active');
       }
       
+      if (toggleBtn) {
+        toggleBtn.setAttribute('aria-expanded', 'true');
+        toggleBtn.classList.add('active');
+      }
+      
       // Ghi lại thời điểm mở để guard ghost click
       _tocLastOpenedAt = Date.now();
     }
 
     function toggleTOC() {
+      // Only work on mobile
+      if (window.innerWidth > 1024) return;
+      
       const sidebar = document.getElementById('tocSidebar');
-      const overlay = document.getElementById('tocOverlay');
       
       if (sidebar) {
         const isOpen = sidebar.classList.contains('open');
@@ -3733,13 +4585,16 @@
       });
     }
 
-    // Close sidebar when clicking outside on mobile
+    // Close sidebar when clicking outside (mobile only)
     document.addEventListener('click', function(event) {
+      // Only work on mobile
+      if (window.innerWidth > 1024) return;
+      
       const sidebar = document.getElementById('tocSidebar');
       const toggleBtn = document.getElementById('tocToggle');
       const overlay = document.getElementById('tocOverlay');
       
-      if (window.innerWidth <= 1024 && sidebar && toggleBtn) {
+      if (sidebar && toggleBtn) {
         // Nếu click bên ngoài sidebar, toggle button, và không phải overlay
         if (!sidebar.contains(event.target) && 
             !toggleBtn.contains(event.target) && 
@@ -3748,8 +4603,25 @@
         }
       }
     });
+    
+    // Handle window resize - close sidebar on mobile when switching to desktop
+    window.addEventListener('resize', function() {
+      const sidebar = document.getElementById('tocSidebar');
+      
+      // If resizing to desktop, ensure sidebar is visible (remove open class)
+      if (window.innerWidth > 1024 && sidebar) {
+        sidebar.classList.remove('open');
+        const overlay = document.getElementById('tocOverlay');
+        const toggleBtn = document.getElementById('tocToggle');
+        if (overlay) overlay.classList.remove('active');
+        if (toggleBtn) {
+          toggleBtn.setAttribute('aria-expanded', 'false');
+          toggleBtn.classList.remove('active');
+        }
+      }
+    });
 
-    // Close sidebar when clicking on a link (mobile) and smooth scroll
+    // Close sidebar when clicking on a link (mobile only) and smooth scroll
     document.querySelectorAll('.toc-list a').forEach(link => {
       link.addEventListener('click', function(e) {
         const href = this.getAttribute('href');
@@ -3757,6 +4629,11 @@
           e.preventDefault();
           const targetId = href.substring(1);
           const targetElement = document.getElementById(targetId) || document.querySelector(`[id="${targetId}"]`);
+          
+          // Close sidebar on mobile when clicking a link
+          if (window.innerWidth <= 1024) {
+            closeTOC();
+          }
           
           if (targetElement) {
             const navbarHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70;
@@ -3769,20 +4646,18 @@
           }
         }
         
-        if (window.innerWidth <= 1024) {
-          // Đóng overlay ngay lập tức để không che màn hình
-          const overlay = document.getElementById('tocOverlay');
-          if (overlay) {
-            overlay.classList.remove('active');
-          }
-          
-          // Đóng sidebar sau delay để smooth scroll hoạt động tốt
-          const sidebar = document.getElementById('tocSidebar');
-          if (sidebar) {
-            setTimeout(() => {
-              sidebar.classList.remove('open');
-            }, 300); // Delay to allow smooth scroll
-          }
+        // Đóng overlay ngay lập tức để không che màn hình
+        const overlay = document.getElementById('tocOverlay');
+        if (overlay) {
+          overlay.classList.remove('active');
+        }
+        
+        // Đóng sidebar sau delay để smooth scroll hoạt động tốt
+        const sidebar = document.getElementById('tocSidebar');
+        if (sidebar) {
+          setTimeout(() => {
+            closeTOC();
+          }, 300); // Delay to allow smooth scroll
         }
       });
     });
@@ -7011,7 +7886,14 @@
       border-top: 1px solid rgba(255, 215, 0, 0.3);
       text-align: center;
       font-size: 14px;
-      color: #FFD700;
+      color: #8B0000;
+      font-weight: 600;
+    }
+    
+    .footer-bottom p {
+      color: #8B0000;
+      text-shadow: 2px 2px 6px rgba(255, 255, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4), 1px 1px 3px rgba(0, 0, 0, 0.2);
+      font-weight: 600;
     }
 
     @media (max-width: 767px) {
@@ -7876,7 +8758,389 @@
         // Tự động load và hiển thị tất cả albums khi trang load
         loadAlbums();
       });
+
+    // ============================================
+    // SCROLL TO TOP FUNCTIONALITY
+    // ============================================
+    (function() {
+      const scrollToTopBtn = document.getElementById('scrollToTop');
+      if (!scrollToTopBtn) return;
+
+      function toggleScrollButton() {
+        if (window.scrollY > 300) {
+          scrollToTopBtn.classList.add('visible');
+        } else {
+          scrollToTopBtn.classList.remove('visible');
+        }
+      }
+
+      scrollToTopBtn.addEventListener('click', function() {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+
+      window.addEventListener('scroll', toggleScrollButton);
+      toggleScrollButton(); // Check on load
+    })();
+
+    // ============================================
+    // READING PROGRESS INDICATOR
+    // ============================================
+    (function() {
+      const progressBar = document.getElementById('readingProgress');
+      if (!progressBar) return;
+
+      function updateProgress() {
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const scrollableHeight = documentHeight - windowHeight;
+        const progress = scrollableHeight > 0 ? (scrollTop / scrollableHeight) * 100 : 0;
+        const progressValue = Math.min(100, Math.max(0, progress));
+        
+        // Update the progress bar width using CSS variable
+        progressBar.style.setProperty('--progress-width', progressValue + '%');
+        progressBar.setAttribute('aria-valuenow', Math.round(progressValue));
+      }
+
+      window.addEventListener('scroll', updateProgress);
+      window.addEventListener('resize', updateProgress);
+      updateProgress(); // Update on load
+    })();
+
+    // ============================================
+    // LAZY LOADING IMAGES
+    // ============================================
+    (function() {
+      if ('loading' in HTMLImageElement.prototype) {
+        // Native lazy loading supported
+        const images = document.querySelectorAll('img[loading="lazy"]');
+        images.forEach(img => {
+          img.addEventListener('load', function() {
+            this.classList.add('loaded');
+          });
+        });
+      } else {
+        // Fallback: Intersection Observer
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const img = entry.target;
+              if (img.dataset.src) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                img.classList.add('loaded');
+                observer.unobserve(img);
+              }
+            }
+          });
+        });
+
+        document.querySelectorAll('img[data-src]').forEach(img => {
+          imageObserver.observe(img);
+        });
+      }
+    })();
+
+    // ============================================
+    // SMART FLOATING TABLE OF CONTENTS
+    // Dynamic TOC Generation & Auto-navigation
+    // ============================================
+    
+    // Hàm throttle để giảm tải cho sự kiện scroll
+    function throttle(func, limit) {
+      let inThrottle;
+      return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+          func.apply(context, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      }
+    }
+    
+    // Hàm tạo slug từ text
+    function createSlug(text) {
+      return text
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+        .replace(/\s+/g, '-') // Replace spaces with -
+        .replace(/-+/g, '-') // Replace multiple - with single -
+        .trim();
+    }
+    
+    // Hàm sinh mục lục tự động với submenu
+    function generateTOC() {
+      const tocList = document.getElementById('dynamicTocList');
+      if (!tocList) return;
+      
+      tocList.innerHTML = '';
+      
+      // Chọn các thẻ H2 và H3 trong <main> hoặc <section>
+      const mainContent = document.querySelector('main');
+      const searchScope = mainContent || document.body;
+      
+      // Quét tất cả H2 và H3 trong searchScope
+      const allHeadings = Array.from(searchScope.querySelectorAll('h2, h3'));
+      
+      if (allHeadings.length === 0) {
+        tocList.innerHTML = '<li style="padding:15px;text-align:center;color:var(--color-text-muted)">Chưa có mục lục</li>';
+        return;
+      }
+      
+      // Nhóm H3 theo H2 gần nhất
+      let currentH2 = null;
+      let currentH3s = [];
+      
+      allHeadings.forEach((heading, index) => {
+        const tagName = heading.tagName.toLowerCase();
+        
+        // Tự động tạo id nếu thiếu
+        if (!heading.id) {
+          heading.id = createSlug(heading.textContent.trim());
+        }
+        
+        if (tagName === 'h2') {
+          // Nếu có H2 trước đó, tạo TOC item cho nó
+          if (currentH2) {
+            createTOCItem(currentH2, currentH3s, tocList);
+          }
+          
+          // Bắt đầu nhóm mới với H2 này
+          currentH2 = heading;
+          currentH3s = [];
+        } else if (tagName === 'h3' && currentH2) {
+          // Thêm H3 vào nhóm của H2 hiện tại
+          currentH3s.push(heading);
+        }
+        
+        // Xử lý H2 cuối cùng
+        if (index === allHeadings.length - 1 && currentH2) {
+          createTOCItem(currentH2, currentH3s, tocList);
+        }
+      });
+      
+      // Thêm event listeners cho tất cả links
+      setupTOCLinks();
+    }
+    
+    // Hàm tạo TOC item cho một H2 và các H3 của nó
+    function createTOCItem(h2, h3s, tocList) {
+      const h2Id = h2.id;
+      const h2Title = h2.textContent.trim();
+      
+      // Tạo TOC item cho H2
+      const tocItem = document.createElement('li');
+      tocItem.className = 'toc-item toc-level-1';
+      
+      // Tạo parent container
+      const tocParent = document.createElement('div');
+      tocParent.className = 'toc-parent';
+      
+      // Link H2
+      const h2Link = document.createElement('a');
+      h2Link.href = `#${h2Id}`;
+      h2Link.textContent = h2Title;
+      h2Link.setAttribute('data-heading-id', h2Id);
+      
+      // Toggle button (mobile only) - chỉ hiển thị nếu có H3
+      let toggleBtn = null;
+      if (h3s.length > 0) {
+        toggleBtn = document.createElement('button');
+        toggleBtn.className = 'toc-toggle';
+        toggleBtn.innerHTML = '<span>+</span>';
+        toggleBtn.setAttribute('aria-label', 'Toggle submenu');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        
+        // Xử lý click toggle trên mobile
+        toggleBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          const isExpanded = tocItem.classList.toggle('expanded');
+          toggleBtn.setAttribute('aria-expanded', isExpanded);
+          const span = toggleBtn.querySelector('span');
+          if (span) {
+            span.textContent = isExpanded ? '−' : '+';
+          }
+        });
+      }
+      
+      tocParent.appendChild(h2Link);
+      if (toggleBtn) {
+        tocParent.appendChild(toggleBtn);
+      }
+      
+      // Tạo submenu cho H3
+      const h3Submenu = document.createElement('ul');
+      h3Submenu.className = 'toc-submenu';
+      
+      h3s.forEach(h3 => {
+        const h3Id = h3.id;
+        const h3Title = h3.textContent.trim();
+        
+        const h3Item = document.createElement('li');
+        const h3Link = document.createElement('a');
+        h3Link.href = `#${h3Id}`;
+        h3Link.className = 'toc-link';
+        h3Link.textContent = h3Title;
+        h3Link.setAttribute('data-heading-id', h3Id);
+        
+        h3Item.appendChild(h3Link);
+        h3Submenu.appendChild(h3Item);
+      });
+      
+      // Thêm submenu nếu có H3
+      if (h3s.length > 0) {
+        tocItem.appendChild(tocParent);
+        tocItem.appendChild(h3Submenu);
+      } else {
+        // Nếu không có H3, chỉ thêm parent
+        tocItem.appendChild(tocParent);
+      }
+      
+      tocList.appendChild(tocItem);
+    }
+    
+    // Hàm setup event listeners cho TOC links
+    function setupTOCLinks() {
+      const allLinks = document.querySelectorAll('.toc-menu-list .toc-link, .toc-parent > a');
+      
+      allLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          const href = this.getAttribute('href');
+          const targetId = href.substring(1);
+          const target = document.getElementById(targetId);
+          
+          if (target) {
+            // Đóng menu khi click
+            const tocMenu = document.getElementById('floatingTocMenu');
+            const tocOverlay = document.getElementById('tocOverlay');
+            const tocBtn = document.getElementById('floatingTocBtn');
+            
+            if (tocMenu) tocMenu.classList.remove('active');
+            if (tocOverlay) tocOverlay.classList.remove('active');
+            if (tocBtn) tocBtn.classList.remove('active');
+            document.body.style.overflow = '';
+            
+            // Smooth scroll
+            const navbarHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70;
+            const targetPosition = target.getBoundingClientRect().top + window.scrollY - navbarHeight - 20;
+            
+            window.scrollTo({
+              top: targetPosition,
+              behavior: 'smooth'
+            });
+          }
+        });
+      });
+    }
+    
+    // Hàm cập nhật trạng thái Active khi cuộn trang
+    function updateTOCActiveState() {
+      const mainContent = document.querySelector('main');
+      const searchScope = mainContent || document.body;
+      const headers = searchScope.querySelectorAll('section h2[id], section h3[id]');
+      const scrollPos = window.scrollY + 150;
+      
+      let currentId = '';
+      
+      headers.forEach(header => {
+        if (header.offsetTop <= scrollPos) {
+          currentId = header.id;
+        }
+      });
+      
+      // Xóa active cũ
+      document.querySelectorAll('.toc-link, .toc-parent > a').forEach(link => {
+        link.classList.remove('active');
+      });
+      
+      // Thêm active mới
+      const activeLink = document.querySelector(`.toc-link[href="#${currentId}"], .toc-parent > a[href="#${currentId}"]`);
+      if (activeLink) {
+        activeLink.classList.add('active');
+        
+        // Tự động mở submenu nếu active item là H3
+        const tocItem = activeLink.closest('.toc-item');
+        if (tocItem && activeLink.classList.contains('toc-link')) {
+          tocItem.classList.add('expanded');
+        }
+        
+        // Tự động cuộn menu TOC để thấy mục đang active
+        const menu = document.getElementById('floatingTocMenu');
+        if (menu && menu.classList.contains('active')) {
+          const linkItem = activeLink.closest('.toc-item') || activeLink.parentElement;
+          if (linkItem) {
+            const menuRect = menu.getBoundingClientRect();
+            const linkRect = linkItem.getBoundingClientRect();
+            
+            if (linkRect.top < menuRect.top || linkRect.bottom > menuRect.bottom) {
+              menu.scrollTo({ 
+                top: linkItem.offsetTop - 50, 
+                behavior: 'smooth' 
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    // Khởi tạo khi DOM ready
+    document.addEventListener('DOMContentLoaded', function() {
+      // 1. Tự động sinh mục lục
+      generateTOC();
+      
+      // 2. Xử lý sự kiện đóng/mở menu
+      const tocBtn = document.getElementById('floatingTocBtn');
+      const tocMenu = document.getElementById('floatingTocMenu');
+      const tocOverlay = document.getElementById('tocOverlay');
+      const closeBtn = document.getElementById('tocCloseBtn');
+      
+      function toggleTOCMenu() {
+        const isActive = tocMenu.classList.contains('active');
+        tocBtn.classList.toggle('active');
+        tocMenu.classList.toggle('active');
+        tocOverlay.classList.toggle('active');
+        tocBtn.setAttribute('aria-expanded', !isActive ? 'true' : 'false');
+        document.body.style.overflow = !isActive ? 'hidden' : '';
+      }
+      
+      if (tocBtn) tocBtn.addEventListener('click', toggleTOCMenu);
+      if (closeBtn) closeBtn.addEventListener('click', toggleTOCMenu);
+      if (tocOverlay) tocOverlay.addEventListener('click', toggleTOCMenu);
+      
+      // 3. Xử lý Scroll Spy (Bôi đậm mục đang xem)
+      window.addEventListener('scroll', throttle(updateTOCActiveState, 100));
+      
+      // Initial update
+      setTimeout(updateTOCActiveState, 500);
+      
+      // Close menu on Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && tocMenu && tocMenu.classList.contains('active')) {
+          toggleTOCMenu();
+        }
+      });
+    });
   </script>
+
+  <!-- Scroll to Top Button -->
+  <button id="scrollToTop" class="scroll-to-top" aria-label="Scroll to top" title="Lên đầu trang">
+    ↑
+  </button>
+
+  <!-- Reading Progress Indicator -->
+  <div id="readingProgress" class="reading-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="--progress-width: 0%">
+    <div class="reading-progress-fill"></div>
+  </div>
 
 </body>
 </html>
