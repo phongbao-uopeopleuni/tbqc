@@ -1730,30 +1730,38 @@
       }
     }
     
-    /* Related Posts & Most Viewed */
+    /* Related Posts & Most Viewed & Activity Info & NPT Council */
     .related-posts-list,
-    .most-viewed-list {
+    .most-viewed-list,
+    .activity-info-list,
+    .npt-council-list {
       list-style: none;
       padding: 0;
       margin: 0;
     }
     
     .related-posts-list li,
-    .most-viewed-list li {
+    .most-viewed-list li,
+    .activity-info-list li,
+    .npt-council-list li {
       margin-bottom: var(--space-4);
       padding-bottom: var(--space-4);
       border-bottom: 1px solid var(--color-border);
     }
     
     .related-posts-list li:last-child,
-    .most-viewed-list li:last-child {
+    .most-viewed-list li:last-child,
+    .activity-info-list li:last-child,
+    .npt-council-list li:last-child {
       border-bottom: none;
       margin-bottom: 0;
       padding-bottom: 0;
     }
     
     .related-posts-list a,
-    .most-viewed-list a {
+    .most-viewed-list a,
+    .activity-info-list a,
+    .npt-council-list a {
       color: var(--color-text);
       text-decoration: none;
       font-size: var(--font-size-sm);
@@ -1763,8 +1771,15 @@
     }
     
     .related-posts-list a:hover,
-    .most-viewed-list a:hover {
+    .most-viewed-list a:hover,
+    .activity-info-list a:hover,
+    .npt-council-list a:hover {
       color: var(--color-primary);
+    }
+    
+    /* External link indicator */
+    .npt-council-list a[target="_blank"] {
+      position: relative;
     }
     
     /* Note/Tip/Warning Boxes */
@@ -3882,6 +3897,31 @@
             <li><a href="#de-he-thi">Đế Hệ Thi - Bài Thơ Định Danh</a></li>
             <li><a href="#tuy-bien-quan-cong">Ngài Tuy Biên Quận Công</a></li>
             <li><a href="#so-hoa-gia-pha">Số Hóa Gia Phả</a></li>
+          </ul>
+        </div>
+        
+        <!-- Activity Info Card -->
+        <div class="sidebar-card activity-info">
+          <h3>Thông tin hoạt động Phủ Tuy Biên</h3>
+          <ul class="activity-info-list">
+            <!-- Placeholder data - có thể thay thế bằng dữ liệu thực từ backend -->
+            <li><a href="/activities">Hoạt động dòng họ</a></li>
+            <li><a href="/activities#albums">Album ảnh hoạt động</a></li>
+            <li><a href="/members">Danh sách thành viên</a></li>
+            <li><a href="/genealogy">Tra cứu gia phả</a></li>
+            <li><a href="/contact">Liên hệ</a></li>
+          </ul>
+        </div>
+        
+        <!-- Hội đồng NPT VN Card -->
+        <div class="sidebar-card npt-council">
+          <h3>Hoạt động Hội đồng NPT VN</h3>
+          <ul class="npt-council-list">
+            <li><a href="https://nguyenphuoctoc.info" target="_blank" rel="noopener noreferrer">Trang chủ Hội đồng NPT VN <span style="font-size: 12px; color: var(--color-text-muted);">↗</span></a></li>
+            <li><a href="https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/" target="_blank" rel="noopener noreferrer">Lễ chánh kỵ, kỷ niệm 28 năm ngày băng hà của Hoàng đế Bảo Đại</a></li>
+            <li><a href="https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/" target="_blank" rel="noopener noreferrer">Thư Mời húy kỵ Chúa Tiên năm 2025 - Ất Tỵ</a></li>
+            <li><a href="https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/" target="_blank" rel="noopener noreferrer">Nhân dịp 480 năm ngày băng của Đức Triệu Tổ Nguyễn Kim</a></li>
+            <li><a href="https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/" target="_blank" rel="noopener noreferrer">TIÊU CHÍ CÁC PHỦ PHÒNG "GIỮ NẾP TRUYỀN THỐNG GIA PHONG HOÀNG TỘC"</a></li>
           </ul>
         </div>
       </aside>

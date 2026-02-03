@@ -167,6 +167,51 @@
       cursor: not-allowed;
       transform: none;
     }
+    
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #8B0000;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    label[for="rememberLogin"] {
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+      color: #333;
+      transition: color 0.2s ease;
+    }
+    
+    label[for="rememberLogin"]:hover {
+      color: #8B0000;
+    }
+    
+    .remember-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: rgba(139, 0, 0, 0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(139, 0, 0, 0.1);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    
+    .remember-container:hover {
+      background: rgba(139, 0, 0, 0.05);
+      border-color: rgba(139, 0, 0, 0.2);
+    }
+    
+    .remember-container input[type="checkbox"]:checked + label {
+      color: #8B0000;
+      font-weight: 600;
+    }
 
     @media (max-width: 768px) {
       .navbar-menu {
@@ -222,6 +267,11 @@
           <input type="password" id="password" name="password" required>
         </div>
         
+        <div class="remember-container">
+          <input type="checkbox" id="rememberLogin">
+          <label for="rememberLogin">Lưu mật khẩu</label>
+        </div>
+        
         <div class="error-message" id="errorMessage">
           Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.
         </div>
@@ -242,6 +292,7 @@
       
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value.trim();
+      const rememberCheckbox = document.getElementById('rememberLogin');
       const errorDiv = document.getElementById('errorMessage');
       const loginBtn = document.getElementById('loginBtn');
       
@@ -265,6 +316,27 @@
         const result = await response.json();
         
         if (result.success) {
+          // Lưu thông tin đăng nhập nếu checkbox được tick
+          if (rememberCheckbox && rememberCheckbox.checked) {
+            try {
+              // Lưu username và password vào localStorage (có thể mã hóa cơ bản)
+              localStorage.setItem('members_username', username);
+              localStorage.setItem('members_password', password);
+              localStorage.setItem('members_remember', 'true');
+            } catch (e) {
+              console.warn('Cannot save to localStorage:', e);
+            }
+          } else {
+            // Xóa thông tin đã lưu nếu không tick
+            try {
+              localStorage.removeItem('members_username');
+              localStorage.removeItem('members_password');
+              localStorage.removeItem('members_remember');
+            } catch (e) {
+              console.warn('Cannot remove from localStorage:', e);
+            }
+          }
+          
           // Đăng nhập thành công - redirect về /members
           window.location.href = '/members';
         } else {
@@ -284,9 +356,41 @@
       }
     }
 
-    // Focus vào username khi load trang
+    // Load thông tin đăng nhập đã lưu khi trang load
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('username').focus();
+      try {
+        const savedUsername = localStorage.getItem('members_username');
+        const savedPassword = localStorage.getItem('members_password');
+        const rememberSaved = localStorage.getItem('members_remember');
+        
+        if (savedUsername && savedPassword && rememberSaved === 'true') {
+          const usernameInput = document.getElementById('username');
+          const passwordInput = document.getElementById('password');
+          const rememberCheckbox = document.getElementById('rememberLogin');
+          
+          if (usernameInput && passwordInput) {
+            usernameInput.value = savedUsername;
+            passwordInput.value = savedPassword;
+            if (rememberCheckbox) {
+              rememberCheckbox.checked = true;
+            }
+            
+            // Tự động submit sau một chút delay
+            setTimeout(() => {
+              const form = document.getElementById('loginForm');
+              if (form) {
+                handleLogin(new Event('submit'));
+              }
+            }, 300);
+          }
+        } else {
+          // Focus vào username nếu không có thông tin đã lưu
+          document.getElementById('username').focus();
+        }
+      } catch (e) {
+        console.warn('Cannot load from localStorage:', e);
+        document.getElementById('username').focus();
+      }
     });
   </script>
 </body>

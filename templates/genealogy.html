@@ -1241,6 +1241,52 @@
       display: block;
     }
     
+    .gate-form input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--color-primary, #2563eb);
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    .gate-form label[for="rememberPassphrase"] {
+      cursor: pointer;
+      user-select: none;
+      font-size: 14px;
+      color: #333;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      transition: color 0.2s ease;
+    }
+    
+    .gate-form label[for="rememberPassphrase"]:hover {
+      color: var(--color-primary, #2563eb);
+    }
+    
+    .gate-form input[type="checkbox"]:checked + label[for="rememberPassphrase"] {
+      color: var(--color-primary, #2563eb);
+      font-weight: 600;
+    }
+    
+    .remember-passphrase-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      padding: 10px;
+      background: rgba(37, 99, 235, 0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(37, 99, 235, 0.1);
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    
+    .remember-passphrase-container:hover {
+      background: rgba(37, 99, 235, 0.05);
+      border-color: rgba(37, 99, 235, 0.2);
+    }
+    
     #genealogy-content {
       display: none;
     }
@@ -1269,6 +1315,10 @@
       <h2>Xác thực truy cập</h2>
       <form class="gate-form" id="gateForm" onsubmit="handleGateSubmit(event)">
         <input type="password" id="gatePassphrase" placeholder="Nhập chuỗi mật khẩu" required autofocus>
+        <div class="remember-passphrase-container">
+          <input type="checkbox" id="rememberPassphrase">
+          <label for="rememberPassphrase">Lưu mật khẩu</label>
+        </div>
         <button type="submit">Mở khóa</button>
         <div class="gate-error" id="gateError">Chuỗi không đúng. Vui lòng nhập lại.</div>
         <div class="gate-note" id="gateNote">Bạn có thể liên hệ nhóm Zalo BTS để được cung cấp thông tin.</div>
@@ -5611,6 +5661,7 @@
       event.preventDefault();
       
       const input = document.getElementById('gatePassphrase');
+      const rememberCheckbox = document.getElementById('rememberPassphrase');
       const errorDiv = document.getElementById('gateError');
       const noteDiv = document.getElementById('gateNote');
       
@@ -5620,6 +5671,24 @@
       
       if (VALID_PASSPHRASES.includes(enteredPassphrase)) {
         // Correct passphrase
+        // Lưu mật khẩu nếu checkbox được tick
+        if (rememberCheckbox && rememberCheckbox.checked) {
+          try {
+            localStorage.setItem('genealogy_passphrase', enteredPassphrase);
+            localStorage.setItem('genealogy_remember', 'true');
+          } catch (e) {
+            console.warn('Cannot save to localStorage:', e);
+          }
+        } else {
+          // Xóa mật khẩu đã lưu nếu không tick
+          try {
+            localStorage.removeItem('genealogy_passphrase');
+            localStorage.removeItem('genealogy_remember');
+          } catch (e) {
+            console.warn('Cannot remove from localStorage:', e);
+          }
+        }
+        
         unlockGenealogy();
         if (errorDiv) errorDiv.classList.remove('show');
         if (noteDiv) noteDiv.classList.remove('show');
@@ -5631,6 +5700,36 @@
         input.focus();
       }
     }
+    
+    // Load mật khẩu đã lưu khi trang load
+    document.addEventListener('DOMContentLoaded', function() {
+      try {
+        const savedPassphrase = localStorage.getItem('genealogy_passphrase');
+        const rememberSaved = localStorage.getItem('genealogy_remember');
+        
+        if (savedPassphrase && rememberSaved === 'true') {
+          const input = document.getElementById('gatePassphrase');
+          const rememberCheckbox = document.getElementById('rememberPassphrase');
+          
+          if (input) {
+            input.value = savedPassphrase;
+            if (rememberCheckbox) {
+              rememberCheckbox.checked = true;
+            }
+            
+            // Tự động submit nếu mật khẩu hợp lệ
+            if (VALID_PASSPHRASES.includes(savedPassphrase)) {
+              // Delay một chút để đảm bảo form đã render
+              setTimeout(() => {
+                handleGateSubmit(new Event('submit'));
+              }, 100);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Cannot load from localStorage:', e);
+      }
+    });
   </script>
 </body>
 </html>
