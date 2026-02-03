@@ -1399,6 +1399,30 @@
       padding: 0;
     }
     
+    /* Ensure images are visible in post content */
+    .post-content .about-image,
+    .post-content .about-image img {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    
+    .post-content .about-image {
+      text-align: center;
+      margin: var(--space-6) 0;
+      width: 100%;
+    }
+    
+    .post-content img {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    
     .post-content p {
       margin-bottom: var(--space-5);
       line-height: 1.8;
@@ -3516,12 +3540,17 @@
 
     /* Lazy loading image styles */
     img[loading="lazy"] {
-      opacity: 0;
+      opacity: 1;
       transition: opacity 0.3s;
     }
-
+    
     img[loading="lazy"].loaded {
       opacity: 1;
+    }
+    
+    /* Ensure images in post content are always visible */
+    .post-content img[loading="lazy"] {
+      opacity: 1 !important;
     }
 
     /* TOC Sidebar enhancements removed - sidebar is hidden */
