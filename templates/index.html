@@ -1,4 +1,14 @@
 <!DOCTYPE html>
+<!--
+  CHANGELOG:
+  - Added post layout grid (article + sidebar) for blog-style reading experience
+  - Enabled TOC sidebar + active tracking with IntersectionObserver
+  - Added responsive TOC for mobile (toggle button + accordion)
+  - Refactored section "about" into article.post-content with proper header
+  - Added sidebar blocks: TOC, related posts, most viewed (placeholder data)
+  - Improved typography for long-form reading (max-width, spacing, line-height)
+  - Sticky sidebar on desktop with proper top offset
+-->
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
@@ -1318,9 +1328,142 @@
       border-radius: 2px;
     }
 
-    /* TOC Sidebar - Hidden (removed per user request) */
+    /* ============================================
+       POST LAYOUT - Blog-style reading layout
+       ============================================ */
+    .post-layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: var(--space-8);
+      max-width: var(--content-max-width);
+      margin: 0 auto;
+      padding: var(--space-6) var(--space-5);
+      align-items: start;
+    }
+    
+    .post-content {
+      min-width: 0; /* Prevent overflow */
+    }
+    
+    .post-sidebar {
+      position: sticky;
+      top: calc(var(--navbar-height) + 20px);
+      height: fit-content;
+      max-height: calc(100vh - var(--navbar-height) - 40px);
+      overflow-y: auto;
+    }
+    
+    /* Post Header */
+    .post-header {
+      margin-bottom: var(--space-8);
+      padding-bottom: var(--space-6);
+      border-bottom: 2px solid var(--color-border);
+    }
+    
+    .post-header h1 {
+      font-size: var(--font-size-4xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+      line-height: 1.3;
+      font-weight: 700;
+    }
+    
+    .post-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-4);
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-4);
+    }
+    
+    .post-lead {
+      font-size: var(--font-size-lg);
+      line-height: 1.8;
+      color: var(--color-text);
+      font-weight: 400;
+      margin-top: var(--space-4);
+    }
+    
+    /* Article Typography for Reading */
+    .post-content article,
+    .post-content .section-container {
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Override section-container padding khi trong post-content */
+    .post-content .section-container {
+      padding: 0;
+    }
+    
+    .post-content p {
+      margin-bottom: var(--space-5);
+      line-height: 1.8;
+      font-size: var(--font-size-base);
+      color: var(--color-text);
+    }
+    
+    .post-content h2 {
+      margin-top: var(--space-10);
+      margin-bottom: var(--space-5);
+      scroll-margin-top: calc(var(--navbar-height) + 20px);
+    }
+    
+    .post-content h3 {
+      margin-top: var(--space-8);
+      margin-bottom: var(--space-4);
+      scroll-margin-top: calc(var(--navbar-height) + 20px);
+    }
+    
+    .post-content h4 {
+      margin-top: var(--space-6);
+      margin-bottom: var(--space-3);
+      scroll-margin-top: calc(var(--navbar-height) + 20px);
+    }
+    
+    /* Sidebar Cards */
+    .sidebar-card {
+      background: var(--color-bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: var(--space-5);
+      margin-bottom: var(--space-5);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .sidebar-card h3 {
+      font-size: var(--font-size-xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 2px solid var(--color-accent);
+      font-weight: 700;
+    }
+    
+    /* TOC Sidebar - Enabled */
     .toc-sidebar {
-      display: none !important;
+      display: block;
+    }
+    
+    /* Ensure TOC sidebar scrollbar styling */
+    .post-sidebar::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .post-sidebar::-webkit-scrollbar-track {
+      background: rgba(218, 165, 32, 0.05);
+      border-radius: 3px;
+    }
+    
+    .post-sidebar::-webkit-scrollbar-thumb {
+      background: rgba(139, 0, 0, 0.2);
+      border-radius: 3px;
+    }
+    
+    .post-sidebar::-webkit-scrollbar-thumb:hover {
+      background: rgba(139, 0, 0, 0.4);
     }
 
     .toc-sidebar::-webkit-scrollbar {
@@ -1342,14 +1485,21 @@
 
     .toc-sidebar h3 {
       color: var(--color-primary);
-      font-size: 18px;
-      margin-bottom: 20px;
-      border-bottom: 3px solid var(--color-accent);
-      padding-bottom: 12px;
-      text-align: center;
+      font-size: var(--font-size-xl);
+      margin-bottom: var(--space-4);
+      border-bottom: 2px solid var(--color-accent);
+      padding-bottom: var(--space-3);
+      text-align: left;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    
+    /* Hide TOC toggle button title on desktop */
+    @media (min-width: 769px) {
+      .toc-toggle-mobile {
+        display: none !important;
+      }
     }
 
     .toc-list {
@@ -1422,20 +1572,199 @@
       background: var(--color-accent);
       border-radius: 0 3px 3px 0;
     }
-
-    /* TOC Toggle Button - Hidden (removed per user request) */
-    .toc-toggle {
-      display: none !important;
+    
+    /* TOC Sublist (H3/H4) */
+    .toc-sublist {
+      list-style: none;
+      padding: 0;
+      margin: var(--space-2) 0 0 var(--space-4);
+    }
+    
+    .toc-sublist li {
+      margin-bottom: var(--space-2);
+    }
+    
+    .toc-link-h3,
+    .toc-link-h4 {
+      font-size: 13px;
+      padding: 8px 12px 8px 16px;
+      color: var(--color-text-muted);
+      font-weight: 400;
+    }
+    
+    .toc-link-h4 {
+      padding-left: 24px;
+      font-size: 12px;
+    }
+    
+    .toc-link-h3:hover,
+    .toc-link-h4:hover {
+      color: var(--color-primary);
+      background: rgba(218, 165, 32, 0.08);
+    }
+    
+    .toc-link-h3.active,
+    .toc-link-h4.active {
+      color: var(--color-primary);
+      background: rgba(139, 0, 0, 0.1);
+      border-left-color: var(--color-primary);
+      font-weight: 500;
     }
 
-    /* TOC Overlay - Hidden (removed per user request) */
-    .toc-overlay {
-      display: none !important;
+    /* TOC Toggle Button - Mobile only */
+    .toc-toggle-mobile {
+      display: none;
+      width: 100%;
+      padding: var(--space-4);
+      background: var(--color-primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: var(--font-size-base);
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: var(--space-4);
+      transition: background 0.2s ease;
+    }
+    
+    .toc-toggle-mobile:hover {
+      background: #A52A2A;
+    }
+    
+    .toc-toggle-mobile.active {
+      background: var(--color-accent);
+      color: var(--color-primary);
+    }
+
+    /* TOC Overlay - Mobile only */
+    .toc-overlay-mobile {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(3px);
+      z-index: 9998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    
+    .toc-overlay-mobile.active {
+      opacity: 1;
+      pointer-events: auto;
     }
 
     /* Scroll offset for anchor links */
-    h3[id], h4[id] {
+    h2[id], h3[id], h4[id] {
       scroll-margin-top: calc(var(--navbar-height) + 20px);
+    }
+    
+    /* Responsive Post Layout */
+    @media (max-width: 1024px) {
+      .post-layout {
+        grid-template-columns: 1fr 280px;
+        gap: var(--space-6);
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .post-layout {
+        grid-template-columns: 1fr;
+        gap: var(--space-5);
+        padding: var(--space-4);
+      }
+      
+      .post-sidebar {
+        position: static;
+        max-height: none;
+        order: -1; /* TOC appears before content on mobile */
+      }
+      
+      .toc-toggle-mobile {
+        display: block;
+      }
+      
+      .toc-sidebar {
+        display: none;
+        margin-top: var(--space-4);
+      }
+      
+      .toc-sidebar.active {
+        display: block;
+      }
+      
+      .sidebar-card {
+        margin-bottom: var(--space-4);
+      }
+      
+      .post-header h1 {
+        font-size: var(--font-size-3xl);
+      }
+    }
+    
+    /* Related Posts & Most Viewed */
+    .related-posts-list,
+    .most-viewed-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .related-posts-list li,
+    .most-viewed-list li {
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-4);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .related-posts-list li:last-child,
+    .most-viewed-list li:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    
+    .related-posts-list a,
+    .most-viewed-list a {
+      color: var(--color-text);
+      text-decoration: none;
+      font-size: var(--font-size-sm);
+      line-height: 1.6;
+      display: block;
+      transition: color 0.2s ease;
+    }
+    
+    .related-posts-list a:hover,
+    .most-viewed-list a:hover {
+      color: var(--color-primary);
+    }
+    
+    /* Note/Tip/Warning Boxes */
+    .note,
+    .tip,
+    .warning {
+      padding: var(--space-4);
+      border-radius: 8px;
+      margin: var(--space-5) 0;
+      border-left: 4px solid;
+    }
+    
+    .note {
+      background: rgba(139, 0, 0, 0.05);
+      border-left-color: var(--color-primary);
+    }
+    
+    .tip {
+      background: rgba(218, 165, 32, 0.1);
+      border-left-color: var(--color-accent);
+    }
+    
+    .warning {
+      background: rgba(220, 20, 60, 0.1);
+      border-left-color: #DC143C;
     }
 
     /* Responsive Images */
@@ -3280,432 +3609,6 @@
     }
 
     /* ============================================
-       FLOATING TABLE OF CONTENTS BUTTON
-       ============================================ */
-    .floating-toc-btn {
-      position: fixed;
-      bottom: 90px;
-      right: 30px;
-      z-index: 10001;
-      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
-      color: #FFFFFF;
-      border: 2px solid #DAA520;
-      border-radius: 50px;
-      padding: 14px 22px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      font-size: 15px;
-      font-weight: 600;
-      font-family: 'Noto Serif TC', 'Playfair Display', serif;
-      box-shadow: 0 6px 20px rgba(139, 0, 0, 0.35), 0 0 0 0 rgba(218, 165, 32, 0.4);
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      touch-action: manipulation;
-      -webkit-tap-highlight-color: rgba(255, 215, 0, 0.2);
-      letter-spacing: 0.3px;
-    }
-    
-    .floating-toc-btn:hover {
-      transform: translateY(-4px) scale(1.02);
-      box-shadow: 0 8px 25px rgba(139, 0, 0, 0.45), 0 0 0 4px rgba(218, 165, 32, 0.2);
-      background: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
-    }
-    
-    .floating-toc-btn:active {
-      transform: translateY(-2px) scale(0.98);
-    }
-    
-    .floating-toc-btn.active {
-      background: linear-gradient(135deg, #DAA520 0%, #FFD700 100%);
-      color: #8B0000;
-      border-color: #8B0000;
-      box-shadow: 0 6px 20px rgba(218, 165, 32, 0.4), 0 0 0 4px rgba(139, 0, 0, 0.2);
-    }
-    
-    .floating-toc-btn.active:hover {
-      box-shadow: 0 8px 25px rgba(218, 165, 32, 0.5), 0 0 0 4px rgba(139, 0, 0, 0.3);
-    }
-    
-    .toc-icon {
-      font-size: 20px;
-      font-weight: 700;
-      transition: transform 0.3s ease;
-      display: inline-block;
-    }
-    
-    .floating-toc-btn:hover .toc-icon {
-      transform: rotate(90deg);
-    }
-    
-    .floating-toc-btn.active .toc-icon {
-      transform: rotate(180deg);
-    }
-    
-    .toc-text {
-      font-size: 15px;
-      letter-spacing: 0.5px;
-    }
-    
-    @media (max-width: 768px) {
-      .floating-toc-btn {
-        bottom: 80px;
-        right: 20px;
-        padding: 10px 16px;
-      }
-      
-      .toc-text {
-        display: none;
-      }
-      
-      .toc-icon {
-        font-size: 24px;
-      }
-    }
-    
-    /* Floating TOC Menu */
-    .floating-toc-menu {
-      position: fixed;
-      top: 50%;
-      right: 30px;
-      transform: translateY(-50%) translateX(20px) scale(0.95);
-      z-index: 10000;
-      background: var(--color-bg-card);
-      border: 2px solid var(--color-accent);
-      border-radius: 16px;
-      box-shadow: 0 15px 50px rgba(139, 0, 0, 0.35), 0 0 0 1px rgba(218, 165, 32, 0.15);
-      min-width: 300px;
-      max-width: 340px;
-      max-height: 80vh;
-      overflow-y: auto;
-      overflow-x: hidden;
-      opacity: 0;
-      pointer-events: none;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      backdrop-filter: blur(10px);
-    }
-    
-    /* Ensure menu is scrollable on mobile */
-    @media (max-width: 768px) {
-      .floating-toc-menu {
-        max-height: 70vh;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-    }
-    
-    .floating-toc-menu.active {
-      transform: translateY(-50%) translateX(0) scale(1);
-      opacity: 1;
-      pointer-events: auto;
-    }
-    
-    .toc-menu-header {
-      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
-      color: #FFFFFF;
-      padding: 18px 24px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-radius: 14px 14px 0 0;
-      box-shadow: 0 2px 8px rgba(139, 0, 0, 0.2);
-    }
-    
-    .toc-menu-header h3 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-    }
-    
-    .toc-close-btn {
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      color: #FFFFFF;
-      font-size: 24px;
-      line-height: 1;
-      cursor: pointer;
-      padding: 0;
-      width: 32px;
-      height: 32px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      transition: all 0.2s ease;
-      font-weight: 300;
-    }
-    
-    .toc-close-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: rotate(90deg) scale(1.1);
-      border-color: rgba(255, 255, 255, 0.5);
-    }
-    
-    .toc-menu-list {
-      list-style: none;
-      padding: 8px 0;
-      margin: 0;
-      background: var(--color-bg-card);
-    }
-    
-    .toc-menu-list > li:first-child {
-      border-top: 1px solid rgba(139, 0, 0, 0.08);
-    }
-    
-    /* ============================================
-       TOC ITEM STRUCTURE - Tối ưu phân cấp
-       ============================================ */
-    .toc-menu-list .toc-item {
-      list-style: none;
-      margin: 0;
-      border-bottom: 1px solid rgba(139, 0, 0, 0.1);
-    }
-    
-    .toc-menu-list .toc-item:last-child {
-      border-bottom: none;
-    }
-    
-    /* TOC Parent Container (H2 - Mục chính) */
-    .toc-parent {
-      display: flex;
-      align-items: stretch;
-      position: relative;
-    }
-    
-    .toc-parent > a {
-      flex: 1;
-      display: block;
-      padding: 14px 20px;
-      color: var(--color-primary);
-      text-decoration: none;
-      font-size: 15px;
-      font-weight: 700;
-      transition: background-color 0.2s ease, color 0.2s ease, border-left-color 0.2s ease, box-shadow 0.2s ease;
-      border-left: 4px solid transparent;
-      background-color: rgba(250, 235, 215, 0.4);
-      font-family: 'Noto Serif TC', 'Playfair Display', serif;
-      line-height: 1.6;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
-      min-width: 0;
-    }
-    
-    /* TOC Toggle Button (Mobile only) */
-    .toc-toggle {
-      display: none;
-      background: transparent;
-      border: none;
-      color: var(--color-primary);
-      font-size: 20px;
-      font-weight: 300;
-      width: 40px;
-      min-width: 40px;
-      height: 100%;
-      cursor: pointer;
-      padding: 0;
-      margin: 0;
-      transition: background-color 0.2s ease;
-      flex-shrink: 0;
-      align-items: center;
-      justify-content: center;
-      border-left: 1px solid rgba(139, 0, 0, 0.15);
-    }
-    
-    .toc-toggle:hover {
-      background: rgba(139, 0, 0, 0.1);
-    }
-    
-    .toc-toggle span {
-      display: block;
-      line-height: 1;
-      transition: transform 0.2s ease;
-    }
-    
-    /* Hover state cho H2 - không làm chữ nhảy */
-    .toc-parent > a:hover {
-      background-color: rgba(218, 165, 32, 0.2);
-      color: var(--color-primary);
-      border-left-color: var(--color-accent);
-      box-shadow: inset 3px 0 6px rgba(218, 165, 32, 0.15);
-    }
-    
-    /* Active state cho H2 */
-    .toc-parent > a.active {
-      background-color: rgba(139, 0, 0, 0.15);
-      color: var(--color-primary);
-      border-left-color: var(--color-primary);
-      box-shadow: inset 3px 0 6px rgba(139, 0, 0, 0.2);
-    }
-    
-    /* TOC Submenu (H3 - Mục con) */
-    .toc-submenu {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
-      opacity: 0;
-      background: rgba(255, 255, 255, 0.6);
-    }
-    
-    /* Đảm bảo submenu không bị tràn */
-    .toc-submenu {
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-    
-    /* Desktop: Show submenu on hover */
-    @media (min-width: 769px) {
-      .toc-item:hover .toc-submenu,
-      .toc-item.expanded .toc-submenu {
-        max-height: 800px;
-        opacity: 1;
-      }
-    }
-    
-    /* Mobile: Show submenu when expanded */
-    @media (max-width: 768px) {
-      .toc-item.expanded .toc-submenu {
-        max-height: 600px;
-        opacity: 1;
-      }
-      
-      .toc-toggle {
-        display: flex;
-      }
-      
-      /* Đảm bảo submenu scroll được trên mobile */
-      .toc-submenu {
-        max-height: 400px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-      }
-      
-      .toc-item.expanded .toc-submenu {
-        max-height: 400px;
-      }
-    }
-    
-    /* Submenu items (H3) - Thụt vào, font nhỏ hơn, màu nhạt hơn */
-    .toc-submenu li {
-      list-style: none;
-      margin: 0;
-    }
-    
-    .toc-submenu .toc-link {
-      display: block;
-      padding: 10px 20px 10px 36px;
-      color: #666666;
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 400;
-      transition: background-color 0.2s ease, color 0.2s ease, border-left-color 0.2s ease, box-shadow 0.2s ease;
-      border-left: 3px solid transparent;
-      font-family: 'Noto Serif TC', 'Playfair Display', serif;
-      line-height: 1.6;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
-      position: relative;
-      min-width: 0;
-    }
-    
-    /* Hover state cho submenu links - không làm chữ nhảy */
-    .toc-submenu .toc-link:hover {
-      background-color: rgba(218, 165, 32, 0.12);
-      color: #8B0000;
-      border-left-color: var(--color-accent);
-      box-shadow: inset 2px 0 4px rgba(218, 165, 32, 0.1);
-    }
-    
-    /* Active state cho submenu links */
-    .toc-submenu .toc-link.active {
-      background-color: rgba(139, 0, 0, 0.1);
-      color: #8B0000;
-      border-left-color: var(--color-primary);
-      font-weight: 500;
-      box-shadow: inset 2px 0 4px rgba(139, 0, 0, 0.1);
-    }
-    
-    /* TOC Overlay - Fixed để hiển thị đúng */
-    .toc-overlay {
-      position: fixed !important;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(3px);
-      z-index: 9999;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease, backdrop-filter 0.3s ease;
-      display: block !important;
-    }
-    
-    .toc-overlay.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    
-    @media (max-width: 768px) {
-      .floating-toc-menu {
-        top: 50%;
-        right: 20px;
-        left: 20px;
-        max-width: none;
-        min-width: auto;
-        max-height: 70vh;
-        overflow-y: auto;
-        overflow-x: hidden;
-        transform: translateY(-50%) translateX(20px) scale(0.95);
-        -webkit-overflow-scrolling: touch;
-      }
-      
-      .floating-toc-menu.active {
-        transform: translateY(-50%) translateX(0) scale(1);
-      }
-      
-      /* Disable hover on mobile - chỉ dùng click */
-      .toc-item:hover .toc-submenu {
-        max-height: 0;
-        opacity: 0;
-      }
-      
-      /* Đảm bảo text không bị tràn trên mobile */
-      .toc-parent > a,
-      .toc-submenu .toc-link {
-        word-break: break-word;
-        hyphens: auto;
-      }
-    }
-    
-    /* Custom scrollbar for TOC menu */
-    .floating-toc-menu::-webkit-scrollbar {
-      width: 8px;
-    }
-    
-    .floating-toc-menu::-webkit-scrollbar-track {
-      background: rgba(139, 0, 0, 0.05);
-      border-radius: 4px;
-      margin: 8px 0;
-    }
-    
-    .floating-toc-menu::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, #DAA520 0%, #8B0000 100%);
-      border-radius: 4px;
-      border: 2px solid var(--color-bg-card);
-    }
-    
-    .floating-toc-menu::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(180deg, #FFD700 0%, #DC143C 100%);
-    }
-
-    /* ============================================
        ENHANCED SECTION TITLES
        ============================================ */
     /* Note: .section-title styles are already defined earlier in the file */
@@ -3786,28 +3689,23 @@
     </div>
   </section>
 
-  <!-- Floating Table of Contents Button -->
-  <button class="floating-toc-btn" id="floatingTocBtn" aria-label="Mục lục" aria-expanded="false">
-    <span class="toc-icon">☰</span>
-    <span class="toc-text">Mục lục</span>
-  </button>
-  
-  <div class="floating-toc-menu" id="floatingTocMenu">
-    <div class="toc-menu-header">
-      <h3>Mục Lục</h3>
-      <button class="toc-close-btn" id="tocCloseBtn" aria-label="Đóng mục lục">&times;</button>
-    </div>
-    <ul class="toc-menu-list" id="dynamicTocList">
-      <!-- Dynamic TOC items will be generated here by JavaScript -->
-    </ul>
-  </div>
-  
-  <div class="toc-overlay" id="tocOverlay"></div>
-
-  <!-- Section: About -->
+  <!-- Section: About - Refactored as Post Layout -->
   <section id="about">
-    <div class="section-container">
-      <h2 class="section-title" id="gioi-thieu">Giới Thiệu</h2>
+    <div class="post-layout">
+      <article class="post-content">
+        <header class="post-header">
+          <h1>Gia Phả Nguyễn Phước Tộc - Phòng Tuy Biên Quận Công</h1>
+          <div class="post-meta">
+            <span>📅 Cập nhật: 2025</span>
+            <span>📖 Đọc: ~15 phút</span>
+          </div>
+          <p class="post-lead">
+            Khám phá lịch sử và truyền thống của Phòng Tuy Biên Quận Công - một nhánh diệp chi quan trọng trong đại tộc Nguyễn Phước, hậu duệ của Vua Minh Mạng.
+          </p>
+        </header>
+        
+        <div class="section-container">
+          <h2 class="section-title" id="gioi-thieu">Giới Thiệu</h2>
       
       <div class="about-content">
         <div class="about-text">
@@ -4034,8 +3932,51 @@
           </p>
         </div>
       </div>
+        </div>
+      </article>
+      
+      <!-- Sidebar -->
+      <aside class="post-sidebar">
+        <!-- TOC Card -->
+        <div class="sidebar-card toc-sidebar" id="tocSidebar">
+          <button class="toc-toggle-mobile" id="tocToggleMobile" aria-label="Toggle mục lục" aria-expanded="false">
+            📑 Mục Lục
+          </button>
+          <h3>Mục Lục</h3>
+          <ul class="toc-list" id="tocList">
+            <!-- TOC sẽ được tự động generate bởi JavaScript -->
+          </ul>
+        </div>
+        
+        <!-- Related Posts Card -->
+        <div class="sidebar-card related-posts">
+          <h3>Bài Liên Quan</h3>
+          <ul class="related-posts-list">
+            <!-- Placeholder data - có thể thay thế bằng dữ liệu thực từ backend -->
+            <li><a href="#hinh-anh-nha-tho">Hình Ảnh Bên Trong Nhà Thờ</a></li>
+            <li><a href="#album-anh">Album Ảnh Phủ Tuy Biên</a></li>
+            <li><a href="/genealogy">Tra Cứu Gia Phả</a></li>
+            <li><a href="/members">Danh Sách Thành Viên</a></li>
+            <li><a href="/contact">Liên Hệ</a></li>
+          </ul>
+        </div>
+        
+        <!-- Most Viewed Card -->
+        <div class="sidebar-card most-viewed">
+          <h3>Xem Nhiều</h3>
+          <ul class="most-viewed-list">
+            <!-- Placeholder data - có thể thay thế bằng dữ liệu thực từ backend -->
+            <li><a href="#gioi-thieu">Giới Thiệu Phòng Tuy Biên</a></li>
+            <li><a href="#de-he-thi">Đế Hệ Thi - Bài Thơ Định Danh</a></li>
+            <li><a href="#tuy-bien-quan-cong">Ngài Tuy Biên Quận Công</a></li>
+            <li><a href="#so-hoa-gia-pha">Số Hóa Gia Phả</a></li>
+          </ul>
+        </div>
+      </aside>
     </div>
   </section>
+  
+  <div class="toc-overlay-mobile" id="tocOverlayMobile"></div>
 
   <!-- Section: Temple Interior -->
   <section id="temple-interior">
@@ -8844,292 +8785,239 @@
       }
     })();
 
+    
     // ============================================
-    // SMART FLOATING TABLE OF CONTENTS
-    // Dynamic TOC Generation & Auto-navigation
+    // POST LAYOUT TOC - Auto-generate from H2/H3
     // ============================================
-    
-    // Hàm throttle để giảm tải cho sự kiện scroll
-    function throttle(func, limit) {
-      let inThrottle;
-      return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-          func.apply(context, args);
-          inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
-        }
-      }
-    }
-    
-    // Hàm tạo slug từ text
-    function createSlug(text) {
-      return text
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-        .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-        .replace(/\s+/g, '-') // Replace spaces with -
-        .replace(/-+/g, '-') // Replace multiple - with single -
-        .trim();
-    }
-    
-    // Hàm sinh mục lục tự động với submenu
-    function generateTOC() {
-      const tocList = document.getElementById('dynamicTocList');
-      if (!tocList) return;
+    (function() {
+      'use strict';
       
-      tocList.innerHTML = '';
-      
-      // Chọn các thẻ H2 và H3 trong <main> hoặc <section>
-      const mainContent = document.querySelector('main');
-      const searchScope = mainContent || document.body;
-      
-      // Quét tất cả H2 và H3 trong searchScope
-      const allHeadings = Array.from(searchScope.querySelectorAll('h2, h3'));
-      
-      if (allHeadings.length === 0) {
-        tocList.innerHTML = '<li style="padding:15px;text-align:center;color:var(--color-text-muted)">Chưa có mục lục</li>';
-        return;
+      // Hàm tạo slug từ text
+      function createSlug(text) {
+        return text
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .trim();
       }
       
-      // Nhóm H3 theo H2 gần nhất
-      let currentH2 = null;
-      let currentH3s = [];
-      
-      allHeadings.forEach((heading, index) => {
-        const tagName = heading.tagName.toLowerCase();
+      // Hàm build TOC từ headings trong article
+      function buildPostTOC() {
+        const tocList = document.getElementById('tocList');
+        const article = document.querySelector('.post-content article, .post-content .section-container');
         
-        // Tự động tạo id nếu thiếu
-        if (!heading.id) {
-          heading.id = createSlug(heading.textContent.trim());
+        if (!tocList || !article) return;
+        
+        const headings = Array.from(article.querySelectorAll('h2[id], h3[id], h4[id]'));
+        
+        if (headings.length === 0) {
+          tocList.innerHTML = '<li style="padding:10px;color:var(--color-text-muted);font-size:14px;">Chưa có mục lục</li>';
+          return;
         }
         
-        if (tagName === 'h2') {
-          // Nếu có H2 trước đó, tạo TOC item cho nó
-          if (currentH2) {
-            createTOCItem(currentH2, currentH3s, tocList);
+        tocList.innerHTML = '';
+        let currentH2 = null;
+        let h3Group = null;
+        
+        headings.forEach((heading, index) => {
+          const tagName = heading.tagName.toLowerCase();
+          const id = heading.id || createSlug(heading.textContent.trim());
+          
+          // Tự động gán id nếu thiếu
+          if (!heading.id) {
+            heading.id = id;
           }
           
-          // Bắt đầu nhóm mới với H2 này
-          currentH2 = heading;
-          currentH3s = [];
-        } else if (tagName === 'h3' && currentH2) {
-          // Thêm H3 vào nhóm của H2 hiện tại
-          currentH3s.push(heading);
-        }
-        
-        // Xử lý H2 cuối cùng
-        if (index === allHeadings.length - 1 && currentH2) {
-          createTOCItem(currentH2, currentH3s, tocList);
-        }
-      });
-      
-      // Thêm event listeners cho tất cả links
-      setupTOCLinks();
-    }
-    
-    // Hàm tạo TOC item cho một H2 và các H3 của nó
-    function createTOCItem(h2, h3s, tocList) {
-      const h2Id = h2.id;
-      const h2Title = h2.textContent.trim();
-      
-      // Tạo TOC item cho H2
-      const tocItem = document.createElement('li');
-      tocItem.className = 'toc-item toc-level-1';
-      
-      // Tạo parent container
-      const tocParent = document.createElement('div');
-      tocParent.className = 'toc-parent';
-      
-      // Link H2
-      const h2Link = document.createElement('a');
-      h2Link.href = `#${h2Id}`;
-      h2Link.textContent = h2Title;
-      h2Link.setAttribute('data-heading-id', h2Id);
-      
-      // Toggle button (mobile only) - chỉ hiển thị nếu có H3
-      let toggleBtn = null;
-      if (h3s.length > 0) {
-        toggleBtn = document.createElement('button');
-        toggleBtn.className = 'toc-toggle';
-        toggleBtn.innerHTML = '<span>+</span>';
-        toggleBtn.setAttribute('aria-label', 'Toggle submenu');
-        toggleBtn.setAttribute('aria-expanded', 'false');
-        
-        // Xử lý click toggle trên mobile
-        toggleBtn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          e.preventDefault();
-          const isExpanded = tocItem.classList.toggle('expanded');
-          toggleBtn.setAttribute('aria-expanded', isExpanded);
-          const span = toggleBtn.querySelector('span');
-          if (span) {
-            span.textContent = isExpanded ? '−' : '+';
-          }
-        });
-      }
-      
-      tocParent.appendChild(h2Link);
-      if (toggleBtn) {
-        tocParent.appendChild(toggleBtn);
-      }
-      
-      // Tạo submenu cho H3
-      const h3Submenu = document.createElement('ul');
-      h3Submenu.className = 'toc-submenu';
-      
-      h3s.forEach(h3 => {
-        const h3Id = h3.id;
-        const h3Title = h3.textContent.trim();
-        
-        const h3Item = document.createElement('li');
-        const h3Link = document.createElement('a');
-        h3Link.href = `#${h3Id}`;
-        h3Link.className = 'toc-link';
-        h3Link.textContent = h3Title;
-        h3Link.setAttribute('data-heading-id', h3Id);
-        
-        h3Item.appendChild(h3Link);
-        h3Submenu.appendChild(h3Item);
-      });
-      
-      // Thêm submenu nếu có H3
-      if (h3s.length > 0) {
-        tocItem.appendChild(tocParent);
-        tocItem.appendChild(h3Submenu);
-      } else {
-        // Nếu không có H3, chỉ thêm parent
-        tocItem.appendChild(tocParent);
-      }
-      
-      tocList.appendChild(tocItem);
-    }
-    
-    // Hàm setup event listeners cho TOC links
-    function setupTOCLinks() {
-      const allLinks = document.querySelectorAll('.toc-menu-list .toc-link, .toc-parent > a');
-      
-      allLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-          e.preventDefault();
-          
-          const href = this.getAttribute('href');
-          const targetId = href.substring(1);
-          const target = document.getElementById(targetId);
-          
-          if (target) {
-            // Đóng menu khi click
-            const tocMenu = document.getElementById('floatingTocMenu');
-            const tocOverlay = document.getElementById('tocOverlay');
-            const tocBtn = document.getElementById('floatingTocBtn');
+          if (tagName === 'h2') {
+            // Đóng nhóm H3 trước đó nếu có
+            if (h3Group && currentH2) {
+              currentH2.appendChild(h3Group);
+            }
             
-            if (tocMenu) tocMenu.classList.remove('active');
-            if (tocOverlay) tocOverlay.classList.remove('active');
-            if (tocBtn) tocBtn.classList.remove('active');
-            document.body.style.overflow = '';
+            // Tạo item H2 mới
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = `#${id}`;
+            a.textContent = heading.textContent.trim();
+            a.setAttribute('data-heading-id', id);
+            li.appendChild(a);
+            tocList.appendChild(li);
             
-            // Smooth scroll
-            const navbarHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70;
-            const targetPosition = target.getBoundingClientRect().top + window.scrollY - navbarHeight - 20;
+            currentH2 = li;
+            h3Group = null;
+          } else if (tagName === 'h3' || tagName === 'h4') {
+            // Tạo submenu nếu chưa có
+            if (!h3Group && currentH2) {
+              h3Group = document.createElement('ul');
+              h3Group.className = 'toc-sublist';
+            }
             
-            window.scrollTo({
-              top: targetPosition,
-              behavior: 'smooth'
-            });
-          }
-        });
-      });
-    }
-    
-    // Hàm cập nhật trạng thái Active khi cuộn trang
-    function updateTOCActiveState() {
-      const mainContent = document.querySelector('main');
-      const searchScope = mainContent || document.body;
-      const headers = searchScope.querySelectorAll('section h2[id], section h3[id]');
-      const scrollPos = window.scrollY + 150;
-      
-      let currentId = '';
-      
-      headers.forEach(header => {
-        if (header.offsetTop <= scrollPos) {
-          currentId = header.id;
-        }
-      });
-      
-      // Xóa active cũ
-      document.querySelectorAll('.toc-link, .toc-parent > a').forEach(link => {
-        link.classList.remove('active');
-      });
-      
-      // Thêm active mới
-      const activeLink = document.querySelector(`.toc-link[href="#${currentId}"], .toc-parent > a[href="#${currentId}"]`);
-      if (activeLink) {
-        activeLink.classList.add('active');
-        
-        // Tự động mở submenu nếu active item là H3
-        const tocItem = activeLink.closest('.toc-item');
-        if (tocItem && activeLink.classList.contains('toc-link')) {
-          tocItem.classList.add('expanded');
-        }
-        
-        // Tự động cuộn menu TOC để thấy mục đang active
-        const menu = document.getElementById('floatingTocMenu');
-        if (menu && menu.classList.contains('active')) {
-          const linkItem = activeLink.closest('.toc-item') || activeLink.parentElement;
-          if (linkItem) {
-            const menuRect = menu.getBoundingClientRect();
-            const linkRect = linkItem.getBoundingClientRect();
+            // Tạo item H3/H4
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = `#${id}`;
+            a.textContent = heading.textContent.trim();
+            a.setAttribute('data-heading-id', id);
+            a.className = tagName === 'h3' ? 'toc-link-h3' : 'toc-link-h4';
+            li.appendChild(a);
             
-            if (linkRect.top < menuRect.top || linkRect.bottom > menuRect.bottom) {
-              menu.scrollTo({ 
-                top: linkItem.offsetTop - 50, 
-                behavior: 'smooth' 
-              });
+            if (h3Group) {
+              h3Group.appendChild(li);
+            } else {
+              // Nếu không có H2 trước đó, thêm trực tiếp
+              const mainLi = document.createElement('li');
+              mainLi.appendChild(a);
+              tocList.appendChild(mainLi);
             }
           }
-        }
-      }
-    }
-    
-    // Khởi tạo khi DOM ready
-    document.addEventListener('DOMContentLoaded', function() {
-      // 1. Tự động sinh mục lục
-      generateTOC();
-      
-      // 2. Xử lý sự kiện đóng/mở menu
-      const tocBtn = document.getElementById('floatingTocBtn');
-      const tocMenu = document.getElementById('floatingTocMenu');
-      const tocOverlay = document.getElementById('tocOverlay');
-      const closeBtn = document.getElementById('tocCloseBtn');
-      
-      function toggleTOCMenu() {
-        const isActive = tocMenu.classList.contains('active');
-        tocBtn.classList.toggle('active');
-        tocMenu.classList.toggle('active');
-        tocOverlay.classList.toggle('active');
-        tocBtn.setAttribute('aria-expanded', !isActive ? 'true' : 'false');
-        document.body.style.overflow = !isActive ? 'hidden' : '';
+          
+          // Đóng nhóm H3 cuối cùng
+          if (index === headings.length - 1 && h3Group && currentH2) {
+            currentH2.appendChild(h3Group);
+          }
+        });
+        
+        // Setup click handlers cho TOC links
+        setupTOCLinks();
       }
       
-      if (tocBtn) tocBtn.addEventListener('click', toggleTOCMenu);
-      if (closeBtn) closeBtn.addEventListener('click', toggleTOCMenu);
-      if (tocOverlay) tocOverlay.addEventListener('click', toggleTOCMenu);
+      // Setup click handlers cho TOC links
+      function setupTOCLinks() {
+        const tocLinks = document.querySelectorAll('#tocList a');
+        
+        tocLinks.forEach(link => {
+          link.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const href = this.getAttribute('href');
+            const targetId = href.substring(1);
+            const target = document.getElementById(targetId);
+            
+            if (target) {
+              // Smooth scroll
+              const navbarHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70;
+              const targetPosition = target.getBoundingClientRect().top + window.scrollY - navbarHeight - 20;
+              
+              window.scrollTo({
+                top: targetPosition,
+                behavior: 'smooth'
+              });
+              
+              // Đóng mobile TOC nếu đang mở
+              const tocSidebar = document.getElementById('tocSidebar');
+              const tocToggle = document.getElementById('tocToggleMobile');
+              if (tocSidebar && tocSidebar.classList.contains('active')) {
+                toggleMobileTOC();
+              }
+            }
+          });
+        });
+      }
       
-      // 3. Xử lý Scroll Spy (Bôi đậm mục đang xem)
-      window.addEventListener('scroll', throttle(updateTOCActiveState, 100));
+      // IntersectionObserver để highlight active heading
+      function setupActiveTracking() {
+        const article = document.querySelector('.post-content article, .post-content .section-container');
+        if (!article) return;
+        
+        const headings = Array.from(article.querySelectorAll('h2[id], h3[id], h4[id]'));
+        const tocLinks = document.querySelectorAll('#tocList a');
+        
+        if (headings.length === 0 || tocLinks.length === 0) return;
+        
+        const observerOptions = {
+          root: null,
+          rootMargin: `-${parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70}px 0px -80% 0px`,
+          threshold: 0
+        };
+        
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              // Xóa active cũ
+              tocLinks.forEach(link => link.classList.remove('active'));
+              
+              // Thêm active mới
+              const id = entry.target.id;
+              const activeLink = document.querySelector(`#tocList a[href="#${id}"]`);
+              if (activeLink) {
+                activeLink.classList.add('active');
+                
+                // Scroll TOC sidebar để thấy active item
+                const tocSidebar = document.getElementById('tocSidebar');
+                if (tocSidebar && activeLink.offsetParent) {
+                  const sidebarRect = tocSidebar.getBoundingClientRect();
+                  const linkRect = activeLink.getBoundingClientRect();
+                  
+                  if (linkRect.top < sidebarRect.top || linkRect.bottom > sidebarRect.bottom) {
+                    activeLink.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  }
+                }
+              }
+            }
+          });
+        }, observerOptions);
+        
+        headings.forEach(heading => {
+          observer.observe(heading);
+        });
+      }
       
-      // Initial update
-      setTimeout(updateTOCActiveState, 500);
-      
-      // Close menu on Escape key
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && tocMenu && tocMenu.classList.contains('active')) {
-          toggleTOCMenu();
+      // Mobile TOC Toggle
+      function toggleMobileTOC() {
+        const tocSidebar = document.getElementById('tocSidebar');
+        const tocToggle = document.getElementById('tocToggleMobile');
+        const tocOverlay = document.getElementById('tocOverlayMobile');
+        
+        if (!tocSidebar || !tocToggle) return;
+        
+        const isActive = tocSidebar.classList.contains('active');
+        
+        tocSidebar.classList.toggle('active');
+        tocToggle.classList.toggle('active');
+        tocToggle.setAttribute('aria-expanded', !isActive ? 'true' : 'false');
+        
+        if (tocOverlay) {
+          tocOverlay.classList.toggle('active');
         }
+        
+        if (!isActive) {
+          document.body.style.overflow = 'hidden';
+        } else {
+          document.body.style.overflow = '';
+        }
+      }
+      
+      // Initialize on DOMContentLoaded
+      document.addEventListener('DOMContentLoaded', function() {
+        buildPostTOC();
+        setupActiveTracking();
+        
+        // Mobile TOC toggle
+        const tocToggle = document.getElementById('tocToggleMobile');
+        const tocOverlay = document.getElementById('tocOverlayMobile');
+        
+        if (tocToggle) {
+          tocToggle.addEventListener('click', toggleMobileTOC);
+        }
+        
+        if (tocOverlay) {
+          tocOverlay.addEventListener('click', toggleMobileTOC);
+        }
+        
+        // Close on Escape
+        document.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') {
+            const tocSidebar = document.getElementById('tocSidebar');
+            if (tocSidebar && tocSidebar.classList.contains('active')) {
+              toggleMobileTOC();
+            }
+          }
+        });
       });
-    });
+    })();
   </script>
 
   <!-- Scroll to Top Button -->
