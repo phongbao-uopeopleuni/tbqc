@@ -194,6 +194,13 @@
           <input type="password" id="password" name="password" required>
         </div>
         
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label style="display: flex; align-items: center; cursor: pointer; font-weight: normal;">
+            <input type="checkbox" id="rememberPassword" style="width: auto; margin-right: 8px; cursor: pointer;">
+            <span>Lưu mật khẩu</span>
+          </label>
+        </div>
+        
         <div class="error-message" id="errorMessage">
           Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.
         </div>
@@ -214,6 +221,7 @@
       
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value.trim();
+      const rememberPassword = document.getElementById('rememberPassword').checked;
       const errorDiv = document.getElementById('errorMessage');
       const loginBtn = document.getElementById('loginBtn');
       
@@ -237,6 +245,18 @@
         const result = await response.json();
         
         if (result.success) {
+          // Lưu mật khẩu vào localStorage nếu checkbox được chọn
+          if (rememberPassword) {
+            localStorage.setItem('activities_username', username);
+            localStorage.setItem('activities_password', password);
+            localStorage.setItem('activities_remember', 'true');
+          } else {
+            // Xóa dữ liệu đã lưu nếu không chọn
+            localStorage.removeItem('activities_username');
+            localStorage.removeItem('activities_password');
+            localStorage.removeItem('activities_remember');
+          }
+          
           // Đăng nhập thành công - reload trang
           window.location.reload();
         } else {
@@ -256,9 +276,22 @@
       }
     }
 
-    // Focus vào username khi load trang
+    // Load dữ liệu đã lưu khi trang được tải
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('username').focus();
+      const savedUsername = localStorage.getItem('activities_username');
+      const savedPassword = localStorage.getItem('activities_password');
+      const savedRemember = localStorage.getItem('activities_remember');
+      
+      if (savedRemember === 'true' && savedUsername && savedPassword) {
+        document.getElementById('username').value = savedUsername;
+        document.getElementById('password').value = savedPassword;
+        document.getElementById('rememberPassword').checked = true;
+        // Tự động focus vào password để người dùng có thể Enter để đăng nhập
+        document.getElementById('password').focus();
+      } else {
+        // Nếu không có dữ liệu đã lưu, focus vào username
+        document.getElementById('username').focus();
+      }
     });
   </script>
 </body>

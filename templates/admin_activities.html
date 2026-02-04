@@ -754,7 +754,7 @@
   <div class="page-header">
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
       <div>
-        <h1>📝 Quản lý Hoạt động</h1>
+        <h1 style="color: #8B0000;">Quản lý Hoạt động</h1>
         <p>Tạo, chỉnh sửa và quản lý các bài viết hoạt động</p>
         {% if gate_username and not is_admin %}
         <p style="margin-top: 10px; font-size: 14px; opacity: 0.9;">
@@ -762,13 +762,6 @@
         </p>
         {% endif %}
       </div>
-      {% if gate_username and not is_admin %}
-      <div class="page-header-actions">
-        <a href="/activities/post-logout" class="btn btn-secondary" style="text-decoration: none;">
-          Đăng xuất
-        </a>
-      </div>
-      {% endif %}
     </div>
   </div>
 

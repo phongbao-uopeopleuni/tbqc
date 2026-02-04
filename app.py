@@ -417,7 +417,7 @@ MEMBERS_GATE_ACCOUNTS = [
 external_posts_cache = {
     'data': None,
     'timestamp': None,
-    'cache_duration': timedelta(hours=6)  # Cache 6 giờ
+    'cache_duration': timedelta(minutes=30)  # Cache 30 phút để đồng bộ nhanh hơn
 }
 
 def sync_members_gate_accounts_from_db():
@@ -1961,72 +1961,36 @@ def get_external_posts():
         response.raise_for_status()
         
         # Parse HTML
-        soup = BeautifulSoup(response.content, 'lxml')
+        soup = BeautifulSoup(response.content, 'html.parser')
         posts = []
         
-        # Tìm các bài đăng - thử nhiều cách để lấy đúng cấu trúc
-        article_headers = []
-        
-        # Cách 1: Tìm các tiêu đề bài viết (h2, h3 có link) - ưu tiên
-        article_headers = soup.select('h2 a, h3 a, h4 a, .post-title a, .news-title a, article h2 a, article h3 a, .entry-title a')
-        
-        # Cách 2: Tìm trong các container bài viết
-        if not article_headers:
-            articles = soup.select('article, .post, .news-item, .entry, .content-item, div[class*="post"], div[class*="news"]')
-            for article in articles[:20]:
-                header = article.find(['h2', 'h3', 'h4'])
-                if header:
-                    link_elem = header.find('a')
-                    if link_elem:
-                        article_headers.append(link_elem)
-                    elif header.find_parent('a'):
-                        article_headers.append(header.find_parent('a'))
-        
-        # Cách 3: Tìm trong table rows (nếu trang dùng table)
-        if not article_headers:
-            rows = soup.select('tr')
-            for row in rows[:30]:
-                header_link = row.find('a')
-                if header_link:
-                    text = header_link.get_text(strip=True)
-                    # Chỉ lấy link có text dài và có vẻ là tiêu đề bài viết
-                    if text and len(text) > 15 and len(text) < 200:
-                        article_headers.append(header_link)
-        
-        # Cách 4: Tìm tất cả các link có chứa tiêu đề bài viết
-        if not article_headers:
-            all_links = soup.select('a[href*="/hoat-dong"], a[href*="/tin-tuc"], a[href*="/bai-viet"], a[href*="index.php"]')
-            for link in all_links[:30]:
-                text = link.get_text(strip=True)
-                href = link.get('href', '')
-                # Chỉ lấy link có text dài và href hợp lệ
-                if text and len(text) > 20 and len(text) < 200 and href and ('hoat-dong' in href or 'tin-tuc' in href or 'index.php' in href):
-                    article_headers.append(link)
-        
-        # Cách 5: Tìm tất cả h2, h3 có chứa link và có ngày tháng gần đó
-        if not article_headers:
-            all_headings = soup.find_all(['h2', 'h3', 'h4'])
-            for heading in all_headings[:30]:
-                link_elem = heading.find('a')
-                if link_elem:
-                    text = link_elem.get_text(strip=True)
-                    if text and len(text) > 15:
-                        # Kiểm tra xem có ngày tháng gần đó không
-                        parent = heading.find_parent(['div', 'article', 'li', 'tr', 'section'])
-                        if parent:
-                            parent_text = parent.get_text()
-                            if re.search(r'\d{1,2}/\d{1,2}/\d{4}', parent_text):
-                                article_headers.append(link_elem)
-        
-        # Xử lý từng bài đăng
+        # Tìm các bài đăng dựa trên cấu trúc thực tế của trang
+        # Trang có cấu trúc: h2/h3 > a (tiêu đề), sau đó có ngày tháng và nội dung
         seen_titles = set()  # Tránh trùng lặp
-        for header in article_headers[:15]:  # Lấy nhiều hơn để filter
+        
+        # Tìm tất cả các heading (h2, h3) có chứa link
+        headings = soup.find_all(['h2', 'h3'], limit=20)
+        
+        for heading in headings:
             try:
-                title = header.get_text(strip=True)
-                link = header.get('href', '')
+                # Tìm link trong heading
+                link_elem = heading.find('a')
+                if not link_elem:
+                    # Nếu không có link trong heading, tìm heading có parent là link
+                    if heading.find_parent('a'):
+                        link_elem = heading.find_parent('a')
+                    else:
+                        continue
                 
-                # Bỏ qua nếu không có title hoặc đã có
+                title = link_elem.get_text(strip=True)
+                link = link_elem.get('href', '')
+                
+                # Bỏ qua nếu không có title hoặc đã có, hoặc title quá ngắn
                 if not title or len(title) < 10 or title in seen_titles:
+                    continue
+                
+                # Bỏ qua các heading không phải bài viết (như menu, sidebar)
+                if any(skip in title.lower() for skip in ['trang nhất', 'giới thiệu', 'tin tức', 'danh mục', 'thống kê']):
                     continue
                 
                 seen_titles.add(title)
@@ -2038,122 +2002,86 @@ def get_external_posts():
                     else:
                         link = f'https://nguyenphuoctoc.info/{link}'
                 
-                # Tìm phần tử cha để lấy thêm thông tin
-                parent = header.find_parent(['article', 'div', 'li', 'section', 'td', 'tr'])
-                if not parent:
-                    parent = header.parent
-                    # Tìm parent container lớn hơn
-                    while parent and parent.name not in ['article', 'div', 'li', 'section', 'body']:
-                        parent = parent.parent
+                # Tìm container bài viết - tìm parent div/article chứa heading này
+                article_container = heading.find_parent(['div', 'article', 'section', 'li', 'td'])
+                if not article_container:
+                    article_container = heading.parent
+                    # Tìm container lớn hơn
+                    while article_container and article_container.name not in ['div', 'article', 'section', 'body']:
+                        article_container = article_container.parent
                 
-                # Extract ngày tháng - tìm trong parent và các element con
+                if not article_container:
+                    continue
+                
+                # Extract ngày tháng - tìm pattern DD/MM/YYYY trong container
                 date_str = ''
-                if parent:
-                    # Tìm text chứa ngày tháng (format: DD/MM/YYYY hoặc có năm 2023-2025)
-                    date_patterns = [
-                        r'\d{1,2}/\d{1,2}/\d{4}',  # DD/MM/YYYY
-                        r'\d{4}-\d{2}-\d{2}',  # YYYY-MM-DD
-                    ]
-                    
-                    # Tìm trong tất cả text nodes
-                    all_text = parent.get_text()
-                    for pattern in date_patterns:
-                        matches = re.findall(pattern, all_text)
-                        if matches:
-                            date_str = matches[0]
-                            break
-                    
-                    # Nếu chưa tìm thấy, tìm trong các element cụ thể
-                    if not date_str:
-                        date_elem = parent.find(string=lambda x: x and re.search(r'\d{1,2}/\d{1,2}/\d{4}', str(x)))
-                        if date_elem:
-                            date_str = str(date_elem).strip()
-                            # Lấy phần ngày tháng từ string (có thể có thêm thời gian)
-                            date_match = re.search(r'\d{1,2}/\d{1,2}/\d{4}', date_str)
-                            if date_match:
-                                date_str = date_match.group(0)
-                    
-                    # Tìm trong các element có class chứa "date"
-                    if not date_str:
-                        date_elem = parent.find(['span', 'time', 'div', 'td'], class_=lambda x: x and ('date' in str(x).lower() if x else False))
-                        if date_elem:
-                            date_text = date_elem.get_text(strip=True)
-                            date_match = re.search(r'\d{1,2}/\d{1,2}/\d{4}', date_text)
-                            if date_match:
-                                date_str = date_match.group(0)
-                    
-                    # Tìm time element
-                    if not date_str:
-                        time_elem = parent.find('time')
-                        if time_elem:
-                            date_str = time_elem.get_text(strip=True)
-                            date_match = re.search(r'\d{1,2}/\d{1,2}/\d{4}', date_str)
-                            if date_match:
-                                date_str = date_match.group(0)
+                container_text = article_container.get_text()
+                date_match = re.search(r'(\d{1,2}/\d{1,2}/\d{4})', container_text)
+                if date_match:
+                    date_str = date_match.group(1)
                 
-                # Extract mô tả - tìm paragraph đầu tiên sau tiêu đề
-                description = ''
-                if parent:
-                    # Tìm tất cả các paragraph
-                    paragraphs = parent.find_all('p')
-                    for p in paragraphs:
-                        text = p.get_text(strip=True)
-                        # Bỏ qua paragraph quá ngắn hoặc chỉ chứa số
-                        if len(text) > 30 and not re.match(r'^\d+$', text):
-                            description = text[:250]  # Lấy 250 ký tự đầu
-                            break
-                    
-                    # Nếu chưa có, tìm trong div chứa nội dung
-                    if not description:
-                        content_div = parent.find(['div', 'section'], class_=lambda x: x and ('content' in str(x).lower() or 'text' in str(x).lower() if x else False))
-                        if content_div:
-                            first_p = content_div.find('p')
-                            if first_p:
-                                description = first_p.get_text(strip=True)[:250]
-                
-                # Extract thumbnail - tìm ảnh đầu tiên trong parent container
+                # Extract thumbnail - tìm ảnh đầu tiên trong container
                 thumbnail = ''
-                if parent:
-                    # Tìm tất cả các img trong parent
-                    images = parent.find_all('img')
-                    for img in images:
-                        img_src = img.get('src', '')
-                        if img_src:
-                            # Bỏ qua các ảnh quá nhỏ hoặc icon
-                            img_width = img.get('width', '')
-                            img_height = img.get('height', '')
-                            # Nếu có width/height và quá nhỏ thì bỏ qua
-                            if img_width and img_height:
-                                try:
-                                    if int(img_width) < 50 or int(img_height) < 50:
-                                        continue
-                                except:
-                                    pass
-                            
-                            # Chuyển relative URL thành absolute
-                            if img_src.startswith('http'):
-                                thumbnail = img_src
-                            elif img_src.startswith('/'):
-                                thumbnail = f'https://nguyenphuoctoc.info{img_src}'
-                            else:
-                                thumbnail = f'https://nguyenphuoctoc.info/{img_src}'
-                            break
-                    
-                    # Nếu chưa tìm thấy, tìm trong các div chứa ảnh
-                    if not thumbnail:
-                        img_containers = parent.find_all(['div', 'figure', 'section'], class_=lambda x: x and ('image' in str(x).lower() or 'photo' in str(x).lower() or 'thumb' in str(x).lower() if x else False))
-                        for container in img_containers:
-                            img = container.find('img')
-                            if img:
-                                img_src = img.get('src', '')
-                                if img_src:
-                                    if img_src.startswith('http'):
-                                        thumbnail = img_src
-                                    elif img_src.startswith('/'):
-                                        thumbnail = f'https://nguyenphuoctoc.info{img_src}'
-                                    else:
-                                        thumbnail = f'https://nguyenphuoctoc.info/{img_src}'
-                                    break
+                images = article_container.find_all('img')
+                for img in images:
+                    img_src = img.get('src', '') or img.get('data-src', '')
+                    if img_src:
+                        # Bỏ qua các ảnh quá nhỏ (icon, logo)
+                        img_width = img.get('width', '')
+                        img_height = img.get('height', '')
+                        if img_width and img_height:
+                            try:
+                                if int(img_width) < 100 or int(img_height) < 100:
+                                    continue
+                            except:
+                                pass
+                        
+                        # Bỏ qua các ảnh không phải thumbnail (logo, icon)
+                        img_alt = (img.get('alt', '') or '').lower()
+                        img_class = (img.get('class', []) or [])
+                        img_class_str = ' '.join(img_class).lower() if isinstance(img_class, list) else str(img_class).lower()
+                        
+                        if any(skip in img_alt or skip in img_class_str for skip in ['logo', 'icon', 'banner', 'header', 'footer']):
+                            continue
+                        
+                        # Chuyển relative URL thành absolute
+                        if img_src.startswith('http'):
+                            thumbnail = img_src
+                        elif img_src.startswith('/'):
+                            thumbnail = f'https://nguyenphuoctoc.info{img_src}'
+                        else:
+                            thumbnail = f'https://nguyenphuoctoc.info/{img_src}'
+                        break
+                
+                # Extract mô tả/nội dung ngắn - tìm paragraph đầu tiên sau heading
+                description = ''
+                # Tìm tất cả các paragraph trong container
+                paragraphs = article_container.find_all('p')
+                for p in paragraphs:
+                    text = p.get_text(strip=True)
+                    # Bỏ qua paragraph quá ngắn, chỉ chứa số, hoặc chứa "Xem tiếp"
+                    if (len(text) > 50 and 
+                        not re.match(r'^\d+$', text) and 
+                        'xem tiếp' not in text.lower() and
+                        'đã xem' not in text.lower() and
+                        'phản hồi' not in text.lower()):
+                        description = text[:300]  # Lấy 300 ký tự đầu
+                        break
+                
+                # Nếu chưa có description, tìm text sau heading nhưng trước "Xem tiếp"
+                if not description:
+                    # Lấy text từ container, loại bỏ title và các phần không cần
+                    all_text = article_container.get_text(separator=' ', strip=True)
+                    # Tìm phần text sau title
+                    title_pos = all_text.find(title)
+                    if title_pos >= 0:
+                        text_after_title = all_text[title_pos + len(title):]
+                        # Loại bỏ ngày tháng và các phần không cần
+                        text_after_title = re.sub(r'\d{1,2}/\d{1,2}/\d{4}.*?PM', '', text_after_title)
+                        text_after_title = re.sub(r'Đã xem.*?Phản hồi.*?\d+', '', text_after_title)
+                        text_after_title = text_after_title.split('Xem tiếp')[0].strip()
+                        if len(text_after_title) > 50:
+                            description = text_after_title[:300]
                 
                 posts.append({
                     'title': title,
@@ -2228,6 +2156,33 @@ def clear_external_posts_cache():
         'success': True,
         'message': 'Cache đã được xóa. Lần fetch tiếp theo sẽ lấy dữ liệu mới.'
     })
+
+@app.route('/api/external-posts/refresh', methods=['POST'])
+def refresh_external_posts():
+    """
+    Force refresh external posts ngay lập tức (chỉ admin)
+    Xóa cache và fetch lại dữ liệu mới từ nguyenphuoctoc.info
+    """
+    if not is_admin_user():
+        return jsonify({
+            'success': False,
+            'error': 'Bạn không có quyền thực hiện thao tác này'
+        }), 403
+    
+    global external_posts_cache
+    # Xóa cache
+    external_posts_cache['data'] = None
+    external_posts_cache['timestamp'] = None
+    
+    # Gọi lại hàm get_external_posts để fetch ngay
+    try:
+        return get_external_posts()
+    except Exception as e:
+        logger.error(f"Error refreshing external posts: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/upload-image', methods=['POST'])
 @limiter.exempt if limiter else lambda f: f

@@ -2905,29 +2905,36 @@
       return text.substring(0, maxLength) + '...';
     }
 
-    // Load và render news feed
+    // Load và render news feed - chỉ hiển thị TIN NỔI BẬT
     async function loadNewsFeed() {
+      const hotEl = document.getElementById('hotNewsList');
+      if (!hotEl) {
+        console.warn('hotNewsList element not found');
+        return;
+      }
+
       try {
         const response = await fetch('/api/activities?status=published&limit=100');
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const activities = await response.json();
         
-        if (!Array.isArray(activities) || activities.length === 0) {
+        // Kiểm tra response.ok TRƯỚC khi parse JSON
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json().catch(err => {
+          console.error('JSON parse error:', err);
+          throw new Error('Không thể đọc dữ liệu từ server');
+        });
+        
+        // API trả về mảng trực tiếp
+        const activities = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+        
+        if (!activities.length) {
           renderEmptyState();
           return;
         }
 
-        // Render bài nổi bật (4 bài mới nhất có thumbnail)
-        renderFeaturedPosts(activities);
-        
-        // Render tin nổi bật (7 bài mới nhất)
         renderHotNews(activities);
-        
-        // Render chuyên mục
-        renderCategories(activities);
-        
       } catch (error) {
         console.error('Error loading news feed:', error);
         renderErrorState();
@@ -2935,15 +2942,17 @@
     }
 
     function renderEmptyState() {
-      document.getElementById('featuredPosts').innerHTML = '<div class="placeholder placeholder--muted">Chưa có bài viết</div>';
-      document.getElementById('hotNewsList').innerHTML = '<li class="placeholder placeholder--muted placeholder--compact">Chưa có bài viết</li>';
-      document.getElementById('categorySections').innerHTML = '<div class="placeholder placeholder--muted">Chưa có bài viết</div>';
+      const hotEl = document.getElementById('hotNewsList');
+      if (hotEl) {
+        hotEl.innerHTML = '<li class="placeholder placeholder--muted placeholder--compact">Chưa có bài viết</li>';
+      }
     }
 
     function renderErrorState() {
-      document.getElementById('featuredPosts').innerHTML = '<div class="placeholder placeholder--error">Lỗi tải dữ liệu</div>';
-      document.getElementById('hotNewsList').innerHTML = '<li class="placeholder placeholder--error placeholder--compact">Lỗi tải dữ liệu</li>';
-      document.getElementById('categorySections').innerHTML = '<div class="placeholder placeholder--error">Lỗi tải dữ liệu</div>';
+      const hotEl = document.getElementById('hotNewsList');
+      if (hotEl) {
+        hotEl.innerHTML = '<li class="placeholder placeholder--error placeholder--compact">Lỗi tải dữ liệu. Vui lòng thử lại sau.</li>';
+      }
     }
 
     function renderFeaturedPosts(activities) {
@@ -2973,18 +2982,55 @@
     }
 
     function renderHotNews(activities) {
-      // Chọn 7 bài mới nhất
-      const hotNews = activities.slice(0, 7);
+      const hotEl = document.getElementById('hotNewsList');
+      if (!hotEl) {
+        console.warn('hotNewsList element not found');
+        return;
+      }
+
+      // Lọc và sắp xếp: chỉ lấy bài đã published, sắp xếp theo created_at mới nhất
+      // API đã trả về theo thứ tự DESC (mới nhất trước), nên chỉ cần filter và slice
+      const validActivities = activities
+        .filter(activity => activity && activity.id && activity.title)
+        .slice(0, 6); // Chọn 6 bài mới nhất để hiển thị đẹp hơn
       
-      const hotNewsHtml = hotNews.map(activity => {
+      if (!validActivities.length) {
+        hotEl.innerHTML = '<div class="placeholder placeholder--muted">Chưa có bài viết</div>';
+        return;
+      }
+      
+      const hotNewsHtml = validActivities.map(activity => {
+        const title = escapeHtml(activity.title || 'Chưa có tiêu đề');
+        const activityId = activity.id || activity.activity_id || '';
+        const summary = escapeHtml(truncateText(activity.summary || '', 150));
+        const thumbnail = getThumbnail(activity);
+        
+        if (!activityId) {
+          console.warn('Activity missing ID:', activity);
+          return '';
+        }
+        
+        const thumbnailHtml = thumbnail 
+          ? `<img src="${escapeHtml(thumbnail)}" alt="${title}" class="hot-news-thumbnail js-hide-on-error" loading="lazy">`
+          : '<div class="hot-news-thumbnail-placeholder">📰</div>';
+        
         return `
-          <li class="hot-news-item">
-            <a href="/activities/${activity.id}">${escapeHtml(activity.title || 'Chưa có tiêu đề')}</a>
-          </li>
+          <div class="hot-news-card">
+            <div class="hot-news-thumbnail-wrapper">
+              ${thumbnailHtml}
+            </div>
+            <div class="hot-news-content">
+              <h4 class="hot-news-card-title">
+                <a href="/activities/${activityId}">${title}</a>
+              </h4>
+              ${summary ? `<p class="hot-news-summary">${summary}</p>` : ''}
+              <a href="/activities/${activityId}" class="hot-news-read-more">Xem tiếp →</a>
+            </div>
+          </div>
         `;
-      }).join('');
+      }).filter(html => html).join(''); // Lọc bỏ các item rỗng
       
-      document.getElementById('hotNewsList').innerHTML = hotNewsHtml || '<li class="placeholder placeholder--muted placeholder--compact">Chưa có bài viết</li>';
+      hotEl.innerHTML = hotNewsHtml || '<div class="placeholder placeholder--muted">Chưa có bài viết</div>';
     }
 
     function renderCategories(activities) {
@@ -2999,8 +3045,8 @@
         categoriesMap[category].push(activity);
       });
       
-      // Lọc bỏ category "Tin tức chung"
-      const filteredCategories = Object.keys(categoriesMap).filter(category => category !== 'Tin tức chung');
+      // Hiển thị tất cả category (kể cả "Tin tức chung") để luôn có nội dung khi có bài viết
+      const filteredCategories = Object.keys(categoriesMap);
       
       const categoriesHtml = filteredCategories.map(category => {
         const categoryActivities = categoriesMap[category];
@@ -3043,15 +3089,46 @@
     async function loadExternalPosts() {
       const container = document.getElementById('externalPosts');
       if (!container) return;
-      
+
+      const fallbackHtml = `
+        <div class="external-posts-fallback placeholder placeholder--lg">
+          <p class="placeholder--muted">Không tải được bài đăng từ Hội đồng NPT VN. Bạn có thể xem trực tiếp tại:</p>
+          <p style="margin-top: 1rem;">
+            <a href="https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/" target="_blank" rel="noopener noreferrer" class="link-underline">
+              nguyenphuoctoc.info – Hoạt động Hội đồng NPT VN
+            </a>
+          </p>
+        </div>
+      `;
+
       try {
         const response = await fetch('/api/external-posts');
-        const result = await response.json();
         
-        if (result.success && result.data && result.data.length > 0) {
+        // Kiểm tra response.ok TRƯỚC khi parse JSON
+        if (!response.ok) {
+          console.error(`External posts API error: HTTP ${response.status}`);
+          container.innerHTML = fallbackHtml;
+          return;
+        }
+        
+        const result = await response.json().catch(err => {
+          console.error('JSON parse error for external posts:', err);
+          throw err;
+        });
+        
+        // Kiểm tra kết quả
+        if (!result || result.success === false) {
+          console.error('External posts API returned error:', result?.error || 'Unknown error');
+          container.innerHTML = fallbackHtml;
+          return;
+        }
+        
+        if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
           let html = '';
           
           result.data.forEach(post => {
+            if (!post || !post.title) return; // Bỏ qua post không hợp lệ
+            
             html += `
               <div class="external-post-item">
                 <div class="external-post-thumbnail">
@@ -3063,7 +3140,7 @@
                 </div>
                 <div class="external-post-content">
                   <h3 class="external-post-title">
-                    <a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer">
+                    <a href="${escapeHtml(post.link || 'https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/')}" target="_blank" rel="noopener noreferrer">
                       ${escapeHtml(post.title)}
                     </a>
                   </h3>
@@ -3090,21 +3167,18 @@
             `;
           });
           
-          container.innerHTML = html;
+          if (html) {
+            container.innerHTML = html;
+          } else {
+            container.innerHTML = fallbackHtml;
+          }
         } else {
-          container.innerHTML = `
-            <div class="placeholder placeholder--lg placeholder--muted">
-              Chưa có bài viết
-            </div>
-          `;
+          // Không có dữ liệu hoặc dữ liệu rỗng
+          container.innerHTML = fallbackHtml;
         }
       } catch (error) {
         console.error('Error loading external posts:', error);
-        container.innerHTML = `
-          <div class="placeholder placeholder--lg placeholder--error">
-            Lỗi tải dữ liệu. Vui lòng thử lại sau.
-          </div>
-        `;
+        container.innerHTML = fallbackHtml;
       }
     }
 
@@ -3621,21 +3695,34 @@ async function renderAlbums(albumsList) {
         const albumsData = await albumsResponse.json();
         
         if (!albumsData.success || !albumsData.albums || albumsData.albums.length === 0) {
-          photoGallery.innerHTML = '<div class="gallery-loading">Ch?a c? album n?o</div>';
+          photoGallery.innerHTML = '<div class="gallery-loading">Chưa có album nào</div>';
           return;
         }
         
+        // Tìm album "Phủ Tuy Biên Quận Công" với theme "khuôn viên"
         const targetAlbum = albumsData.albums.find(album => 
-          album.name && album.name.includes('Ph? Tuy Bi?n Qu?n C?ng') && 
-          album.theme && album.theme.includes('khu?n vi?n')
+          album.name && (
+            album.name.includes('Phủ Tuy Biên Quận Công') || 
+            album.name.includes('Phu Tuy Bien Quan Cong')
+          ) && 
+          album.theme && (
+            album.theme.includes('khuôn viên') || 
+            album.theme.includes('khuon vien')
+          )
         );
         
+        // Fallback: tìm album có tên chứa "Phủ Tuy Biên" hoặc "Tuy Biên"
         const fallbackAlbum = targetAlbum || albumsData.albums.find(album => 
-          album.name && album.name.includes('Ph? Tuy Bi?n Qu?n C?ng')
+          album.name && (
+            album.name.includes('Phủ Tuy Biên') || 
+            album.name.includes('Phu Tuy Bien') ||
+            album.name.includes('Tuy Biên') ||
+            album.name.includes('Tuy Bien')
+          )
         );
         
         if (!fallbackAlbum) {
-          photoGallery.innerHTML = '<div class="gallery-loading">Kh?ng t?m th?y album "Ph? Tuy Bi?n Qu?n C?ng"</div>';
+          photoGallery.innerHTML = '<div class="gallery-loading">Không tìm thấy album "Phủ Tuy Biên Quận Công"</div>';
           return;
         }
         
@@ -3651,11 +3738,11 @@ async function renderAlbums(albumsList) {
           }));
           renderGallery(galleryImages, { mode: 'home', container: photoGallery });
         } else {
-          photoGallery.innerHTML = '<div class="gallery-loading">Album n?y ch?a c? ?nh</div>';
+          photoGallery.innerHTML = '<div class="gallery-loading">Album này chưa có ảnh</div>';
         }
       } catch (error) {
         console.error('Error loading gallery:', error);
-        photoGallery.innerHTML = '<div class="gallery-loading">L?i khi t?i ?nh</div>';
+        photoGallery.innerHTML = '<div class="gallery-loading">Lỗi khi tải ảnh</div>';
       }
     }
     

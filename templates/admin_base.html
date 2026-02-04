@@ -263,12 +263,19 @@
   <nav class="admin-navbar">
     <div class="admin-navbar-left">
       <ul class="admin-navbar-menu">
+        {% if request.path == '/admin/activities' %}
+        {# Chỉ hiển thị Trang chủ và Hoạt động ở trang activities #}
+        <li><a href="/admin/activities" class="active">Hoạt động</a></li>
+        <li><a href="/">Trang chủ</a></li>
+        {% else %}
+        {# Hiển thị đầy đủ menu ở các trang admin khác #}
         <li><a href="/admin/dashboard" {% if request.path == '/admin/dashboard' %}class="active"{% endif %}>Dashboard</a></li>
         <li><a href="/admin/data-management" {% if request.path == '/admin/data-management' %}class="active"{% endif %}>Quản lý dữ liệu</a></li>
         <li><a href="/admin/logs" {% if request.path == '/admin/logs' %}class="active"{% endif %}>Log</a></li>
         <li><a href="/admin/users" {% if request.path == '/admin/users' %}class="active"{% endif %}>Tài khoản</a></li>
         <li><a href="/admin/activities" {% if request.path == '/admin/activities' %}class="active"{% endif %}>Hoạt động</a></li>
         <li><a href="/">Trang chủ</a></li>
+        {% endif %}
       </ul>
     </div>
     <div class="admin-navbar-right">
@@ -281,7 +288,19 @@
         <span class="role">{{ current_user.role }}</span>
       </div>
       {% endif %}
+      {% if request.path == '/admin/activities' %}
+      {# Ở trang activities, kiểm tra xem là admin hay gate user #}
+      {% if session.get('activities_post_ok') and not current_user.is_authenticated %}
+      {# Gate user - dùng activities logout #}
+      <a href="/activities/post-logout" class="admin-logout-btn">Đăng xuất</a>
+      {% else %}
+      {# Admin user - dùng admin logout #}
       <a href="/admin/logout" class="admin-logout-btn">Đăng xuất</a>
+      {% endif %}
+      {% else %}
+      {# Các trang admin khác - chỉ dùng admin logout #}
+      <a href="/admin/logout" class="admin-logout-btn">Đăng xuất</a>
+      {% endif %}
     </div>
   </nav>
 
