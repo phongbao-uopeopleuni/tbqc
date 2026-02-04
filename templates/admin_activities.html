@@ -175,9 +175,9 @@
     }
     
     /* ============================================
-       QUILL EDITOR FIXES
+       QUILL EDITOR FIXES - CRITICAL
        ============================================ */
-    /* Bảo vệ Quill Editor khỏi CSS reset */
+    /* CRITICAL: Protect Quill Editor from admin_base.html CSS reset */
     #contentEditor,
     #contentEditor *,
     .ql-container,
@@ -186,7 +186,7 @@
     .ql-editor *,
     .ql-toolbar,
     .ql-toolbar * {
-      box-sizing: content-box;
+      box-sizing: content-box !important;
     }
     
     /* Reset font cho Quill để tránh ký tự lạ */
@@ -197,11 +197,13 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
     }
     
+    /* Editor Container */
     .quill-wrapper {
       border: 2px solid #e0e0e0;
       border-radius: 8px;
       overflow: hidden;
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+      background: white;
     }
     
     .quill-wrapper:focus-within {
@@ -209,47 +211,64 @@
       box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.1);
     }
     
+    /* Toolbar Styling */
     .ql-toolbar {
-      background: #fafafa;
-      padding: 12px;
-      border-bottom: 1px solid #e0e0e0;
-      border-radius: 8px 8px 0 0;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
+      background: #fafafa !important;
+      padding: 12px !important;
+      border: 1px solid #e0e0e0 !important;
+      border-bottom: none !important;
+      border-radius: 8px 8px 0 0 !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      align-items: center !important;
+      min-height: 42px !important;
     }
     
-    /* Fix cho toolbar buttons */
     .ql-toolbar .ql-formats {
-      display: inline-flex;
-      align-items: center;
-      margin-right: 15px;
+      display: inline-flex !important;
+      align-items: center !important;
+      margin-right: 15px !important;
+      vertical-align: middle !important;
     }
     
+    /* Toolbar Buttons */
     .ql-toolbar button {
       width: auto !important;
       height: auto !important;
-      padding: 5px !important;
+      min-width: 28px !important;
+      min-height: 28px !important;
+      padding: 4px 6px !important;
       margin: 0 2px !important;
       border: none !important;
       background: transparent !important;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 4px !important;
+      transition: background 0.2s ease !important;
     }
     
     .ql-toolbar button:hover,
     .ql-toolbar button:focus,
     .ql-toolbar button.ql-active {
       background: #e8e8e8 !important;
-      border-radius: 3px;
+      outline: none !important;
     }
     
-    /* Fix SVG icons */
+    /* SVG Icons - CRITICAL FIX */
+    .ql-toolbar svg {
+      display: inline-block !important;
+      height: 18px !important;
+      width: 18px !important;
+      vertical-align: middle !important;
+      pointer-events: none !important;
+    }
+    
     .ql-toolbar .ql-stroke {
       stroke: #444 !important;
       fill: none !important;
+      stroke-width: 2 !important;
     }
     
     .ql-toolbar .ql-fill {
@@ -261,7 +280,6 @@
       stroke-width: 1 !important;
     }
     
-    /* Fix cho các icon đặc biệt */
     .ql-toolbar button:hover .ql-stroke,
     .ql-toolbar button.ql-active .ql-stroke {
       stroke: #06c !important;
@@ -272,101 +290,109 @@
       fill: #06c !important;
     }
     
-    /* Ẩn các ký tự tam giác đen và ký tự lạ */
+    /* Ẩn các pseudo-elements có thể gây ký tự lạ */
     .ql-toolbar button::before,
     .ql-toolbar button::after {
       display: none !important;
       content: none !important;
     }
     
-    .ql-toolbar .ql-picker-label::before,
-    .ql-toolbar .ql-picker-label::after {
-      display: none !important;
-      content: none !important;
-    }
-    
-    /* Fix cho picker dropdowns */
+    /* Picker Dropdowns */
     .ql-toolbar .ql-picker {
-      color: #444;
-      display: inline-block;
-      font-size: 14px;
-      font-weight: 500;
-      height: 24px;
-      position: relative;
-      vertical-align: middle;
+      color: #444 !important;
+      display: inline-block !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      height: 28px !important;
+      position: relative !important;
+      vertical-align: middle !important;
+      margin: 0 2px !important;
     }
     
     .ql-toolbar .ql-picker-label {
-      cursor: pointer;
-      display: inline-block;
-      height: 100%;
-      padding: 5px 8px;
-      position: relative;
-      width: 100%;
+      cursor: pointer !important;
+      display: inline-block !important;
+      height: 100% !important;
+      padding: 4px 8px !important;
+      position: relative !important;
+      border-radius: 4px !important;
+      transition: background 0.2s ease !important;
+    }
+    
+    .ql-toolbar .ql-picker-label:hover {
+      background: #e8e8e8 !important;
     }
     
     .ql-toolbar .ql-picker-label::before {
-      display: inline-block;
-      line-height: 22px;
+      display: inline-block !important;
+      line-height: 20px !important;
     }
     
     .ql-toolbar .ql-picker-options {
-      background-color: #fff;
-      border: 1px solid transparent;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      display: none;
-      padding: 4px 8px;
-      position: absolute;
-      white-space: nowrap;
-      z-index: 1;
+      background-color: #fff !important;
+      border: 1px solid #e0e0e0 !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+      display: none !important;
+      padding: 4px 0 !important;
+      position: absolute !important;
+      white-space: nowrap !important;
+      z-index: 1000 !important;
+      border-radius: 4px !important;
+      margin-top: 4px !important;
     }
     
     .ql-toolbar .ql-picker.ql-expanded .ql-picker-options {
-      display: block;
+      display: block !important;
     }
     
     .ql-toolbar .ql-picker-item {
-      cursor: pointer;
-      display: block;
-      padding: 5px;
+      cursor: pointer !important;
+      display: block !important;
+      padding: 6px 12px !important;
+      transition: background 0.2s ease !important;
     }
     
     .ql-toolbar .ql-picker-item:hover {
-      background-color: #f0f0f0;
+      background-color: #f0f0f0 !important;
     }
     
-    /* Ẩn các ký tự Unicode không mong muốn */
-    .ql-toolbar svg {
-      display: inline-block !important;
-      height: 18px !important;
-      width: 18px !important;
-      vertical-align: middle !important;
-    }
-    
-    /* Fix cho editor container */
+    /* Editor Container */
     .ql-container {
-      font-family: 'Noto Serif TC', serif;
-      font-size: 15px;
+      border: 1px solid #e0e0e0 !important;
+      border-top: none !important;
+      border-radius: 0 0 8px 8px !important;
+      font-family: 'Noto Serif TC', serif !important;
+      font-size: 15px !important;
     }
     
     .ql-editor {
-      min-height: 400px;
-      padding: 20px;
-      line-height: 1.8;
-      color: #333;
+      min-height: 400px !important;
+      padding: 20px !important;
+      line-height: 1.8 !important;
+      color: #333 !important;
     }
     
     .ql-editor.ql-blank::before {
-      color: #999;
-      font-style: normal;
+      color: #999 !important;
+      font-style: normal !important;
+      left: 20px !important;
     }
     
-    /* Đảm bảo không có ký tự đặc biệt hiển thị */
+    /* Text Rendering */
     .ql-toolbar,
-    .ql-toolbar * {
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+    .ql-toolbar *,
+    .ql-container,
+    .ql-container * {
+      text-rendering: optimizeLegibility !important;
+      -webkit-font-smoothing: antialiased !important;
+      -moz-osx-font-smoothing: grayscale !important;
+    }
+    
+    /* Ensure no outline issues */
+    .ql-toolbar button:focus,
+    .ql-toolbar .ql-picker-label:focus {
+      outline: 2px solid #DAA520 !important;
+      outline-offset: 2px !important;
     }
     
     /* ============================================

@@ -1268,11 +1268,10 @@ def activity_detail_page(activity_id):
 @app.route('/documents')
 def documents_page():
     """
-    Trang tài liệu - redirect về trang chủ với anchor #tai-lieu
-    
-    Documents page - redirect to homepage with #tai-lieu anchor
+    Trang Tài liệu - template documents.html
+    Documents page - template documents.html
     """
-    return redirect(url_for('index') + '#tai-lieu')
+    return render_template('documents.html')
 
 @app.route('/vr-tour')
 def vr_tour_page():
