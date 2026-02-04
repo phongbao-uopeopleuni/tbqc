@@ -1835,6 +1835,33 @@
       color: var(--color-primary);
     }
     
+    /* New info badge - blinking red with yellow contrast */
+    .new-info-badge {
+      display: inline-block;
+      color: #b91c1c;
+      font-size: 0.85em;
+      font-weight: 700;
+      margin-left: 6px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      animation: blink-contrast 1.2s ease-in-out infinite;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    }
+    
+    @keyframes blink-contrast {
+      0%, 100% {
+        color: #b91c1c;
+        background-color: transparent;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+      50% {
+        color: #b91c1c;
+        background-color: #FFD700;
+        text-shadow: 0 1px 3px rgba(185, 28, 28, 0.3);
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+      }
+    }
+    
     /* External link indicator */
     .npt-council-list a[target="_blank"] {
       position: relative;
