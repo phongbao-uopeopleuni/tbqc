@@ -74,11 +74,3 @@ backups/
 # Large PDF files (served externally, not in Git)
 static/documents/*.pdf
 tailieu/*.pdf
-
-# Local-only: chay tai may, khong dong bo len Git
-tbqc_db.env.example
-restart_server.ps1
-sync_tbqc_accounts.py
-TEST_API_ENDPOINTS.ps1
-.smtp_config.example
-install_requests.ps1
