@@ -794,23 +794,18 @@
       pendingAction = null;
     }
 
-    // Verify password
+    // Verify password (chi dung mat khau tu server, khong hardcode)
     function verifyPassword() {
       const password = document.getElementById('passwordInput').value.trim();
       const errorDiv = document.getElementById('passwordError');
-      
-      // Fallback password nếu server không trả về
-      const fallbackPassword = 'tbqc@2026';
-      const serverPassword = REQUIRED_PASSWORD && REQUIRED_PASSWORD !== 'null' && REQUIRED_PASSWORD !== '' ? REQUIRED_PASSWORD : fallbackPassword;
-      
-      // Debug log
-      console.log('Password verification:', {
-        input: password ? '***' : '(empty)',
-        serverPassword: serverPassword ? '***' : '(empty)',
-        requiredPassword: REQUIRED_PASSWORD,
-        usingFallback: REQUIRED_PASSWORD === 'null' || REQUIRED_PASSWORD === '' || !REQUIRED_PASSWORD
-      });
-      
+      const serverPassword = REQUIRED_PASSWORD && REQUIRED_PASSWORD !== 'null' && REQUIRED_PASSWORD !== '' ? REQUIRED_PASSWORD : null;
+
+      if (!serverPassword) {
+        errorDiv.textContent = 'Trang chua duoc cau hinh mat khau. Lien he quan tri.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
       if (password === serverPassword) {
         // Xác thực thành công
         isAuthenticated = true;

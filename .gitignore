@@ -34,7 +34,6 @@ tbqc_db.env
 # Backups
 backups/
 *.sql
-!folder_sql/*.sql
 
 # Sensitive information
 # Domain/DNS configuration files (actual config files, not documentation)
@@ -64,16 +63,17 @@ create_tbqc_admin_user.py
 
 # CSV data files (may contain sensitive data)
 *.csv
-!folder_sql/*.sql
 
 # Backup files
 backups/
 *.sql
-!folder_sql/*.sql
 
 # Large PDF files (served externally, not in Git)
 static/documents/*.pdf
-tailieu/*.pdf
+
+# Luu tren laptop, khong dong bo len Git
+folder_sql/
+tailieu/
 
 # Local-only: chay tai may, khong dong bo len Git
 tbqc_db.env.example
