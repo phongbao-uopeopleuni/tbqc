@@ -27,19 +27,19 @@ services:
         fromDatabase:
           name: tbqc-db
           property: port
-      # Application Passwords (for Members page actions: Add, Update, Delete, Backup)
-      # ⚠️ Set these in Render Dashboard > Environment Variables (do not hardcode here)
+      # Mat khau ung dung (cho trang Thanh vien: Them, Cap nhat, Xoa, Sao luu)
+      # Dat cac bien nay trong Render Dashboard > Environment Variables (khong hardcode o day)
       - key: MEMBERS_PASSWORD
-        sync: false  # Must be set manually in Render Dashboard
+        sync: false  # Phai dat thu cong trong Render Dashboard
       - key: ADMIN_PASSWORD
-        sync: false  # Must be set manually in Render Dashboard
+        sync: false  # Phai dat thu cong trong Render Dashboard
       - key: BACKUP_PASSWORD
-        sync: false  # Must be set manually in Render Dashboard
-      # Geoapify API Key (for grave search map on /genealogy page)
-      # ⚠️ Set this in Render Dashboard > Environment Variables (do not hardcode here)
-      # Get free API key from: https://www.geoapify.com/ (3,000 requests/day)
+        sync: false  # Phai dat thu cong trong Render Dashboard
+      # Geoapify API Key (cho ban do tim kiem mo tren trang /genealogy)
+      # Dat trong Render Dashboard > Environment Variables (khong hardcode o day)
+      # Lay API key mien phi: https://www.geoapify.com/ (3.000 yeu cau/ngay)
       - key: GEOAPIFY_API_KEY
-        sync: false  # Must be set manually in Render Dashboard
+        sync: false  # Phai dat thu cong trong Render Dashboard
 
 databases:
   - name: tbqc-db
