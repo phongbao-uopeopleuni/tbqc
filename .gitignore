@@ -82,3 +82,6 @@ sync_tbqc_accounts.py
 TEST_API_ENDPOINTS.ps1
 .smtp_config.example
 install_requests.ps1
+fix_index_js.py
+cleanup_unused_files.py
+start_server.py
