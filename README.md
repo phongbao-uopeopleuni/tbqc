@@ -10,8 +10,8 @@ Ung dung web quan ly va hien thi gia pha (family tree), ket noi HTML voi MySQL. 
 
 ## Cau truc thu muc
 
-- `folder_py/` — Thu muc chinh khi chay production: chua `db_config.py`, `auth.py`, ...
-- `app.py` — Diem vao khi chay tai thu muc goc (local)
+- `app.py` — **Diem vao bat buoc**: phai chay tai thu muc goc repo (`python app.py`), de dang ky blueprints.
+- `folder_py/` — Module phu (db_config, auth, ...), khong phai diem vao; khong chay `python app.py` trong folder_py.
 - `blueprints/` — Flask blueprints: main, auth, activities, family_tree, persons, members_portal, gallery, admin
 - `templates/` — HTML (genealogy, members, admin, documents, index, ...)
 - `static/` — CSS, JS; `static/images/` — Anh trang chu (dat file theo huong dan trong `static/images/README.txt`)
@@ -42,7 +42,7 @@ Xem `.env.example` de biet cac bien can thiet (chi chua placeholder, khong chua 
 - **Gia pha:** Cay gia pha, co passphrase
 - **Thanh vien:** Danh sach thanh vien, dang nhap noi bo, xuat Excel, tim kiem
 - **Admin:** Dang nhap, luu tai khoan (cookie), Dashboard, quan ly tai khoan, quan ly du lieu, Log
-- **Lien he, Tai lieu, VR Tour**
+- **Lien he, Tai lieu**
 
 ## Bao mat
 
@@ -53,4 +53,10 @@ Xem `.env.example` de biet cac bien can thiet (chi chua placeholder, khong chua 
 
 - Bien moi truong dat thong qua Dashboard cua Render/Railway (hoac file env tren server, khong commit).
 - Build: `pip install -r requirements.txt`
-- Start: `python app.py` (hoac `cd folder_py && python app.py` neu chay tu thu muc con).
+- **Start:** `python app.py` — Bat buoc chay tai **thu muc goc** cua repo (co file `app.py` va thu muc `blueprints/`). Neu chay tu thu muc khac (vd. `folder_py`) thi `/genealogy`, `/members`, `/contact` se 404.
+
+### Neu sau khi push len Git ma /genealogy, /members, /contact tra ve JSON 404
+
+1. Mo `https://<domain>/api/health` — xem truong `blueprints_registered`: neu `false`, co truong `blueprints_error` ghi loi khi dang ky blueprints (thieu dependency, import loi, ...).
+2. Tren Dashboard Render/Railway: kiem tra **Start Command** la `python app.py`, **Root/Working Directory** la thu muc goc repo (khong phai `folder_py`).
+3. Xem log khi khoi dong: neu co dong "OK: Da dang ky Flask Blueprints." thi blueprints da load; neu co "WARNING: Loi khi dang ky blueprints" thi doc traceback phia duoi de sua (vd. `pip install openpyxl`, hoac sua duong dan/import).

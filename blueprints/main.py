@@ -39,12 +39,3 @@ def documents_page():
     Documents page - template documents.html
     """
     return render_template('documents.html')
-
-@main_bp.route('/vr-tour')
-def vr_tour_page():
-    """
-    Trang VR Tour - chức năng tham quan ảo đang được phát triển
-    
-    VR Tour page - virtual tour feature under development
-    """
-    return render_template('vr_tour.html')

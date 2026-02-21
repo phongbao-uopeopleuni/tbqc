@@ -183,12 +183,14 @@ except Exception as e:
     print(f'WARNING: Loi khi khoi tao rate limiter: {e}')
     limiter = None
 # Dang ky blueprints truoc de /, /genealogy, ... duoc map dung (truoc admin_routes)
+BLUEPRINTS_ERROR = None  # Luu loi de hien trong /api/health neu that bai
 try:
     register_blueprints(app)
 except Exception as e:
-    print(f'WARNING: Loi khi dang ky blueprints: {e}')
     import traceback
-    traceback.print_exc()
+    BLUEPRINTS_ERROR = traceback.format_exc()
+    print(f'WARNING: Loi khi dang ky blueprints: {e}')
+    print(BLUEPRINTS_ERROR)
 # Miễn rate limit cho toàn bộ blueprint Members (trang /members, /api/members, /members/export/excel) để tránh 429
 if limiter:
     try:
@@ -4304,6 +4306,7 @@ def api_health():
         cfg = DB_CONFIG if (DB_CONFIG.get('host') and DB_CONFIG.get('host') != 'localhost') else get_db_config()
         health_status = {
             'server': 'ok',
+            'blueprints_registered': BLUEPRINTS_ERROR is None,
             'database': 'unknown',
             'db_config': {
                 'host': cfg.get('host', 'N/A'),
@@ -4341,6 +4344,8 @@ def api_health():
                 mysql.connector.connect(**cfg)
             except Exception as e:
                 health_status['connection_error'] = str(e)
+        if BLUEPRINTS_ERROR:
+            health_status['blueprints_error'] = BLUEPRINTS_ERROR
         return jsonify(health_status)
     except Exception as e:
         logger.error(f'api_health error: {e}', exc_info=True)
