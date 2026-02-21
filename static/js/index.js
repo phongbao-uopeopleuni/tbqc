@@ -3998,7 +3998,16 @@ async function renderAlbums(albumsList) {
       }
 
       document.querySelectorAll('.navbar-menu a').forEach(link => {
-        link.addEventListener('click', () => setActive(link));
+        link.addEventListener('click', function(e) {
+          const href = (link.getAttribute('href') || '').trim();
+          // Chi smooth-scroll cho anchor (#...), khong chan diều hướng sang /genealogy, /contact, ...
+          if (href.startsWith('#')) {
+            setActive(link);
+            return;
+          }
+          setActive(link);
+          // Khong goi e.preventDefault() cho link sang trang khac (href="/...") de browser diều hướng binh thuong
+        });
       });
     }
 

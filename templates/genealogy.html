@@ -1299,6 +1299,7 @@
 <body>
   <nav class="navbar">
     <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy" class="active">Gia phả</a></li>
@@ -2025,6 +2026,7 @@
               container.innerHTML = `<div style="padding: 20px; color: #d32f2f; text-align: center;">
                 <h3>Lỗi khi tải cây gia phả</h3>
                 <p>${err.message}</p>
+                <p><a href="/api/health" target="_blank" rel="noopener">Kiểm tra trạng thái server và database (/api/health)</a></p>
               </div>`;
             }
           }
@@ -2130,7 +2132,7 @@
                     }
                   } catch (err) {
                     console.error('[Genealogy] Error loading tree:', err);
-                    alert(`Lỗi khi tải cây gia phả: ${err.message}`);
+                    alert(`Lỗi khi tải cây gia phả: ${err.message}\n\nKiểm tra /api/health để xem trạng thái database.`);
                   }
                 });
               });
@@ -4041,7 +4043,7 @@
               }
             } catch (err) {
               console.error('[Genealogy] Error lazy loading tab:', err);
-              content.innerHTML = '<div style="padding: 20px; color: #d32f2f; text-align: center;">Lỗi khi tải dữ liệu</div>';
+              content.innerHTML = '<div style="padding: 20px; color: #d32f2f; text-align: center;">Lỗi khi tải dữ liệu. <a href="/api/health" target="_blank" rel="noopener">Kiểm tra /api/health</a></div>';
             }
           }
         } else {

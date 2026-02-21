@@ -5,7 +5,7 @@ Admin Routes
 Routes cho trang quản trị
 """
 
-from flask import render_template_string, request, jsonify, redirect, url_for, flash, session
+from flask import render_template_string, render_template, request, jsonify, redirect, url_for, flash, session, make_response
 from flask_login import login_user, logout_user, login_required, current_user
 try:
     from folder_py.db_config import get_db_connection
@@ -22,27 +22,33 @@ import os
 def register_admin_routes(app):
     """Đăng ký các routes cho admin"""
     
+    COOKIE_REMEMBER_USERNAME = 'tbqc_admin_remember_username'
+    COOKIE_REMEMBER_DAYS = 30
+
     @app.route('/admin/login', methods=['GET', 'POST'])
     def admin_login():
         """Trang đăng nhập admin"""
+        next_url = request.args.get('next') or request.form.get('next', '')
+        remembered_username = request.cookies.get(COOKIE_REMEMBER_USERNAME, '').strip()
+
         if request.method == 'POST':
             username = request.form.get('username', '').strip()
             password = request.form.get('password', '')
             
             if not username or not password:
-                return render_template_string(ADMIN_LOGIN_TEMPLATE, 
-                    error='Vui lòng nhập đầy đủ username và password')
+                return render_template('admin/login.html',
+                    error='Vui lòng nhập đầy đủ username và password', next=next_url, remembered_username=username or remembered_username)
             
             # Tìm user
             user_data = get_user_by_username(username)
             if not user_data:
-                return render_template_string(ADMIN_LOGIN_TEMPLATE,
-                    error='Không tồn tại tài khoản')
+                return render_template('admin/login.html',
+                    error='Không tồn tại tài khoản', next=next_url, remembered_username=remembered_username)
             
             # Xác thực mật khẩu
             if not verify_password(password, user_data['password_hash']):
-                return render_template_string(ADMIN_LOGIN_TEMPLATE,
-                    error='Sai mật khẩu')
+                return render_template('admin/login.html',
+                    error='Sai mật khẩu', next=next_url, remembered_username=remembered_username)
             
             # Tạo user object và đăng nhập
             from auth import User
@@ -80,12 +86,19 @@ def register_admin_routes(app):
                         connection.close()
             
             # Redirect theo role
-            if user_data['role'] == 'admin':
-                return redirect(url_for('admin_dashboard'))
+            if next_url:
+                resp = redirect(next_url)
+            elif user_data['role'] == 'admin':
+                resp = redirect(url_for('admin_dashboard'))
             else:
-                return redirect(url_for('index'))
-        
-        return render_template_string(ADMIN_LOGIN_TEMPLATE)
+                resp = redirect(url_for('index'))
+            if request.form.get('remember_username'):
+                resp.set_cookie(COOKIE_REMEMBER_USERNAME, username, max_age=COOKIE_REMEMBER_DAYS * 24 * 3600, httponly=True, samesite='Lax')
+            else:
+                resp.delete_cookie(COOKIE_REMEMBER_USERNAME)
+            return resp
+
+        return render_template('admin/login.html', next=next_url, remembered_username=remembered_username)
     
     @app.route('/admin/logout')
     @login_required
@@ -821,13 +834,18 @@ ADMIN_LOGIN_TEMPLATE = '''
         <div class="error">{{ error }}</div>
         {% endif %}
         <form method="POST">
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
             <div class="form-group">
                 <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autofocus>
+                <input type="text" id="username" name="username" value="{{ remembered_username|default('') }}" required autofocus>
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group" style="display:flex;align-items:center;gap:10px;">
+                <input type="checkbox" id="remember_username" name="remember_username" value="1" style="width:18px;height:18px;">
+                <label for="remember_username" style="margin:0;">Lưu tài khoản</label>
             </div>
             <button type="submit" class="btn-login">Đăng Nhập</button>
         </form>

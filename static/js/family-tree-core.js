@@ -77,7 +77,13 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`API /api/tree trả mã ${response.status}`);
+      let msg = `API /api/tree tra ma ${response.status}`;
+      try {
+        const errBody = await response.json();
+        if (errBody.error) msg = errBody.error;
+        if (errBody.hint) msg += ' ' + errBody.hint;
+      } catch (_) {}
+      throw new Error(msg);
     }
 
     if (statusEl) {

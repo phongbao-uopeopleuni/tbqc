@@ -17,53 +17,11 @@
       font-family: 'Noto Serif TC', 'Playfair Display', serif;
       background: linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DAA520 75%, #FFD700 100%);
       background-attachment: fixed;
-      padding-top: 70px;
+      /* padding-top do navbar.css (64px) - giống trang Gia phả */
       min-height: 100vh;
     }
 
-    .navbar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: #111827;
-      color: white;
-      padding: 15px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 1000;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    }
-
-    .navbar-logo {
-      font-size: 24px;
-      font-weight: 700;
-      color: #FFD700;
-      text-decoration: none;
-    }
-
-    .navbar-menu {
-      display: flex;
-      gap: 30px;
-      list-style: none;
-    }
-
-    .navbar-menu a {
-      color: white;
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: 500;
-      transition: color 0.3s;
-      padding: 5px 10px;
-      border-radius: 4px;
-    }
-
-    .navbar-menu a:hover,
-    .navbar-menu a.active {
-      color: #FFD700;
-      background: rgba(255, 215, 0, 0.1);
-    }
+    /* Navbar dùng chung từ main.css -> navbar.css (giống trang Gia phả) */
 
     .container {
       max-width: 100%;
@@ -95,19 +53,45 @@
 
     .controls {
       background: white;
-      padding: 20px 30px;
+      padding: 24px 30px;
       border-radius: 12px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
       margin-bottom: 20px;
       display: flex;
-      gap: 15px;
+      flex-direction: column;
+      gap: 20px;
+      min-height: 120px;
+    }
+
+    .controls-row {
+      display: flex;
       flex-wrap: wrap;
+      gap: 12px;
       align-items: center;
     }
 
+    .controls-row-2 {
+      min-height: 52px;
+    }
+
+    .controls-row-1 .search-box {
+      flex: 1 1 280px;
+      min-width: 0;
+    }
+
+    .controls-row-2 .btn,
+    .controls-row-2 a.btn {
+      flex-shrink: 0;
+      min-height: 48px;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .search-box {
-      flex: 1;
-      min-width: 300px;
+      width: 100%;
+      max-width: 100%;
     }
 
     .search-box input {
@@ -127,6 +111,7 @@
 
     .btn {
       padding: 12px 30px;
+      min-height: 48px;
       border: none;
       border-radius: 8px;
       font-size: 16px;
@@ -134,6 +119,10 @@
       cursor: pointer;
       transition: all 0.3s;
       font-family: 'Noto Serif TC', serif;
+      box-sizing: border-box;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn-search {
@@ -154,6 +143,31 @@
 
     .btn-refresh:hover {
       background: #1976D2;
+      transform: translateY(-2px);
+    }
+
+    a.btn-export-excel {
+      background: #2E7D32;
+      color: white !important;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      min-height: 48px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: 'Noto Serif TC', serif;
+      box-sizing: border-box;
+      border: 2px solid #1B5E20;
+      line-height: 1.2;
+    }
+
+    .btn-export-excel:hover {
+      background: #1B5E20;
+      color: white;
       transform: translateY(-2px);
     }
 
@@ -491,31 +505,20 @@
     }
 
     @media (max-width: 768px) {
-      .navbar-menu {
-        position: fixed;
-        top: 70px;
-        left: -100%;
-        width: 100%;
-        background: #111827;
-        flex-direction: column;
-        padding: 20px;
-        transition: left 0.3s;
-      }
+      /* .navbar-menu mobile do navbar.css (giống Gia phả) */
 
-      .navbar-menu.active {
-        left: 0;
-      }
-
-      .controls {
-        flex-direction: column;
-      }
-
-      .search-box {
+      .controls-row {
         width: 100%;
       }
 
-      .btn {
-        width: 100%;
+      .controls-row-1 .search-box {
+        flex: 1 1 100%;
+      }
+
+      .controls-row-2 .btn,
+      .controls-row-2 a.btn {
+        flex: 1 1 auto;
+        min-width: 120px;
       }
 
       table {
@@ -530,14 +533,17 @@
   </style>
 </head>
 <body>
-  <!-- Navbar -->
+  <!-- Navbar (giống trang Gia phả) -->
   <nav class="navbar">
-    <button class="navbar-toggle" onclick="toggleMenu()" style="display: none; background: none; border: none; color: white; font-size: 24px; cursor: pointer;">☰</button>
+    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
       <li style="display: none;"><a href="/activities">Hoạt động</a></li>
       <li><a href="/members" class="active">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/admin/login">Admin</a></li>
     </ul>
   </nav>
 
@@ -545,7 +551,7 @@
     <div class="page-header">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
         <div>
-          <h1>📋 Danh Sách Thành Viên</h1>
+          <h1>Danh Sách Thành Viên</h1>
           <p>Danh sách đầy đủ các thành viên trong dòng họ Nguyễn Phước Tộc - Tuy Biên Phòng</p>
           {% if gate_username %}
           <p style="margin-top: 10px; font-size: 14px; color: #666;">
@@ -562,16 +568,21 @@
     </div>
 
     <div class="controls">
-      <div class="search-box">
-        <input type="text" id="membersSearch" placeholder="🔍 Tìm kiếm theo ID, tên, giới tính, trạng thái, đời, FM_ID, bố, mẹ, hôn phối, anh chị em, con cái..." 
-               onkeypress="if(event.key==='Enter') filterMembers()">
+      <div class="controls-row controls-row-1">
+        <div class="search-box">
+          <input type="text" id="membersSearch" placeholder="🔍 Tìm kiếm theo ID, tên, giới tính, trạng thái, đời, FM_ID, bố, mẹ, hôn phối, anh chị em, con cái..." 
+                 onkeypress="if(event.key==='Enter') filterMembers()">
+        </div>
+        <button class="btn btn-search" onclick="filterMembers()">Tìm kiếm</button>
       </div>
-      <button class="btn btn-search" onclick="filterMembers()">Tìm kiếm</button>
-      <button class="btn btn-refresh" onclick="loadMembers()">🔄 Làm mới</button>
-      <button class="btn btn-backup" onclick="checkAuthAndBackup()" id="btnBackup" title="Tạo backup database">💾 Backup</button>
-      <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">➕ Thêm</button>
-      <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">✏️ Cập nhật</button>
-      <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">🗑️ Xóa</button>
+      <div class="controls-row controls-row-2">
+        <button class="btn btn-refresh" onclick="loadMembers()">🔄 Làm mới</button>
+        <a href="/members/export/excel" class="btn btn-export-excel" download title="Tải file Excel toàn bộ danh sách thành viên">📥 Xuất Excel</a>
+        <button class="btn btn-backup" onclick="checkAuthAndBackup()" id="btnBackup" title="Tạo backup database">💾 Backup</button>
+        <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">➕ Thêm</button>
+        <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">✏️ Cập nhật</button>
+        <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">🗑️ Xóa</button>
+      </div>
     </div>
 
     <div class="table-container">
@@ -1609,6 +1620,7 @@
     }
   </script>
   
+  <script src="/static/js/common.js"></script>
   <script src="/static/js/device-detection.js"></script>
   
   <!-- Floating Zalo Button -->

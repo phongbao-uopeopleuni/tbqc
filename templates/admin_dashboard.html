@@ -107,6 +107,22 @@
   .info-value {
     color: var(--color-text, #111827);
   }
+
+  .quick-action-btn {
+    display: inline-block;
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-primary, #2563eb);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius-sm, 6px);
+    font-size: var(--font-size-sm, 14px);
+    font-weight: 500;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .quick-action-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
 </style>
 {% endblock %}
 
@@ -145,11 +161,12 @@
 <!-- Website Structure -->
 <div class="website-structure">
   <h2>🌐 Cấu trúc Website</h2>
+  <p style="color: var(--color-text-muted, #6b7280); font-size: 13px; margin-bottom: var(--space-3);">Các trang công khai và khu vực quản trị thực tế đang hoạt động.</p>
   <div class="tree-structure">
-    <div class="tree-item level-0">Trang chủ (/)</div>
+    <div class="tree-item level-0">Công khai</div>
+    <div class="tree-item level-1">├── Trang chủ (/)</div>
     <div class="tree-item level-1">├── Gia phả (/genealogy) <span class="gate-badge">Cổng passphrase</span></div>
-    <div class="tree-item level-1">├── Hoạt động (/activities)</div>
-    <div class="tree-item level-1">├── Thành viên (/members) <span class="gate-badge">Cổng 4 accounts</span></div>
+    <div class="tree-item level-1">├── Thành viên (/members) <span class="gate-badge">Cổng đăng nhập</span></div>
     <div class="tree-item level-1">├── Liên hệ (/contact)</div>
     <div class="tree-item level-1">├── Tài liệu (/documents)</div>
     <div class="tree-item level-1">└── VR Tour (/vr-tour)</div>
@@ -157,8 +174,19 @@
     <div class="tree-item level-1">├── Dashboard (/admin/dashboard)</div>
     <div class="tree-item level-1">├── Quản lý dữ liệu (/admin/data-management)</div>
     <div class="tree-item level-1">├── Log (/admin/logs)</div>
-    <div class="tree-item level-1">├── Tài khoản (/admin/users)</div>
-    <div class="tree-item level-1">└── Hoạt động (/admin/activities) <span class="gate-badge">Cổng 4 accounts</span></div>
+    <div class="tree-item level-1">├── Yêu cầu chỉnh sửa (/admin/requests)</div>
+    <div class="tree-item level-1">└── Tài khoản (/admin/users)</div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="website-structure" style="margin-bottom: var(--space-6);">
+  <h2>⚡ Thao tác nhanh</h2>
+  <div style="display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3);">
+    <a href="/admin/users" class="quick-action-btn">👥 Tài khoản</a>
+    <a href="/admin/data-management" class="quick-action-btn">📂 Quản lý dữ liệu</a>
+    <a href="/admin/logs" class="quick-action-btn">📋 Log</a>
+    <a href="/admin/requests" class="quick-action-btn">✏️ Yêu cầu chỉnh sửa</a>
   </div>
 </div>
 
@@ -175,7 +203,7 @@
   </div>
   <div class="info-row">
     <span class="info-label">Server:</span>
-    <span class="info-value">Railway</span>
+    <span class="info-value" id="serverEnv">-</span>
   </div>
 </div>
 
@@ -193,12 +221,22 @@
         console.error('Error loading users:', e);
       }
 
-      // Load activities count
+      // Load activities count: thử /api/activities, không có thì dùng /admin/api/table-stats
       try {
         const activitiesRes = await fetch('/api/activities', { credentials: 'include' });
         if (activitiesRes.ok) {
-          const activities = await activitiesRes.json();
-          document.getElementById('totalActivities').textContent = Array.isArray(activities) ? activities.length : '-';
+          const data = await activitiesRes.json();
+          const n = Array.isArray(data) ? data.length : (data && typeof data.count === 'number' ? data.count : null);
+          if (n != null) document.getElementById('totalActivities').textContent = n;
+        }
+        if (document.getElementById('totalActivities').textContent === '-') {
+          const tableRes = await fetch('/admin/api/table-stats?table=activities', { credentials: 'include' });
+          if (tableRes.ok) {
+            const tableData = await tableRes.json();
+            if (tableData.success && typeof tableData.count === 'number') {
+              document.getElementById('totalActivities').textContent = tableData.count;
+            }
+          }
         }
       } catch (e) {
         console.error('Error loading activities:', e);
@@ -242,6 +280,24 @@
         }
       } catch (e) {
         console.error('Error loading DB info:', e);
+      }
+
+      // Server / môi trường (từ /api/health)
+      try {
+        const healthRes = await fetch('/api/health', { credentials: 'include' });
+        if (healthRes.ok) {
+          const health = await healthRes.json();
+          const host = health.db_config && health.db_config.host;
+          if (host && host !== 'localhost' && host !== '127.0.0.1') {
+            document.getElementById('serverEnv').textContent = host;
+          } else {
+            document.getElementById('serverEnv').textContent = health.database === 'connected' ? 'Local' : 'Local';
+          }
+        } else {
+          document.getElementById('serverEnv').textContent = 'Local';
+        }
+      } catch (e) {
+        document.getElementById('serverEnv').textContent = 'Local';
       }
     } catch (error) {
       console.error('Error loading dashboard stats:', error);

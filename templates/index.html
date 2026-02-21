@@ -24,6 +24,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/index.css">
+  <style>
+    .img-placeholder { min-height: 140px; background: #e8e8e8; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px; border-radius: 8px; }
+    .hero-image-container .img-placeholder { min-height: 280px; }
+  </style>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Bỏ qua đến nội dung chính</a>
@@ -645,6 +649,27 @@
   <div id="readingProgress" class="reading-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
     <div class="reading-progress-fill"></div>
   </div>
+
+  <script>
+    (function() {
+      function onImageError(img) {
+        if (img.dataset.placeholderDone) return;
+        img.dataset.placeholderDone = '1';
+        var wrap = img.closest('.hero-image-container, .about-image');
+        if (!wrap) return;
+        var span = document.createElement('span');
+        span.className = 'img-placeholder';
+        span.textContent = 'Ảnh chưa tải. Đặt file vào static/images/ (xem static/images/README.txt).';
+        img.style.display = 'none';
+        if (img.nextSibling) wrap.insertBefore(span, img.nextSibling);
+        else wrap.appendChild(span);
+      }
+      document.querySelectorAll('.hero-image-container img, .about-image img').forEach(function(img) {
+        if (img.complete && img.naturalWidth === 0) onImageError(img);
+        else img.addEventListener('error', function() { onImageError(img); });
+      });
+    })();
+  </script>
 
 </body>
 </html>

@@ -15,6 +15,27 @@ logger = logging.getLogger(__name__)
 
 # Global connection pool
 _db_pool = None
+# Override config (app set tu .env khi khoi dong) - uu tien hon os.environ
+_config_override = None
+
+def _get_resolved_config_path():
+    """Duong dan file cache config (de process khac doc)."""
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.db_resolved.json')
+
+def set_config_override(config_dict):
+    """Dat cau hinh DB tu app (sau khi load .env). Ghi ra file de process khac cung doc duoc."""
+    global _config_override, _db_pool
+    config_dict = dict(config_dict) if config_dict else None
+    _config_override = config_dict
+    _db_pool = None
+    if config_dict:
+        try:
+            path = _get_resolved_config_path()
+            with open(path, 'w', encoding='utf-8') as f:
+                import json
+                json.dump(config_dict, f, indent=0)
+        except Exception as e:
+            logger.warning("Could not write .db_resolved.json: %s", e)
 
 
 def load_env_file(env_file_path: str) -> dict:
@@ -48,19 +69,85 @@ def load_env_file(env_file_path: str) -> dict:
     return env_vars
 
 
+def _get_resolved_config_paths():
+    """Tra ve danh sach duong dan co the cua .db_resolved.json (de moi process tim duoc file)."""
+    paths = []
+    # 1) Thu muc chua db_config.py (repo root)
+    paths.append(_get_resolved_config_path())
+    # 2) Thu muc chua app.py (khi chay tu repo root)
+    try:
+        app_mod = sys.modules.get('app')
+        if getattr(app_mod, '__file__', None):
+            app_dir = os.path.dirname(os.path.abspath(app_mod.__file__))
+            paths.append(os.path.join(app_dir, '.db_resolved.json'))
+    except Exception:
+        pass
+    # 3) Current working directory
+    paths.append(os.path.join(os.getcwd(), '.db_resolved.json'))
+    return paths
+
+
 def get_db_config() -> dict:
     """
     Returns a dict usable by mysql.connector.connect(...)
     
     Priority:
-    1) DB_* env vars (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
-    2) Railway MYSQL* env vars (MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE)
-    3) Local dev: try to load from tbqc_db.env
-    4) Local dev defaults (host='localhost', db='tbqc2025', user='tbqc_admin', password='tbqc2025')
-    
-    Charset/collation: utf8mb4 / utf8mb4_unicode_ci
+    0) _config_override (app da set tu .env khi khoi dong)
+    1) os.environ DB_* / MYSQL* (cung process da load .env trong app.py)
+    2) Doc .db_resolved.json (thu nhieu duong dan)
+    3) Load .env / tbqc_db.env
+    4) Local defaults
     """
-    # Check DB_* vars first
+    global _config_override
+    # Neu process chua co DB_HOST: thu load .env truoc (de request handler cung thay config)
+    if not os.environ.get('DB_HOST') and not os.environ.get('MYSQLHOST'):
+        for _env_path in [
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'),
+            os.path.join(os.getcwd(), '.env'),
+        ]:
+            if _env_path and os.path.exists(_env_path):
+                _ev = load_env_file(_env_path)
+                for _k, _v in _ev.items():
+                    if _k and _k not in os.environ:
+                        os.environ[_k] = _v
+                if os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST'):
+                    break
+    if _config_override:
+        return dict(_config_override)
+    # Cung process: uu tien os.environ (app.py da load .env o dau file)
+    host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST')
+    if host:
+        port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
+        user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'root'
+        password = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or ''
+        database = os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or 'railway'
+        cfg = {
+            'host': host,
+            'database': database,
+            'user': user,
+            'password': password,
+            'charset': 'utf8mb4',
+            'collation': 'utf8mb4_unicode_ci',
+        }
+        if port:
+            try:
+                cfg['port'] = int(port)
+            except ValueError:
+                pass
+        return cfg
+    # Process khac: doc config tu file (thu nhieu duong dan de chac chan tim duoc)
+    import json as _json
+    for path in _get_resolved_config_paths():
+        try:
+            if path and os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    loaded = _json.load(f)
+                    if loaded and loaded.get('host'):
+                        _config_override = loaded
+                        return dict(_config_override)
+        except Exception as e:
+            logger.debug("Read .db_resolved.json %s: %s", path, e)
+    # Check DB_* vars (sau khi co the load .env o block duoi)
     host = os.environ.get('DB_HOST')
     port = os.environ.get('DB_PORT')
     user = os.environ.get('DB_USER')
@@ -79,33 +166,55 @@ def get_db_config() -> dict:
     if not database:
         database = os.environ.get('MYSQLDATABASE')
     
-    # Local dev: try to load from tbqc_db.env if no env vars set
-    is_local_dev = not host and not os.environ.get('MYSQLHOST')
-    if is_local_dev:
-        # Find tbqc_db.env in repo root
+    # Neu chua co DB_* / MYSQL*: thu load .env tu thu muc app.py (khi chay flask run process con co the chua co env)
+    if not host and not os.environ.get('MYSQLHOST'):
+        env_paths_to_try = []
+        try:
+            app_mod = sys.modules.get('app')
+            if getattr(app_mod, '__file__', None):
+                app_dir = os.path.dirname(os.path.abspath(app_mod.__file__))
+                env_paths_to_try.append(os.path.join(app_dir, '.env'))
+                env_paths_to_try.append(os.path.join(app_dir, 'tbqc_db.env'))
+        except Exception:
+            pass
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        env_file = os.path.join(repo_root, 'tbqc_db.env')
-        
-        if os.path.exists(env_file):
-            logger.info(f"Loading DB config from {env_file}")
+        env_paths_to_try.append(os.path.join(repo_root, '.env'))
+        env_paths_to_try.append(os.path.join(repo_root, 'tbqc_db.env'))
+        env_paths_to_try.append(os.path.join(os.getcwd(), '.env'))
+        env_paths_to_try.append(os.path.join(os.getcwd(), 'tbqc_db.env'))
+        for env_file in env_paths_to_try:
+            if not env_file or not os.path.exists(env_file):
+                continue
             env_vars = load_env_file(env_file)
-            
-            # Set in environment for this process
             for key, value in env_vars.items():
                 if key not in os.environ:
                     os.environ[key] = value
-            
-            # Re-read from environment
             host = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST')
             port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
             user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER')
             password = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD')
             database = os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE')
-            
             if host or user or database:
-                logger.info("Loaded DB config from tbqc_db.env")
-        else:
-            logger.info("No tbqc_db.env found, using default localhost dev DB")
+                logger.info("Loaded DB config from %s", env_file)
+                global _db_pool
+                _db_pool = None
+                break
+        if not host:
+            logger.info("No .env/tbqc_db.env with DB_* found, using default localhost dev DB")
+    
+    # Truoc khi tra ve default: thu doc lai .db_resolved.json (thu nhieu duong dan)
+    if not host or host == 'localhost':
+        import json as _json2
+        for path in _get_resolved_config_paths():
+            try:
+                if path and os.path.exists(path):
+                    with open(path, 'r', encoding='utf-8') as f:
+                        loaded = _json2.load(f)
+                        if loaded and loaded.get('host'):
+                            _config_override = loaded
+                            return dict(_config_override)
+            except Exception as e:
+                logger.debug("Retry read .db_resolved.json %s: %s", path, e)
     
     # Final fallback to local defaults
     if not host:

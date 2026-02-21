@@ -8,7 +8,7 @@
   left: 0;
   right: 0;
   height: 64px;
-  background: rgba(17, 24, 39, 0.95);
+  background: rgba(17, 24, 39, 0.98);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: white;
@@ -17,36 +17,50 @@
   justify-content: space-between;
   align-items: center;
   z-index: var(--z-fixed);
-  box-shadow: var(--shadow-md);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   overflow: visible;
-  min-width: 0; /* Allow flex items to shrink if needed */
+  min-width: 0;
+  gap: var(--space-4);
 }
 
-.navbar-logo {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-accent);
-  text-decoration: none;
-  transition: opacity var(--transition-fast);
-  white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
-  max-width: none;
+.navbar-brand {
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
 }
 
+.navbar-logo {
+  font-size: var(--font-size-lg, 18px);
+  font-weight: 700;
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: opacity var(--transition-fast), color 0.2s ease;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
 .navbar-logo:hover {
-  opacity: 0.9;
+  opacity: 0.95;
+  color: var(--color-accent-light, #FFF7D1);
 }
 
 .navbar-menu {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-1);
   list-style: none;
   align-items: center;
   flex-wrap: nowrap;
   overflow: visible;
+  margin: 0;
+  padding: 0;
+  margin-left: auto; /* Đẩy menu sang bên phải */
+}
+
+@media (min-width: 1024px) {
+  .navbar-menu {
+    gap: var(--space-4);
+  }
 }
 
 .navbar-menu li {
@@ -54,17 +68,24 @@
 }
 
 .navbar-menu a {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.92);
   text-decoration: none;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm, 14px);
+  font-weight: 500;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
+  transition: all 0.2s ease;
   position: relative;
   white-space: nowrap;
   overflow: visible;
   text-overflow: clip;
+}
+
+@media (min-width: 1024px) {
+  .navbar-menu a {
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-base, 16px);
+  }
 }
 
 .navbar-menu a:hover {

@@ -12,6 +12,7 @@ ENV/
 # IDE
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 
@@ -20,6 +21,7 @@ ENV/
 *.env
 !*.env.example
 tbqc_db.env
+.db_resolved.json
 .smtp_config
 *.config
 *_config
