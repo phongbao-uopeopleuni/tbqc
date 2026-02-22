@@ -1,0 +1,298 @@
+[
+  {
+    "path": "/",
+    "function": "index"
+  },
+  {
+    "path": "/login",
+    "function": "login_page"
+  },
+  {
+    "path": "/admin/login-page",
+    "function": "admin_login_page"
+  },
+  {
+    "path": "/api/geoapify-key",
+    "function": "get_geoapify_api_key"
+  },
+  {
+    "path": "/genealogy",
+    "function": "genealogy_page"
+  },
+  {
+    "path": "/api/grave/update-location",
+    "function": "update_grave_location"
+  },
+  {
+    "path": "/api/grave/upload-image",
+    "function": "upload_grave_image"
+  },
+  {
+    "path": "/api/grave/delete-image",
+    "function": "delete_grave_image"
+  },
+  {
+    "path": "/api/grave-search",
+    "function": "search_grave"
+  },
+  {
+    "path": "/contact",
+    "function": "contact_page"
+  },
+  {
+    "path": "/activities",
+    "function": "activities_page"
+  },
+  {
+    "path": "/activities/<int:activity_id>",
+    "function": "activity_detail_page"
+  },
+  {
+    "path": "/documents",
+    "function": "documents_page"
+  },
+  {
+    "path": "/vr-tour",
+    "function": "vr_tour_page"
+  },
+  {
+    "path": "/admin/users",
+    "function": "admin_users_page"
+  },
+  {
+    "path": "/api/admin/sync-tbqc-accounts",
+    "function": "api_sync_tbqc_accounts"
+  },
+  {
+    "path": "/admin/activities",
+    "function": "admin_activities_page"
+  },
+  {
+    "path": "/api/activities/post-login",
+    "function": "api_activities_post_login"
+  },
+  {
+    "path": "/api/activities/can-post",
+    "function": "api_activities_can_post"
+  },
+  {
+    "path": "/activities/post-logout",
+    "function": "activities_post_logout"
+  },
+  {
+    "path": "/api/activities",
+    "function": "api_activities"
+  },
+  {
+    "path": "/api/activities/<int:activity_id>",
+    "function": "api_activity_detail"
+  },
+  {
+    "path": "/api/external-posts",
+    "function": "get_external_posts"
+  },
+  {
+    "path": "/api/external-posts/clear-cache",
+    "function": "clear_external_posts_cache"
+  },
+  {
+    "path": "/api/external-posts/refresh",
+    "function": "refresh_external_posts"
+  },
+  {
+    "path": "/api/upload-image",
+    "function": "upload_image"
+  },
+  {
+    "path": "/members",
+    "function": "members"
+  },
+  {
+    "path": "/members/verify",
+    "function": "members_verify"
+  },
+  {
+    "path": "/members/logout",
+    "function": "members_logout"
+  },
+  {
+    "path": "/family-tree-core.js",
+    "function": "serve_core_js"
+  },
+  {
+    "path": "/family-tree-ui.js",
+    "function": "serve_ui_js"
+  },
+  {
+    "path": "/genealogy-lineage.js",
+    "function": "serve_genealogy_js"
+  },
+  {
+    "path": "/static/images/<path:filename>",
+    "function": "serve_image_static"
+  },
+  {
+    "path": "/api/gallery/anh1",
+    "function": "api_gallery_anh1"
+  },
+  {
+    "path": "/api/albums",
+    "function": "api_get_albums"
+  },
+  {
+    "path": "/api/albums",
+    "function": "api_create_album"
+  },
+  {
+    "path": "/api/albums/<int:album_id>",
+    "function": "api_update_album"
+  },
+  {
+    "path": "/api/albums/<int:album_id>",
+    "function": "api_delete_album"
+  },
+  {
+    "path": "/api/albums/<int:album_id>/images",
+    "function": "api_get_album_images"
+  },
+  {
+    "path": "/images/<path:filename>",
+    "function": "serve_image"
+  },
+  {
+    "path": "/api/persons",
+    "function": "get_persons"
+  },
+  {
+    "path": "/api/generations",
+    "function": "get_generations_api"
+  },
+  {
+    "path": "/api/person/<person_id>",
+    "function": "get_person"
+  },
+  {
+    "path": "/api/family-tree",
+    "function": "get_family_tree"
+  },
+  {
+    "path": "/api/relationships",
+    "function": "get_relationships"
+  },
+  {
+    "path": "/api/children/<parent_id>",
+    "function": "get_children"
+  },
+  {
+    "path": "/api/genealogy/sync",
+    "function": "sync_genealogy_from_members"
+  },
+  {
+    "path": "/api/tree",
+    "function": "get_tree"
+  },
+  {
+    "path": "/api/ancestors/<person_id>",
+    "function": "get_ancestors"
+  },
+  {
+    "path": "/api/descendants/<person_id>",
+    "function": "get_descendants"
+  },
+  {
+    "path": "/api/search",
+    "function": "search_persons"
+  },
+  {
+    "path": "/api/edit-requests",
+    "function": "create_edit_request"
+  },
+  {
+    "path": "/api/current-user",
+    "function": "get_current_user"
+  },
+  {
+    "path": "/api/stats",
+    "function": "get_stats"
+  },
+  {
+    "path": "/api/person/<int:person_id>",
+    "function": "delete_person"
+  },
+  {
+    "path": "/api/person/<int:person_id>",
+    "function": "update_person"
+  },
+  {
+    "path": "/api/person/<int:person_id>/sync",
+    "function": "sync_person"
+  },
+  {
+    "path": "/api/members",
+    "function": "get_members"
+  },
+  {
+    "path": "/api/persons",
+    "function": "create_person"
+  },
+  {
+    "path": "/api/persons/<person_id>",
+    "function": "update_person_members"
+  },
+  {
+    "path": "/api/fix/p-1-1-parents",
+    "function": "fix_p1_1_parents"
+  },
+  {
+    "path": "/api/genealogy/update-info",
+    "function": "update_genealogy_info"
+  },
+  {
+    "path": "/api/persons/batch",
+    "function": "delete_persons_batch"
+  },
+  {
+    "path": "/api/admin/users",
+    "function": "api_admin_users"
+  },
+  {
+    "path": "/api/admin/users/<int:user_id>",
+    "function": "api_admin_user_detail"
+  },
+  {
+    "path": "/api/admin/verify-password",
+    "function": "verify_password_api"
+  },
+  {
+    "path": "/api/admin/activity-logs",
+    "function": "api_admin_activity_logs"
+  },
+  {
+    "path": "/api/admin/backup",
+    "function": "create_backup_api"
+  },
+  {
+    "path": "/api/admin/backups",
+    "function": "list_backups_api"
+  },
+  {
+    "path": "/api/admin/backup/<filename>",
+    "function": "download_backup"
+  },
+  {
+    "path": "/api/health",
+    "function": "api_health"
+  },
+  {
+    "path": "/api/stats/members",
+    "function": "api_member_stats"
+  },
+  {
+    "path": "/api/login",
+    "function": "api_login"
+  },
+  {
+    "path": "/api/logout",
+    "function": "api_logout"
+  }
+]

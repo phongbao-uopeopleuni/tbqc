@@ -55,7 +55,7 @@ def sync_genealogy_from_members():
     return _call_app('sync_genealogy_from_members')
 
 
-@family_tree_bp.route('/api/tree', methods=['GET'])
+@family_tree_bp.route('/api/tree', methods=['GET'], strict_slashes=False)
 def get_tree():
     return _call_app('get_tree')
 
@@ -70,6 +70,6 @@ def get_descendants(person_id):
     return _call_app('get_descendants', person_id)
 
 
-@family_tree_bp.route('/api/generations', methods=['GET'])
+@family_tree_bp.route('/api/generations', methods=['GET'], strict_slashes=False)
 def get_generations_api():
     return _call_app('get_generations_api')

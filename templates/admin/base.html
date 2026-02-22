@@ -1,0 +1,60 @@
+{# Admin Base - Layout chung. Design system trong static/css/admin.css #}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>{% block title %}Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="stylesheet" href="/static/css/admin.css">
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="admin-body">
+  <nav class="admin-navbar">
+    <div class="admin-navbar-left">
+      <ul class="admin-navbar-menu">
+        {% if request.path == '/admin/activities' %}
+        <li><a href="/admin/activities" class="active">Hoạt động</a></li>
+        <li><a href="/">Trang chủ</a></li>
+        {% else %}
+        <li><a href="/admin/dashboard" {% if request.path == '/admin/dashboard' %}class="active"{% endif %}>Dashboard</a></li>
+        <li><a href="/admin/data-management" {% if request.path == '/admin/data-management' %}class="active"{% endif %}>Quản lý dữ liệu</a></li>
+        <li><a href="/admin/logs" {% if request.path == '/admin/logs' %}class="active"{% endif %}>Log</a></li>
+        <li><a href="/admin/users" {% if request.path == '/admin/users' %}class="active"{% endif %}>Tài khoản</a></li>
+        <li><a href="/admin/activities" {% if request.path == '/admin/activities' %}class="active"{% endif %}>Hoạt động</a></li>
+        <li><a href="/">Trang chủ</a></li>
+        {% endif %}
+      </ul>
+    </div>
+    <div class="admin-navbar-right">
+      {% if current_user.is_authenticated %}
+      <div class="admin-user-info">
+        <span class="username">{{ current_user.username }}</span>
+        {% if current_user.full_name %}
+        <span>({{ current_user.full_name }})</span>
+        {% endif %}
+        <span class="role">{{ current_user.role }}</span>
+      </div>
+      {% endif %}
+      {% if request.path == '/admin/activities' %}
+      {% if session.get('activities_post_ok') and not current_user.is_authenticated %}
+      <a href="/activities/post-logout" class="admin-logout-btn">Đăng xuất</a>
+      {% else %}
+      <a href="/admin/logout" class="admin-logout-btn">Đăng xuất</a>
+      {% endif %}
+      {% else %}
+      <a href="/admin/logout" class="admin-logout-btn">Đăng xuất</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <div class="admin-container">
+    {% block content %}{% endblock %}
+  </div>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

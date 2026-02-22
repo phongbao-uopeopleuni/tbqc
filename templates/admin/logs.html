@@ -1,171 +1,14 @@
-{% extends "admin_base.html" %}
+{% extends "admin/base.html" %}
 
 {% block title %}Log - Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}
-
-{% block extra_css %}
-<style>
-  .filter-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
-    padding: var(--space-4);
-    background: var(--color-bg, #f9fafb);
-    border-radius: var(--radius-md, 8px);
-  }
-
-  .filter-controls > div {
-    flex: 1;
-    min-width: 200px;
-  }
-
-  .filter-controls label {
-    display: block;
-    margin-bottom: var(--space-2);
-    font-weight: var(--font-weight-semibold, 600);
-    font-size: var(--font-size-sm, 14px);
-  }
-
-  .filter-controls select,
-  .filter-controls input {
-    width: 100%;
-    padding: var(--space-3);
-    border: 1px solid var(--color-border, #e5e7eb);
-    border-radius: var(--radius, 6px);
-    font-size: var(--font-size-base, 14px);
-  }
-
-  .logs-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    border-radius: var(--radius-md, 8px);
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  }
-
-  .logs-table th {
-    background: var(--color-primary, #2563eb);
-    color: white;
-    padding: var(--space-4);
-    text-align: left;
-    font-weight: var(--font-weight-semibold, 600);
-    white-space: nowrap;
-  }
-
-  .logs-table td {
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--color-border, #e5e7eb);
-    vertical-align: top;
-  }
-
-  .logs-table tr:hover {
-    background: var(--color-bg, #f9fafb);
-  }
-
-  .log-action-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: var(--font-size-xs, 12px);
-    font-weight: var(--font-weight-semibold, 600);
-    white-space: nowrap;
-  }
-
-  .log-action-LOGIN,
-  .log-action-CREATE_PERSON {
-    background: #10b981;
-    color: white;
-  }
-
-  .log-action-UPDATE_PERSON,
-  .log-action-UPDATE_SPOUSE,
-  .log-action-UPDATE_USER_ROLE {
-    background: #f59e0b;
-    color: white;
-  }
-
-  .log-action-DELETE_PERSON {
-    background: #ef4444;
-    color: white;
-  }
-
-  .log-action-LOGIN_FAILED {
-    background: #dc2626;
-    color: white;
-  }
-
-  .log-diff {
-    max-width: 300px;
-    font-size: var(--font-size-sm, 14px);
-  }
-
-  .log-diff details {
-    cursor: pointer;
-  }
-
-  .log-diff summary {
-    color: var(--color-primary, #2563eb);
-    font-weight: var(--font-weight-semibold, 600);
-    padding: var(--space-2);
-  }
-
-  .log-diff pre {
-    background: var(--color-bg, #f9fafb);
-    padding: var(--space-3);
-    border-radius: var(--radius-sm, 4px);
-    overflow-x: auto;
-    font-size: var(--font-size-xs, 12px);
-    margin-top: var(--space-2);
-    max-height: 200px;
-    overflow-y: auto;
-  }
-
-  .pagination-controls {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: var(--space-6);
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--color-border, #e5e7eb);
-  }
-
-  .pagination-info {
-    color: var(--color-text-muted, #6b7280);
-  }
-
-  .pagination-buttons {
-    display: flex;
-    gap: var(--space-2);
-    align-items: center;
-  }
-
-  @media (max-width: 768px) {
-    .hide-mobile {
-      display: none;
-    }
-
-    .filter-controls {
-      flex-direction: column;
-    }
-
-    .filter-controls > div {
-      width: 100%;
-    }
-  }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="admin-card">
   <h1>📋 Log</h1>
-  <p style="color: var(--color-text-muted, #6b7280); margin-top: var(--space-2);">
-    Ghi lại tất cả các thay đổi và hoạt động trong website
-  </p>
+  <p class="text-muted admin-desc">Ghi lại tất cả các thay đổi và hoạt động trong website</p>
 </div>
 
-<!-- Filter Controls -->
-<div class="filter-controls">
+<div class="filter-bar">
   <div>
     <label for="filterAction">Hành động:</label>
     <select id="filterAction" class="select">
@@ -193,15 +36,14 @@
     <label for="filterUserId">User ID:</label>
     <input type="number" id="filterUserId" class="input" placeholder="Tất cả">
   </div>
-  <div style="display: flex; align-items: flex-end; gap: var(--space-2);">
+  <div>
     <button class="btn btn-primary" onclick="applyFilters()">Lọc</button>
     <button class="btn btn-secondary" onclick="clearFilters()">Xóa bộ lọc</button>
   </div>
 </div>
 
-<!-- Logs Table -->
-<div style="overflow-x: auto;">
-  <table class="logs-table">
+<div class="admin-table-wrapper">
+  <table class="admin-table">
     <thead>
       <tr>
         <th>Thời gian</th>
@@ -216,9 +58,7 @@
     </thead>
     <tbody id="activityLogsList">
       <tr>
-        <td colspan="8" style="text-align: center; padding: var(--space-8);">
-          <div class="loading">Đang tải...</div>
-        </td>
+        <td colspan="8" class="loading-cell"><div class="loading">Đang tải...</div></td>
       </tr>
     </tbody>
   </table>
@@ -230,8 +70,8 @@
     Đang tải...
   </div>
   <div class="pagination-buttons">
-    <label for="logsPerPage" style="margin-right: var(--space-2);">Số lượng mỗi trang:</label>
-    <select id="logsPerPage" class="select" onchange="changeLogsPerPage()" style="width: auto;">
+    <label for="logsPerPage">Số lượng mỗi trang:</label>
+    <select id="logsPerPage" class="select" onchange="changeLogsPerPage()">
       <option value="10">10</option>
       <option value="25">25</option>
       <option value="50">50</option>
@@ -267,7 +107,7 @@
       if (filters.target_type) params.append('target_type', filters.target_type);
       if (filters.user_id) params.append('user_id', filters.user_id.toString());
       
-      listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--space-8);"><div class="loading">Đang tải...</div></td></tr>';
+      listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6);"><div class="loading">Đang tải...</div></td></tr>';
       
       const result = await fetch(`/api/admin/activity-logs?${params.toString()}`, {
         credentials: 'include',
@@ -288,7 +128,7 @@
         } catch (e) {
           // Nếu không parse được JSON, dùng message mặc định
         }
-        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">
+        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
           <div style="margin-bottom: 10px;"><strong>Lỗi 401: ${errorMsg}</strong></div>
           <a href="/admin/login" class="btn btn-primary" style="text-decoration: none; display: inline-block; padding: 8px 16px;">Đăng nhập lại</a>
         </td></tr>`;
@@ -308,7 +148,7 @@
         } catch (e) {
           // Nếu không parse được JSON, dùng message mặc định
         }
-        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">
+        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
           <div><strong>Lỗi 403: ${errorMsg}</strong></div>
         </td></tr>`;
         paginationInfo.textContent = 'Không có quyền truy cập';
@@ -327,9 +167,9 @@
         } catch (e) {
           // Nếu không parse được JSON, dùng message mặc định
         }
-        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">
+        listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
           <div><strong>Lỗi 404: ${errorMsg}</strong></div>
-          <div style="margin-top: 10px; font-size: 14px; color: #666;">Vui lòng kiểm tra database hoặc liên hệ quản trị viên.</div>
+          <div style="margin-top: 10px; font-size: 14px; color: var(--admin-text-muted);">Vui lòng kiểm tra database hoặc liên hệ quản trị viên.</div>
         </td></tr>`;
         paginationInfo.textContent = 'Bảng không tồn tại';
         prevBtn.disabled = true;
@@ -371,7 +211,7 @@
       const logs = data.logs || [];
       
       if (logs.length === 0) {
-        listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--space-8);">Chưa có log nào</td></tr>';
+        listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6);">Chưa có log nào</td></tr>';
         paginationInfo.textContent = 'Không có log nào';
         prevBtn.disabled = true;
         nextBtn.disabled = true;
@@ -418,7 +258,7 @@
       nextBtn.disabled = offset + limit >= logsTotal;
       
     } catch (err) {
-      listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--space-8); color: #ef4444;">Lỗi: ${err.message}</td></tr>`;
+      listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">Lỗi: ${err.message}</td></tr>`;
       paginationInfo.textContent = 'Lỗi khi tải logs';
       prevBtn.disabled = true;
       nextBtn.disabled = true;
@@ -457,7 +297,7 @@
 
   function formatLogDiff(beforeData, afterData) {
     if (!beforeData && !afterData) {
-      return '<span style="color: var(--color-text-muted, #6b7280);">Không có thay đổi</span>';
+      return '<span style="color: var(--admin-text-muted);">Không có thay đổi</span>';
     }
     
     if (!beforeData && afterData) {
@@ -479,18 +319,18 @@
     const afterStr = JSON.stringify(afterData, null, 2);
     
     if (beforeStr === afterStr) {
-      return '<span style="color: var(--color-text-muted, #6b7280);">Không có thay đổi</span>';
+      return '<span style="color: var(--admin-text-muted);">Không có thay đổi</span>';
     }
     
     return `<details>
       <summary>Xem thay đổi</summary>
       <div>
         <div style="margin-bottom: var(--space-2);">
-          <strong style="color: #ef4444;">Trước:</strong>
+          <strong style="color: var(--admin-danger);">Trước:</strong>
           <pre class="diff-removed">${escapeHtml(beforeStr)}</pre>
         </div>
         <div>
-          <strong style="color: #10b981;">Sau:</strong>
+          <strong style="color: var(--admin-success);">Sau:</strong>
           <pre class="diff-added">${escapeHtml(afterStr)}</pre>
         </div>
       </div>

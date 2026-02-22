@@ -69,8 +69,8 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
     // Fetch với timeout 30 giây
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
-    
-    const response = await fetch(`${API_BASE_URL}/tree?max_generation=${maxGeneration}&root_id=${rootId}`, {
+    const fetchUrl = `${API_BASE_URL}/tree?max_generation=${maxGeneration}&root_id=${rootId}`;
+    const response = await fetch(fetchUrl, {
       signal: controller.signal
     });
 

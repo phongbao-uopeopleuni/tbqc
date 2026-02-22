@@ -6,6 +6,12 @@ Routes cho trang quản trị
 """
 
 from flask import render_template_string, render_template, request, jsonify, redirect, url_for, flash, session, make_response
+
+# Stats mặc định cho dashboard khi lỗi hoặc không có DB
+DASHBOARD_DEFAULT_STATS = {
+    'total_people': 0, 'alive_count': 0, 'deceased_count': 0, 'max_generation': 0,
+    'generation_stats': [], 'gender_stats': [], 'status_stats': []
+}
 from flask_login import login_user, logout_user, login_required, current_user
 try:
     from folder_py.db_config import get_db_connection
@@ -13,14 +19,12 @@ except ImportError:
     from db_config import get_db_connection
 from auth import (get_user_by_username, verify_password, hash_password,
                   admin_required, permission_required, role_required)
-from audit_log import log_activity, log_login, log_user_update, log_person_update
+from audit_log import log_activity, log_login, log_user_update
+from admin_templates import ADMIN_REQUESTS_TEMPLATE
 import mysql.connector
 from mysql.connector import Error
 import csv
 import os
-import logging
-
-logger = logging.getLogger(__name__)
 
 def register_admin_routes(app):
     """Đăng ký các routes cho admin"""
@@ -31,10 +35,14 @@ def register_admin_routes(app):
     @app.route('/admin/login', methods=['GET', 'POST'])
     def admin_login():
         """Trang đăng nhập admin"""
-        # Lấy next param từ query string (GET) hoặc form (POST)
-        next_url = request.args.get('next') or request.form.get('next', '')
-        # Username đã lưu (ghi nhớ tài khoản)
-        remembered_username = request.cookies.get(COOKIE_REMEMBER_USERNAME, '').strip()
+        try:
+            next_url = str(request.args.get('next') or '')
+            if request.method == 'POST' and request.form:
+                next_url = next_url or str(request.form.get('next') or '')
+            remembered_username = str(request.cookies.get(COOKIE_REMEMBER_USERNAME) or '').strip()
+        except Exception:
+            next_url = ''
+            remembered_username = ''
 
         if request.method == 'POST':
             username = request.form.get('username', '').strip()
@@ -68,7 +76,6 @@ def register_admin_routes(app):
             )
             
             login_user(user, remember=True)
-            session.permanent = True  # Đặt session là permanent để sử dụng PERMANENT_SESSION_LIFETIME
             
             # Ghi log đăng nhập
             log_login(success=True, username=username)
@@ -91,13 +98,13 @@ def register_admin_routes(app):
                         cursor.close()
                         connection.close()
             
-            # Redirect: ưu tiên next_url nếu có, nếu không thì theo role
+            # Redirect theo role
             if next_url:
                 resp = redirect(next_url)
             elif user_data['role'] == 'admin':
-                resp = redirect('/admin/users')
+                resp = redirect(url_for('admin_dashboard'))
             else:
-                resp = redirect('/')
+                resp = redirect(url_for('main.index'))
             # Ghi nhớ tài khoản: set hoặc xóa cookie
             if request.form.get('remember_username'):
                 resp.set_cookie(COOKIE_REMEMBER_USERNAME, username, max_age=COOKIE_REMEMBER_DAYS * 24 * 3600, httponly=True, samesite='Lax')
@@ -115,15 +122,98 @@ def register_admin_routes(app):
         return redirect(url_for('admin_login'))
     
     @app.route('/admin/dashboard')
-    @login_required
+    @permission_required('canViewDashboard')
     def admin_dashboard():
-        """Trang dashboard admin"""
-        # Check admin permission
-        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-            return redirect('/admin/login')
-        
-        # Render dashboard template
-        return render_template('admin_dashboard.html', current_user=current_user)
+        """Trang dashboard admin (dùng admin_base) với thống kê"""
+        def _render(stats=None, error=None):
+            s = stats if stats is not None else DASHBOARD_DEFAULT_STATS
+            return render_template('admin/dashboard.html', stats=s, error=error)
+
+        connection = None
+        try:
+            connection = get_db_connection()
+        except Exception as e:
+            return _render(error='Không thể kết nối database: ' + str(e))
+        if not connection:
+            return _render(error='Không thể kết nối database')
+        cursor = None
+        try:
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute("SELECT COUNT(*) AS total FROM persons")
+            total_people = cursor.fetchone()['total']
+            cursor.execute("SELECT COUNT(*) AS alive FROM persons WHERE status = 'Còn sống'")
+            alive_count = cursor.fetchone()['alive']
+            cursor.execute("SELECT COUNT(*) AS deceased FROM persons WHERE status = 'Đã mất'")
+            deceased_count = cursor.fetchone()['deceased']
+            cursor.execute("SELECT MAX(generation_number) AS max_gen FROM generations")
+            max_generation = cursor.fetchone()['max_gen'] or 0
+            # persons dùng generation_level (số đời), generations có generation_number - join theo số đời
+            cursor.execute("""
+                SELECT g.generation_number, COUNT(p.person_id) AS count
+                FROM generations g
+                LEFT JOIN persons p ON g.generation_number = p.generation_level
+                GROUP BY g.generation_number
+                ORDER BY g.generation_number
+            """)
+            generation_stats = cursor.fetchall()
+            cursor.execute("""
+                SELECT gender, COUNT(*) AS count
+                FROM persons WHERE gender IS NOT NULL
+                GROUP BY gender
+            """)
+            gender_stats = cursor.fetchall()
+            cursor.execute("""
+                SELECT status, COUNT(*) AS count
+                FROM persons WHERE status IS NOT NULL
+                GROUP BY status
+            """)
+            status_stats = cursor.fetchall()
+            stats = {
+                'total_people': total_people, 'alive_count': alive_count, 'deceased_count': deceased_count,
+                'max_generation': max_generation, 'generation_stats': generation_stats,
+                'gender_stats': gender_stats, 'status_stats': status_stats
+            }
+            return _render(stats=stats)
+        except (Error, Exception) as e:
+            err_msg = str(e) if e else 'Lỗi không xác định'
+            try:
+                import logging
+                logging.getLogger(__name__).exception('admin_dashboard error')
+            except Exception:
+                pass
+            return _render(error=err_msg)
+        finally:
+            try:
+                if cursor is not None:
+                    cursor.close()
+                if connection and getattr(connection, 'is_connected', lambda: False)():
+                    connection.close()
+            except Exception:
+                pass
+    
+    @app.route('/admin/activities')
+    def admin_activities_page():
+        """Trang quản lý hoạt động: gate đăng nhập hoặc form quản lý bài đăng"""
+        can_post = (
+            current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin'
+        ) or session.get('activities_post_ok')
+        if can_post:
+            gate_username = session.get('activities_gate_user') or session.get('members_gate_user') or ''
+            is_admin = current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin'
+            return render_template(
+                'admin/activities.html',
+                gate_username=gate_username,
+                is_admin=is_admin
+            )
+        return render_template('admin/activities_gate.html')
+
+    @app.route('/api/activities/can-post', methods=['GET'])
+    def api_activities_can_post():
+        """API kiểm tra quyền đăng bài: trả về { allowed: bool, success: true }."""
+        can_post = (
+            current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin'
+        ) or session.get('activities_post_ok')
+        return jsonify({'success': True, 'allowed': bool(can_post)})
     
     @app.route('/admin/requests')
     @permission_required('canViewDashboard')
@@ -131,7 +221,7 @@ def register_admin_routes(app):
         """Trang quản lý yêu cầu chỉnh sửa"""
         connection = get_db_connection()
         if not connection:
-            return render_template('admin/requests.html',
+            return render_template_string(ADMIN_REQUESTS_TEMPLATE,
                 error='Không thể kết nối database', requests=[])
         
         try:
@@ -141,17 +231,17 @@ def register_admin_routes(app):
                        u.username AS requester_username,
                        u.full_name AS requester_name,
                        p.full_name AS person_full_name,
-                       p.generation_number AS person_generation
+                       p.generation_level AS person_generation
                 FROM edit_requests er
                 LEFT JOIN users u ON er.user_id = u.user_id
                 LEFT JOIN persons p ON er.person_id = p.person_id
                 ORDER BY er.created_at DESC
             """)
             requests = cursor.fetchall()
-            return render_template('admin/requests.html',
+            return render_template_string(ADMIN_REQUESTS_TEMPLATE,
                 requests=requests, current_user=current_user)
         except Error as e:
-            return render_template('admin/requests.html',
+            return render_template_string(ADMIN_REQUESTS_TEMPLATE,
                 error=f'Lỗi: {str(e)}', requests=[])
         finally:
             if connection.is_connected():
@@ -202,29 +292,13 @@ def register_admin_routes(app):
         
         try:
             cursor = connection.cursor(dictionary=True)
-            # Kiểm tra xem cột permissions có tồn tại không
-            cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
-            has_permissions = cursor.fetchone() is not None
-            
-            if has_permissions:
-                cursor.execute("""
-                    SELECT user_id, username, full_name, email, role, permissions,
-                           created_at, updated_at, last_login, is_active
-                    FROM users
-                    ORDER BY created_at DESC
-                """)
-            else:
-                cursor.execute("""
-                    SELECT user_id, username, full_name, email, role,
-                           created_at, updated_at, last_login, is_active
-                    FROM users
-                    ORDER BY created_at DESC
-                """)
+            cursor.execute("""
+                SELECT user_id, username, full_name, email, role, permissions,
+                       created_at, updated_at, last_login, is_active
+                FROM users
+                ORDER BY created_at DESC
+            """)
             users = cursor.fetchall()
-            # Thêm permissions = None nếu không có cột
-            for user in users:
-                if 'permissions' not in user:
-                    user['permissions'] = None
             return render_template('admin/users.html',
                 users=users, current_user=current_user)
         except Error as e:
@@ -594,15 +668,10 @@ def register_admin_routes(app):
     # =====================================================
     
     @app.route('/admin/data-management')
-    @login_required
+    @permission_required('canViewDashboard')
     def admin_data_management():
-        """Trang quản lý dữ liệu"""
-        # Check admin permission
-        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-            return redirect('/admin/login')
-        
-        # Render data management template
-        return render_template('admin_data_management.html', current_user=current_user)
+        """Trang quản lý dữ liệu CSV (đồng bộ layout admin_base)"""
+        return render_template('admin/data_management.html', current_user=current_user)
     
     @app.route('/admin/logs')
     @login_required
@@ -613,7 +682,7 @@ def register_admin_routes(app):
             return redirect('/admin/login')
         
         # Render logs template
-        return render_template('admin_logs.html', current_user=current_user)
+        return render_template('admin/logs.html', current_user=current_user)
     
     @app.route('/admin/api/db-info')
     @login_required
@@ -650,7 +719,79 @@ def register_admin_routes(app):
             if connection.is_connected():
                 cursor.close()
                 connection.close()
-    
+
+    @app.route('/admin/api/schema')
+    @login_required
+    def admin_api_schema():
+        """API lấy toàn bộ schema database (bảng, cột, khóa ngoại) cho developer."""
+        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+        try:
+            cursor = connection.cursor(dictionary=True)
+            cursor.execute("SELECT DATABASE() as db_name")
+            db_row = cursor.fetchone()
+            db_name = (db_row or {}).get('db_name') or 'unknown'
+            cursor.execute("""
+                SELECT TABLE_NAME as table_name
+                FROM INFORMATION_SCHEMA.TABLES
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE'
+                ORDER BY TABLE_NAME
+            """)
+            def _get(d, *keys):
+                for k in keys:
+                    v = d.get(k) or d.get(k.upper()) if isinstance(d, dict) else None
+                    if v is not None:
+                        return v
+                return None
+            rows_tables = cursor.fetchall()
+            tables_list = [_get(r, 'table_name') for r in rows_tables if _get(r, 'table_name')]
+            tables = []
+            for tname in tables_list:
+                cursor.execute("""
+                    SELECT COLUMN_NAME as col_name, DATA_TYPE as data_type, COLUMN_TYPE as col_type,
+                           COLUMN_KEY as col_key, IS_NULLABLE as nullable
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s
+                    ORDER BY ORDINAL_POSITION
+                """, (tname,))
+                cols = []
+                for c in cursor.fetchall():
+                    cols.append({
+                        'name': _get(c, 'col_name') or '',
+                        'type': _get(c, 'col_type') or _get(c, 'data_type') or '',
+                        'key': _get(c, 'col_key') or '',
+                        'nullable': (_get(c, 'nullable') or '') == 'YES'
+                    })
+                tables.append({'name': tname, 'columns': cols})
+            cursor.execute("""
+                SELECT kcu.TABLE_NAME as from_table, kcu.COLUMN_NAME as from_column,
+                       kcu.REFERENCED_TABLE_NAME as to_table, kcu.REFERENCED_COLUMN_NAME as to_column
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+                JOIN INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS rc
+                  ON rc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME AND rc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA
+                WHERE kcu.TABLE_SCHEMA = DATABASE() AND kcu.REFERENCED_TABLE_NAME IS NOT NULL
+                ORDER BY kcu.TABLE_NAME, kcu.COLUMN_NAME
+            """)
+            fk_rows = cursor.fetchall()
+            fks = [{'from_table': _get(r, 'from_table'), 'from_column': _get(r, 'from_column'),
+                    'to_table': _get(r, 'to_table'), 'to_column': _get(r, 'to_column')} for r in fk_rows]
+            fks = [x for x in fks if x['from_table'] and x['to_table']]
+            return jsonify({
+                'success': True,
+                'database': db_name,
+                'tables': tables,
+                'foreign_keys': fks
+            })
+        except Error as e:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        finally:
+            if connection.is_connected():
+                cursor.close()
+                connection.close()
+
     @app.route('/admin/api/table-stats')
     @login_required
     def admin_api_table_stats():

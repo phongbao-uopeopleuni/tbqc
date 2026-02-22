@@ -212,6 +212,47 @@ if register_admin_routes:
         register_admin_routes(app)
     except Exception as e:
         print(f'WARNING: Loi khi dang ky admin routes: {e}')
+
+
+@app.route('/members/verify', methods=['POST'])
+def members_verify_route():
+    """Route trực tiếp trên app để POST /members/verify luôn khớp (tránh 404 từ handler)."""
+    try:
+        data = request.get_json(silent=True) if request.is_json else {}
+        if not data:
+            data = {
+                'username': (request.form.get('username') or '').strip(),
+                'password': (request.form.get('password') or '').strip(),
+            }
+        else:
+            data = {'username': (data.get('username') or '').strip(), 'password': (data.get('password') or '').strip()}
+        username = data.get('username', '')
+        password = data.get('password', '')
+        if not username or not password:
+            return (jsonify({'success': False, 'error': 'Tên đăng nhập và mật khẩu không được để trống'}), 400)
+        if validate_tbqc_gate(username, password):
+            session['members_gate_ok'] = True
+            session['members_gate_user'] = username
+            logger.info(f'Members gate login successful: {username}')
+            return jsonify({'success': True, 'message': 'Đăng nhập thành công'})
+        logger.warning(f'Members gate login failed: username={username!r}')
+        return (jsonify({'success': False, 'error': 'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.'}), 401)
+    except Exception as e:
+        logger.error(f'Error in members_verify_route: {e}', exc_info=True)
+        return (jsonify({'success': False, 'error': 'Lỗi server: ' + str(e)}), 500)
+
+
+@app.route('/api/members', methods=['GET'])
+def api_members_route():
+    """Route trực tiếp trên app để GET /api/members luôn khớp (tránh 404 từ handler)."""
+    try:
+        from blueprints.members_portal import get_members
+        return get_members()
+    except Exception as e:
+        logger.exception('api_members_route failed')
+        return (jsonify({'success': False, 'error': 'Lỗi server: ' + str(e)}), 500)
+
+
 try:
     from marriage_api import register_marriage_routes
 except ImportError:
@@ -388,7 +429,9 @@ def secure_compare(a: str, b: str) -> bool:
         True if strings match, False otherwise
     """
     return secrets.compare_digest(a.encode('utf-8'), b.encode('utf-8'))
+# 4 tài khoản cố định cho cổng Members (luôn chấp nhận đăng nhập)
 MEMBERS_GATE_ACCOUNTS = [{'username': 'tbqcnhanh1', 'password': 'nhanh1@123'}, {'username': 'tbqcnhanh2', 'password': 'nhanh2@123'}, {'username': 'tbqcnhanh3', 'password': 'nhanh3@123'}, {'username': 'tbqcnhanh4', 'password': 'nhanh4@123'}]
+FIXED_MEMBERS_PASSWORDS = {'tbqcnhanh1': 'nhanh1@123', 'tbqcnhanh2': 'nhanh2@123', 'tbqcnhanh3': 'nhanh3@123', 'tbqcnhanh4': 'nhanh4@123'}
 external_posts_cache = {'data': None, 'timestamp': None, 'cache_duration': timedelta(minutes=30)}
 
 def sync_members_gate_accounts_from_db():
@@ -414,54 +457,32 @@ def sync_members_gate_accounts_from_db():
 
 def validate_tbqc_gate(username: str, password: str) -> bool:
     """
-    Kiểm tra username/password có khớp với BẤT KỲ account nào có role='user' và is_active=TRUE trong database.
-    Kiểm tra từ database để đảm bảo đồng bộ tự động với TẤT CẢ các account được quản lý tại /admin/users.
-    Fallback về MEMBERS_GATE_ACCOUNTS CHỈ KHI KHÔNG THỂ kết nối database.
-    
-    Logic:
-    - Nếu có kết nối database: Kiểm tra TẤT CẢ user có role='user' và is_active=TRUE trong database
-      * Nếu user tồn tại: verify password với hash → return True/False
-      * Nếu user KHÔNG tồn tại: return False (KHÔNG fallback về hardcoded)
-    - Chỉ fallback về hardcoded list khi KHÔNG THỂ kết nối database (connection = None hoặc exception khi query)
-    
-    Args:
-        username: Username cần kiểm tra
-        password: Password cần kiểm tra
-    
-    Returns:
-        True nếu khớp một cặp, False nếu không
+    Kiểm tra username/password cho cổng Members.
+    - Ưu tiên 4 tài khoản cố định (dict FIXED_MEMBERS_PASSWORDS).
+    - Các user khác: auth.get_user_by_username + verify_password.
     """
-    username = username.strip()
-    password = password.strip()
-    connection = get_db_connection()
-    if connection:
-        try:
-            cursor = connection.cursor(dictionary=True)
-            cursor.execute("\n                SELECT username, password_hash, role \n                FROM users \n                WHERE username = %s\n                AND role = 'user'\n                AND is_active = TRUE\n            ", (username,))
-            user = cursor.fetchone()
-            if user:
-                from auth import verify_password
-                if verify_password(password, user['password_hash']):
-                    logger.info(f'Gate validation successful from database: {username}')
-                    return True
-                else:
-                    logger.info(f'Gate validation failed: password mismatch for {username}')
-                    return False
-            else:
-                logger.info(f"Gate validation failed: user not found or not eligible (username: {username}, must be role='user' and is_active=TRUE)")
-                return False
-        except Exception as e:
-            logger.warning(f'Error validating from database, falling back to hardcoded list: {e}')
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    else:
-        logger.warning('Cannot connect to database, falling back to hardcoded list for gate validation')
-    for account in MEMBERS_GATE_ACCOUNTS:
-        if account['username'] == username and account['password'] == password:
-            logger.info(f'Gate validation successful from hardcoded list: {username}')
-            return True
+    username = (username or '').strip()
+    password = (password or '').strip()
+    if not username or not password:
+        return False
+    # 1) So khớp 4 tài khoản cố định bằng dict (tránh lỗi so sánh)
+    expected = FIXED_MEMBERS_PASSWORDS.get(username)
+    if expected is not None and expected == password:
+        logger.info(f'Members gate OK (fixed): {username}')
+        return True
+    # 2) Các user khác: DB
+    try:
+        from auth import get_user_by_username, verify_password
+        user_data = get_user_by_username(username)
+        if user_data and user_data.get('password_hash'):
+            if verify_password(password, user_data['password_hash']):
+                logger.info(f'Members gate OK (database): {username}')
+                return True
+            return False
+        if user_data:
+            return False
+    except Exception as e:
+        logger.warning(f'Members gate DB/auth error: {e}')
     return False
 
 def get_members_password():
@@ -2388,8 +2409,13 @@ def get_tree():
         cursor = connection.cursor(dictionary=True)
         cursor.execute('SELECT person_id FROM persons WHERE person_id = %s', (root_id,))
         if not cursor.fetchone():
-            logger.warning(f'Person {root_id} not found in database')
-            return (jsonify({'error': f'Person {root_id} not found'}), 404)
+            cursor.execute('SELECT person_id FROM persons ORDER BY generation_level ASC, person_id ASC LIMIT 1')
+            first_row = cursor.fetchone()
+            if first_row:
+                root_id = first_row['person_id']
+                logger.info(f'Root {request.args.get("root_id")} not found, using first person: {root_id}')
+            else:
+                return (jsonify({'persons': [], 'relationships': [], 'root_id': None, 'message': 'Chưa có dữ liệu người trong cơ sở dữ liệu'}), 200)
         persons_by_id = load_persons_data(cursor)
         logger.info(f'Loaded {len(persons_by_id)} persons from database (consistent with /api/members)')
         children_map = build_children_map(cursor)
@@ -4418,15 +4444,34 @@ def api_member_stats():
         except Exception:
             pass
 
+# Fallback API routes cho trang Gia phả: đảm bảo /api/tree và /api/generations luôn tồn tại (kể cả khi blueprint chưa load)
+try:
+    app.add_url_rule('/api/tree', 'api_tree', get_tree, methods=['GET'], strict_slashes=False)
+    app.add_url_rule('/api/generations', 'api_generations', get_generations_api, methods=['GET'], strict_slashes=False)
+    print('OK: Fallback API routes /api/tree, /api/generations da dang ky')
+except Exception as e:
+    logger.warning('Khong dang ky duoc fallback API routes: %s', e)
+
 @app.errorhandler(500)
 def internal_error(error):
     """
     Xử lý lỗi 500 - không expose thông tin nhạy cảm.
     Handle 500 errors - don't expose sensitive information.
+    Trang /admin/* trả HTML để hiển thị lỗi và link đăng nhập lại.
     """
     logger.error(f'Internal server error: {error}', exc_info=True)
-    if request.path.startswith('/api/'):
+    if request.path.startswith('/api/') or request.path.startswith('/admin/api/'):
         return (jsonify({'success': False, 'error': 'Internal server error'}), 500)
+    if request.path.startswith('/admin/'):
+        from flask import render_template_string
+        html = '''
+        <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Lỗi hệ thống</title>
+        <style>body{font-family:sans-serif;max-width:500px;margin:60px auto;padding:20px;text-align:center;}
+        a{color:#3498db;}</style></head><body>
+        <h1>Lỗi hệ thống</h1><p>Đã xảy ra lỗi. Vui lòng thử đăng nhập lại.</p>
+        <p><a href="/admin/login">Đăng nhập lại</a> | <a href="/">Trang chủ</a></p>
+        </body></html>'''
+        return (render_template_string(html), 500)
     return (jsonify({'success': False, 'error': 'Internal server error'}), 500)
 
 @app.errorhandler(404)
@@ -4435,12 +4480,34 @@ def not_found(error):
     Xử lý lỗi 404 - Resource not found.
     Handle 404 errors - Resource not found.
     Không trả về index.html cho các path trang riêng (/genealogy, /contact, ...) để tránh hiển thị nhầm nội dung.
+    Nếu URL có trailing slash và bỏ slash là trang riêng thì redirect về URL chuẩn (không slash).
     """
     if request.path.startswith('/api/'):
         return (jsonify({'success': False, 'error': 'Resource not found'}), 404)
-    # Cac path co trang riêng: tra 404 thay vi index.html
+    path_stripped = request.path.rstrip('/') or '/'
     dedicated_paths = ('/genealogy', '/contact', '/documents', '/members', '/activities', '/login', '/vr-tour')
-    if request.path.rstrip('/') in dedicated_paths or any(request.path.startswith(p + '/') for p in dedicated_paths):
+    # Có trailing slash và path không slash là trang riêng -> redirect để blueprint xử lý
+    if request.path != path_stripped and path_stripped in dedicated_paths:
+        return redirect(path_stripped, code=302)
+    # Trang riêng: thử render template thay vì trả JSON 404
+    if path_stripped in dedicated_paths:
+        page_templates = {
+            '/genealogy': 'genealogy.html', '/contact': 'contact.html', '/documents': 'documents.html',
+            '/members': 'members_gate.html', '/activities': 'index.html', '/login': 'login.html', '/vr-tour': 'index.html',
+        }
+        template_name = page_templates.get(path_stripped, 'index.html')
+        try:
+            if path_stripped == '/members':
+                members_password = get_members_password()
+                gate_username = session.get('members_gate_user', '')
+                if session.get('members_gate_ok'):
+                    return render_template('members.html', members_password=members_password or '', gate_username=gate_username)
+                return render_template('members_gate.html')
+            return render_template(template_name)
+        except Exception as e:
+            logger.warning('not_found render %s: %s', path_stripped, e)
+            return (jsonify({'success': False, 'error': 'Resource not found'}), 404)
+    if any(request.path.startswith(p + '/') for p in dedicated_paths):
         return (jsonify({'success': False, 'error': 'Resource not found'}), 404)
     try:
         return render_template('index.html')

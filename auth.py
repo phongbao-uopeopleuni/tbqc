@@ -226,11 +226,17 @@ def get_user_by_username(username):
             connection.close()
 
 def verify_password(password, password_hash):
-    """Xác thực mật khẩu"""
+    """Xác thực mật khẩu. Chấp nhận password_hash là str hoặc bytes (từ DB)."""
+    if not password_hash:
+        return False
     try:
-        return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
+        pwd_bytes = password.encode('utf-8')
+        hash_bytes = password_hash.encode('utf-8') if isinstance(password_hash, str) else password_hash
+        if not hash_bytes:
+            return False
+        return bcrypt.checkpw(pwd_bytes, hash_bytes)
     except Exception as e:
-        print(f"Lỗi khi xác thực mật khẩu: {e}")
+        logger.debug(f"Lỗi khi xác thực mật khẩu: {e}")
         return False
 
 def hash_password(password):
@@ -257,7 +263,15 @@ def init_login_manager(app):
     
     @login_manager.user_loader
     def load_user(user_id):
-        return get_user_by_id(int(user_id))
+        if user_id is None:
+            return None
+        try:
+            return get_user_by_id(int(user_id))
+        except (TypeError, ValueError):
+            return None
+        except Exception:
+            logger.exception("load_user failed for user_id=%s", user_id)
+            return None
     
     return login_manager
 
@@ -309,8 +323,9 @@ def permission_required(permission_name):
             # At this point, Flask-Login already loaded current_user from session.
             _auth_debug(f"permission_required:{permission_name}")
 
-            # Kiểm tra permission
-            if not current_user.has_permission(permission_name):
+            # Kiểm tra permission (tránh AttributeError nếu current_user không có has_permission)
+            has_perm = getattr(current_user, 'has_permission', None)
+            if not (has_perm and has_perm(permission_name)):
                 if _is_api_request(request):
                     return jsonify({'success': False, 'error': f'Không có quyền: {permission_name}'}), 403
                 # Cho non-API requests, có thể redirect hoặc hiển thị lỗi

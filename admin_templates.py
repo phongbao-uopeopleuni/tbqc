@@ -1,863 +1,9 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Admin Routes
-Routes cho trang quản trị
-"""
-
-from flask import render_template_string, render_template, request, jsonify, redirect, url_for, flash, session, make_response
-from flask_login import login_user, logout_user, login_required, current_user
-try:
-    from folder_py.db_config import get_db_connection
-except ImportError:
-    from db_config import get_db_connection
-from auth import (get_user_by_username, verify_password, hash_password,
-                  admin_required, permission_required, role_required)
-from audit_log import log_activity, log_login, log_user_update
-import mysql.connector
-from mysql.connector import Error
-import csv
-import os
-
-def register_admin_routes(app):
-    """Đăng ký các routes cho admin"""
-    
-    COOKIE_REMEMBER_USERNAME = 'tbqc_admin_remember_username'
-    COOKIE_REMEMBER_DAYS = 30
-
-    @app.route('/admin/login', methods=['GET', 'POST'])
-    def admin_login():
-        """Trang đăng nhập admin"""
-        next_url = request.args.get('next') or request.form.get('next', '')
-        remembered_username = request.cookies.get(COOKIE_REMEMBER_USERNAME, '').strip()
-
-        if request.method == 'POST':
-            username = request.form.get('username', '').strip()
-            password = request.form.get('password', '')
-            
-            if not username or not password:
-                return render_template('admin/login.html',
-                    error='Vui lòng nhập đầy đủ username và password', next=next_url, remembered_username=username or remembered_username)
-            
-            # Tìm user
-            user_data = get_user_by_username(username)
-            if not user_data:
-                return render_template('admin/login.html',
-                    error='Không tồn tại tài khoản', next=next_url, remembered_username=remembered_username)
-            
-            # Xác thực mật khẩu
-            if not verify_password(password, user_data['password_hash']):
-                return render_template('admin/login.html',
-                    error='Sai mật khẩu', next=next_url, remembered_username=remembered_username)
-            
-            # Tạo user object và đăng nhập
-            from auth import User
-            permissions = user_data.get('permissions', {})
-            user = User(
-                user_id=user_data['user_id'],
-                username=user_data['username'],
-                role=user_data['role'],
-                full_name=user_data.get('full_name'),
-                email=user_data.get('email'),
-                permissions=permissions
-            )
-            
-            login_user(user, remember=True)
-            
-            # Ghi log đăng nhập
-            log_login(success=True, username=username)
-            
-            # Cập nhật last_login
-            connection = get_db_connection()
-            if connection:
-                try:
-                    cursor = connection.cursor()
-                    cursor.execute("""
-                        UPDATE users 
-                        SET last_login = NOW() 
-                        WHERE user_id = %s
-                    """, (user_data['user_id'],))
-                    connection.commit()
-                except Error as e:
-                    print(f"Lỗi cập nhật last_login: {e}")
-                finally:
-                    if connection.is_connected():
-                        cursor.close()
-                        connection.close()
-            
-            # Redirect theo role
-            if next_url:
-                resp = redirect(next_url)
-            elif user_data['role'] == 'admin':
-                resp = redirect(url_for('admin_dashboard'))
-            else:
-                resp = redirect(url_for('index'))
-            if request.form.get('remember_username'):
-                resp.set_cookie(COOKIE_REMEMBER_USERNAME, username, max_age=COOKIE_REMEMBER_DAYS * 24 * 3600, httponly=True, samesite='Lax')
-            else:
-                resp.delete_cookie(COOKIE_REMEMBER_USERNAME)
-            return resp
-
-        return render_template('admin/login.html', next=next_url, remembered_username=remembered_username)
-    
-    @app.route('/admin/logout')
-    @login_required
-    def admin_logout():
-        """Đăng xuất"""
-        logout_user()
-        return redirect(url_for('admin_login'))
-    
-    @app.route('/admin/dashboard')
-    @permission_required('canViewDashboard')
-    def admin_dashboard():
-        """Trang dashboard admin với thống kê"""
-        connection = get_db_connection()
-        if not connection:
-            return render_template_string(ADMIN_DASHBOARD_TEMPLATE,
-                current_user=current_user, stats={}, error='Không thể kết nối database')
-        
-        try:
-            cursor = connection.cursor(dictionary=True)
-            
-            # Tổng số thành viên
-            cursor.execute("SELECT COUNT(*) AS total FROM persons")
-            total_people = cursor.fetchone()['total']
-            
-            # Số người còn sống
-            cursor.execute("SELECT COUNT(*) AS alive FROM persons WHERE status = 'Còn sống'")
-            alive_count = cursor.fetchone()['alive']
-            
-            # Số người đã mất
-            cursor.execute("SELECT COUNT(*) AS deceased FROM persons WHERE status = 'Đã mất'")
-            deceased_count = cursor.fetchone()['deceased']
-            
-            # Số đời tối đa
-            cursor.execute("SELECT MAX(generation_number) AS max_gen FROM generations")
-            max_generation = cursor.fetchone()['max_gen'] or 0
-            
-            # Thống kê theo đời
-            cursor.execute("""
-                SELECT g.generation_number, COUNT(p.person_id) AS count
-                FROM generations g
-                LEFT JOIN persons p ON g.generation_id = p.generation_id
-                GROUP BY g.generation_number
-                ORDER BY g.generation_number
-            """)
-            generation_stats = cursor.fetchall()
-            
-            # Thống kê theo giới tính
-            cursor.execute("""
-                SELECT gender, COUNT(*) AS count
-                FROM persons
-                WHERE gender IS NOT NULL
-                GROUP BY gender
-            """)
-            gender_stats = cursor.fetchall()
-            
-            # Thống kê theo trạng thái
-            cursor.execute("""
-                SELECT status, COUNT(*) AS count
-                FROM persons
-                WHERE status IS NOT NULL
-                GROUP BY status
-            """)
-            status_stats = cursor.fetchall()
-            
-            stats = {
-                'total_people': total_people,
-                'alive_count': alive_count,
-                'deceased_count': deceased_count,
-                'max_generation': max_generation,
-                'generation_stats': generation_stats,
-                'gender_stats': gender_stats,
-                'status_stats': status_stats
-            }
-            
-            return render_template_string(ADMIN_DASHBOARD_TEMPLATE,
-                current_user=current_user, stats=stats)
-        except Error as e:
-            return render_template_string(ADMIN_DASHBOARD_TEMPLATE,
-                current_user=current_user, stats={}, error=str(e))
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    @app.route('/admin/requests')
-    @permission_required('canViewDashboard')
-    def admin_requests():
-        """Trang quản lý yêu cầu chỉnh sửa"""
-        connection = get_db_connection()
-        if not connection:
-            return render_template_string(ADMIN_REQUESTS_TEMPLATE,
-                error='Không thể kết nối database', requests=[])
-        
-        try:
-            cursor = connection.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT er.*, 
-                       u.username AS requester_username,
-                       u.full_name AS requester_name,
-                       p.full_name AS person_full_name,
-                       p.generation_number AS person_generation
-                FROM edit_requests er
-                LEFT JOIN users u ON er.user_id = u.user_id
-                LEFT JOIN persons p ON er.person_id = p.person_id
-                ORDER BY er.created_at DESC
-            """)
-            requests = cursor.fetchall()
-            return render_template_string(ADMIN_REQUESTS_TEMPLATE,
-                requests=requests, current_user=current_user)
-        except Error as e:
-            return render_template_string(ADMIN_REQUESTS_TEMPLATE,
-                error=f'Lỗi: {str(e)}', requests=[])
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    @app.route('/admin/api/requests/<int:request_id>/process', methods=['POST'])
-    @permission_required('canEditGenealogy')
-    def api_process_request(request_id):
-        """API xử lý yêu cầu (approve/reject)"""
-        data = request.get_json()
-        action = data.get('action')  # 'approve' or 'reject'
-        reason = data.get('reason', '')
-        
-        if action not in ['approve', 'reject']:
-            return jsonify({'error': 'Action không hợp lệ'}), 400
-        
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'error': 'Không thể kết nối database'}), 500
-        
-        try:
-            cursor = connection.cursor()
-            status = 'approved' if action == 'approve' else 'rejected'
-            cursor.execute("""
-                UPDATE edit_requests
-                SET status = %s, processed_at = NOW(), processed_by = %s, rejection_reason = %s
-                WHERE request_id = %s
-            """, (status, current_user.id, reason if action == 'reject' else None, request_id))
-            connection.commit()
-            
-            return jsonify({'success': True, 'message': f'Đã {action} yêu cầu'})
-        except Error as e:
-            return jsonify({'error': f'Lỗi: {str(e)}'}), 500
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    @app.route('/admin/users')
-    @admin_required
-    def admin_users():
-        """Trang quản lý users"""
-        connection = get_db_connection()
-        if not connection:
-            return render_template_string(ADMIN_USERS_TEMPLATE,
-                error='Không thể kết nối database', users=[])
-        
-        try:
-            cursor = connection.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT user_id, username, full_name, email, role, permissions,
-                       created_at, updated_at, last_login, is_active
-                FROM users
-                ORDER BY created_at DESC
-            """)
-            users = cursor.fetchall()
-            return render_template_string(ADMIN_USERS_TEMPLATE,
-                users=users, current_user=current_user)
-        except Error as e:
-            return render_template_string(ADMIN_USERS_TEMPLATE,
-                error=f'Lỗi: {str(e)}', users=[])
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    @app.route('/admin/api/users', methods=['POST'])
-    @admin_required
-    def api_create_user():
-        """API tạo user mới"""
-        data = request.get_json()
-        username = data.get('username', '').strip()
-        password = data.get('password', '')
-        password_confirm = data.get('password_confirm', '')
-        full_name = data.get('full_name', '').strip()
-        email = data.get('email', '').strip()
-        role = data.get('role', 'user')
-        
-        # Validate
-        if not username or not password:
-            return jsonify({'error': 'Username và password là bắt buộc'}), 400
-        
-        if password != password_confirm:
-            return jsonify({'error': 'Mật khẩu không khớp'}), 400
-        
-        if len(password) < 6:
-            return jsonify({'error': 'Mật khẩu phải có ít nhất 6 ký tự'}), 400
-        
-        if role not in ['admin', 'user', 'editor']:
-            return jsonify({'error': 'Role không hợp lệ'}), 400
-        
-        # Xử lý permissions nếu có
-        permissions = data.get('permissions')
-        if permissions is not None:
-            import json
-            # Validate permissions structure
-            valid_permissions = [
-                'canViewGenealogy', 'canComment', 'canCreatePost', 'canEditPost',
-                'canDeletePost', 'canUploadMedia', 'canEditGenealogy',
-                'canManageUsers', 'canConfigurePermissions', 'canViewDashboard'
-            ]
-            filtered_permissions = {}
-            for perm in valid_permissions:
-                filtered_permissions[perm] = permissions.get(perm, False)
-            permissions_json = json.dumps(filtered_permissions, ensure_ascii=False)
-        else:
-            permissions_json = None
-        
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'error': 'Không thể kết nối database'}), 500
-        
-        try:
-            cursor = connection.cursor()
-            
-            # Kiểm tra username đã tồn tại
-            cursor.execute("SELECT user_id FROM users WHERE username = %s", (username,))
-            if cursor.fetchone():
-                return jsonify({'error': 'Username đã tồn tại'}), 400
-            
-            # Hash password và tạo user
-            password_hash = hash_password(password)
-            
-            # Set default permissions theo role (trigger sẽ tự động set, nhưng set sẵn để chắc chắn)
-            import json
-            if role == 'user':
-                default_permissions = json.dumps({
-                    'canViewGenealogy': True, 'canComment': True,
-                    'canCreatePost': False, 'canEditPost': False, 'canDeletePost': False,
-                    'canUploadMedia': False, 'canEditGenealogy': False,
-                    'canManageUsers': False, 'canConfigurePermissions': False, 'canViewDashboard': False
-                }, ensure_ascii=False)
-            elif role == 'editor':
-                default_permissions = json.dumps({
-                    'canViewGenealogy': True, 'canComment': True,
-                    'canCreatePost': True, 'canEditPost': True, 'canDeletePost': False,
-                    'canUploadMedia': True, 'canEditGenealogy': True,
-                    'canManageUsers': False, 'canConfigurePermissions': False, 'canViewDashboard': False
-                }, ensure_ascii=False)
-            elif role == 'admin':
-                default_permissions = json.dumps({
-                    'canViewGenealogy': True, 'canComment': True,
-                    'canCreatePost': True, 'canEditPost': True, 'canDeletePost': True,
-                    'canUploadMedia': True, 'canEditGenealogy': True,
-                    'canManageUsers': True, 'canConfigurePermissions': True, 'canViewDashboard': True
-                }, ensure_ascii=False)
-            else:
-                default_permissions = None
-            
-            cursor.execute("""
-                INSERT INTO users (username, password_hash, full_name, email, role, permissions)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (username, password_hash, full_name or None, email or None, role, default_permissions))
-            connection.commit()
-            
-            return jsonify({'success': True, 'message': 'Đã tạo tài khoản thành công'})
-        except Error as e:
-            return jsonify({'error': f'Lỗi: {str(e)}'}), 500
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    @app.route('/admin/api/users/<int:user_id>', methods=['PUT'])
-    @admin_required
-    def api_update_user(user_id):
-        """API cập nhật user"""
-        data = request.get_json()
-        full_name = data.get('full_name', '').strip()
-        email = data.get('email', '').strip()
-        role = data.get('role')
-        permissions = data.get('permissions')  # JSON object
-        
-        # Validate
-        if role and role not in ['admin', 'user', 'editor']:
-            return jsonify({'error': 'Role không hợp lệ'}), 400
-        
-        # Không cho phép xóa admin cuối cùng
-        if role == 'user':
-            connection = get_db_connection()
-            if connection:
-                try:
-                    cursor = connection.cursor()
-                    cursor.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND user_id != %s", (user_id,))
-                    admin_count = cursor.fetchone()[0]
-                    if admin_count == 0:
-                        return jsonify({'error': 'Không thể thay đổi role. Phải có ít nhất một admin'}), 400
-                finally:
-                    if connection.is_connected():
-                        cursor.close()
-                        connection.close()
-        
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'error': 'Không thể kết nối database'}), 500
-        
-        try:
-            cursor = connection.cursor()
-            
-            # Build update query
-            updates = []
-            params = []
-            
-            if full_name is not None:
-                updates.append("full_name = %s")
-                params.append(full_name or None)
-            
-            if email is not None:
-                updates.append("email = %s")
-                params.append(email or None)
-            
-            if role:
-                updates.append("role = %s")
-                params.append(role)
-            
-            # Cập nhật permissions nếu có
-            if permissions is not None:
-                import json
-                permissions_json = json.dumps(permissions, ensure_ascii=False)
-                updates.append("permissions = %s")
-                params.append(permissions_json)
-            
-            if not updates:
-                return jsonify({'error': 'Không có thông tin để cập nhật'}), 400
-            
-            params.append(user_id)
-            query = f"UPDATE users SET {', '.join(updates)} WHERE user_id = %s"
-            cursor.execute(query, params)
-            connection.commit()
-            
-            # Ghi log
-            log_user_update(user_id, {}, data)
-            
-            return jsonify({'success': True, 'message': 'Đã cập nhật thành công'})
-        except Error as e:
-            return jsonify({'error': f'Lỗi: {str(e)}'}), 500
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    @app.route('/admin/api/users/<int:user_id>', methods=['GET'])
-    @admin_required
-    def api_get_user(user_id):
-        """API lấy thông tin user (bao gồm permissions)"""
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'error': 'Không thể kết nối database'}), 500
-        
-        try:
-            cursor = connection.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT user_id, username, full_name, email, role, permissions,
-                       created_at, updated_at, last_login, is_active
-                FROM users
-                WHERE user_id = %s
-            """, (user_id,))
-            user = cursor.fetchone()
-            
-            if not user:
-                return jsonify({'error': 'Không tìm thấy user'}), 404
-            
-            # Parse permissions JSON
-            if user.get('permissions'):
-                import json
-                try:
-                    if isinstance(user['permissions'], str):
-                        user['permissions'] = json.loads(user['permissions'])
-                except:
-                    user['permissions'] = {}
-            else:
-                user['permissions'] = {}
-            
-            return jsonify(user)
-        except Error as e:
-            return jsonify({'error': f'Lỗi: {str(e)}'}), 500
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    @app.route('/admin/api/users/<int:user_id>/reset-password', methods=['POST'])
-    @admin_required
-    def api_reset_password(user_id):
-        """API đặt lại mật khẩu"""
-        data = request.get_json()
-        password = data.get('password', '')
-        password_confirm = data.get('password_confirm', '')
-        
-        if not password:
-            return jsonify({'error': 'Mật khẩu là bắt buộc'}), 400
-        
-        if password != password_confirm:
-            return jsonify({'error': 'Mật khẩu không khớp'}), 400
-        
-        if len(password) < 6:
-            return jsonify({'error': 'Mật khẩu phải có ít nhất 6 ký tự'}), 400
-        
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'error': 'Không thể kết nối database'}), 500
-        
-        try:
-            cursor = connection.cursor()
-            password_hash = hash_password(password)
-            cursor.execute("""
-                UPDATE users 
-                SET password_hash = %s 
-                WHERE user_id = %s
-            """, (password_hash, user_id))
-            connection.commit()
-            
-            return jsonify({'success': True, 'message': 'Đã đặt lại mật khẩu thành công'})
-        except Error as e:
-            return jsonify({'error': f'Lỗi: {str(e)}'}), 500
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    @app.route('/admin/api/users/<int:user_id>', methods=['DELETE'])
-    @admin_required
-    def api_delete_user(user_id):
-        """API xóa user"""
-        # Không cho phép xóa chính mình
-        if user_id == current_user.id:
-            return jsonify({'error': 'Không thể xóa tài khoản đang đăng nhập'}), 400
-        
-        # Không cho phép xóa admin cuối cùng
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({'error': 'Không thể kết nối database'}), 500
-        
-        try:
-            cursor = connection.cursor()
-            
-            # Kiểm tra role của user cần xóa
-            cursor.execute("SELECT role FROM users WHERE user_id = %s", (user_id,))
-            result = cursor.fetchone()
-            if not result:
-                return jsonify({'error': 'Không tìm thấy user'}), 404
-            
-            user_role = result[0]
-            
-            # Nếu là admin, kiểm tra còn admin khác không
-            if user_role == 'admin':
-                cursor.execute("SELECT COUNT(*) as count FROM users WHERE role = 'admin' AND user_id != %s", (user_id,))
-                admin_count = cursor.fetchone()[0]
-                if admin_count == 0:
-                    return jsonify({'error': 'Không thể xóa admin cuối cùng'}), 400
-            
-            # Xóa user
-            cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
-            connection.commit()
-            
-            return jsonify({'success': True, 'message': 'Đã xóa tài khoản thành công'})
-        except Error as e:
-            return jsonify({'error': f'Lỗi: {str(e)}'}), 500
-        finally:
-            if connection.is_connected():
-                cursor.close()
-                connection.close()
-    
-    # =====================================================
-    # DATA MANAGEMENT ROUTES (Quản lý dữ liệu CSV)
-    # =====================================================
-    
-    @app.route('/admin/data-management')
-    @permission_required('canViewDashboard')
-    def admin_data_management():
-        """Trang quản lý dữ liệu CSV"""
-        return render_template_string(DATA_MANAGEMENT_TEMPLATE, current_user=current_user)
-    
-    def get_csv_filename(sheet_name):
-        """Lấy tên file CSV dựa trên sheet name"""
-        mapping = {
-            'sheet1': 'Data_TBQC_Sheet1.csv',
-            'sheet2': 'Data_TBQC_Sheet2.csv',
-            'sheet3': 'Data_TBQC_Sheet3.csv'
-        }
-        return mapping.get(sheet_name)
-    
-    def read_csv_file(sheet_name):
-        """Đọc dữ liệu từ file CSV"""
-        filename = get_csv_filename(sheet_name)
-        if not filename:
-            return None, 'Sheet không hợp lệ'
-        
-        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
-        if not os.path.exists(filepath):
-            return None, f'File {filename} không tồn tại'
-        
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                data = list(reader)
-            return data, None
-        except Exception as e:
-            return None, f'Lỗi đọc file: {str(e)}'
-    
-    def write_csv_file(sheet_name, data):
-        """Ghi dữ liệu vào file CSV"""
-        filename = get_csv_filename(sheet_name)
-        if not filename:
-            return 'Sheet không hợp lệ'
-        
-        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
-        
-        if not data:
-            return 'Dữ liệu rỗng'
-        
-        try:
-            headers = list(data[0].keys())
-            with open(filepath, 'w', encoding='utf-8', newline='') as f:
-                writer = csv.DictWriter(f, fieldnames=headers)
-                writer.writeheader()
-                writer.writerows(data)
-            return None
-        except Exception as e:
-            return f'Lỗi ghi file: {str(e)}'
-    
-    @app.route('/admin/api/csv-data/<sheet_name>', methods=['GET'])
-    @permission_required('canViewDashboard')
-    def get_csv_data(sheet_name):
-        """API: Lấy dữ liệu từ CSV"""
-        data, error = read_csv_file(sheet_name)
-        if error:
-            return jsonify({'success': False, 'error': error})
-        return jsonify({'success': True, 'data': data})
-    
-    @app.route('/admin/api/csv-data/<sheet_name>', methods=['POST'])
-    @permission_required('canViewDashboard')
-    def add_csv_row(sheet_name):
-        """API: Thêm dòng mới vào CSV"""
-        data, error = read_csv_file(sheet_name)
-        if error:
-            return jsonify({'success': False, 'error': error})
-        
-        new_row = request.json
-        
-        # Tự động tăng STT/ID nếu chưa có
-        if sheet_name in ['sheet1', 'sheet2']:
-            # Sheet1 và Sheet2 dùng STT
-            if not new_row.get('STT') or new_row.get('STT') == '':
-                max_stt = 0
-                for row in data:
-                    try:
-                        stt_val = int(str(row.get('STT', 0) or 0))
-                        if stt_val > max_stt:
-                            max_stt = stt_val
-                    except:
-                        pass
-                new_row['STT'] = str(max_stt + 1)
-        elif sheet_name == 'sheet3':
-            # Sheet3 dùng ID
-            if not new_row.get('ID') or new_row.get('ID') == '':
-                max_id = 0
-                for row in data:
-                    try:
-                        id_val = int(str(row.get('ID', 0) or 0))
-                        if id_val > max_id:
-                            max_id = id_val
-                    except:
-                        pass
-                new_row['ID'] = str(max_id + 1)
-        
-        # Đảm bảo có đủ các cột
-        headers = list(data[0].keys()) if data else []
-        for header in headers:
-            if header not in new_row:
-                new_row[header] = ''
-        
-        data.append(new_row)
-        
-        error = write_csv_file(sheet_name, data)
-        if error:
-            return jsonify({'success': False, 'error': error})
-        
-        return jsonify({'success': True, 'message': 'Đã thêm dòng mới thành công'})
-    
-    @app.route('/admin/api/csv-data/<sheet_name>/<int:row_index>', methods=['PUT'])
-    @permission_required('canViewDashboard')
-    def update_csv_row(sheet_name, row_index):
-        """API: Cập nhật dòng trong CSV"""
-        data, error = read_csv_file(sheet_name)
-        if error:
-            return jsonify({'success': False, 'error': error})
-        
-        if row_index < 0 or row_index >= len(data):
-            return jsonify({'success': False, 'error': 'Chỉ số dòng không hợp lệ'})
-        
-        updated_row = request.json
-        # Giữ lại các key có sẵn trong header
-        headers = list(data[0].keys())
-        new_row = {header: updated_row.get(header, '') for header in headers}
-        data[row_index] = new_row
-        
-        error = write_csv_file(sheet_name, data)
-        if error:
-            return jsonify({'success': False, 'error': error})
-        
-        return jsonify({'success': True, 'message': 'Đã cập nhật thành công'})
-    
-    @app.route('/admin/api/csv-data/<sheet_name>/<int:row_index>', methods=['DELETE'])
-    @permission_required('canViewDashboard')
-    def delete_csv_row(sheet_name, row_index):
-        """API: Xóa dòng trong CSV"""
-        data, error = read_csv_file(sheet_name)
-        if error:
-            return jsonify({'success': False, 'error': error})
-        
-        if row_index < 0 or row_index >= len(data):
-            return jsonify({'success': False, 'error': 'Chỉ số dòng không hợp lệ'})
-        
-        data.pop(row_index)
-        
-        error = write_csv_file(sheet_name, data)
-        if error:
-            return jsonify({'success': False, 'error': error})
-        
-        return jsonify({'success': True, 'message': 'Đã xóa thành công'})
-    
-
-# Templates
-ADMIN_LOGIN_TEMPLATE = '''
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập Admin - TBQC Gia Phả</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 400px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .subtitle {
-            color: #666;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .btn-login:hover {
-            transform: translateY(-2px);
-        }
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border-left: 4px solid #c33;
-        }
-        .back-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .back-link a {
-            color: #667eea;
-            text-decoration: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-container">
-        <h1>🔐 Đăng Nhập Admin</h1>
-        <p class="subtitle">Hệ thống quản trị TBQC Gia Phả</p>
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
-        <form method="POST">
-            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" value="{{ remembered_username|default('') }}" required autofocus>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <div class="form-group" style="display:flex;align-items:center;gap:10px;">
-                <input type="checkbox" id="remember_username" name="remember_username" value="1" style="width:18px;height:18px;">
-                <label for="remember_username" style="margin:0;">Lưu tài khoản</label>
-            </div>
-            <button type="submit" class="btn-login">Đăng Nhập</button>
-        </form>
-        <div class="back-link">
-            <a href="/">← Về trang chủ</a>
-        </div>
-    </div>
-</body>
-</html>
-'''
+# Template strings for admin routes (code cũ - render_template_string)
+# Template strings for admin (dashboard, users, requests, data-management). ADMIN_REQUESTS_TEMPLATE minimal.
 
 ADMIN_DASHBOARD_TEMPLATE = '''
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1099,9 +245,11 @@ ADMIN_DASHBOARD_TEMPLATE = '''
     </script>
 </body>
 </html>
+
 '''
 
 ADMIN_USERS_TEMPLATE = '''
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -1714,12 +862,81 @@ ADMIN_USERS_TEMPLATE = '''
     </script>
 </body>
 </html>
+
 '''
 
-# =====================================================
-# DATA MANAGEMENT TEMPLATE (Quản lý dữ liệu CSV)
-# =====================================================
+ADMIN_REQUESTS_TEMPLATE = '''
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yêu cầu chỉnh sửa - Admin TBQC</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        .navbar { background: #2c3e50; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+        .navbar-menu { display: flex; gap: 20px; list-style: none; }
+        .navbar-menu a { color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px; }
+        .navbar-menu a:hover { background: rgba(255,255,255,0.1); }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #34495e; color: white; }
+        .error { background: #fee; color: #c33; padding: 12px; border-radius: 6px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <h1>Yêu cầu chỉnh sửa</h1>
+        <ul class="navbar-menu">
+            <li><a href="/admin/dashboard">Dashboard</a></li>
+            <li><a href="/admin/users">Tài Khoản</a></li>
+            <li><a href="/admin/data-management">Quản Lý Dữ Liệu</a></li>
+            <li><a href="/">Trang Chủ</a></li>
+            <li><a href="/admin/logout">Đăng Xuất</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        <h2>Danh sách yêu cầu</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Người yêu cầu</th>
+                    <th>Người liên quan</th>
+                    <th>Đời</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in requests %}
+                <tr>
+                    <td>{{ r.request_id }}</td>
+                    <td>{{ r.requester_username or '-' }} ({{ r.requester_name or '-' }})</td>
+                    <td>{{ r.person_full_name or '-' }}</td>
+                    <td>{{ r.person_generation or '-' }}</td>
+                    <td>{{ r.status or 'pending' }}</td>
+                    <td>{{ r.created_at.strftime('%d/%m/%Y %H:%M') if r.created_at else '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if not requests %}
+        <p style="margin-top:20px;color:#666;">Chưa có yêu cầu nào.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
+
+'''
+
 DATA_MANAGEMENT_TEMPLATE = '''
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -2356,5 +1573,5 @@ DATA_MANAGEMENT_TEMPLATE = '''
     </script>
 </body>
 </html>
-'''
 
+'''

@@ -3,7 +3,6 @@
 Cổng nội bộ Members - /members, /members/verify, /members/logout, /api/members
 """
 import logging
-import pandas as pd
 from io import BytesIO
 from flask import Blueprint, render_template, request, jsonify, session, send_file
 
@@ -11,7 +10,7 @@ logger = logging.getLogger(__name__)
 members_portal_bp = Blueprint('members_portal', __name__)
 
 
-@members_portal_bp.route('/members')
+@members_portal_bp.route('/members', strict_slashes=False)
 def members():
     """Trang danh sách thành viên - hiển thị cổng đăng nhập hoặc trang members."""
     if not session.get('members_gate_ok'):
@@ -24,11 +23,18 @@ def members():
 
 @members_portal_bp.route('/members/verify', methods=['POST'])
 def members_verify():
-    """API xác thực đăng nhập cho cổng Members."""
+    """API xác thực đăng nhập cho cổng Members. Nhận JSON hoặc form."""
     try:
-        data = request.get_json(silent=True) or {}
-        username = data.get('username', '').strip()
-        password = data.get('password', '').strip()
+        data = request.get_json(silent=True) if request.is_json else {}
+        if not data:
+            data = {
+                'username': (request.form.get('username') or '').strip(),
+                'password': (request.form.get('password') or '').strip(),
+            }
+        else:
+            data = {'username': (data.get('username') or '').strip(), 'password': (data.get('password') or '').strip()}
+        username = data.get('username', '')
+        password = data.get('password', '')
         if not username or not password:
             return (jsonify({'success': False, 'error': 'Tên đăng nhập và mật khẩu không được để trống'}), 400)
         from app import validate_tbqc_gate
@@ -37,7 +43,7 @@ def members_verify():
             session['members_gate_user'] = username
             logger.info(f'Members gate login successful: {username}')
             return jsonify({'success': True, 'message': 'Đăng nhập thành công'})
-        logger.warning(f'Members gate login failed: username={username}')
+        logger.warning(f'Members gate login failed: username={username!r} (len_pwd={len(password)})')
         return (jsonify({'success': False, 'error': 'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.'}), 401)
     except Exception as e:
         logger.error(f'Error in members_verify: {e}', exc_info=True)
@@ -87,7 +93,12 @@ def get_members():
             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons'
             AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death', 'occupation')
         """)
-        available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
+        _col_rows = cursor.fetchall()
+        available_columns = set()
+        for row in _col_rows:
+            col = row.get('COLUMN_NAME') or row.get('column_name') or ''
+            if col:
+                available_columns.add(str(col).strip())
         select_fields = [
             'p.person_id', 'p.father_mother_id AS fm_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status',
             'p.generation_level AS generation_number', 'p.birth_date_solar', 'p.birth_date_lunar',
@@ -190,7 +201,12 @@ def _fetch_members_list():
             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons'
             AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death', 'occupation')
         """)
-        available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
+        _col_rows = cursor.fetchall()
+        available_columns = set()
+        for row in _col_rows:
+            col = row.get('COLUMN_NAME') or row.get('column_name') or ''
+            if col:
+                available_columns.add(str(col).strip())
         select_fields = [
             'p.person_id', 'p.father_mother_id AS fm_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status',
             'p.generation_level AS generation_number', 'p.birth_date_solar', 'p.birth_date_lunar',

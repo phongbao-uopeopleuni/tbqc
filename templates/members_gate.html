@@ -7,64 +7,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
+    /* Đồng bộ nền với trang Gia phả: dùng token --color-bg từ main.css */
     body {
-      font-family: 'Noto Serif TC', 'Playfair Display', serif;
-      background: linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DAA520 75%, #FFD700 100%);
+      font-family: var(--font-family-serif, 'Noto Serif TC', 'Playfair Display', serif);
+      background: var(--color-bg, #F8F5EF);
       background-attachment: fixed;
-      padding-top: 70px;
+      padding-top: 64px;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-    }
-
-    .navbar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: #111827;
-      color: white;
-      padding: 15px 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 1000;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    }
-
-    .navbar-logo {
-      font-size: 24px;
-      font-weight: 700;
-      color: #FFD700;
-      text-decoration: none;
-    }
-
-    .navbar-menu {
-      display: flex;
-      gap: 30px;
-      list-style: none;
-    }
-
-    .navbar-menu a {
-      color: white;
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: 500;
-      transition: color 0.3s;
-      padding: 5px 10px;
-      border-radius: 4px;
-    }
-
-    .navbar-menu a:hover,
-    .navbar-menu a.active {
-      color: #FFD700;
-      background: rgba(255, 215, 0, 0.1);
     }
 
     .gate-container {
@@ -214,21 +165,6 @@
     }
 
     @media (max-width: 768px) {
-      .navbar-menu {
-        position: fixed;
-        top: 70px;
-        left: -100%;
-        width: 100%;
-        background: #111827;
-        flex-direction: column;
-        padding: 20px;
-        transition: left 0.3s;
-      }
-
-      .navbar-menu.active {
-        left: 0;
-      }
-
       .gate-card {
         padding: 30px 20px;
       }
@@ -240,13 +176,13 @@
   </style>
 </head>
 <body>
-  <!-- Navbar -->
+  <!-- Navbar đồng bộ với Gia phả (main.css/navbar.css), không hiển thị Hoạt động -->
   <nav class="navbar">
-    <button class="navbar-toggle" onclick="toggleMenu()" style="display: none; background: none; border: none; color: white; font-size: 24px; cursor: pointer;">☰</button>
+    <button class="navbar-toggle" onclick="toggleMenu()" aria-label="Menu">☰</button>
+    <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
-      <li><a href="/activities">Hoạt động</a></li>
       <li><a href="/members" class="active">Thành viên</a></li>
     </ul>
   </nav>
@@ -290,32 +226,32 @@
     async function handleLogin(event) {
       event.preventDefault();
       
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value.trim();
+      const username = String(document.getElementById('username').value || '').trim();
+      const password = String(document.getElementById('password').value || '').trim();
       const rememberCheckbox = document.getElementById('rememberLogin');
       const errorDiv = document.getElementById('errorMessage');
       const loginBtn = document.getElementById('loginBtn');
       
-      // Ẩn lỗi cũ
       errorDiv.classList.remove('show');
-      
-      // Disable button và hiển thị loading
       loginBtn.disabled = true;
       loginBtn.textContent = 'Đang xác thực...';
       
       try {
         const response = await fetch('/members/verify', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include', // Quan trọng: gửi session cookie
-          body: JSON.stringify({ username, password })
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username: username, password: password })
         });
         
-        const result = await response.json();
+        let result;
+        try {
+          result = await response.json();
+        } catch (e) {
+          result = { success: false, error: response.status === 401 ? 'Tên đăng nhập hoặc mật khẩu không đúng.' : 'Lỗi phản hồi từ server.' };
+        }
         
-        if (result.success) {
+        if (result && result.success) {
           // Lưu thông tin đăng nhập nếu checkbox được tick
           if (rememberCheckbox && rememberCheckbox.checked) {
             try {

@@ -12,7 +12,7 @@ def index():
     """
     return render_template('index.html')
 
-@main_bp.route('/genealogy')
+@main_bp.route('/genealogy', strict_slashes=False)
 def genealogy_page():
     """
     Trang Gia phả - render template genealogy.html
@@ -23,7 +23,7 @@ def genealogy_page():
     """
     return render_template('genealogy.html')
 
-@main_bp.route('/contact')
+@main_bp.route('/contact', strict_slashes=False)
 def contact_page():
     """
     Trang Liên hệ - render template contact.html
@@ -32,7 +32,7 @@ def contact_page():
     """
     return render_template('contact.html')
 
-@main_bp.route('/documents')
+@main_bp.route('/documents', strict_slashes=False)
 def documents_page():
     """
     Trang Tài liệu - template documents.html

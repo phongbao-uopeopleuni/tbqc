@@ -1,151 +1,52 @@
+{# Trang đăng nhập Admin - dùng admin.css, không navbar #}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập Admin - TBQC Gia Phả</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 400px;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .subtitle {
-            color: #666;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-        }
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 6px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-        input[type="text"]:focus,
-        input[type="password"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .row-remember {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .row-remember input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: #667eea;
-            flex-shrink: 0;
-        }
-        .row-remember label {
-            margin: 0;
-            font-weight: 500;
-            cursor: pointer;
-        }
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .btn-login:hover {
-            transform: translateY(-2px);
-        }
-        .error {
-            background: #fee;
-            color: #c33;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border-left: 4px solid #c33;
-        }
-        .back-link {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .back-link a {
-            color: #667eea;
-            text-decoration: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập Admin - TBQC Gia Phả</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/admin.css">
 </head>
-<body>
-    <div class="login-container" data-remembered="{{ remembered_username|default('', true)|e }}">
-        <h1>Đăng nhập Admin</h1>
-        <p class="subtitle">Hệ thống quản trị TBQC Gia Phả</p>
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
-        <form method="POST" action="" id="loginForm">
-            {% if next %}
-            <input type="hidden" name="next" value="{{ next }}">
-            {% endif %}
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autofocus>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <div class="row-remember">
-                <input type="checkbox" id="remember_username" name="remember_username" value="1">
-                <label for="remember_username">Lưu tài khoản</label>
-            </div>
-            <button type="submit" class="btn-login">Đăng nhập</button>
-        </form>
-        <div class="back-link">
-            <a href="/">← Về trang chủ</a>
-        </div>
+<body class="admin-login-page">
+  <div class="admin-login-container" data-remembered="{{ remembered_username|default('', true)|e }}">
+    <h1>Đăng nhập Admin</h1>
+    <p class="subtitle">Hệ thống quản trị TBQC Gia Phả</p>
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="POST" action="" id="loginForm">
+      {% if next %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% endif %}
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autofocus>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <div class="row-remember">
+        <input type="checkbox" id="remember_username" name="remember_username" value="1">
+        <label for="remember_username">Lưu tài khoản</label>
+      </div>
+      <button type="submit" class="btn-login">Đăng nhập</button>
+    </form>
+    <div class="back-link">
+      <a href="/">← Về trang chủ</a>
     </div>
-    <script>
-        (function() {
-            var el = document.querySelector('.login-container');
-            var saved = (el && el.getAttribute('data-remembered')) || '';
-            var prefill = document.getElementById('username');
-            var check = document.getElementById('remember_username');
-            if (saved && prefill) prefill.value = saved;
-            if (saved && check) check.checked = true;
-        })();
-    </script>
+  </div>
+  <script>
+    (function() {
+      var el = document.querySelector('.admin-login-container');
+      var saved = (el && el.getAttribute('data-remembered')) || '';
+      var prefill = document.getElementById('username');
+      var check = document.getElementById('remember_username');
+      if (saved && prefill) prefill.value = saved;
+      if (saved && check) check.checked = true;
+    })();
+  </script>
 </body>
 </html>

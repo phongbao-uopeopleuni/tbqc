@@ -1,241 +1,153 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Quản Trị TBQC</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard - Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}
+
+{% block content %}
+<div class="admin-card">
+  <h1>📊 Dashboard</h1>
+  <p class="text-muted admin-desc">Tổng quan hệ thống và cấu trúc website</p>
+</div>
+
+<div class="dashboard-grid">
+  <div class="stat-card">
+    <div class="icon">👥</div>
+    <div class="value" id="totalUsers">-</div>
+    <div class="label">Tổng số người dùng</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon">📝</div>
+    <div class="value" id="totalActivities">-</div>
+    <div class="label">Tổng số hoạt động</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon">👨‍👩‍👧‍👦</div>
+    <div class="value" id="totalMembers">-</div>
+    <div class="label">Tổng số thành viên</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon">📋</div>
+    <div class="value" id="totalLogs">-</div>
+    <div class="label">Tổng số logs</div>
+  </div>
+</div>
+
+<div class="website-structure">
+  <h2>🌐 Cấu trúc Website</h2>
+  <p class="tree-desc">Các trang công khai và khu vực quản trị thực tế đang hoạt động.</p>
+  <div class="tree-structure">
+    <div class="tree-item level-0">Công khai</div>
+    <div class="tree-item level-1">├── Trang chủ (/)</div>
+    <div class="tree-item level-1">├── Gia phả (/genealogy) <span class="gate-badge">Cổng passphrase</span></div>
+    <div class="tree-item level-1">├── Thành viên (/members) <span class="gate-badge">Cổng đăng nhập</span></div>
+    <div class="tree-item level-1">├── Liên hệ (/contact)</div>
+    <div class="tree-item level-1">└── Tài liệu (/documents)</div>
+    <div class="tree-item level-0 tree-section-spacer">Admin Panel (/admin/*)</div>
+    <div class="tree-item level-1">├── Dashboard (/admin/dashboard)</div>
+    <div class="tree-item level-1">├── Quản lý dữ liệu (/admin/data-management)</div>
+    <div class="tree-item level-1">├── Log (/admin/logs)</div>
+    <div class="tree-item level-1">├── Yêu cầu chỉnh sửa (/admin/requests)</div>
+    <div class="tree-item level-1">└── Tài khoản (/admin/users)</div>
+  </div>
+</div>
+
+<div class="website-structure">
+  <h2>⚡ Thao tác nhanh</h2>
+  <div class="quick-actions">
+    <a href="/admin/users" class="quick-action-btn">👥 Tài khoản</a>
+    <a href="/admin/data-management" class="quick-action-btn">📂 Quản lý dữ liệu</a>
+    <a href="/admin/logs" class="quick-action-btn">📋 Log</a>
+    <a href="/admin/requests" class="quick-action-btn">✏️ Yêu cầu chỉnh sửa</a>
+  </div>
+</div>
+
+<div class="system-info">
+  <h2>ℹ️ Thông tin hệ thống</h2>
+  <div class="info-row">
+    <span class="info-label">Database:</span>
+    <span class="info-value" id="dbName">-</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Số bảng:</span>
+    <span class="info-value" id="dbTables">-</span>
+  </div>
+  <div class="info-row">
+    <span class="info-label">Server:</span>
+    <span class="info-value" id="serverEnv">-</span>
+  </div>
+</div>
+
+<script>
+  async function loadDashboardStats() {
+    try {
+      try {
+        const usersRes = await fetch('/api/admin/users', { credentials: 'include' });
+        if (usersRes.ok) {
+          const users = await usersRes.json();
+          document.getElementById('totalUsers').textContent = Array.isArray(users) ? users.length : '-';
         }
-        .navbar {
-            background: #2c3e50;
-            color: white;
-            padding: 15px 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      } catch (e) { console.error('Error loading users:', e); }
+
+      try {
+        const activitiesRes = await fetch('/api/activities', { credentials: 'include' });
+        if (activitiesRes.ok) {
+          const data = await activitiesRes.json();
+          const n = Array.isArray(data) ? data.length : (data && typeof data.count === 'number' ? data.count : null);
+          if (n != null) document.getElementById('totalActivities').textContent = n;
         }
-        .navbar h1 {
-            font-size: 20px;
+        if (document.getElementById('totalActivities').textContent === '-') {
+          const tableRes = await fetch('/admin/api/table-stats?table=activities', { credentials: 'include' });
+          if (tableRes.ok) {
+            const tableData = await tableRes.json();
+            if (tableData.success && typeof tableData.count === 'number')
+              document.getElementById('totalActivities').textContent = tableData.count;
+          }
         }
-        .navbar-menu {
-            display: flex;
-            gap: 20px;
-            list-style: none;
+      } catch (e) { console.error('Error loading activities:', e); }
+
+      try {
+        const membersRes = await fetch('/api/members', { credentials: 'include' });
+        if (membersRes.ok) {
+          const result = await membersRes.json();
+          if (result.success && Array.isArray(result.data))
+            document.getElementById('totalMembers').textContent = result.data.length;
         }
-        .navbar-menu a {
-            color: white;
-            text-decoration: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            transition: background 0.3s;
+      } catch (e) { console.error('Error loading members:', e); }
+
+      try {
+        const logsRes = await fetch('/api/admin/activity-logs?limit=1', { credentials: 'include' });
+        if (logsRes.ok) {
+          const result = await logsRes.json();
+          if (result.success) document.getElementById('totalLogs').textContent = result.total || '-';
         }
-        .navbar-menu a:hover {
-            background: rgba(255,255,255,0.1);
+      } catch (e) { console.error('Error loading logs:', e); }
+
+      try {
+        const dbInfoRes = await fetch('/admin/api/db-info', { credentials: 'include' });
+        if (dbInfoRes.ok) {
+          const dbInfo = await dbInfoRes.json();
+          if (dbInfo.success) {
+            document.getElementById('dbName').textContent = dbInfo.database || '-';
+            document.getElementById('dbTables').textContent = dbInfo.tables_count || '-';
+          }
         }
-        .container {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
+      } catch (e) { console.error('Error loading DB info:', e); }
+
+      try {
+        const healthRes = await fetch('/api/health', { credentials: 'include' });
+        if (healthRes.ok) {
+          const health = await healthRes.json();
+          const host = health.db_config && health.db_config.host;
+          document.getElementById('serverEnv').textContent = (host && host !== 'localhost' && host !== '127.0.0.1') ? host : 'Local';
+        } else {
+          document.getElementById('serverEnv').textContent = 'Local';
         }
-        .dashboard-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-        .card {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .card h3 {
-            color: #2c3e50;
-            margin-bottom: 10px;
-        }
-        .card p {
-            color: #666;
-            font-size: 14px;
-        }
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 6px;
-            margin-top: 15px;
-            transition: background 0.3s;
-        }
-        .btn:hover {
-            background: #2980b9;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar">
-        <h1>🏛️ Quản Trị Hệ Thống TBQC</h1>
-        <ul class="navbar-menu">
-            <li><a href="/admin/dashboard">Dashboard</a></li>
-            <li><a href="/admin/users">Tài Khoản</a></li>
-            <li><a href="/admin/data-management">Quản Lý Dữ Liệu</a></li>
-            <li><a href="/">Trang Chủ</a></li>
-            <li><a href="/admin/logout">Đăng Xuất</a></li>
-        </ul>
-    </nav>
-    <div class="container">
-        <h2>Chào mừng, {{ current_user.full_name or current_user.username }}!</h2>
-        <p style="color: #666; margin-top: 10px;">Bạn đang đăng nhập với quyền: <strong>{{ current_user.role }}</strong></p>
-        
-        {% if error %}
-        <div class="error" style="background: #fee; color: #c33; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            Lỗi: {{ error }}
-        </div>
-        {% endif %}
-        
-        <!-- Summary Cards -->
-        <div class="dashboard-cards">
-            <div class="card">
-                <h3>👥 Tổng Thành Viên</h3>
-                <p style="font-size: 32px; font-weight: bold; color: #3498db; margin: 10px 0;">
-                    {{ stats.total_people or 0 }}
-                </p>
-            </div>
-            <div class="card">
-                <h3>❤️ Còn Sống</h3>
-                <p style="font-size: 32px; font-weight: bold; color: #27ae60; margin: 10px 0;">
-                    {{ stats.alive_count or 0 }}
-                </p>
-            </div>
-            <div class="card">
-                <h3>🕯️ Đã Mất</h3>
-                <p style="font-size: 32px; font-weight: bold; color: #e74c3c; margin: 10px 0;">
-                    {{ stats.deceased_count or 0 }}
-                </p>
-            </div>
-            <div class="card">
-                <h3>📊 Số Đời</h3>
-                <p style="font-size: 32px; font-weight: bold; color: #9b59b6; margin: 10px 0;">
-                    {{ stats.max_generation or 0 }}
-                </p>
-            </div>
-        </div>
-        
-        <!-- Charts Section -->
-        <div style="margin-top: 40px;">
-            <h2 style="color: #2c3e50; margin-bottom: 20px;">📊 Thống Kê Chi Tiết</h2>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-                <!-- Biểu đồ theo Đời -->
-                <div class="card">
-                    <h3>📈 Số Người Theo Đời</h3>
-                    <canvas id="generationChart" width="400" height="300"></canvas>
-                </div>
-                
-                <!-- Biểu đồ Giới Tính -->
-                <div class="card">
-                    <h3>👥 Phân Bố Giới Tính</h3>
-                    <canvas id="genderChart" width="400" height="300"></canvas>
-                </div>
-            </div>
-            
-            <div style="margin-top: 20px;">
-                <div class="card">
-                    <h3>📊 Tình Trạng Sống/Mất</h3>
-                    <canvas id="statusChart" width="400" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Quick Actions -->
-        <div class="dashboard-cards" style="margin-top: 40px;">
-            <div class="card">
-                <h3>👥 Quản Lý Tài Khoản</h3>
-                <p>Thêm, sửa, xóa tài khoản người dùng</p>
-                <a href="/admin/users" class="btn">Quản Lý</a>
-            </div>
-            <div class="card">
-                <h3>🌳 Gia Phả</h3>
-                <p>Xem và quản lý gia phả</p>
-                <a href="/#genealogy" class="btn">Xem Gia Phả</a>
-            </div>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script>
-        // Dữ liệu từ server
-        const generationData = {{ stats.generation_stats|tojson|safe }};
-        const genderData = {{ stats.gender_stats|tojson|safe }};
-        const statusData = {{ stats.status_stats|tojson|safe }};
-        
-        // Biểu đồ theo Đời
-        const genCtx = document.getElementById('generationChart').getContext('2d');
-        new Chart(genCtx, {
-            type: 'bar',
-            data: {
-                labels: generationData.map(item => 'Đời ' + item.generation_number),
-                datasets: [{
-                    label: 'Số người',
-                    data: generationData.map(item => item.count),
-                    backgroundColor: 'rgba(52, 152, 219, 0.6)',
-                    borderColor: 'rgba(52, 152, 219, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-        
-        // Biểu đồ Giới Tính
-        const genderCtx = document.getElementById('genderChart').getContext('2d');
-        new Chart(genderCtx, {
-            type: 'doughnut',
-            data: {
-                labels: genderData.map(item => item.gender || 'Không rõ'),
-                datasets: [{
-                    data: genderData.map(item => item.count),
-                    backgroundColor: [
-                        'rgba(52, 152, 219, 0.6)',
-                        'rgba(231, 76, 60, 0.6)',
-                        'rgba(149, 165, 166, 0.6)'
-                    ]
-                }]
-            }
-        });
-        
-        // Biểu đồ Tình Trạng
-        const statusCtx = document.getElementById('statusChart').getContext('2d');
-        new Chart(statusCtx, {
-            type: 'bar',
-            data: {
-                labels: statusData.map(item => item.status || 'Không rõ'),
-                datasets: [{
-                    label: 'Số người',
-                    data: statusData.map(item => item.count),
-                    backgroundColor: [
-                        'rgba(39, 174, 96, 0.6)',
-                        'rgba(231, 76, 60, 0.6)',
-                        'rgba(149, 165, 166, 0.6)'
-                    ]
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-    </script>
-</body>
-</html>
+      } catch (e) {
+        document.getElementById('serverEnv').textContent = 'Local';
+      }
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error);
+    }
+  }
+  document.addEventListener('DOMContentLoaded', loadDashboardStats);
+</script>
+{% endblock %}

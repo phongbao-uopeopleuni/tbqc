@@ -1,18 +1,35 @@
+{# Cổng đăng nhập quản lý bài đăng (activities) - dùng chung bảng màu admin #}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>Đăng nhập - Quản lý Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
   <style>
+    :root {
+      --admin-nav-bg: #111827;
+      --admin-accent: #FFD700;
+      --admin-accent-rgb: 255, 215, 0;
+      --admin-primary: #B8860B;
+      --admin-primary-hover: #D4A84B;
+      --admin-danger: #c53030;
+      --admin-bg: #f5f5f5;
+      --admin-card-bg: #ffffff;
+      --admin-border: #e5e7eb;
+      --admin-text: #111827;
+      --admin-text-muted: #6b7280;
+      --admin-radius: 8px;
+      --admin-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Noto Serif TC', serif;
-      background: #f5f5f5;
+      font-family: 'Inter', sans-serif;
+      background: var(--admin-bg);
       min-height: 100vh;
-      padding-top: 70px;
+      padding-top: 64px;
       display: flex;
       flex-direction: column;
     }
@@ -21,36 +38,34 @@
       top: 0;
       left: 0;
       right: 0;
-      background: #111827;
+      background: var(--admin-nav-bg);
       color: white;
-      padding: 15px 30px;
+      padding: 12px 24px;
+      height: 64px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       z-index: 1000;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    }
-    .navbar-logo {
-      font-size: 20px;
-      font-weight: 700;
-      color: #FFD700;
-      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     .navbar-menu {
       display: flex;
-      gap: 20px;
+      gap: 8px;
       list-style: none;
+      flex-wrap: wrap;
     }
     .navbar-menu a {
-      color: white;
+      color: rgba(255,255,255,0.9);
       text-decoration: none;
       font-size: 14px;
-      padding: 5px 10px;
-      border-radius: 4px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: background 0.2s, color 0.2s;
     }
-    .navbar-menu a:hover, .navbar-menu a.active {
-      color: #FFD700;
-      background: rgba(255, 215, 0, 0.1);
+    .navbar-menu a:hover,
+    .navbar-menu a.active {
+      color: var(--admin-accent);
+      background: rgba(var(--admin-accent-rgb), 0.15);
     }
     .gate-container {
       flex: 1;
@@ -60,113 +75,97 @@
       padding: 40px 20px;
     }
     .gate-card {
-      background: white;
+      background: var(--admin-card-bg);
       padding: 40px;
       border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      box-shadow: var(--admin-shadow);
       max-width: 450px;
       width: 100%;
+      border: 1px solid var(--admin-border);
     }
     .gate-card h1 {
-      color: #8B0000;
-      font-size: 32px;
+      color: var(--admin-primary);
+      font-size: 28px;
       margin-bottom: 10px;
       text-align: center;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
     }
     .gate-card p {
-      color: #666;
+      color: var(--admin-text-muted);
       font-size: 16px;
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 28px;
     }
-    .form-group {
-      margin-bottom: 20px;
-    }
+    .form-group { margin-bottom: 20px; }
     .form-group label {
       display: block;
       margin-bottom: 8px;
       font-weight: 600;
-      color: #333;
+      color: var(--admin-text);
       font-size: 14px;
     }
     .form-group input {
       width: 100%;
-      padding: 12px 18px;
-      border: 2px solid #DAA520;
-      border-radius: 8px;
+      padding: 12px 16px;
+      border: 2px solid var(--admin-border);
+      border-radius: var(--admin-radius);
       font-size: 16px;
-      font-family: 'Noto Serif TC', serif;
-      transition: border-color 0.3s, box-shadow 0.3s;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
     .form-group input:focus {
       outline: none;
-      border-color: #8B0000;
-      box-shadow: 0 0 10px rgba(218, 165, 32, 0.5);
+      border-color: var(--admin-primary);
+      box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.15);
     }
     .error-message {
-      color: #c62828;
+      color: var(--admin-danger);
       font-size: 14px;
       margin-top: 10px;
-      padding: 10px;
-      background: #ffebee;
-      border-radius: 8px;
+      padding: 12px;
+      background: #fef2f2;
+      border-radius: var(--admin-radius);
+      border-left: 4px solid var(--admin-danger);
       display: none;
     }
-    .error-message.show {
-      display: block;
-    }
+    .error-message.show { display: block; }
     .btn-login {
       width: 100%;
-      padding: 12px 30px;
+      padding: 12px 24px;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--admin-radius);
       font-size: 16px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
-      font-family: 'Noto Serif TC', serif;
-      background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%);
-      color: #FFD700;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      margin-top: 10px;
+      font-family: inherit;
+      background: var(--admin-primary);
+      color: white;
+      margin-top: 8px;
+      transition: background 0.2s;
     }
-    .btn-login:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
-    }
+    .btn-login:hover { background: var(--admin-primary-hover); }
     .btn-login:disabled {
       opacity: 0.6;
       cursor: not-allowed;
-      transform: none;
+    }
+    .form-group label.checkbox-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .form-group label.checkbox-label input {
+      width: auto;
+      margin-right: 8px;
     }
     @media (max-width: 768px) {
-      .navbar-menu {
-        position: fixed;
-        top: 70px;
-        left: -100%;
-        width: 100%;
-        background: #111827;
-        flex-direction: column;
-        padding: 20px;
-        transition: left 0.3s;
-      }
-      .navbar-menu.active {
-        left: 0;
-      }
-      .gate-card {
-        padding: 30px 20px;
-      }
-      .gate-card h1 {
-        font-size: 24px;
-      }
+      .navbar { height: auto; padding: 12px; }
+      .gate-card { padding: 28px 20px; }
+      .gate-card h1 { font-size: 22px; }
     }
   </style>
 </head>
 <body>
-  <!-- Navbar -->
   <nav class="navbar">
-    <button class="navbar-toggle" onclick="toggleMenu()" style="display: none; background: none; border: none; color: white; font-size: 24px; cursor: pointer;">☰</button>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
@@ -182,114 +181,83 @@
     <div class="gate-card">
       <h1>🔐 Đăng nhập</h1>
       <p>Vui lòng đăng nhập để quản lý bài đăng</p>
-      
+
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="form-group">
           <label for="username">Tên đăng nhập</label>
           <input type="text" id="username" name="username" required autofocus>
         </div>
-        
         <div class="form-group">
           <label for="password">Mật khẩu</label>
           <input type="password" id="password" name="password" required>
         </div>
-        
-        <div class="form-group" style="margin-bottom: 20px;">
-          <label style="display: flex; align-items: center; cursor: pointer; font-weight: normal;">
-            <input type="checkbox" id="rememberPassword" style="width: auto; margin-right: 8px; cursor: pointer;">
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="rememberPassword">
             <span>Lưu mật khẩu</span>
           </label>
         </div>
-        
         <div class="error-message" id="errorMessage">
           Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.
         </div>
-        
         <button type="submit" class="btn-login" id="loginBtn">Đăng nhập</button>
       </form>
     </div>
   </div>
 
   <script>
-    function toggleMenu() {
-      const menu = document.getElementById('navbarMenu');
-      menu.classList.toggle('active');
-    }
-
     async function handleLogin(event) {
       event.preventDefault();
-      
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value.trim();
-      const rememberPassword = document.getElementById('rememberPassword').checked;
-      const errorDiv = document.getElementById('errorMessage');
-      const loginBtn = document.getElementById('loginBtn');
-      
-      // Ẩn lỗi cũ
+      var username = document.getElementById('username').value.trim();
+      var password = document.getElementById('password').value.trim();
+      var rememberPassword = document.getElementById('rememberPassword').checked;
+      var errorDiv = document.getElementById('errorMessage');
+      var loginBtn = document.getElementById('loginBtn');
       errorDiv.classList.remove('show');
-      
-      // Disable button và hiển thị loading
       loginBtn.disabled = true;
       loginBtn.textContent = 'Đang xác thực...';
-      
       try {
-        const response = await fetch('/api/activities/post-login', {
+        var response = await fetch('/api/activities/post-login', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include', // Quan trọng: gửi session cookie
-          body: JSON.stringify({ username, password })
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ username: username, password: password })
         });
-        
-        const result = await response.json();
-        
+        var result = await response.json();
         if (result.success) {
-          // Lưu mật khẩu vào localStorage nếu checkbox được chọn
           if (rememberPassword) {
             localStorage.setItem('activities_username', username);
             localStorage.setItem('activities_password', password);
             localStorage.setItem('activities_remember', 'true');
           } else {
-            // Xóa dữ liệu đã lưu nếu không chọn
             localStorage.removeItem('activities_username');
             localStorage.removeItem('activities_password');
             localStorage.removeItem('activities_remember');
           }
-          
-          // Đăng nhập thành công - reload trang
           window.location.reload();
         } else {
-          // Đăng nhập thất bại - hiển thị lỗi
           errorDiv.classList.add('show');
           document.getElementById('password').value = '';
           document.getElementById('username').focus();
         }
       } catch (error) {
-        console.error('Login error:', error);
         errorDiv.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
         errorDiv.classList.add('show');
       } finally {
-        // Restore button
         loginBtn.disabled = false;
         loginBtn.textContent = 'Đăng nhập';
       }
     }
-
-    // Load dữ liệu đã lưu khi trang được tải
-    document.addEventListener('DOMContentLoaded', () => {
-      const savedUsername = localStorage.getItem('activities_username');
-      const savedPassword = localStorage.getItem('activities_password');
-      const savedRemember = localStorage.getItem('activities_remember');
-      
+    document.addEventListener('DOMContentLoaded', function() {
+      var savedUsername = localStorage.getItem('activities_username');
+      var savedPassword = localStorage.getItem('activities_password');
+      var savedRemember = localStorage.getItem('activities_remember');
       if (savedRemember === 'true' && savedUsername && savedPassword) {
         document.getElementById('username').value = savedUsername;
         document.getElementById('password').value = savedPassword;
         document.getElementById('rememberPassword').checked = true;
-        // Tự động focus vào password để người dùng có thể Enter để đăng nhập
         document.getElementById('password').focus();
       } else {
-        // Nếu không có dữ liệu đã lưu, focus vào username
         document.getElementById('username').focus();
       }
     });

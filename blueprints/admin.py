@@ -11,14 +11,7 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint('admin', __name__)
 
 
-@admin_bp.route('/admin/users')
-@login_required
-def admin_users_page():
-    """Trang quản lý người dùng (chỉ admin)."""
-    if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-        return redirect('/admin/login')
-    return render_template('admin_users.html')
-
+# /admin/users do admin_routes dang ky, render admin/users.html — khong trung route
 
 @admin_bp.route('/api/admin/sync-tbqc-accounts', methods=['POST'])
 @login_required

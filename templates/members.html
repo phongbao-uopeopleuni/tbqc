@@ -13,15 +13,13 @@
       box-sizing: border-box;
     }
 
+    /* Đồng bộ nền với trang Gia phả */
     body {
-      font-family: 'Noto Serif TC', 'Playfair Display', serif;
-      background: linear-gradient(135deg, #8B4513 0%, #A0522D 25%, #CD853F 50%, #DAA520 75%, #FFD700 100%);
+      font-family: var(--font-family-serif, 'Noto Serif TC', 'Playfair Display', serif);
+      background: var(--color-bg, #F8F5EF);
       background-attachment: fixed;
-      /* padding-top do navbar.css (64px) - giống trang Gia phả */
       min-height: 100vh;
     }
-
-    /* Navbar dùng chung từ main.css -> navbar.css (giống trang Gia phả) */
 
     .container {
       max-width: 100%;
@@ -533,14 +531,13 @@
   </style>
 </head>
 <body>
-  <!-- Navbar (giống trang Gia phả) -->
+  <!-- Navbar đồng bộ với Gia phả, không hiển thị Hoạt động -->
   <nav class="navbar">
-    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <button class="navbar-toggle" onclick="toggleNavbar()" aria-label="Menu">☰</button>
     <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
-      <li style="display: none;"><a href="/activities">Hoạt động</a></li>
       <li><a href="/members" class="active">Thành viên</a></li>
       <li><a href="/contact">Liên hệ</a></li>
       <li><a href="/admin/login">Admin</a></li>
