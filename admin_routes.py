@@ -76,8 +76,8 @@ def register_admin_routes(app):
             )
             
             login_user(user, remember=True)
-            
-            # Ghi log đăng nhập
+            session.permanent = True
+            session.modified = True
             log_login(success=True, username=username)
             
             # Cập nhật last_login

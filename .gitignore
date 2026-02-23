@@ -22,6 +22,7 @@ ENV/
 !*.env.example
 tbqc_db.env
 .db_resolved.json
+.secret_key
 .smtp_config
 *.config
 *_config

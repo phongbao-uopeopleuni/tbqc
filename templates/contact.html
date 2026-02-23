@@ -143,7 +143,12 @@
       <li style="display: none;"><a href="/activities">Hoạt động</a></li>
       <li><a href="/members">Thành viên</a></li>
       <li><a href="/contact" class="active">Liên hệ</a></li>
-      <li><a href="/admin/login">Admin</a></li>
+      {% if current_user.is_authenticated %}
+      <li><a href="{% if current_user.role == 'admin' %}/admin/dashboard{% else %}/admin/activities{% endif %}">{{ current_user.username }}</a></li>
+      <li><a href="/admin/logout">Đăng xuất</a></li>
+      {% else %}
+      <li><a href="/login">Đăng nhập</a></li>
+      {% endif %}
     </ul>
   </nav>
 
