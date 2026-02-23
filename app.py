@@ -116,7 +116,24 @@ except Exception as e:
 try:
     app = Flask(__name__, static_folder='static', static_url_path='/static', template_folder='templates')
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
-    app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+    def _get_or_create_secret_key():
+        """Return a stable SECRET_KEY persisted to .secret_key file (survives restarts)."""
+        _sk_file = Path(__file__).resolve().parent / '.secret_key'
+        if _sk_file.exists():
+            try:
+                key = _sk_file.read_text('utf-8').strip()
+                if key:
+                    return key
+            except Exception as e:
+                print(f'WARNING: Could not read .secret_key file: {e}')
+        key = secrets.token_hex(32)
+        try:
+            _sk_file.write_text(key, 'utf-8')
+            _sk_file.chmod(0o600)
+        except Exception as e:
+            print(f'WARNING: Could not write .secret_key file: {e}')
+        return key
+    app.secret_key = os.environ.get('SECRET_KEY') or _get_or_create_secret_key()
     from datetime import timedelta, datetime
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
     is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true' or os.environ.get('RENDER') == 'true' or (os.environ.get('ENVIRONMENT') == 'production') or (os.environ.get('COOKIE_DOMAIN') is not None and os.environ.get('COOKIE_DOMAIN') != '')
