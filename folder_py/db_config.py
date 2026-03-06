@@ -216,15 +216,16 @@ def get_db_config() -> dict:
             except Exception as e:
                 logger.debug("Retry read .db_resolved.json %s: %s", path, e)
     
-    # Final fallback to local defaults
+    # Final fallback: chỉ dùng giá trị từ env. Không hardcode mật khẩu/username/server.
+    # Cấu hình thật đặt trong .env hoặc tbqc_db.env (chỉ lưu local, đã gitignore)
     if not host:
         host = 'localhost'
     if not database:
-        database = 'tbqc2025'
+        database = os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or ''
     if not user:
-        user = 'tbqc_admin'
+        user = os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'root'
     if not password:
-        password = 'tbqc2025'
+        password = os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or ''
     
     # Build config dict
     config = {

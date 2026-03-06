@@ -1,62 +1,36 @@
 # TBQC Gia Phả
 
-Ung dung web quan ly va hien thi gia pha (family tree), ket noi HTML voi MySQL. Du an dung Flask, ho tro admin, trang Thanh vien, trang Tai lieu, va ban do tim kiem mo (Geoapify).
+Ứng dụng web quản lý và hiển thị gia phả (cây gia đình), kết nối giao diện HTML với cơ sở dữ liệu MySQL. Dự án sử dụng Flask, hỗ trợ trang quản trị, trang Thành viên, trang Tài liệu và bản đồ tìm kiếm mộ phần (Geoapify).
 
-## Cong nghe
+## Tổng quan
+
+TBQC Gia Phả là website lưu trữ và trình bày thông tin gia phả dòng họ một cách trực quan, dễ tra cứu. Hệ thống cho phép xem cây gia phả, danh sách thành viên, quản lý tài liệu, theo dõi hoạt động và tìm kiếm thông tin mộ phần trên bản đồ.
+
+## Mục tiêu
+
+- **Lưu trữ gia phả số hóa:** Số hóa thông tin gia phả, giúp lưu trữ lâu dài và dễ dàng cập nhật.
+- **Trình bày trực quan:** Hiển thị cây gia phả, mối quan hệ huyết thống, thông tin cá nhân một cách rõ ràng.
+- **Tra cứu thuận tiện:** Cho phép thành viên tìm kiếm, lọc, xuất danh sách và quản lý dữ liệu.
+- **Chia sẻ nội bộ:** Trang Thành viên, Tài liệu và Liên hệ giúp kết nối thông tin trong họ tộc.
+- **Quản trị tập trung:** Giao diện admin để quản lý tài khoản, dữ liệu và theo dõi hoạt động hệ thống.
+
+## Công nghệ
 
 - **Backend:** Python 3, Flask
 - **Database:** MySQL
-- **Deploy:** Render hoac Railway, cau hinh qua bien moi truong (khong lu mat khau, thong tin server vao Git)
 
-## Cau truc thu muc
+## Cấu trúc thư mục
 
-- `app.py` — **Diem vao bat buoc**: phai chay tai thu muc goc repo (`python app.py`), de dang ky blueprints.
-- `folder_py/` — Module phu (db_config, auth, ...), khong phai diem vao; khong chay `python app.py` trong folder_py.
+- `app.py` — Điểm vào ứng dụng
+- `folder_py/` — Module phụ trợ (db_config, auth, ...)
 - `blueprints/` — Flask blueprints: main, auth, activities, family_tree, persons, members_portal, gallery, admin
-- `templates/` — HTML (genealogy, members, admin, documents, index, ...)
-- `static/` — CSS, JS; `static/images/` — Anh trang chu (dat file theo huong dan trong `static/images/README.txt`)
-- `folder_sql/`, `tailieu/` — Chi luu local, khong dong bo len Git (khai bao trong `.gitignore`)
+- `templates/` — Giao diện HTML (genealogy, members, admin, documents, index, ...)
+- `static/` — CSS, JS, ảnh trang chủ
 
-## Chay local
+## Tính năng chính
 
-1. Tao moi truong ao: `python -m venv venv` va kich hoat.
-2. Cai dat: `pip install -r requirements.txt`
-3. Tao file `.env` tu mau (xem phan Bien moi truong). **Khong commit file `.env` len Git.**
-4. Chay: `python app.py` — Ung dung mo tai `http://127.0.0.1:5000` (hoac port cau hinh).
-
-## Bien moi truong
-
-Dat trong file `.env` o thu muc goc (hoac tren Dashboard Render/Railway). File `.env` da duoc gitignore, khong day len Git.
-
-- `SECRET_KEY` — Bi mat cho session Flask
-- `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT` — Ket noi MySQL (lay tu dich vu Database tren Render/Railway, khong ghi that vao code)
-- `MEMBERS_PASSWORD` — Mat khau trang Thanh vien (them/cap nhat/xoa/sao luu)
-- `ADMIN_PASSWORD`, `BACKUP_PASSWORD` — Mat khau admin va backup
-- `GEOAPIFY_API_KEY` — API key ban do (tu Geoapify, dang ky mien phi)
-
-Xem `.env.example` de biet cac bien can thiet (chi chua placeholder, khong chua mat khau that).
-
-## Tinh nang chinh
-
-- **Trang chu:** Gioi thieu, anh (dat trong `static/images/` theo README)
-- **Gia pha:** Cay gia pha, co passphrase
-- **Thanh vien:** Danh sach thanh vien, dang nhap noi bo, xuat Excel, tim kiem
-- **Admin:** Dang nhap, luu tai khoan (cookie), Dashboard, quan ly tai khoan, quan ly du lieu, Log
-- **Lien he, Tai lieu**
-
-## Bao mat
-
-- Khong lu mat khau, `DB_HOST` that, hoac API key vao Git. Chi dung bien moi truong (`.env` local hoac bien tren Render/Railway).
-- File `.env`, `tbqc_db.env`, `.db_resolved.json` da duoc gitignore.
-
-## Deploy
-
-- Bien moi truong dat thong qua Dashboard cua Render/Railway (hoac file env tren server, khong commit).
-- Build: `pip install -r requirements.txt`
-- **Start:** `python app.py` — Bat buoc chay tai **thu muc goc** cua repo (co file `app.py` va thu muc `blueprints/`). Neu chay tu thu muc khac (vd. `folder_py`) thi `/genealogy`, `/members`, `/contact` se 404.
-
-### Neu sau khi push len Git ma /genealogy, /members, /contact tra ve JSON 404
-
-1. Mo `https://<domain>/api/health` — xem truong `blueprints_registered`: neu `false`, co truong `blueprints_error` ghi loi khi dang ky blueprints (thieu dependency, import loi, ...).
-2. Tren Dashboard Render/Railway: kiem tra **Start Command** la `python app.py`, **Root/Working Directory** la thu muc goc repo (khong phai `folder_py`).
-3. Xem log khi khoi dong: neu co dong "OK: Da dang ky Flask Blueprints." thi blueprints da load; neu co "WARNING: Loi khi dang ky blueprints" thi doc traceback phia duoi de sua (vd. `pip install openpyxl`, hoac sua duong dan/import).
+- **Trang chủ:** Giới thiệu tổng quan, hình ảnh minh họa
+- **Gia phả:** Cây gia phả tương tác, có bảo vệ bằng passphrase
+- **Thành viên:** Danh sách thành viên, đăng nhập nội bộ, xuất Excel, tìm kiếm
+- **Admin:** Đăng nhập, Dashboard, quản lý tài khoản, quản lý dữ liệu, nhật ký hoạt động
+- **Liên hệ, Tài liệu**

@@ -278,7 +278,7 @@ except ImportError:
     except ImportError:
         print('WARNING: Cannot import db_config, using fallback')
         def _get_db_config_impl():
-            return {'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost', 'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or 'tbqc2025', 'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'tbqc_admin', 'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or 'tbqc2025', 'charset': 'utf8mb4', 'collation': 'utf8mb4_unicode_ci'}
+            return {'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost', 'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or '', 'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'root', 'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or '', 'charset': 'utf8mb4', 'collation': 'utf8mb4_unicode_ci'}
         def _get_db_connection_impl():
             try:
                 return mysql.connector.connect(**_get_db_config_impl())
@@ -431,9 +431,19 @@ def secure_compare(a: str, b: str) -> bool:
         True if strings match, False otherwise
     """
     return secrets.compare_digest(a.encode('utf-8'), b.encode('utf-8'))
-# 4 tài khoản cố định cho cổng Members (luôn chấp nhận đăng nhập)
-MEMBERS_GATE_ACCOUNTS = [{'username': 'tbqcnhanh1', 'password': 'nhanh1@123'}, {'username': 'tbqcnhanh2', 'password': 'nhanh2@123'}, {'username': 'tbqcnhanh3', 'password': 'nhanh3@123'}, {'username': 'tbqcnhanh4', 'password': 'nhanh4@123'}]
-FIXED_MEMBERS_PASSWORDS = {'tbqcnhanh1': 'nhanh1@123', 'tbqcnhanh2': 'nhanh2@123', 'tbqcnhanh3': 'nhanh3@123', 'tbqcnhanh4': 'nhanh4@123'}
+# Tài khoản cố định cổng Members: load từ env MEMBERS_FIXED_ACCOUNTS (format: user1:pass1,user2:pass2)
+# Chỉ lưu giá trị thật trong .env/tbqc_db.env trên máy local, không commit
+def _load_fixed_members_passwords():
+    raw = os.environ.get('MEMBERS_FIXED_ACCOUNTS', '').strip()
+    result = {}
+    for part in raw.split(','):
+        part = part.strip()
+        if ':' in part:
+            u, p = part.split(':', 1)
+            result[u.strip()] = p.strip()
+    return result
+FIXED_MEMBERS_PASSWORDS = _load_fixed_members_passwords()
+MEMBERS_GATE_ACCOUNTS = [{'username': k, 'password': v} for k, v in FIXED_MEMBERS_PASSWORDS.items()]
 external_posts_cache = {'data': None, 'timestamp': None, 'cache_duration': timedelta(minutes=30)}
 
 def sync_members_gate_accounts_from_db():
@@ -490,16 +500,9 @@ def validate_tbqc_gate(username: str, password: str) -> bool:
 def get_members_password():
     """
     Lấy mật khẩu cho các thao tác trên trang Members (Add, Update, Delete, Backup).
-    Priority: MEMBERS_PASSWORD > ADMIN_PASSWORD > BACKUP_PASSWORD > Default (tbqc@2026)
+    Priority: MEMBERS_PASSWORD > ADMIN_PASSWORD > BACKUP_PASSWORD.
     Tự động load từ tbqc_db.env nếu không có trong environment variables (local dev).
-    Trên production: chỉ dùng environment variables.
-    Fallback: tbqc@2026 nếu không có environment variable nào được set.
-    
-    Get password for operations on Members page (Add, Update, Delete, Backup).
-    Priority: MEMBERS_PASSWORD > ADMIN_PASSWORD > BACKUP_PASSWORD > Default (tbqc@2026)
-    Automatically loads from tbqc_db.env if not in environment variables (local dev).
-    On production: only uses environment variables.
-    Fallback: tbqc@2026 if no environment variable is set.
+    Trên production: chỉ dùng environment variables. Chỉ lưu mật khẩu local, không commit Git.
     
     Returns:
         Password string để sử dụng cho các thao tác Members
@@ -523,9 +526,8 @@ def get_members_password():
             import traceback
             logger.error(traceback.format_exc())
     if not password:
-        password = 'tbqc@2026'
-        logger.warning('MEMBERS_PASSWORD not set - using default (security risk in production)')
-    return password
+        logger.warning('MEMBERS_PASSWORD/ADMIN_PASSWORD/BACKUP_PASSWORD chưa cấu hình - đặt trong .env hoặc biến môi trường (chỉ lưu local)')
+    return password or ''
 
 def get_geoapify_api_key():
     """
@@ -1233,36 +1235,27 @@ def ensure_album_images_table(cursor):
                 Database cursor to execute SQL queries
     """
     cursor.execute('\n        CREATE TABLE IF NOT EXISTS album_images (\n            image_id INT PRIMARY KEY AUTO_INCREMENT,\n            album_id INT NOT NULL,\n            filename VARCHAR(500) NOT NULL,\n            filepath VARCHAR(1000) NOT NULL,\n            url VARCHAR(1000) NOT NULL,\n            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n            FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE CASCADE,\n            INDEX idx_album_id (album_id),\n            INDEX idx_uploaded_at (uploaded_at)\n        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n    ')
-ALBUM_PASSWORD = 'tbqc@2026'
-GRAVE_IMAGE_DELETE_PASSWORD = 'tbqc@2026'
+def _get_album_password():
+    return os.environ.get('ALBUM_PASSWORD') or os.environ.get('MEMBERS_PASSWORD') or get_members_password()
+
+def _get_grave_image_delete_password():
+    return os.environ.get('GRAVE_IMAGE_DELETE_PASSWORD') or os.environ.get('MEMBERS_PASSWORD') or get_members_password()
 
 def verify_album_password(password):
     """
     Xác thực mật khẩu để đăng ảnh vào album.
-    
-    Verify password to upload images to album.
-    
-    Args:
-        password: Mật khẩu cần kiểm tra
-        
-    Returns:
-        True nếu mật khẩu đúng, False nếu sai
+    Mật khẩu lấy từ env ALBUM_PASSWORD hoặc MEMBERS_PASSWORD (chỉ lưu local).
     """
-    return password == ALBUM_PASSWORD
+    expected = _get_album_password()
+    return expected and secure_compare(password or '', expected)
 
 def verify_grave_image_delete_password(password):
     """
     Xác thực mật khẩu để xóa ảnh mộ phần.
-    
-    Verify password to delete grave image.
-    
-    Args:
-        password: Mật khẩu cần kiểm tra
-        
-    Returns:
-        True nếu mật khẩu đúng, False nếu sai
+    Mật khẩu lấy từ env GRAVE_IMAGE_DELETE_PASSWORD hoặc MEMBERS_PASSWORD (chỉ lưu local).
     """
-    return password == GRAVE_IMAGE_DELETE_PASSWORD
+    expected = _get_grave_image_delete_password()
+    return expected and secure_compare(password or '', expected)
 
 def api_get_albums():
     """

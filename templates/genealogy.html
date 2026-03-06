@@ -5613,16 +5613,20 @@
   <!-- Floating Zalo Button -->
   <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
   
-  <!-- Passphrase Gate Script -->
+  <!-- Passphrase Gate Script - Xác thực qua API, passphrase chỉ lưu trên server (env) -->
   <script>
-    const VALID_PASSPHRASES = [
-      'phutuybien2026',
-      'nhanh1@123',
-      'nhanh2@123',
-      'nhanh3@123',
-      'nhanh4@123'
-    ];
     const STORAGE_KEY = 'genealogy_unlocked';
+
+    async function verifyPassphrase(passphrase) {
+      const res = await fetch('/api/genealogy/verify-passphrase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passphrase }),
+        credentials: 'include'
+      });
+      const data = await res.json();
+      return data && data.success === true;
+    }
     
     // Check if already unlocked on page load
     document.addEventListener('DOMContentLoaded', () => {
@@ -5659,7 +5663,7 @@
       sessionStorage.setItem(STORAGE_KEY, 'true');
     }
     
-    function handleGateSubmit(event) {
+    async function handleGateSubmit(event) {
       event.preventDefault();
       
       const input = document.getElementById('gatePassphrase');
@@ -5670,8 +5674,9 @@
       if (!input) return;
       
       const enteredPassphrase = input.value.trim();
+      const isValid = await verifyPassphrase(enteredPassphrase);
       
-      if (VALID_PASSPHRASES.includes(enteredPassphrase)) {
+      if (isValid) {
         // Correct passphrase
         // Lưu mật khẩu nếu checkbox được tick
         if (rememberCheckbox && rememberCheckbox.checked) {
@@ -5704,7 +5709,7 @@
     }
     
     // Load mật khẩu đã lưu khi trang load
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
       try {
         const savedPassphrase = localStorage.getItem('genealogy_passphrase');
         const rememberSaved = localStorage.getItem('genealogy_remember');
@@ -5719,8 +5724,9 @@
               rememberCheckbox.checked = true;
             }
             
-            // Tự động submit nếu mật khẩu hợp lệ
-            if (VALID_PASSPHRASES.includes(savedPassphrase)) {
+            // Tự động submit nếu mật khẩu hợp lệ (xác thực qua API)
+            const isValid = await verifyPassphrase(savedPassphrase);
+            if (isValid) {
               // Delay một chút để đảm bảo form đã render
               setTimeout(() => {
                 handleGateSubmit(new Event('submit'));

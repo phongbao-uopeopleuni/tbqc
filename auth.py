@@ -54,12 +54,12 @@ def _auth_debug(tag: str):
     except Exception:
         logger.exception("[AUTH_DEBUG] failed to log")
 
-# Cấu hình database
+# Cấu hình database - chỉ từ env, không hardcode
 DB_CONFIG = {
     "host": os.environ.get("DB_HOST") or os.environ.get("MYSQLHOST") or "localhost",
-    "database": os.environ.get("DB_NAME") or os.environ.get("MYSQLDATABASE") or "tbqc2025",
-    "user": os.environ.get("DB_USER") or os.environ.get("MYSQLUSER") or "tbqc_admin",
-    "password": os.environ.get("DB_PASSWORD") or os.environ.get("MYSQLPASSWORD") or "tbqc2025",
+    "database": os.environ.get("DB_NAME") or os.environ.get("MYSQLDATABASE") or "",
+    "user": os.environ.get("DB_USER") or os.environ.get("MYSQLUSER") or "root",
+    "password": os.environ.get("DB_PASSWORD") or os.environ.get("MYSQLPASSWORD") or "",
     "charset": "utf8mb4",
     "collation": "utf8mb4_unicode_ci",
 }

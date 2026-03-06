@@ -1,7 +1,14 @@
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request, jsonify
+import os
 
 # Khởi tạo Blueprint 'main'
 main_bp = Blueprint('main', __name__)
+
+
+def _get_genealogy_passphrases():
+    """Passphrase từ env GENEALOGY_PASSPHRASES (phân cách bằng dấu phẩy). Chỉ lưu local."""
+    raw = os.environ.get('GENEALOGY_PASSPHRASES', '').strip()
+    return [p.strip() for p in raw.split(',') if p.strip()]
 
 @main_bp.route('/')
 def index():
@@ -11,6 +18,22 @@ def index():
     Homepage - renders the index.html template
     """
     return render_template('index.html')
+
+@main_bp.route('/api/genealogy/verify-passphrase', methods=['POST'])
+def verify_genealogy_passphrase():
+    """Xác thực passphrase mở trang gia phả. Passphrase lưu trong env (chỉ local)."""
+    try:
+        data = request.get_json(silent=True) or {}
+        passphrase = (data.get('passphrase') or '').strip()
+        valid_list = _get_genealogy_passphrases()
+        if not valid_list:
+            return jsonify({'success': False, 'error': 'Chưa cấu hình passphrase'}), 500
+        if passphrase in valid_list:
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Passphrase không đúng'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @main_bp.route('/genealogy', strict_slashes=False)
 def genealogy_page():

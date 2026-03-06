@@ -22,12 +22,14 @@ def api_sync_tbqc_accounts():
     try:
         from folder_py.db_config import get_db_connection
         from auth import hash_password
+        from app import FIXED_MEMBERS_PASSWORDS
+        # Tài khoản lấy từ env MEMBERS_FIXED_ACCOUNTS (chỉ lưu local)
         accounts = [
-            {'username': 'tbqcnhanh1', 'password': 'nhanh1@123', 'full_name': 'Nhánh 1', 'email': 'tbqcnhanh1@tbqc.local'},
-            {'username': 'tbqcnhanh2', 'password': 'nhanh2@123', 'full_name': 'Nhánh 2', 'email': 'tbqcnhanh2@tbqc.local'},
-            {'username': 'tbqcnhanh3', 'password': 'nhanh3@123', 'full_name': 'Nhánh 3', 'email': 'tbqcnhanh3@tbqc.local'},
-            {'username': 'tbqcnhanh4', 'password': 'nhanh4@123', 'full_name': 'Nhánh 4', 'email': 'tbqcnhanh4@tbqc.local'},
+            {'username': u, 'password': p, 'full_name': f'Nhánh {i+1}', 'email': f'{u}@tbqc.local'}
+            for i, (u, p) in enumerate(FIXED_MEMBERS_PASSWORDS.items())
         ]
+        if not accounts:
+            return (jsonify({'success': False, 'error': 'Chưa cấu hình MEMBERS_FIXED_ACCOUNTS trong env'}), 400)
         connection = get_db_connection()
         if not connection:
             return (jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500)

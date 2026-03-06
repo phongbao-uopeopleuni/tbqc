@@ -43,6 +43,7 @@ services:
 
 databases:
   - name: tbqc-db
-    databaseName: tbqc2025
-    user: tbqc_admin
+    # Cấu hình DB: đặt tên và user theo ý (không hardcode mật khẩu - Render tự sinh)
+    databaseName: tbqc_db
+    user: tbqc_user
     plan: free
