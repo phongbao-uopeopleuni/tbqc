@@ -399,7 +399,7 @@
     // Check authentication
     async function checkAuth() {
       try {
-        const response = await fetch('/api/current-user');
+        const response = await fetch('/api/current-user', { credentials: 'include' });
         const result = await response.json();
         if (result.success && result.user) {
           currentUser = result.user;
@@ -407,11 +407,11 @@
           document.getElementById('userInfo').style.display = 'flex';
           return true;
         } else {
-          window.location.href = '/login';
+          window.location.href = '/admin/login';
           return false;
         }
       } catch (e) {
-        window.location.href = '/login';
+        window.location.href = '/admin/login';
         return false;
       }
     }
@@ -419,10 +419,10 @@
     // Logout
     async function handleLogout() {
       try {
-        await fetch('/api/logout', { method: 'POST' });
-        window.location.href = '/login';
+        await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+        window.location.href = '/admin/login';
       } catch (e) {
-        window.location.href = '/login';
+        window.location.href = '/admin/login';
       }
     }
 
@@ -470,7 +470,8 @@
       try {
         const response = await fetch('/api/upload-image', {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'include'
         });
         const result = await response.json();
         
@@ -579,14 +580,16 @@
           response = await fetch(`/api/activities/${postId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
+            credentials: 'include'
           });
         } else {
           // Create
           response = await fetch('/api/activities', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
+            credentials: 'include'
           });
         }
 

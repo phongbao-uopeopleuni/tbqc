@@ -121,7 +121,8 @@
 
         const response = await fetch('/api/login', {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'include'
         });
 
         const result = await response.json();

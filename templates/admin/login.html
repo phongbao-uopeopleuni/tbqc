@@ -13,10 +13,8 @@
   <div class="admin-login-container" data-remembered="{{ remembered_username|default('', true)|e }}">
     <h1>Đăng nhập Admin</h1>
     <p class="subtitle">Hệ thống quản trị TBQC Gia Phả</p>
-    {% if error %}
-    <div class="error">{{ error }}</div>
-    {% endif %}
-    <form method="POST" action="" id="loginForm">
+    <div id="loginError" class="error" {% if not error %}style="display:none"{% endif %}>{% if error %}{{ error }}{% endif %}</div>
+    <form id="loginForm" onsubmit="return handleAdminLogin(event)">
       {% if next %}
       <input type="hidden" name="next" value="{{ next }}">
       {% endif %}
@@ -47,6 +45,38 @@
       if (saved && prefill) prefill.value = saved;
       if (saved && check) check.checked = true;
     })();
+
+    async function handleAdminLogin(e) {
+      e.preventDefault();
+      var form = document.getElementById('loginForm');
+      var fd = new FormData(form);
+      fd.append('username', form.username.value);
+      fd.append('password', form.password.value);
+      fd.append('remember', '1');
+      var nextInput = form.querySelector('input[name=next]');
+      if (nextInput && nextInput.value) fd.append('redirect', nextInput.value);
+      var errEl = document.getElementById('loginError');
+      errEl.style.display = 'none';
+      errEl.textContent = '';
+      try {
+        var res = await fetch('/api/login', {
+          method: 'POST',
+          body: fd,
+          credentials: 'include'
+        });
+        var data = await res.json();
+        if (data.success) {
+          window.location.href = data.redirect || '/admin/users';
+        } else {
+          errEl.textContent = data.error || 'Đăng nhập thất bại';
+          errEl.style.display = 'block';
+        }
+      } catch (err) {
+        errEl.textContent = 'Lỗi kết nối: ' + err.message;
+        errEl.style.display = 'block';
+      }
+      return false;
+    }
   </script>
 </body>
 </html>

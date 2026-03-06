@@ -233,6 +233,8 @@ def members_verify_route():
         if validate_tbqc_gate(username, password):
             session['members_gate_ok'] = True
             session['members_gate_user'] = username
+            session.permanent = True
+            session.modified = True
             logger.info(f'Members gate login successful: {username}')
             return jsonify({'success': True, 'message': 'Đăng nhập thành công'})
         logger.warning(f'Members gate login failed: username={username!r}')
