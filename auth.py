@@ -54,31 +54,18 @@ def _auth_debug(tag: str):
     except Exception:
         logger.exception("[AUTH_DEBUG] failed to log")
 
-# Cấu hình database - chỉ từ env, không hardcode
-DB_CONFIG = {
-    "host": os.environ.get("DB_HOST") or os.environ.get("MYSQLHOST") or "localhost",
-    "database": os.environ.get("DB_NAME") or os.environ.get("MYSQLDATABASE") or "",
-    "user": os.environ.get("DB_USER") or os.environ.get("MYSQLUSER") or "root",
-    "password": os.environ.get("DB_PASSWORD") or os.environ.get("MYSQLPASSWORD") or "",
-    "charset": "utf8mb4",
-    "collation": "utf8mb4_unicode_ci",
-}
-
-db_port = os.environ.get("DB_PORT") or os.environ.get("MYSQLPORT")
-if db_port:
-    try:
-        DB_CONFIG["port"] = int(db_port)
-    except ValueError:
-        pass
-
+# Bỏ đoạn hardcode DB_CONFIG từ os.environ vì db_config.py đã lo việc này
 def get_connection():
-    """Tạo kết nối database"""
+    """Tạo kết nối database qua Connection Pool"""
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
-        return connection
-    except Error as e:
-        print(f"Lỗi kết nối database: {e}")
-        return None
+        from folder_py.db_config import get_db_connection
+    except ImportError:
+        try:
+            from db_config import get_db_connection
+        except ImportError:
+            return None
+    
+    return get_db_connection()
 
 class User(UserMixin):
     """User class cho Flask-Login với permissions"""

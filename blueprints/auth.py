@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, redirect
+from flask import Blueprint, render_template, request, jsonify, redirect, session
 from flask_login import login_user, logout_user, current_user
 from mysql.connector import Error
 
@@ -64,7 +64,6 @@ def api_login():
     )
     
     login_user(user, remember=True)
-    from flask import session
     session.permanent = True
     session.modified = True
     

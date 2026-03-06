@@ -910,7 +910,8 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ password: authPassword })
+          body: JSON.stringify({ password: authPassword }),
+          credentials: 'include'
         });
 
         const result = await response.json();

@@ -1,12 +1,13 @@
+# -*- coding: utf-8 -*-
 """
-Flask API Server cho Gia Phả Nguyễn Phước Tộc
-Kết nối HTML với MySQL database
+Flask API Server cho Gia Pha Nguyen Phuoc Toc
+Ket noi HTML voi MySQL database
 
-So với file cũ (single app.py không blueprints):
-- File cũ KHÔNG load .env trong app.py; config DB chỉ từ os.environ hoặc db_config đọc tbqc_db.env.
-- Bản hiện tại: load .env ngay đầu, set override vào db_config + ghi .db_resolved.json để mọi process
-  (kể cả process con / reloader) dùng chung config. Chạy local: chỉ cần có .env; đảm bảo chỉ 1 process
-  (python app.py, use_reloader=False) và tắt process cũ đang chiếm port 5000.
+So voi file cu (single app.py khong blueprints):
+- File cu KHONG load .env trong app.py; config DB chi tu os.environ hoac db_config doc tbqc_db.env.
+- Ban hien tai: load .env ngay dau, set override vao db_config + ghi .db_resolved.json de moi process
+  (ke ca process con / reloader) dung chung config. Chay local: chi can co .env; dam bao chi 1 process
+  (python app.py, use_reloader=False) va tat process cu dang chiem port 5000.
 """
 # Load .env first so DB_*, SECRET_KEY, etc. are available before db_config and the rest of the app
 import os
@@ -116,7 +117,9 @@ except Exception as e:
 try:
     app = Flask(__name__, static_folder='static', static_url_path='/static', template_folder='templates')
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
-    app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
+    import secrets
+    fallback_key = os.environ.get('SECRET_KEY') or 'thuan_thien_cao_hoang_hau_tbqc_2024_fallback_key'
+    app.secret_key = fallback_key
     from datetime import timedelta, datetime
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
     is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true' or os.environ.get('RENDER') == 'true' or (os.environ.get('ENVIRONMENT') == 'production') or (os.environ.get('COOKIE_DOMAIN') is not None and os.environ.get('COOKIE_DOMAIN') != '')
@@ -196,7 +199,7 @@ if limiter:
     try:
         from blueprints.members_portal import members_portal_bp
         limiter.exempt(members_portal_bp)
-        print('OK: Rate limit exempt cho members_portal (trang Members + Xuất Excel)')
+        print('OK: Rate limit exempt cho members_portal (trang Members + Xuat Excel)')
     except Exception as e:
         print(f'WARNING: Khong exempt duoc members_portal: {e}')
 try:
@@ -214,45 +217,10 @@ if register_admin_routes:
         print(f'WARNING: Loi khi dang ky admin routes: {e}')
 
 
-@app.route('/members/verify', methods=['POST'])
-def members_verify_route():
-    """Route trực tiếp trên app để POST /members/verify luôn khớp (tránh 404 từ handler)."""
-    try:
-        data = request.get_json(silent=True) if request.is_json else {}
-        if not data:
-            data = {
-                'username': (request.form.get('username') or '').strip(),
-                'password': (request.form.get('password') or '').strip(),
-            }
-        else:
-            data = {'username': (data.get('username') or '').strip(), 'password': (data.get('password') or '').strip()}
-        username = data.get('username', '')
-        password = data.get('password', '')
-        if not username or not password:
-            return (jsonify({'success': False, 'error': 'Tên đăng nhập và mật khẩu không được để trống'}), 400)
-        if validate_tbqc_gate(username, password):
-            session['members_gate_ok'] = True
-            session['members_gate_user'] = username
-            session.permanent = True
-            session.modified = True
-            logger.info(f'Members gate login successful: {username}')
-            return jsonify({'success': True, 'message': 'Đăng nhập thành công'})
-        logger.warning(f'Members gate login failed: username={username!r}')
-        return (jsonify({'success': False, 'error': 'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.'}), 401)
-    except Exception as e:
-        logger.error(f'Error in members_verify_route: {e}', exc_info=True)
-        return (jsonify({'success': False, 'error': 'Lỗi server: ' + str(e)}), 500)
 
+# NOTE: /members/verify va /api/members da duoc dang ky boi blueprints.members_portal
+# Khong dinh nghia lai o day de tranh duplicate route conflict
 
-@app.route('/api/members', methods=['GET'])
-def api_members_route():
-    """Route trực tiếp trên app để GET /api/members luôn khớp (tránh 404 từ handler)."""
-    try:
-        from blueprints.members_portal import get_members
-        return get_members()
-    except Exception as e:
-        logger.exception('api_members_route failed')
-        return (jsonify({'success': False, 'error': 'Lỗi server: ' + str(e)}), 500)
 
 
 try:

@@ -1514,7 +1514,7 @@
     /**
      * Kiểm tra mật khẩu và cho phép chỉnh sửa nếu đúng
      */
-    function verifyPasswordAndEdit(event) {
+    async function verifyPasswordAndEdit(event) {
       event.preventDefault();
       
       const passwordInput = document.getElementById('passwordInput');
@@ -1533,7 +1533,8 @@
         const verifyResponse = await fetch('/api/admin/verify-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: password, action: 'edit_person' })
+          body: JSON.stringify({ password: password, action: 'edit_person' }),
+          credentials: 'include'
         });
         const verifyResult = await verifyResponse.json();
         
@@ -1662,7 +1663,8 @@
         const verifyResponse = await fetch('/api/admin/verify-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password: password, action: 'delete_person' })
+          body: JSON.stringify({ password: password, action: 'delete_person' }),
+          credentials: 'include'
         });
         const verifyResult = await verifyResponse.json();
         

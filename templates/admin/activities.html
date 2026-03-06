@@ -757,7 +757,8 @@
         
         const response = await fetch('/api/upload-image', {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'include'
         });
         
         console.log('Upload response status:', response.status);
@@ -856,7 +857,8 @@
         try {
           const response = await fetch('/api/upload-image', {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'include'
           });
           
           console.log(`Upload response for ${file.name}:`, response.status);

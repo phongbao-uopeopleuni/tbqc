@@ -40,6 +40,11 @@ services:
       # Lay API key mien phi: https://www.geoapify.com/ (3.000 yeu cau/ngay)
       - key: GEOAPIFY_API_KEY
         sync: false  # Phai dat thu cong trong Render Dashboard
+      # Cookie domain - de SESSION & REMEMBER cookie dung chung cho domain chinh va www
+      # Dat gia tri: .phongtuybienquancong.info (co dau cham de cover ca subdomain)
+      # Production yeu cau HTTPS; SESSION_COOKIE_SECURE=True nen qua HTTP se khong gui cookie
+      - key: COOKIE_DOMAIN
+        sync: false  # Phai dat thu cong trong Render Dashboard: .phongtuybienquancong.info
 
 databases:
   - name: tbqc-db

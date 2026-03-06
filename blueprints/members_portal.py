@@ -73,7 +73,10 @@ def get_members():
     if not session.get('members_gate_ok'):
         logger.warning('Unauthorized access to /api/members')
         return (jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401)
-    cache = current_app.extensions.get('cache', None) if getattr(current_app, 'extensions', None) else None
+    try:
+        from app import cache
+    except Exception:
+        cache = None
     cache_key = 'api_members_data'
     if cache:
         try:
