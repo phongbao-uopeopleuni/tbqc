@@ -7,7 +7,7 @@ main_bp = Blueprint('main', __name__)
 
 def _get_genealogy_passphrases():
     """Passphrase từ env GENEALOGY_PASSPHRASES (phân cách bằng dấu phẩy). Chỉ lưu local."""
-    raw = os.environ.get('GENEALOGY_PASSPHRASES', '').strip()
+    raw = os.environ.get('GENEALOGY_PASSPHRASES', 'phutuybien2026').strip()
     return [p.strip() for p in raw.split(',') if p.strip()]
 
 @main_bp.route('/')
