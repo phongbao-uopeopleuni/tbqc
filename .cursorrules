@@ -1,0 +1,57 @@
+# TBQC Gia Pha — Cursor Rules
+
+## Project Overview
+Flask web app for managing a Vietnamese royal family tree (Nguyen Phuoc Toc).
+Backend: Python 3 + Flask. Database: MySQL. Deploy: Render/Railway.
+
+## Project Structure
+- `app.py` — Single entry point. Must be run from repo root: `python app.py`
+- `blueprints/` — Flask blueprints: main, auth, activities, family_tree, persons, members_portal, gallery, admin
+- `folder_py/` — Utility modules: db_config, genealogy_tree. NOT an entry point.
+- `templates/` — Jinja2 HTML templates
+- `static/` — CSS (`static/css/`), JS, images (`static/images/`)
+- `scripts/` — Dev/ops utilities (backup, route listing, etc.)
+
+## Key Rules
+
+### Running the app
+- Always run `python app.py` from the **repo root**, never from `folder_py/` or any subdirectory.
+- Local dev: requires `.env` file (see `.env.example`). Never commit `.env`.
+
+### Environment Variables
+All secrets go in `.env` (local) or platform dashboard (Render/Railway). Never hardcode:
+- `SECRET_KEY`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`
+- `MEMBERS_PASSWORD`, `ADMIN_PASSWORD`, `BACKUP_PASSWORD`
+- `GEOAPIFY_API_KEY`
+
+### Database
+- MySQL via `mysql-connector-python`. Connection config in `folder_py/db_config.py`.
+- Use `get_db_config()` from `folder_py.db_config` to get connection params.
+- Never hardcode DB credentials anywhere in source code.
+
+### Security
+- No SQL injection: always use parameterized queries with `%s` placeholders.
+- No XSS: escape user content in templates (Jinja2 auto-escapes by default).
+- Passwords hashed with `bcrypt`. Never store plaintext passwords.
+- Rate limiting via `Flask-Limiter` on sensitive endpoints.
+- CORS restricted to allowed origins (see `app.py`).
+
+### Code Style
+- Python 3, follow PEP 8.
+- Keep blueprints focused — one concern per blueprint.
+- Vietnamese comments are acceptable (project uses mixed Vietnamese/English).
+- Avoid over-engineering: minimal changes, no premature abstraction.
+
+### Dependencies (requirements.txt)
+flask, flask-cors, mysql-connector-python, bcrypt, flask-login, gunicorn,
+requests, beautifulsoup4, lxml, Pillow, openai, anthropic, flask-wtf,
+Flask-Limiter, Flask-Caching, python-dotenv, pandas, openpyxl
+
+### Gitignore (do NOT commit these)
+`.env`, `*.env`, `.cursor/`, `folder_sql/`, `tailieu/`, `backups/`, `*.sql`,
+`*.csv`, `static/documents/*.pdf`, `create_*_admin*.py`
+
+## Debugging
+- Health check: `GET /api/health` — shows `blueprints_registered` status.
+- If `/genealogy`, `/members`, `/contact` return 404 after deploy: check Start Command is `python app.py` at repo root.
+- Startup log "OK: Da dang ky Flask Blueprints." = blueprints loaded OK.
