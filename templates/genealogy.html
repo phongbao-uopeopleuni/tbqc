@@ -705,15 +705,15 @@
       width: auto;
     }
     
-    /* Tree Node Styles */
+    /* Tree Node Styles - ô chữ nhật rộng, dễ đọc, không sát nhau */
     #treeContainer .node {
       position: absolute;
-      width: 140px;
-      min-height: 100px;
+      width: 200px;
+      min-height: 115px;
       background: var(--color-surface);
       border: 2px solid var(--color-border);
       border-radius: var(--radius-md);
-      padding: var(--space-2);
+      padding: 10px 12px;
       box-shadow: var(--shadow-sm);
       cursor: pointer;
       transition: all 0.2s ease;
@@ -900,21 +900,21 @@
     }
     
     #treeContainer .node-name {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: var(--font-weight-semibold);
       color: var(--color-text);
-      margin-bottom: 4px;
-      line-height: 1.2;
+      margin-bottom: 6px;
+      line-height: 1.3;
       word-wrap: break-word;
       overflow-wrap: break-word;
       hyphens: auto;
     }
     
     #treeContainer .node-parents {
-      font-size: 9px;
+      font-size: 10px;
       color: var(--color-text-muted);
-      margin-bottom: 4px;
-      line-height: 1.2;
+      margin-bottom: 6px;
+      line-height: 1.35;
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
@@ -1376,7 +1376,7 @@
                 <input type="text" class="input" id="searchInput" placeholder="Vui lòng nhập tên cần tìm kiếm">
               </div>
               <button id="searchBtn" class="btn btn-primary">Tìm kiếm</button>
-              <button id="syncBtn" class="btn btn-secondary" title="Đồng bộ dữ liệu từ database chuẩn">🔄 Đồng bộ</button>
+              <button id="syncBtn" class="btn btn-secondary" title="Đồng bộ / làm mới từ database mới nhất (trang Thành viên)">🔄 Đồng bộ</button>
               <button id="updateInfoBtn" class="btn btn-secondary" title="Cập nhật thông tin hôn phối và tổ tiên">📝 Cập nhật thông tin</button>
               <button id="exportPdfBtn" class="btn btn-secondary" title="Xuất Family Tree ra file PDF">📄 Xuất PDF</button>
               
@@ -1792,7 +1792,7 @@
   <!-- Tree controls event listeners -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Sync button handler
+      // Sync button handler - đồng bộ / làm mới từ database hiện tại (dùng chung với trang Members)
       const syncBtn = document.getElementById('syncBtn');
       if (syncBtn) {
         syncBtn.addEventListener('click', async () => {
@@ -1801,29 +1801,14 @@
           syncBtn.textContent = 'Đang đồng bộ...';
           
           try {
-            const response = await fetch('/api/genealogy/sync', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-              // Show success message
-              alert(`Đồng bộ thành công!\n\n` +
-                    `Thành viên: ${result.stats.persons}\n` +
-                    `Quan hệ: ${result.stats.relationships}\n` +
-                    `Hôn nhân: ${result.stats.marriages}\n` +
-                    `\n${result.message}`);
-              
-              // Refresh tree after sync
-              if (typeof refreshTree === 'function') {
-                await refreshTree();
-              }
+            // Vì trang Members và Genealogy dùng CHUNG database,
+            // chỉ cần làm mới cây từ DB hiện tại là có dữ liệu mới nhất.
+            if (typeof refreshTree === 'function') {
+              await refreshTree();
+              alert('Đã đồng bộ cây gia phả từ database mới nhất (trang Thành viên).');
             } else {
-              alert(`Lỗi đồng bộ: ${result.error || 'Lỗi không xác định'}`);
+              // Fallback: reload toàn trang
+              window.location.reload();
             }
           } catch (error) {
             console.error('Sync error:', error);
@@ -2095,18 +2080,28 @@
               return;
             }
             
-            // Hiển thị kết quả tìm kiếm
+            // Hiển thị kết quả tìm kiếm (thêm dòng "Con của Ông ... và Bà ..." khi có trùng tên)
             if (searchResults) {
               searchResults.innerHTML = results.map(person => {
                 const gen = person.generation_number || person.generation_level || '';
+                const fatherName = person.father_name || '';
+                const motherName = person.mother_name || '';
+                let parentLine = '';
+                if (fatherName && motherName) {
+                  parentLine = `Con của Ông ${escapeHtml(fatherName)} và Bà ${escapeHtml(motherName)}`;
+                } else if (fatherName) {
+                  parentLine = `Con của Ông ${escapeHtml(fatherName)}`;
+                } else if (motherName) {
+                  parentLine = `Con của Bà ${escapeHtml(motherName)}`;
+                }
                 return `
                   <div class="search-result-item" data-person-id="${person.person_id}" 
                        style="padding: 10px; margin: 5px 0; background: #f5f5f5; border-radius: 6px; cursor: pointer; border-left: 3px solid var(--color-primary);"
                        onmouseover="this.style.background='#FFE4B5'" 
                        onmouseout="this.style.background='#f5f5f5'">
-                    <strong>${escapeHtml(person.full_name || person.name || '')}</strong>
-                    ${gen ? ` - Đời ${gen}` : ''}
-            </div>
+                    <div style="font-weight: 600;">${escapeHtml(person.full_name || person.name || '')}${gen ? ` - Đời ${gen}` : ''}</div>
+                    ${parentLine ? `<div style="font-size: 13px; color: #666; margin-top: 4px;">${parentLine}</div>` : ''}
+                  </div>
                 `;
               }).join('');
               
@@ -3035,8 +3030,9 @@
         genFilter.appendChild(option);
       }
 
-      // Default select: keep current if valid else select maxGenFromDB
-      const target = hasCurrent ? Math.min(current, maxGenFromDB) : maxGenFromDB;
+      // Default select: keep current if valid; otherwise mặc định Đến đời 3
+      const defaultGen = 3;
+      const target = hasCurrent ? Math.min(current, maxGenFromDB) : Math.min(defaultGen, maxGenFromDB);
       genFilter.value = String(target);
 
       console.log('[Genealogy] GenFilter populated:', { maxGenFromDB, selected: target });

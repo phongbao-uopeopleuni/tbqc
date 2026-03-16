@@ -159,8 +159,8 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   let maxX = 0, maxY = 0;
   function findMaxBounds(node) {
     if (!node) return;
-    maxX = Math.max(maxX, node.x + 220); // Tăng để đảm bảo không bị cắt
-    maxY = Math.max(maxY, node.y + 160); // Tăng để đảm bảo không bị cắt
+    maxX = Math.max(maxX, node.x + 260); // Ô chữ nhật 200px + margin
+    maxY = Math.max(maxY, node.y + 180); // Ô cao + khoảng cách dọc
     node.children.forEach(child => findMaxBounds(child));
   }
   findMaxBounds(treeRoot);
@@ -306,8 +306,8 @@ function renderFocusTree(targetId) {
   let maxX = 0, maxY = 0;
   function findMaxBounds(node) {
     if (!node) return;
-    maxX = Math.max(maxX, node.x + 220); // Tăng để đảm bảo không bị cắt
-    maxY = Math.max(maxY, node.y + 160); // Tăng để đảm bảo không bị cắt
+    maxX = Math.max(maxX, node.x + 260); // Ô chữ nhật 200px + margin
+    maxY = Math.max(maxY, node.y + 180); // Ô cao + khoảng cách dọc
     node.children.forEach(child => findMaxBounds(child));
   }
   findMaxBounds(focusTree);
@@ -436,8 +436,8 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
 function drawConnectorToSiblings(parentNode, siblings, container) {
   if (!parentNode || !siblings || siblings.length === 0) return;
 
-  const nodeWidth = 140;
-  const nodeHeight = 100;
+  const nodeWidth = 200;
+  const nodeHeight = 115;
   const firstChildTopY = siblings[0].y;
   
   // Tìm cặp bố mẹ từ siblings (cùng fm_id)
@@ -626,26 +626,26 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
     levelPositions[generation] = [];
   }
 
-  // Detect device and adjust spacing for responsive layout
+  // Detect device and adjust spacing for responsive layout (ô chữ nhật, không sát nhau)
   function getResponsiveSpacing() {
     const width = window.innerWidth;
     if (width <= 768) {
       return {
-        verticalGap: 100,
-        horizontalSpacing: 150,
-        nodeWidth: 120
+        verticalGap: 120,
+        horizontalSpacing: 190,
+        nodeWidth: 160
       };
     } else if (width <= 1024) {
       return {
-        verticalGap: 160,
-        horizontalSpacing: 180,
-        nodeWidth: 130
+        verticalGap: 180,
+        horizontalSpacing: 230,
+        nodeWidth: 180
       };
     } else {
       return {
-        verticalGap: 120,
-        horizontalSpacing: 220,
-        nodeWidth: 140
+        verticalGap: 140,
+        horizontalSpacing: 260,
+        nodeWidth: 200
       };
     }
   }
@@ -735,8 +735,8 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
 
   // Phân bổ lại các nhánh với khoảng cách hợp lý giữa các nhánh
   if (branchResults.length > 1) {
-    const branchSpacing = 280; // Khoảng cách giữa các nhánh (siblings cùng fm_id là một nhánh)
-    const siblingSpacing = 200; // Khoảng cách giữa siblings trong cùng một nhánh
+    const branchSpacing = 320; // Khoảng cách giữa các nhánh (siblings cùng fm_id là một nhánh)
+    const siblingSpacing = 240; // Khoảng cách giữa siblings trong cùng một nhánh
     
     let currentX = subtreeLeft;
     
@@ -773,14 +773,14 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
     subtreeRight = branchResults[branchResults.length - 1].right;
   } else if (node.children.length > 1) {
     // Nếu không có fm_id grouping, đảm bảo siblings có khoảng cách đều
-    const minSpacing = 200; // Tăng khoảng cách tối thiểu giữa siblings để tránh chồng lên nhau
+    const minSpacing = 240; // Khoảng cách tối thiểu giữa siblings (ô chữ nhật)
     let currentX = subtreeLeft;
     node.children.forEach((child, index) => {
       if (index > 0) {
         currentX += minSpacing;
       }
       child.x = currentX;
-      currentX += 180; // Tăng node width + spacing
+      currentX += 240; // Ô chữ nhật + khoảng cách
     });
     // Cập nhật lại subtree bounds
     subtreeRight = currentX;
@@ -788,7 +788,7 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
 
   // Đặt parent ở giữa children để giảm giao cắt
   const subtreeWidth = subtreeRight - subtreeLeft;
-  const nodeWidth = 140; // Node width
+  const nodeWidth = 200; // Ô chữ nhật rộng
   node.x = (subtreeLeft + subtreeRight) / 2 - nodeWidth / 2;
 
   // Lưu node vào levelPositions
@@ -830,8 +830,8 @@ function adjustHorizontalPositions(node, levelPositions = {}) {
 function redistributeNodesByGeneration(levelPositions) {
   const minGen = levelPositions._minGeneration || 1;
   const maxGen = levelPositions._maxGeneration || 1;
-  const nodeWidth = 140;
-  const minSpacing = 120; // Tăng khoảng cách tối thiểu để tránh chồng lên nhau và thể hiện rẽ nhánh rõ hơn
+  const nodeWidth = 200; // Ô chữ nhật
+  const minSpacing = 160; // Khoảng cách tối thiểu giữa các ô
   
   for (let gen = minGen; gen <= maxGen; gen++) {
     const nodes = levelPositions[gen] || [];
@@ -873,7 +873,9 @@ function redistributeNodesByGeneration(levelPositions) {
 // ============================================
 
 /**
- * Chuyển về chế độ mặc định (đời 1-5)
+ * Chuyển về chế độ mặc định.
+ * Mặc định dùng giá trị đang chọn trong dropdown "Hiển thị đến đời"
+ * (ví dụ Đến đời 3), thay vì luôn render full đến MAX_DEFAULT_GENERATION.
  */
 function resetToDefault() {
   currentMode = 'default';
@@ -883,13 +885,26 @@ function resetToDefault() {
   const btnFocusMode = document.getElementById("btnFocusMode");
   const genealogyString = document.getElementById("genealogyString");
   const searchName = document.getElementById("searchName");
+  const genFilter = document.getElementById("genFilter");
   
   if (btnDefaultMode) btnDefaultMode.style.display = "none";
   if (btnFocusMode) btnFocusMode.style.display = "none";
   if (genealogyString) genealogyString.style.display = "none";
   if (searchName) searchName.value = "";
   
-  renderDefaultTree(graph, MAX_DEFAULT_GENERATION);
+  // Lấy đời tối đa từ dropdown; fallback 3 (theo yêu cầu) rồi đến MAX_DEFAULT_GENERATION
+  let maxGen = 3;
+  if (genFilter && genFilter.value) {
+    const parsed = parseInt(genFilter.value, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      maxGen = parsed;
+    }
+  }
+  if (!Number.isFinite(maxGen) || maxGen <= 0) {
+    maxGen = MAX_DEFAULT_GENERATION;
+  }
+  
+  renderDefaultTree(graph, maxGen);
 }
 
 function switchToDefaultMode() {
