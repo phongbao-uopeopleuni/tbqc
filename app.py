@@ -118,12 +118,20 @@ try:
     app = Flask(__name__, static_folder='static', static_url_path='/static', template_folder='templates')
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
     import secrets
-    fallback_key = os.environ.get('SECRET_KEY') or 'thuan_thien_cao_hoang_hau_tbqc_2024_fallback_key'
-    app.secret_key = fallback_key
     from datetime import timedelta, datetime
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
+    
     is_production = os.environ.get('RAILWAY_ENVIRONMENT') == 'production' or os.environ.get('RAILWAY') == 'true' or os.environ.get('RENDER') == 'true' or (os.environ.get('ENVIRONMENT') == 'production') or (os.environ.get('COOKIE_DOMAIN') is not None and os.environ.get('COOKIE_DOMAIN') != '')
     app.config['DEBUG'] = False if is_production else os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    
+    fallback_key = os.environ.get('SECRET_KEY')
+    if not fallback_key:
+        if is_production:
+            raise ValueError("CRITICAL ERROR: SECRET_KEY environment variable is REQUIRED in production! Please set it and restart the server.")
+        print("WARNING: Using insecure fallback SECRET_KEY for local development.")
+        fallback_key = 'thuan_thien_cao_hoang_hau_tbqc_2024_fallback_key'
+    
+    app.secret_key = fallback_key
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=24)
     cookie_domain = os.environ.get('COOKIE_DOMAIN') if is_production else None
     use_samesite_none = is_production
     app.config['SESSION_COOKIE_SECURE'] = use_samesite_none
@@ -145,6 +153,16 @@ try:
     else:
         allowed_origins = ['http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:3000', 'http://127.0.0.1:3000']
     CORS(app, origins=allowed_origins, supports_credentials=True)
+    try:
+        from flask_wtf.csrf import CSRFProtect
+        csrf = CSRFProtect(app)
+        print('OK: CSRF protection da duoc khoi tao')
+    except ImportError:
+        print('WARNING: flask_wtf chua duoc cai dat, CSRF protection se bi vo hieu')
+        csrf = None
+    except Exception as e:
+        print(f'WARNING: Loi khi khoi tao CSRF: {e}')
+        csrf = None
     try:
         from flask_caching import Cache
         cache_config = {'CACHE_TYPE': 'simple', 'CACHE_DEFAULT_TIMEOUT': 300, 'CACHE_THRESHOLD': 1000}

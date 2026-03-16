@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -1295,6 +1296,29 @@
       display: block;
     }
   </style>
+
+    <!-- Global CSRF Fetch Interceptor -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) {
+          var csrfToken = metaTag.getAttribute('content');
+          var originalFetch = window.fetch;
+          window.fetch = function(url, options) {
+            options = options || {};
+            if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+              options.headers = options.headers || {};
+              // Set the token header as expected by flask_wtf.csrf
+              options.headers['X-CSRFToken'] = csrfToken;
+              if (options.body && !(options.body instanceof FormData) && !options.headers['Content-Type']) {
+                  options.headers['Content-Type'] = 'application/json';
+              }
+            }
+            return originalFetch(url, options);
+          };
+        }
+      });
+    </script>
 </head>
 <body>
   <nav class="navbar">
