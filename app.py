@@ -3973,9 +3973,11 @@ def delete_persons_batch():
         backup_result = None
         if not skip_backup and len(person_ids) > 0:
             try:
-                from backup_database import create_backup
+                # Backup module lives in scripts/backup_database.py
+                from scripts.backup_database import create_backup
                 logger.info(f'Tạo backup tự động trước khi xóa {len(person_ids)} thành viên...')
-                backup_result = create_backup()
+                backup_dir = os.environ.get('BACKUP_DIR', '').strip() or 'backups'
+                backup_result = create_backup(backup_dir=backup_dir)
                 if backup_result['success']:
                     logger.info(f"✅ Backup thành công: {backup_result['backup_filename']}")
                 else:
@@ -4272,11 +4274,10 @@ def create_backup_api():
     if not password or not secure_compare(password, correct_password):
         return (jsonify({'success': False, 'error': 'Mật khẩu không đúng hoặc chưa được cung cấp'}), 403)
     try:
-        try:
-            from backup_database import create_backup, list_backups
-        except ImportError:
-            return (jsonify({'success': False, 'error': 'Backup module not found'}), 500)
-        result = create_backup()
+        # Backup module lives in scripts/backup_database.py
+        from scripts.backup_database import create_backup
+        backup_dir = os.environ.get('BACKUP_DIR', '').strip() or 'backups'
+        result = create_backup(backup_dir=backup_dir)
         if result['success']:
             return jsonify({'success': True, 'message': 'Backup thành công', 'backup_file': result['backup_filename'], 'file_size': result['file_size'], 'timestamp': result['timestamp']})
         else:
@@ -4289,8 +4290,9 @@ def create_backup_api():
 def list_backups_api():
     """API liệt kê các backup có sẵn"""
     try:
-        from backup_database import list_backups
-        backups = list_backups()
+        from scripts.backup_database import list_backups
+        backup_dir = os.environ.get('BACKUP_DIR', '').strip() or 'backups'
+        backups = list_backups(backup_dir=backup_dir)
         backup_list = []
         for backup in backups:
             backup_list.append({'filename': backup['filename'], 'size': backup['size'], 'size_mb': round(backup['size'] / 1024 / 1024, 2), 'created_at': backup['created_at']})
@@ -4306,7 +4308,7 @@ def download_backup(filename):
         from pathlib import Path
         if not filename.startswith('tbqc_backup_') or not filename.endswith('.sql'):
             return (jsonify({'success': False, 'error': 'Invalid backup filename'}), 400)
-        backup_dir = Path('backups')
+        backup_dir = Path(os.environ.get('BACKUP_DIR', '').strip() or 'backups')
         backup_file = backup_dir / filename
         if not backup_file.exists():
             return (jsonify({'success': False, 'error': 'Backup file not found'}), 404)
