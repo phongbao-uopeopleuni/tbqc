@@ -1384,6 +1384,7 @@
               <div style="display: flex; gap: var(--space-2); align-items: center; margin-left: var(--space-2); border-left: 1px solid var(--color-border); padding-left: var(--space-2);">
                 <button id="zoomOutBtn" class="btn btn-secondary" title="Thu nhỏ" onclick="if(typeof window.zoomOut === 'function') window.zoomOut();">🔍-</button>
                 <button id="resetZoomBtn" class="btn btn-secondary" title="Đặt lại zoom mặc định" onclick="if(typeof window.resetZoom === 'function') window.resetZoom();">⌂</button>
+                <button id="fitToViewBtn" class="btn btn-secondary" title="Vừa khung (tự điều chỉnh để xem toàn bộ cây)" onclick="if(typeof window.fitTreeToView === 'function') window.fitTreeToView();">⊡</button>
                 <button id="zoomInBtn" class="btn btn-secondary" title="Phóng to" onclick="if(typeof window.zoomIn === 'function') window.zoomIn();">🔍+</button>
                 <button id="fullscreenBtn" class="btn btn-secondary" title="Xem toàn màn hình" onclick="toggleFullscreen()">⛶</button>
               </div>

@@ -22,6 +22,25 @@ let currentOffsetY = 0;
 let currentMode = 'default';
 let focusedPersonId = null;
 
+/** Màu đường connector theo từng thế hệ (đời 1, đời 2, ...) - trùng với family-tree-family-ui.js */
+const CONNECTOR_GENERATION_PALETTE = [
+  "#8B0000", "#2563eb", "#16a34a", "#f59e0b", "#7c3aed",
+  "#0ea5e9", "#dc2626", "#14b8a6", "#9333ea", "#ea580c",
+  "#64748b", "#ca8a04"
+];
+
+function getGenerationColor(generation) {
+  const gen = Math.max(0, Math.floor(Number(generation) || 0));
+  return CONNECTOR_GENERATION_PALETTE[gen % CONNECTOR_GENERATION_PALETTE.length] || "#64748b";
+}
+
+// Drag-to-pan state
+let isPanning = false;
+let panStartClientX = 0;
+let panStartClientY = 0;
+let panStartOffsetX = 0;
+let panStartOffsetY = 0;
+
 // ============================================
 // RENDERING: Render tree nodes
 // ============================================
@@ -181,6 +200,10 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
     return count;
   }
   updateStats(countNodes(treeRoot), maxGeneration);
+
+  requestAnimationFrame(function () {
+    if (typeof fitTreeToView === 'function') fitTreeToView();
+  });
 }
 
 /**
@@ -439,6 +462,11 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
   const nodeWidth = 200;
   const nodeHeight = 115;
   const firstChildTopY = siblings[0].y;
+
+  // Màu đường theo thế hệ của các con (đời)
+  const firstChildPerson = typeof personMap !== 'undefined' && personMap ? personMap.get(siblings[0].id) : null;
+  const childGen = firstChildPerson?.generation ?? firstChildPerson?.generation_number ?? 1;
+  const lineColor = getGenerationColor(childGen);
   
   // Tìm cặp bố mẹ từ siblings (cùng fm_id)
   let fatherNode = null;
@@ -518,10 +546,9 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     connectorV.style.top = verticalStartY + "px";
     connectorV.style.height = verticalHeight + "px";
     connectorV.style.width = "4px";
-    // Gradient màu đẹp hơn từ đỏ đậm đến đỏ nhạt
-    connectorV.style.background = "linear-gradient(to bottom, #8B0000 0%, #A52A2A 50%, #CD5C5C 100%)";
+    connectorV.style.background = lineColor;
     connectorV.style.borderRadius = "2px";
-    connectorV.style.boxShadow = "0 2px 8px rgba(139, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
+    connectorV.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
     connectorV.style.zIndex = "1";
     connectorV.style.transition = "all 0.3s ease";
     container.appendChild(connectorV);
@@ -534,9 +561,9 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
       connectorH1.style.top = (firstChildTopY - 20) + "px";
       connectorH1.style.width = Math.abs(parentStartX - siblingsMidX) + "px";
       connectorH1.style.height = "4px";
-      connectorH1.style.background = "linear-gradient(to right, #8B0000 0%, #A52A2A 50%, #CD5C5C 100%)";
+      connectorH1.style.background = lineColor;
       connectorH1.style.borderRadius = "2px";
-      connectorH1.style.boxShadow = "0 2px 8px rgba(139, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
+      connectorH1.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
       connectorH1.style.zIndex = "1";
       connectorH1.style.transition = "all 0.3s ease";
       container.appendChild(connectorH1);
@@ -551,9 +578,9 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     connectorH.style.top = (firstChildTopY - 20) + "px";
     connectorH.style.width = (maxSiblingX - minSiblingX) + "px";
     connectorH.style.height = "4px";
-    connectorH.style.background = "linear-gradient(to right, #8B0000 0%, #A52A2A 50%, #CD5C5C 100%)";
+    connectorH.style.background = lineColor;
     connectorH.style.borderRadius = "2px";
-    connectorH.style.boxShadow = "0 2px 8px rgba(139, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
+    connectorH.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
     connectorH.style.zIndex = "1";
     connectorH.style.transition = "all 0.3s ease";
     container.appendChild(connectorH);
@@ -571,9 +598,9 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     connectorV2.style.top = (childTopY - 20) + "px";
     connectorV2.style.height = "20px";
     connectorV2.style.width = "4px";
-    connectorV2.style.background = "linear-gradient(to bottom, #8B0000 0%, #A52A2A 50%, #CD5C5C 100%)";
+    connectorV2.style.background = lineColor;
     connectorV2.style.borderRadius = "2px";
-    connectorV2.style.boxShadow = "0 2px 8px rgba(139, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
+    connectorV2.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)";
     connectorV2.style.zIndex = "1";
     connectorV2.style.transition = "all 0.3s ease";
     container.appendChild(connectorV2);
@@ -631,20 +658,20 @@ function calculatePositions(node, x = 0, y = 0, levelPositions = {}) {
     const width = window.innerWidth;
     if (width <= 768) {
       return {
-        verticalGap: 120,
-        horizontalSpacing: 190,
+        verticalGap: 180,
+        horizontalSpacing: 220,
         nodeWidth: 160
       };
     } else if (width <= 1024) {
       return {
-        verticalGap: 180,
-        horizontalSpacing: 230,
+        verticalGap: 220,
+        horizontalSpacing: 260,
         nodeWidth: 180
       };
     } else {
       return {
-        verticalGap: 140,
-        horizontalSpacing: 260,
+        verticalGap: 200,
+        horizontalSpacing: 280,
         nodeWidth: 200
       };
     }
@@ -1398,6 +1425,30 @@ function resetZoom() {
   applyZoom();
 }
 
+/**
+ * Tự điều chỉnh zoom để toàn bộ cây gia phả vừa khung nhìn, hạn chế scroll ngang/dọc.
+ * Chỉ thay đổi currentZoom và transform (view), không ảnh hưởng dữ liệu hay logic.
+ */
+function fitTreeToView() {
+  const treeDiv = document.querySelector('.tree') || (typeof window !== 'undefined' && window.familyTreeDiv) || null;
+  const wrapper = document.querySelector('.tree-container-wrapper') || document.getElementById('treeContainer');
+  if (!treeDiv || !wrapper) return;
+
+  const treeW = treeDiv.offsetWidth;
+  const treeH = treeDiv.offsetHeight;
+  const vw = wrapper.clientWidth;
+  const vh = wrapper.clientHeight;
+  if (treeW <= 0 || treeH <= 0 || vw <= 0 || vh <= 0) return;
+
+  let scale = Math.min(vw / treeW, vh / treeH) * 0.95;
+  scale = Math.max(0.2, Math.min(1, scale));
+
+  currentZoom = scale;
+  currentOffsetX = 0;
+  currentOffsetY = 0;
+  applyZoom();
+}
+
 function applyZoom() {
   // Try to find tree div (could be from person tree or family tree)
   let treeDiv = document.querySelector('.tree');
@@ -1410,11 +1461,58 @@ function applyZoom() {
   }
 }
 
+// ============================================
+// DRAG TO PAN
+// ============================================
+
+function startPan(e) {
+  if (e.button !== 0) return; // only left click
+  if (e.target.closest('.node, .family-node, .connector')) return; // click on node vẫn mở thông tin
+  isPanning = true;
+  panStartClientX = e.clientX;
+  panStartClientY = e.clientY;
+  panStartOffsetX = currentOffsetX;
+  panStartOffsetY = currentOffsetY;
+  if (e.currentTarget && e.currentTarget.style) {
+    e.currentTarget.style.cursor = 'grabbing';
+    e.currentTarget.style.userSelect = 'none';
+  }
+}
+
+function onPanMove(e) {
+  if (!isPanning) return;
+  e.preventDefault();
+  currentOffsetX = panStartOffsetX + (e.clientX - panStartClientX);
+  currentOffsetY = panStartOffsetY + (e.clientY - panStartClientY);
+  applyZoom();
+}
+
+function endPan(e) {
+  if (!isPanning) return;
+  isPanning = false;
+  const wrapper = document.querySelector('.tree-container-wrapper');
+  if (wrapper && wrapper.style) {
+    wrapper.style.cursor = 'grab';
+    wrapper.style.userSelect = '';
+  }
+}
+
+function setupPanOnTreeContainer() {
+  const wrapper = document.querySelector('.tree-container-wrapper') || document.getElementById('treeContainer');
+  if (!wrapper) return;
+  wrapper.style.cursor = 'grab';
+  wrapper.addEventListener('mousedown', startPan);
+  document.addEventListener('mousemove', onPanMove);
+  document.addEventListener('mouseup', endPan);
+  document.addEventListener('mouseleave', endPan);
+}
+
 // Export zoom functions and variables to window
 if (typeof window !== 'undefined') {
   window.zoomIn = zoomIn;
   window.zoomOut = zoomOut;
   window.resetZoom = resetZoom;
+  window.fitTreeToView = fitTreeToView;
   window.applyZoom = applyZoom;
 }
 
@@ -1458,8 +1556,12 @@ async function init() {
     
     // Setup UI
     setupSearch();
+    setupPanOnTreeContainer();
     console.log('Đang render default tree...');
     resetToDefault(); // Render default mode (đời 1-5)
+    requestAnimationFrame(function () {
+      if (typeof fitTreeToView === 'function') fitTreeToView();
+    });
     console.log('Đã render xong');
     
     // Note: genFilter is now populated by genealogy.html's populateGenerationFilter()

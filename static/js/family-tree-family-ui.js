@@ -19,6 +19,18 @@ const BRANCH_PALETTE = [
 ];
 const branchColorMap = new Map();
 
+/** Màu đường connector theo từng thế hệ (đời 1, đời 2, ...) */
+const CONNECTOR_GENERATION_PALETTE = [
+  "#8B0000", "#2563eb", "#16a34a", "#f59e0b", "#7c3aed",
+  "#0ea5e9", "#dc2626", "#14b8a6", "#9333ea", "#ea580c",
+  "#64748b", "#ca8a04"
+];
+
+function getGenerationColor(generation) {
+  const gen = Math.max(0, Math.floor(Number(generation) || 0));
+  return CONNECTOR_GENERATION_PALETTE[gen % CONNECTOR_GENERATION_PALETTE.length] || "#64748b";
+}
+
 /**
  * Get branch color by branchKey
  * @param {string|null} branchKey - Branch key
@@ -215,6 +227,12 @@ function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
     return count;
   }
   updateStats(countNodes(familyTree), maxGeneration);
+
+  requestAnimationFrame(function () {
+    if (typeof window !== 'undefined' && typeof window.fitTreeToView === 'function') {
+      window.fitTreeToView();
+    }
+  });
 }
 
 /**
@@ -619,6 +637,9 @@ function getNodeWidth(node) {
   return 140; // default
 }
 
+/** Khoảng cách dọc giữa các thế hệ (px) - tăng để các ô không sát nhau */
+const LEVEL_VERTICAL_GAP = 380;
+
 /**
  * Get Y position for a generation level
  * @param {number} level - Generation level (0, 1, 2, ...)
@@ -627,9 +648,9 @@ function getNodeWidth(node) {
 function getLevelY(level) {
   // Generation 0 (parents) ở trên generation 1
   if (level === 0) {
-    return -300; // 300px phía trên generation 1
+    return -400; // 400px phía trên generation 1
   }
-  return (level - 1) * 300;
+  return (level - 1) * LEVEL_VERTICAL_GAP;
 }
 
 /**
@@ -673,7 +694,7 @@ function layoutFamilyTreeSubtree(node) {
   }
 
   // Node has children: layout children first (bottom-up)
-  const gapX = 180; // Fixed gap between sibling subtrees
+  const gapX = 240; // Khoảng cách ngang giữa các nhánh (tăng để ô không sát nhau)
   let cursor = 0;
   const childBounds = [];
 
@@ -776,9 +797,11 @@ function renderFamilyTreeNodes(node, container, familyGraph) {
     }
   }
   
-  // Draw connectors (orthogonal routing) - cho cả family và person nodes
+  // Draw connectors (orthogonal routing) - màu theo thế hệ (đời) của con
   if (node.parent && (node.type === 'family' || node.type === 'person')) {
-    drawFamilyConnector(node.parent, node, container, branchColor);
+    const childGen = node.family?.generation ?? node.person?.generation ?? 0;
+    const lineColor = getGenerationColor(childGen);
+    drawFamilyConnector(node.parent, node, container, lineColor);
   }
   
   // Render children recursively (only if not collapsed)
@@ -789,15 +812,16 @@ function renderFamilyTreeNodes(node, container, familyGraph) {
 
 /**
  * Draw orthogonal connector từ family parent đến child
+ * Màu theo thế hệ (getGenerationColor) khi truyền color từ renderFamilyTreeNodes.
  * @param {Object} parentNode - Parent node
  * @param {Object} childNode - Child node
  * @param {HTMLElement} container - Container element
- * @param {string} color - Branch color (optional, default gray)
+ * @param {string} color - Màu đường (theo thế hệ)
  */
 function drawFamilyConnector(parentNode, childNode, container, color) {
   if (!parentNode || !childNode) return;
   
-  const branchColor = color || "#64748b";
+  const lineColor = color || "#64748b";
   const familyNodeWidth = 280;
   const familyNodeHeight = 120;
   const personNodeWidth = 140;
@@ -820,7 +844,7 @@ function drawFamilyConnector(parentNode, childNode, container, color) {
   vertical1.style.left = parentCenterX + 'px';
   vertical1.style.top = parentBottomY + 'px';
   vertical1.style.height = (midY - parentBottomY) + 'px';
-  vertical1.style.background = branchColor;
+  vertical1.style.background = lineColor;
   container.appendChild(vertical1);
   
   // Horizontal line
@@ -829,7 +853,7 @@ function drawFamilyConnector(parentNode, childNode, container, color) {
   horizontal.style.left = Math.min(parentCenterX, childCenterX) + 'px';
   horizontal.style.top = midY + 'px';
   horizontal.style.width = Math.abs(childCenterX - parentCenterX) + 'px';
-  horizontal.style.background = branchColor;
+  horizontal.style.background = lineColor;
   container.appendChild(horizontal);
   
   // Vertical line to child
@@ -838,7 +862,7 @@ function drawFamilyConnector(parentNode, childNode, container, color) {
   vertical2.style.left = childCenterX + 'px';
   vertical2.style.top = midY + 'px';
   vertical2.style.height = (childTopY - midY) + 'px';
-  vertical2.style.background = branchColor;
+  vertical2.style.background = lineColor;
   container.appendChild(vertical2);
 }
 
