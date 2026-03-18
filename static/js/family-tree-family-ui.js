@@ -837,11 +837,43 @@ function drawFamilyConnector(parentNode, childNode, container, color) {
   const midY = parentBottomY + (childTopY - parentBottomY) / 2;
   const parentCenterX = parentNode.x + parentWidth / 2;
   const childCenterX = childNode.x + (childNode.type === 'family' ? familyNodeWidth : personNodeWidth) / 2;
+
+  // Anchor connector theo cha (ưu tiên); nếu không có cha thì theo mẹ.
+  // Với family-node: neo vào nửa trái/phải của khung couple để dễ nhìn "con của ai".
+  let parentAnchorX = parentCenterX;
+  if (parentNode.type === 'family' && parentNode.family) {
+    const spouse1Id = parentNode.family.spouse1Id;
+    const spouse2Id = parentNode.family.spouse2Id;
+
+    // Resolve father/mother id of the child
+    let fatherId = null;
+    let motherId = null;
+    if (childNode.type === 'person' && childNode.person) {
+      fatherId = childNode.person.father_id || null;
+      motherId = childNode.person.mother_id || null;
+    } else if (childNode.type === 'family' && childNode.family) {
+      const childIds = childNode.family.children || [];
+      const firstChildId = childIds && childIds.length > 0 ? childIds[0] : null;
+      const pm = (typeof personMap !== 'undefined' && personMap) ? personMap : (typeof window !== 'undefined' ? window.personMap : null);
+      const p = (pm && firstChildId) ? pm.get(firstChildId) : null;
+      if (p) {
+        fatherId = p.father_id || null;
+        motherId = p.mother_id || null;
+      }
+    }
+
+    const preferredParentId = fatherId || motherId; // ưu tiên cha, fallback mẹ
+    if (preferredParentId && String(preferredParentId) === String(spouse1Id)) {
+      parentAnchorX = parentNode.x + familyNodeWidth * 0.25; // spouse1 (nửa trái)
+    } else if (preferredParentId && String(preferredParentId) === String(spouse2Id)) {
+      parentAnchorX = parentNode.x + familyNodeWidth * 0.75; // spouse2 (nửa phải)
+    }
+  }
   
   // Vertical line from parent
   const vertical1 = document.createElement('div');
   vertical1.className = 'connector vertical';
-  vertical1.style.left = parentCenterX + 'px';
+  vertical1.style.left = parentAnchorX + 'px';
   vertical1.style.top = parentBottomY + 'px';
   vertical1.style.height = (midY - parentBottomY) + 'px';
   vertical1.style.background = lineColor;
@@ -850,9 +882,9 @@ function drawFamilyConnector(parentNode, childNode, container, color) {
   // Horizontal line
   const horizontal = document.createElement('div');
   horizontal.className = 'connector horizontal';
-  horizontal.style.left = Math.min(parentCenterX, childCenterX) + 'px';
+  horizontal.style.left = Math.min(parentAnchorX, childCenterX) + 'px';
   horizontal.style.top = midY + 'px';
-  horizontal.style.width = Math.abs(childCenterX - parentCenterX) + 'px';
+  horizontal.style.width = Math.abs(childCenterX - parentAnchorX) + 'px';
   horizontal.style.background = lineColor;
   container.appendChild(horizontal);
   

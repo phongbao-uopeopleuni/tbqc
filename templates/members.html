@@ -674,17 +674,29 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="death_date_solar">Năm mất</label>
-            <input type="text" id="death_date_solar" name="death_date_solar" placeholder="YYYY-MM-DD hoặc YYYY" pattern="^\d{4}(-\d{2}(-\d{2})?)?$">
+            <label for="branch_name">Nhánh</label>
+            <select id="branch_name" name="branch_name">
+              <option value="">-- Chọn nhánh --</option>
+              <option value="Một">Một</option>
+              <option value="Hai">Hai</option>
+              <option value="Ba">Ba</option>
+              <option value="Bốn">Bốn</option>
+            </select>
           </div>
           <div class="form-group">
             <label for="place_of_death">Nơi mất</label>
             <input type="text" id="place_of_death" name="place_of_death" placeholder="Nhập nơi mất">
           </div>
         </div>
-        <div class="form-group">
-          <label for="grave_info">Mộ phần</label>
-          <input type="text" id="grave_info" name="grave_info" placeholder="Nhập thông tin mộ phần">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="death_date_solar">Năm mất</label>
+            <input type="text" id="death_date_solar" name="death_date_solar" placeholder="YYYY-MM-DD hoặc YYYY" pattern="^\d{4}(-\d{2}(-\d{2})?)?$">
+          </div>
+          <div class="form-group">
+            <label for="grave_info">Mộ phần</label>
+            <input type="text" id="grave_info" name="grave_info" placeholder="Nhập thông tin mộ phần">
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -964,6 +976,7 @@
       html += '<th style="min-width: 100px; text-align: center;">Năm sinh</th>';
       html += '<th style="min-width: 100px; text-align: center;">Năm mất</th>';
       html += '<th style="min-width: 150px; text-align: center;">Father_Mother_ID</th>';
+      html += '<th style="min-width: 140px; text-align: center;">Nhánh</th>';
       html += '<th style="min-width: 200px;">Tên bố</th>';
       html += '<th style="min-width: 200px;">Tên mẹ</th>';
       html += '<th style="min-width: 300px;">Thông tin hôn phối</th>';
@@ -990,6 +1003,7 @@
         html += `<td style="text-align: center;">${getYearFromDate(member.birth_date_solar) || '-'}</td>`;
         html += `<td style="text-align: center;">${getYearFromDate(member.death_date_solar) || '-'}</td>`;
         html += `<td style="text-align: center; font-family: monospace; color: #666;">${escapeHtml(member.fm_id || '-')}</td>`;
+        html += `<td style="text-align: center; font-weight: 600; color: #0f172a;">${escapeHtml(member.branch_name || '-')}</td>`;
         html += `<td>${escapeHtml(member.father_name || '-')}</td>`;
         html += `<td>${escapeHtml(member.mother_name || '-')}</td>`;
         html += `<td style="max-width: 300px; word-wrap: break-word; line-height: 1.5;">${formatText(member.spouses || '')}</td>`;
@@ -1181,6 +1195,7 @@
       document.getElementById('birth_date_solar').value = member.birth_date_solar || '';
       document.getElementById('death_date_solar').value = member.death_date_solar || '';
       document.getElementById('place_of_death').value = member.place_of_death || '';
+      document.getElementById('branch_name').value = member.branch_name || '';
       document.getElementById('grave_info').value = member.grave_info || '';
       document.getElementById('father_name').value = member.father_name || '';
       document.getElementById('mother_name').value = member.mother_name || '';

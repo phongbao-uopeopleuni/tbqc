@@ -104,6 +104,36 @@ def get_members():
             col = row.get('COLUMN_NAME') or row.get('column_name') or ''
             if col:
                 available_columns.add(str(col).strip())
+
+        # Nhánh: ưu tiên persons.branch_name nếu có; nếu không thì join branches qua branch_id
+        has_branch_name_col = False
+        has_branch_id = False
+        has_branches_table = False
+        try:
+            cursor.execute("""
+                SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons' AND COLUMN_NAME = 'branch_name'
+                LIMIT 1
+            """)
+            has_branch_name_col = bool(cursor.fetchone())
+            cursor.execute("""
+                SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons' AND COLUMN_NAME = 'branch_id'
+                LIMIT 1
+            """)
+            has_branch_id = bool(cursor.fetchone())
+            cursor.execute("""
+                SELECT TABLE_NAME FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'branches'
+                LIMIT 1
+            """)
+            has_branches_table = bool(cursor.fetchone())
+        except Exception as e:
+            logger.warning(f'Could not detect branch schema: {e}')
+            has_branch_name_col = False
+            has_branch_id = False
+            has_branches_table = False
+
         select_fields = [
             'p.person_id', 'p.father_mother_id AS fm_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status',
             'p.generation_level AS generation_number', 'p.birth_date_solar', 'p.birth_date_lunar',
@@ -117,9 +147,14 @@ def get_members():
         select_fields.append('p.phone' if 'phone' in available_columns else 'NULL AS phone')
         select_fields.append('p.email' if 'email' in available_columns else 'NULL AS email')
         select_fields.append('p.occupation' if 'occupation' in available_columns else 'NULL AS occupation')
+        if has_branch_name_col:
+            select_fields.append('p.branch_name AS branch_name')
+        else:
+            select_fields.append('b.branch_name AS branch_name' if (has_branch_id and has_branches_table) else 'NULL AS branch_name')
         cursor.execute(f"""
             SELECT {', '.join(select_fields)}
             FROM persons p
+            {'LEFT JOIN branches b ON p.branch_id = b.branch_id' if (has_branch_id and has_branches_table) else ''}
             ORDER BY COALESCE(p.generation_level, 999) ASC,
                 CASE WHEN p.person_id LIKE 'P-%' AND SUBSTRING(p.person_id, 3) REGEXP '^[0-9]+-[0-9]+$'
                     THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(p.person_id, '-', 2), '-', -1) AS UNSIGNED) ELSE 999999 END ASC,
@@ -151,6 +186,7 @@ def get_members():
                 'death_date_solar': str(person['death_date_solar']) if person.get('death_date_solar') else None,
                 'death_date_lunar': str(person['death_date_lunar']) if person.get('death_date_lunar') else None,
                 'grave': person.get('grave'), 'grave_info': person.get('grave'), 'place_of_death': person.get('place_of_death'),
+                'branch_name': person.get('branch_name'),
                 'father_name': rel.get('father_name'), 'mother_name': rel.get('mother_name'),
                 'spouses': '; '.join(spouse_names) if spouse_names else None,
                 'siblings': '; '.join(siblings) if siblings else None,
@@ -212,6 +248,36 @@ def _fetch_members_list():
             col = row.get('COLUMN_NAME') or row.get('column_name') or ''
             if col:
                 available_columns.add(str(col).strip())
+
+        # Nhánh: ưu tiên persons.branch_name nếu có; nếu không thì join branches qua branch_id
+        has_branch_name_col = False
+        has_branch_id = False
+        has_branches_table = False
+        try:
+            cursor.execute("""
+                SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons' AND COLUMN_NAME = 'branch_name'
+                LIMIT 1
+            """)
+            has_branch_name_col = bool(cursor.fetchone())
+            cursor.execute("""
+                SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons' AND COLUMN_NAME = 'branch_id'
+                LIMIT 1
+            """)
+            has_branch_id = bool(cursor.fetchone())
+            cursor.execute("""
+                SELECT TABLE_NAME FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'branches'
+                LIMIT 1
+            """)
+            has_branches_table = bool(cursor.fetchone())
+        except Exception as e:
+            logger.warning(f'Could not detect branch schema (_fetch_members_list): {e}')
+            has_branch_name_col = False
+            has_branch_id = False
+            has_branches_table = False
+
         select_fields = [
             'p.person_id', 'p.father_mother_id AS fm_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status',
             'p.generation_level AS generation_number', 'p.birth_date_solar', 'p.birth_date_lunar',
@@ -225,9 +291,14 @@ def _fetch_members_list():
         select_fields.append('p.phone' if 'phone' in available_columns else 'NULL AS phone')
         select_fields.append('p.email' if 'email' in available_columns else 'NULL AS email')
         select_fields.append('p.occupation' if 'occupation' in available_columns else 'NULL AS occupation')
+        if has_branch_name_col:
+            select_fields.append('p.branch_name AS branch_name')
+        else:
+            select_fields.append('b.branch_name AS branch_name' if (has_branch_id and has_branches_table) else 'NULL AS branch_name')
         cursor.execute(f"""
             SELECT {', '.join(select_fields)}
             FROM persons p
+            {'LEFT JOIN branches b ON p.branch_id = b.branch_id' if (has_branch_id and has_branches_table) else ''}
             ORDER BY COALESCE(p.generation_level, 999) ASC,
                 CASE WHEN p.person_id LIKE 'P-%' AND SUBSTRING(p.person_id, 3) REGEXP '^[0-9]+-[0-9]+$'
                     THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(p.person_id, '-', 2), '-', -1) AS UNSIGNED) ELSE 999999 END ASC,
@@ -259,6 +330,7 @@ def _fetch_members_list():
                 'death_date_solar': str(person['death_date_solar']) if person.get('death_date_solar') else None,
                 'death_date_lunar': str(person['death_date_lunar']) if person.get('death_date_lunar') else None,
                 'grave': person.get('grave'), 'grave_info': person.get('grave'), 'place_of_death': person.get('place_of_death'),
+                'branch_name': person.get('branch_name'),
                 'father_name': rel.get('father_name'), 'mother_name': rel.get('mother_name'),
                 'spouses': '; '.join(spouse_names) if spouse_names else None,
                 'siblings': '; '.join(siblings) if siblings else None,
@@ -290,7 +362,7 @@ def _fetch_members_list():
 
 # Cột xuất Excel: (key trong dict, tiêu đề tiếng Việt)
 _EXCEL_COLUMNS = [
-    ('person_id', 'ID'), ('fm_id', 'FM_ID'), ('full_name', 'Họ và tên'), ('alias', 'Tên gọi khác'),
+    ('person_id', 'ID'), ('fm_id', 'FM_ID'), ('branch_name', 'Nhánh'), ('full_name', 'Họ và tên'), ('alias', 'Tên gọi khác'),
     ('gender', 'Giới tính'), ('status', 'Trạng thái'), ('generation_number', 'Đời'),
     ('birth_date_solar', 'Ngày sinh (dương lịch)'), ('birth_date_lunar', 'Ngày sinh (âm lịch)'),
     ('death_date_solar', 'Ngày mất (dương lịch)'), ('death_date_lunar', 'Ngày mất (âm lịch)'),

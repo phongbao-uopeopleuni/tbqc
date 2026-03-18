@@ -509,21 +509,19 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
         motherNode = findNodeById(rootNode, motherId);
       }
       
-      // Tính toán vị trí giữa cặp bố mẹ
-      if (fatherNode && motherNode) {
-        // Có cả bố và mẹ: vẽ từ giữa cặp
+      // Neo connector ưu tiên theo cha; nếu không có cha thì theo mẹ
+      if (fatherNode) {
+        parentStartX = fatherNode.x + nodeWidth / 2;
+        parentBottomY = fatherNode.y + nodeHeight;
+      } else if (motherNode) {
+        parentStartX = motherNode.x + nodeWidth / 2;
+        parentBottomY = motherNode.y + nodeHeight;
+      } else if (fatherNode && motherNode) {
+        // Fallback (hiếm khi vào đây do ưu tiên cha/mẹ phía trên)
         const fatherCenterX = fatherNode.x + nodeWidth / 2;
         const motherCenterX = motherNode.x + nodeWidth / 2;
         parentStartX = (fatherCenterX + motherCenterX) / 2;
         parentBottomY = Math.max(fatherNode.y + nodeHeight, motherNode.y + nodeHeight);
-      } else if (fatherNode) {
-        // Chỉ có bố
-        parentStartX = fatherNode.x + nodeWidth / 2;
-        parentBottomY = fatherNode.y + nodeHeight;
-      } else if (motherNode) {
-        // Chỉ có mẹ
-        parentStartX = motherNode.x + nodeWidth / 2;
-        parentBottomY = motherNode.y + nodeHeight;
       }
     }
   }
