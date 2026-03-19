@@ -190,6 +190,16 @@
       transform: translateY(-2px);
     }
 
+    .btn-branch-update {
+      background: #1E88E5;
+      color: white;
+    }
+
+    .btn-branch-update:hover {
+      background: #1565C0;
+      transform: translateY(-2px);
+    }
+
     .btn-delete {
       background: #f44336;
       color: white;
@@ -602,6 +612,7 @@
         <button class="btn btn-backup" onclick="checkAuthAndBackup()" id="btnBackup" title="Tạo backup database">💾 Backup</button>
         <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">➕ Thêm</button>
         <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">✏️ Cập nhật</button>
+        <button class="btn btn-branch-update" onclick="openBranchUploadModal()" id="btnUpdateBranch">Update Nhánh</button>
         <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">🗑️ Xóa</button>
       </div>
     </div>
@@ -775,6 +786,22 @@
           <button type="submit" class="btn-modal btn-modal-save">Lưu</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal Update Nhánh (bulk from Excel/CSV) -->
+  <div id="branchUploadModal" class="modal">
+    <div class="modal-content" style="max-width: 650px;">
+      <span class="close" onclick="closeBranchUploadModal()">&times;</span>
+      <h2>Update Nhánh từ Excel/CSV</h2>
+      <div class="form-group">
+        <label for="branchUploadFile">Chọn file .xlsx hoặc .csv</label>
+        <input type="file" id="branchUploadFile" name="branchUploadFile" accept=".xlsx,.csv">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-modal btn-modal-cancel" onclick="closeBranchUploadModal()">Hủy</button>
+        <button type="button" class="btn-modal btn-modal-save" onclick="uploadBranchExcel()">Upload</button>
+      </div>
     </div>
   </div>
 
@@ -1284,6 +1311,66 @@
       }
     }
 
+    // Open branch upload modal
+    function openBranchUploadModal() {
+      const modal = document.getElementById('branchUploadModal');
+      const fileInput = document.getElementById('branchUploadFile');
+      if (fileInput) fileInput.value = '';
+      modal.style.display = 'block';
+    }
+
+    // Close branch upload modal
+    function closeBranchUploadModal() {
+      const modal = document.getElementById('branchUploadModal');
+      modal.style.display = 'none';
+    }
+
+    // Upload Excel/CSV and bulk update "Nhánh"
+    async function uploadBranchExcel() {
+      const fileInput = document.getElementById('branchUploadFile');
+      const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+      if (!file) {
+        alert('Vui lòng chọn file .xlsx hoặc .csv');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('password', getAuthPassword());
+
+      try {
+        const response = await fetch('/api/members/bulk-update-branch', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (response.ok && result.success) {
+          const updatedCount = result.updated_count || 0;
+          const errorCount = result.error_count || 0;
+          let message = `✅ Update Nhánh thành công: ${updatedCount} dòng`;
+          if (errorCount > 0) message += `\n⚠️ Dòng lỗi: ${errorCount}`;
+          alert(message);
+
+          closeBranchUploadModal();
+          loadMembers();
+          return;
+        }
+
+        if (response.status === 403) {
+          alert('Mật khẩu hệ thống không đúng. Vui lòng kiểm tra lại cấu hình server.');
+          return;
+        }
+
+        alert('Lỗi: ' + (result.error || result.message || 'Không thể cập nhật nhánh'));
+      } catch (error) {
+        console.error('[Members] Error updating branch bulk:', error);
+        alert('Lỗi kết nối: ' + error.message);
+      }
+    }
+
     // Validate image size
     function validateImageSize(input) {
       const file = input.files[0];
@@ -1466,9 +1553,13 @@
     // Close password modal when clicking outside
     window.onclick = function(event) {
       const modal = document.getElementById('memberModal');
+      const branchModal = document.getElementById('branchUploadModal');
       const passwordModal = document.getElementById('passwordModal');
       if (event.target == modal) {
         closeModal();
+      }
+      if (branchModal && event.target == branchModal) {
+        closeBranchUploadModal();
       }
       if (event.target == passwordModal) {
         closePasswordModal();

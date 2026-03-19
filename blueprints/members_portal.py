@@ -416,3 +416,234 @@ def export_members_excel():
     except Exception as e:
         logger.error(f'Error exporting Excel: {e}', exc_info=True)
         return (jsonify({'success': False, 'error': str(e)}), 500)
+
+
+@members_portal_bp.route('/api/members/bulk-update-branch', methods=['POST'])
+def bulk_update_members_branch():
+    """
+    Bulk update cột "Nhánh" cho members từ file Excel/CSV.
+
+    Template file chỉ cần 2 cột:
+    - ID: ứng với persons.person_id
+    - Nhánh: chỉ nhận 1 trong {Một, Hai, Ba, Bốn}
+
+    Rule:
+    - Nếu Nhánh sai hoặc ID sai format => error_count++ và bỏ qua dòng
+    - Nếu ID hợp lệ nhưng không tồn tại trong DB => silent (không update, không tính lỗi)
+    - Trả về số dòng cập nhật thành công và số dòng lỗi.
+    """
+    import io
+    import os
+    import re
+    import csv
+
+    from app import get_db_connection, get_or_create_branch, get_members_password, secure_compare
+
+    if not session.get('members_gate_ok'):
+        logger.warning('Unauthorized access to /api/members/bulk-update-branch')
+        return (jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401)
+
+    # Auth: read password (multipart/form-data or JSON)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        password = (request.form.get('password') or '').strip()
+    else:
+        payload = request.get_json(silent=True) or {}
+        password = (payload.get('password') or '').strip()
+
+    correct_password = get_members_password()
+    if not password or not secure_compare(password, correct_password):
+        return (jsonify({'success': False, 'error': 'Mật khẩu không đúng hoặc chưa được cung cấp'}), 403)
+
+    uploaded_file = request.files.get('file')
+    if not uploaded_file or not uploaded_file.filename:
+        return (jsonify({'success': False, 'error': 'Chưa nhận được file'}), 400)
+
+    filename = uploaded_file.filename.strip()
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in {'.xlsx', '.csv'}:
+        return (jsonify({'success': False, 'error': 'Chỉ hỗ trợ file .xlsx hoặc .csv'}), 400)
+
+    allowed_branches = {'Một', 'Hai', 'Ba', 'Bốn'}
+    id_regex = re.compile(r'^P-\d+-\d+$')
+
+    # Validate + map: {person_id: branch_name}
+    valid_to_update = {}
+    error_count = 0
+
+    file_bytes = uploaded_file.read()
+    if not file_bytes:
+        return (jsonify({'success': False, 'error': 'File rỗng'}), 400)
+
+    try:
+        if ext == '.xlsx':
+            from openpyxl import load_workbook
+
+            buf = io.BytesIO(file_bytes)
+            wb = load_workbook(filename=buf, read_only=True, data_only=True)
+            ws = wb.active
+
+            header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
+            if not header_row:
+                return (jsonify({'success': False, 'error': 'Không tìm thấy header trong file'}), 400)
+
+            header_cells = [(str(c).strip() if c is not None else '') for c in header_row]
+            id_idx = None
+            branch_idx = None
+            for i, h in enumerate(header_cells):
+                if h == 'ID':
+                    id_idx = i
+                elif h == 'Nhánh':
+                    branch_idx = i
+
+            if id_idx is None or branch_idx is None:
+                return (jsonify({'success': False, 'error': 'File phải có 2 cột: ID và Nhánh'}), 400)
+
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                id_val = row[id_idx] if id_idx < len(row) else None
+                branch_val = row[branch_idx] if branch_idx < len(row) else None
+
+                id_str = str(id_val).strip() if id_val is not None else ''
+                branch_str = str(branch_val).strip() if branch_val is not None else ''
+
+                if not id_regex.match(id_str):
+                    error_count += 1
+                    continue
+                if branch_str not in allowed_branches:
+                    error_count += 1
+                    continue
+
+                valid_to_update[id_str] = branch_str
+
+        else:
+            # CSV
+            text = file_bytes.decode('utf-8-sig', errors='replace')
+            reader = csv.DictReader(io.StringIO(text))
+            if not reader.fieldnames:
+                return (jsonify({'success': False, 'error': 'Không tìm thấy header trong file CSV'}), 400)
+
+            normalized = {(fn or '').strip(): fn for fn in reader.fieldnames if fn is not None}
+            if 'ID' not in normalized or 'Nhánh' not in normalized:
+                return (jsonify({'success': False, 'error': 'File phải có 2 cột: ID và Nhánh'}), 400)
+
+            id_key = normalized['ID']
+            branch_key = normalized['Nhánh']
+
+            for row in reader:
+                id_val = row.get(id_key)
+                branch_val = row.get(branch_key)
+
+                id_str = str(id_val).strip() if id_val is not None else ''
+                branch_str = str(branch_val).strip() if branch_val is not None else ''
+
+                if not id_regex.match(id_str):
+                    error_count += 1
+                    continue
+                if branch_str not in allowed_branches:
+                    error_count += 1
+                    continue
+
+                valid_to_update[id_str] = branch_str
+
+    except Exception as e:
+        logger.error(f'Failed to parse uploaded branch file: {e}', exc_info=True)
+        return (jsonify({'success': False, 'error': f'Lỗi đọc file: {str(e)}'}), 400)
+
+    connection = get_db_connection()
+    if not connection:
+        return (jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500)
+
+    cursor = None
+    try:
+        cursor = connection.cursor(dictionary=True)
+
+        if not valid_to_update:
+            return jsonify({'success': True, 'updated_count': 0, 'error_count': error_count})
+
+        ids = list(valid_to_update.keys())
+        placeholders = ','.join(['%s'] * len(ids))
+        cursor.execute(f'SELECT person_id FROM persons WHERE person_id IN ({placeholders})', tuple(ids))
+        existing_set = {r['person_id'] for r in cursor.fetchall() if r.get('person_id')}
+
+        # Silent: only update if exists
+        existing_map = {pid: valid_to_update[pid] for pid in ids if pid in existing_set}
+        updated_count = len(existing_map)
+
+        if updated_count == 0:
+            return jsonify({'success': True, 'updated_count': 0, 'error_count': error_count})
+
+        # Detect schema for branch_name / branch_id
+        cursor.execute("""
+            SELECT COLUMN_NAME
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'persons'
+              AND COLUMN_NAME IN ('branch_name', 'branch_id')
+        """)
+        cols = {r.get('COLUMN_NAME') for r in cursor.fetchall() if r.get('COLUMN_NAME')}
+
+        cursor.execute("""
+            SELECT TABLE_NAME
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'branches'
+            LIMIT 1
+        """)
+        has_branches_table = bool(cursor.fetchone())
+
+        if 'branch_name' in cols:
+            update_rows = [(branch, pid) for pid, branch in existing_map.items()]
+            cursor.executemany(
+                'UPDATE persons SET branch_name = %s WHERE person_id = %s',
+                update_rows
+            )
+        elif 'branch_id' in cols and has_branches_table:
+            # Map branch_name -> branch_id and update branch_id
+            unique_branch_names = set(existing_map.values())
+            branch_name_to_id = {}
+            # get_or_create_branch() trong app.py kỳ vọng fetchone() trả về tuple
+            # nên dùng cursor thường (không dictionary=True) để tránh KeyError.
+            cursor_for_branch = connection.cursor()
+            try:
+                for bn in unique_branch_names:
+                    branch_name_to_id[bn] = get_or_create_branch(cursor_for_branch, bn)
+            finally:
+                try:
+                    cursor_for_branch.close()
+                except Exception:
+                    pass
+
+            update_rows = [(branch_name_to_id[bn], pid) for pid, bn in existing_map.items()]
+            cursor.executemany(
+                'UPDATE persons SET branch_id = %s WHERE person_id = %s',
+                update_rows
+            )
+        else:
+            return (jsonify({'success': False, 'error': 'Không tìm thấy cột branch_name hoặc branch_id trong persons'}), 500)
+
+        connection.commit()
+
+        # Invalidate members cache
+        try:
+            from app import cache
+            if cache:
+                cache.delete('api_members_data')
+        except Exception as e:
+            logger.warning(f'Cache invalidation error (continuing): {e}')
+
+        return jsonify({'success': True, 'updated_count': updated_count, 'error_count': error_count})
+
+    except Exception as e:
+        connection.rollback()
+        logger.error(f'Error in bulk_update_members_branch: {e}', exc_info=True)
+        return (jsonify({'success': False, 'error': str(e)}), 500)
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if connection and getattr(connection, 'is_connected', lambda: False)():
+            try:
+                connection.close()
+            except Exception:
+                pass
