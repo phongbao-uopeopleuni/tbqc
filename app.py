@@ -4421,7 +4421,7 @@ def api_health():
 
 @app.route('/api/stats/members', methods=['GET'])
 def api_member_stats():
-    """Trả về thống kê thành viên: tổng, nam, nữ, không rõ, và số người theo từng đời"""
+    """Trả về thống kê thành viên: tổng, nam, nữ, không rõ, theo đời và theo nhánh."""
     connection = get_db_connection()
     if not connection:
         return (jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500)
@@ -4439,6 +4439,76 @@ def api_member_stats():
         generation_counts = []
         for i in range(1, 9):
             generation_counts.append({'generation_level': i, 'count': generation_dict.get(i, 0)})
+        # Tổ tiên: quy ước là đời 1
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS ancestor_count
+            FROM persons
+            WHERE generation_level = 1
+            """
+        )
+        ancestor_row = cursor.fetchone() or {}
+        ancestor_count = int(ancestor_row.get('ancestor_count') or 0)
+        # Thống kê theo nhánh (hỗ trợ cả schema persons.branch_name hoặc persons.branch_id -> branches.branch_name)
+        branch_counts = []
+        try:
+            cursor.execute(
+                """
+                SELECT COLUMN_NAME
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'persons'
+                  AND COLUMN_NAME IN ('branch_name', 'branch_id')
+                """
+            )
+            branch_cols = {str((r or {}).get('COLUMN_NAME') or '').strip() for r in (cursor.fetchall() or [])}
+            has_branch_name = 'branch_name' in branch_cols
+            has_branch_id = 'branch_id' in branch_cols
+
+            has_branches_table = False
+            if has_branch_id:
+                cursor.execute(
+                    """
+                    SELECT TABLE_NAME
+                    FROM information_schema.TABLES
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'branches'
+                    LIMIT 1
+                    """
+                )
+                has_branches_table = bool(cursor.fetchone())
+
+            if has_branch_name:
+                cursor.execute(
+                    """
+                    SELECT
+                        COALESCE(NULLIF(TRIM(branch_name), ''), 'Không rõ / khác') AS branch_name,
+                        COUNT(*) AS count
+                    FROM persons
+                    GROUP BY COALESCE(NULLIF(TRIM(branch_name), ''), 'Không rõ / khác')
+                    ORDER BY count DESC, branch_name ASC
+                    """
+                )
+                branch_counts = cursor.fetchall() or []
+            elif has_branch_id and has_branches_table:
+                cursor.execute(
+                    """
+                    SELECT
+                        COALESCE(NULLIF(TRIM(b.branch_name), ''), 'Không rõ / khác') AS branch_name,
+                        COUNT(*) AS count
+                    FROM persons p
+                    LEFT JOIN branches b ON p.branch_id = b.branch_id
+                    GROUP BY COALESCE(NULLIF(TRIM(b.branch_name), ''), 'Không rõ / khác')
+                    ORDER BY count DESC, branch_name ASC
+                    """
+                )
+                branch_counts = cursor.fetchall() or []
+            else:
+                branch_counts = []
+        except Exception as branch_err:
+            logger.warning('Could not build branch_counts in /api/stats/members: %s', branch_err)
+            branch_counts = []
+
         cursor.execute("\n            SELECT \n                academic_rank,\n                COUNT(*) AS count\n            FROM persons\n            WHERE academic_rank IS NOT NULL \n                AND academic_rank != ''\n                AND TRIM(academic_rank) != ''\n            GROUP BY academic_rank\n            ORDER BY count DESC, academic_rank ASC\n        ")
         academic_rank_stats = cursor.fetchall()
         cursor.execute("\n            SELECT \n                academic_degree,\n                COUNT(*) AS count\n            FROM persons\n            WHERE academic_degree IS NOT NULL \n                AND academic_degree != ''\n                AND TRIM(academic_degree) != ''\n            GROUP BY academic_degree\n            ORDER BY count DESC, academic_degree ASC\n        ")
@@ -4472,7 +4542,7 @@ def api_member_stats():
                 degree_categories['Phó Giáo sư'] += count
             elif any((kw in rank_lower for kw in ['giáo sư', 'professor', 'gs.', 'gs ', 'giáo sư'])):
                 degree_categories['Giáo sư'] += count
-        return jsonify({'total_members': row.get('total_members', 0), 'male_count': row.get('male_count', 0), 'female_count': row.get('female_count', 0), 'unknown_gender_count': row.get('unknown_gender_count', 0), 'generation_counts': generation_counts, 'academic_rank_stats': academic_rank_stats, 'academic_degree_stats': academic_degree_stats, 'total_with_rank': total_with_rank, 'total_with_degree': total_with_degree, 'degree_categories': degree_categories})
+        return jsonify({'total_members': row.get('total_members', 0), 'male_count': row.get('male_count', 0), 'female_count': row.get('female_count', 0), 'unknown_gender_count': row.get('unknown_gender_count', 0), 'ancestor_count': ancestor_count, 'branch_counts': branch_counts, 'generation_counts': generation_counts, 'academic_rank_stats': academic_rank_stats, 'academic_degree_stats': academic_degree_stats, 'total_with_rank': total_with_rank, 'total_with_degree': total_with_degree, 'degree_categories': degree_categories})
     except Exception as e:
         print(f'ERROR: Loi khi lay thong ke thanh vien: {e}')
         import traceback

@@ -219,6 +219,11 @@
       gap: var(--space-4);
       align-items: start;
     }
+
+    .tree-panel > .card.tree-controls,
+    .tree-panel > .family-view-switcher-wrap {
+      grid-column: 1 / -1;
+    }
     
     .tree-container-wrapper {
       grid-column: 1;
@@ -286,6 +291,45 @@
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
+    /* Biểu đồ thống kê: kích thước cân đối giữa 2 cột */
+    .stats-charts {
+      align-items: stretch;
+    }
+
+    .stats-chart-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .stats-chart-canvas-wrap {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      min-height: 280px;
+      max-height: 320px;
+    }
+
+    .stats-chart-canvas-wrap--pie {
+      max-width: min(100%, 260px);
+      margin: 0 auto;
+      min-height: 240px;
+      max-height: 280px;
+    }
+
+    .stats-chart-canvas-wrap--branch {
+      min-height: 280px;
+      max-height: 320px;
+    }
+
+    .generation-chart-canvas-wrap {
+      position: relative;
+      width: 100%;
+      min-height: 260px;
+      max-height: 300px;
+      margin-top: var(--space-2);
+    }
+
     @media (max-width: 1024px) {
       .stats-summary {
         grid-template-columns: repeat(2, 1fr);
@@ -351,6 +395,56 @@
       display: flex;
       flex-direction: column;
       gap: var(--space-4);
+    }
+
+    /* Chế độ xem cây gia phả (Danh sách / Sơ đồ / Mindmap) — không liên quan mộ phần */
+    .family-view-switcher-wrap {
+      margin-top: var(--space-4);
+      margin-bottom: 0;
+    }
+
+    .family-view-switcher-wrap .family-view-switcher-card {
+      padding: var(--space-4) var(--space-5);
+    }
+
+    .family-view-switcher-label {
+      font-size: var(--font-size-sm);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-primary);
+      margin: 0 0 var(--space-3) 0;
+    }
+
+    .family-view-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 6px;
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      background: var(--color-surface);
+      flex-wrap: wrap;
+    }
+
+    .family-view-btn {
+      border: none;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--color-text-muted);
+      font-weight: 600;
+      padding: 8px 14px;
+      min-height: 36px;
+    }
+
+    .family-view-btn:hover {
+      background: #f3f4f6;
+      color: var(--color-text);
+    }
+
+    .family-view-btn.active {
+      background: #ffffff;
+      color: var(--color-primary);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(139, 0, 0, 0.2);
     }
     
     .lineage-input-group {
@@ -1393,6 +1487,21 @@
             <!-- Search Results -->
             <div id="searchResults" style="margin-top: var(--space-4); display: none;"></div>
           </div>
+
+          <!-- Chế độ xem theo family (độc lập với tìm mộ phần) -->
+          <div class="family-view-switcher-wrap">
+            <div class="card lineage-card family-view-switcher-card">
+              <p class="family-view-switcher-label">Chế độ xem gia phả</p>
+              <p class="family-view-switcher-hint" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin: 0 0 var(--space-3) 0; line-height: 1.5;">
+                <strong>Mindmap</strong> hiển thị nhánh theo người đang chọn trên cây hoặc sau khi tìm kiếm; dữ liệu đồng bộ với <a href="/members" target="_blank" rel="noopener noreferrer">Thành viên</a> (đăng nhập cổng Thành viên trên cùng trình duyệt).
+              </p>
+              <div class="family-view-switcher" id="familyViewSwitcher" aria-label="Chọn kiểu hiển thị cây gia phả">
+                <button type="button" class="family-view-btn active" data-view="list">Danh sách</button>
+                <button type="button" class="family-view-btn" data-view="tree">Sơ đồ cây</button>
+                <button type="button" class="family-view-btn" data-view="mindmap">Mindmap</button>
+              </div>
+            </div>
+          </div>
           
           <!-- Tree Container -->
           <div class="tree-container-wrapper">
@@ -1416,7 +1525,7 @@
       <div class="lineage-panel" style="display: none;">
         <div class="card lineage-card">
           <div class="lineage-header">
-            <h2>🔍 Tra cứu chuỗi phả hệ</h2>
+            <h2>Tra cứu chuỗi phả hệ</h2>
             <p>Nhập tên để tìm kiếm chuỗi phả hệ theo dòng cha. Hệ thống sẽ tự động gợi ý.</p>
           </div>
           
@@ -1429,7 +1538,7 @@
                 <!-- Suggestions sẽ được điền bằng JavaScript -->
               </div>
             </div>
-            <button id="btnSearchLineage" onclick="searchLineage()" class="btn btn-primary">🔍 Tìm chuỗi phả hệ</button>
+            <button id="btnSearchLineage" onclick="searchLineage()" class="btn btn-primary">Tìm chuỗi phả hệ</button>
           </div>
 
           <!-- Panel thông tin chi tiết -->
@@ -1472,7 +1581,7 @@
                 <!-- Suggestions sẽ được điền bằng JavaScript -->
               </div>
             </div>
-            <button id="btnSearchGrave" onclick="searchGrave()" class="btn btn-primary">🔍 Tìm mộ phần</button>
+            <button id="btnSearchGrave" onclick="searchGrave()" class="btn btn-primary">Tìm mộ phần</button>
           </div>
 
           <!-- Kết quả tìm kiếm mộ phần -->
@@ -1656,6 +1765,33 @@
       <!-- Section: Member Stats -->
       <section id="stats" style="margin-top: var(--space-10);">
         <div class="section-container" style="max-width: 1200px; margin: 0 auto; padding: 0 var(--space-4);">
+          <!-- Thẻ nhỏ Học vị và Học hàm (rút gọn, đặt trên tiêu đề thống kê) -->
+          <div class="card" style="margin-bottom: var(--space-5); padding: var(--space-4);">
+            <h3 style="margin: 0 0 var(--space-3) 0; font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Học vị và Học hàm</h3>
+            <div id="degreeRankMiniCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--space-3);">
+              <div class="card" style="padding: var(--space-3); text-align: center; border-left: 4px solid #3b82f6;">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">Cử nhân</div>
+                <div id="degreeCountBachelor" style="font-size: var(--font-size-lg); font-weight: 700; color: #1f2937;">0</div>
+              </div>
+              <div class="card" style="padding: var(--space-3); text-align: center; border-left: 4px solid #8b5cf6;">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">Thạc sĩ</div>
+                <div id="degreeCountMaster" style="font-size: var(--font-size-lg); font-weight: 700; color: #1f2937;">0</div>
+              </div>
+              <div class="card" style="padding: var(--space-3); text-align: center; border-left: 4px solid #ef4444;">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">Tiến sĩ</div>
+                <div id="degreeCountDoctor" style="font-size: var(--font-size-lg); font-weight: 700; color: #1f2937;">0</div>
+              </div>
+              <div class="card" style="padding: var(--space-3); text-align: center; border-left: 4px solid #f59e0b;">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">Phó Giáo sư</div>
+                <div id="degreeCountAssocProf" style="font-size: var(--font-size-lg); font-weight: 700; color: #1f2937;">0</div>
+              </div>
+              <div class="card" style="padding: var(--space-3); text-align: center; border-left: 4px solid #10b981;">
+                <div style="font-size: var(--font-size-sm); color: var(--color-text-muted);">Giáo sư</div>
+                <div id="degreeCountProf" style="font-size: var(--font-size-lg); font-weight: 700; color: #1f2937;">0</div>
+              </div>
+            </div>
+          </div>
+
           <h2 class="section-title" style="text-align: center; font-size: var(--font-size-3xl); color: var(--color-primary); margin-bottom: var(--space-4);">Thống Kê Thành Viên</h2>
           <p class="stats-subtitle" style="text-align: center; color: var(--color-text-muted); margin-bottom: var(--space-6); font-size: var(--font-size-base);">
             Thống kê nhanh số lượng thành viên trong gia phả Tuy Biên Phòng – Nam, Nữ và các trường hợp chưa rõ.
@@ -1695,26 +1831,21 @@
               <div class="stats-charts" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5);">
                 <div class="stats-chart-card card">
                   <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Cơ cấu giới tính</h3>
-                  <canvas id="genderPieChart"></canvas>
+                  <div class="stats-chart-canvas-wrap stats-chart-canvas-wrap--pie">
+                    <canvas id="genderPieChart"></canvas>
+                  </div>
                 </div>
                 <div class="stats-chart-card card">
-                  <h3 style="margin-bottom: var(--space-3); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Thành viên theo giới tính</h3>
-                  <canvas id="genderBarChart"></canvas>
+                  <h3 style="margin-bottom: var(--space-2); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Thành viên theo Nhánh</h3>
+                  <p style="margin: 0 0 var(--space-3) 0; font-size: var(--font-size-sm); color: var(--color-text-muted); text-align: center;">(ĐVT: người)</p>
+                  <div class="stats-chart-canvas-wrap stats-chart-canvas-wrap--branch">
+                    <canvas id="genderBarChart"></canvas>
+                  </div>
+                  <p style="margin-top: var(--space-3); font-size: var(--font-size-sm); color: var(--color-text-muted); text-align: center;">Dữ liệu được cập nhật mới nhất năm 2026.</p>
                 </div>
               </div>
             </div>
             
-            <!-- Biểu đồ Học vị và Học hàm -->
-            <div class="stats-charts-wrapper" style="margin-top: var(--space-6);">
-              <div class="stats-charts" style="display: grid; grid-template-columns: 1fr; gap: var(--space-5);">
-                <div class="stats-chart-card card" style="background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%); border: 1px solid #e0e0e0; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                  <h3 style="margin-bottom: var(--space-4); font-size: var(--font-size-lg); color: var(--color-primary); text-align: center; font-weight: 600; padding-bottom: var(--space-3); border-bottom: 2px solid #DAA520;">🎓 Học vị và Học hàm</h3>
-                  <div class="degree-chart-container" style="position: relative; height: 350px; padding: var(--space-4);">
-                    <canvas id="degreeRankChart"></canvas>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- Thống kê theo đời -->
@@ -1755,8 +1886,12 @@
               </div>
             </div>
               <div class="generation-chart-container card" style="padding: var(--space-5);">
-                <h3 style="margin-bottom: var(--space-4); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Biểu đồ số người theo đời</h3>
-                <canvas id="generationBarChart"></canvas>
+                <h3 style="margin-bottom: var(--space-2); font-size: var(--font-size-base); color: var(--color-primary); text-align: center;">Biểu đồ số người theo đời</h3>
+                <p style="margin: 0 0 var(--space-2) 0; font-size: var(--font-size-sm); color: var(--color-text-muted); text-align: center;">(ĐVT: người)</p>
+                <div class="generation-chart-canvas-wrap">
+                  <canvas id="generationBarChart"></canvas>
+                </div>
+                <p style="margin-top: var(--space-3); font-size: var(--font-size-sm); color: var(--color-text-muted); text-align: center;">Dữ liệu được cập nhật mới nhất năm 2026.</p>
               </div>
             </div>
           </div>
@@ -2111,6 +2246,9 @@
                 el.addEventListener('click', async () => {
                   const personId = el.getAttribute('data-person-id');
                   console.log('[Genealogy] Selected person:', personId);
+                  if (typeof window !== 'undefined') {
+                    window.selectedPersonId = personId;
+                  }
                   
                   // Hiển thị thông tin chi tiết ngay lập tức
                   if (typeof showPersonInfo === 'function') {
@@ -3066,9 +3204,15 @@
         }
 
 
-        renderGenderCharts({ male, female, unknown });
+        renderGenderCharts({
+          male,
+          female,
+          unknown,
+          branchCounts: data.branch_counts || [],
+          ancestorCount: Number(data.ancestor_count) || 0
+        });
 
-        // Hiển thị biểu đồ học vị và học hàm
+        // Hiển thị card nhỏ học vị và học hàm
         if (data.degree_categories) {
           renderDegreeRankChart(data.degree_categories);
         }
@@ -3114,15 +3258,24 @@
       return div.innerHTML;
     }
 
-    function renderGenderCharts({ male, female, unknown }) {
+    function renderGenderCharts({ male, female, unknown, branchCounts = [], ancestorCount = 0 }) {
       const pieCtx = document.getElementById('genderPieChart')?.getContext('2d');
       const barCtx = document.getElementById('genderBarChart')?.getContext('2d');
       if (!pieCtx || !barCtx || typeof Chart === 'undefined') return;
 
+      if (window.statsGenderPieChart) {
+        try { window.statsGenderPieChart.destroy(); } catch (e) { /* ignore */ }
+        window.statsGenderPieChart = null;
+      }
+      if (window.statsGenderBarChart) {
+        try { window.statsGenderBarChart.destroy(); } catch (e) { /* ignore */ }
+        window.statsGenderBarChart = null;
+      }
+
       const labels = ['Nam', 'Nữ', 'Không rõ / khác'];
       const values = [male, female, unknown];
 
-      new Chart(pieCtx, {
+      window.statsGenderPieChart = new Chart(pieCtx, {
         type: 'doughnut',
         data: {
           labels,
@@ -3133,27 +3286,139 @@
           }]
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '58%',
+          layout: {
+            padding: { top: 4, bottom: 4, left: 4, right: 4 }
+          },
           plugins: {
-            legend: { position: 'bottom' }
+            legend: {
+              position: 'bottom',
+              labels: {
+                boxWidth: 12,
+                padding: 10,
+                font: { size: 11 }
+              }
+            }
           }
         }
       });
 
-      new Chart(barCtx, {
+      function normalizeBranchKey(rawName) {
+        const name = String(rawName || '').trim().toLowerCase();
+        if (!name) return 'other';
+        const ascii = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (name.includes('không rõ') || ascii.includes('khong ro') || name.includes('khác') || ascii.includes('khac')) {
+          return 'other';
+        }
+        if (name.includes('tổ tiên') || ascii.includes('to tien')) {
+          return 'ancestor';
+        }
+        const cleaned = ascii.replace(/^nhanh\s+/u, '').trim();
+        if (cleaned === 'mot' || cleaned === '1') return 'one';
+        if (cleaned === 'hai' || cleaned === '2') return 'two';
+        if (cleaned === 'ba' || cleaned === '3') return 'three';
+        if (cleaned === 'bon' || cleaned === '4') return 'four';
+        if (cleaned === 'nam' || cleaned === '5') return 'five';
+        if (cleaned === 'sau' || cleaned === '6') return 'six';
+        if (cleaned === 'bay' || cleaned === '7') return 'seven';
+        if (cleaned === 'tam' || cleaned === '8') return 'eight';
+        return 'other';
+      }
+
+      const orderedKeys = ['ancestor', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'other'];
+      const orderedLabels = ['Tổ tiên', 'Nhánh Một', 'Nhánh Hai', 'Nhánh Ba', 'Nhánh Bốn', 'Nhánh Năm', 'Nhánh Sáu', 'Nhánh Bảy', 'Khác'];
+      const bucket = new Map(orderedKeys.map((k) => [k, 0]));
+      bucket.set('ancestor', Number(ancestorCount) || 0);
+
+      if (Array.isArray(branchCounts)) {
+        branchCounts.forEach((item) => {
+          const key = normalizeBranchKey(item && item.branch_name);
+          const val = Number(item && item.count) || 0;
+          if (key !== 'ancestor') {
+            bucket.set(key, (bucket.get(key) || 0) + val);
+          }
+        });
+      }
+
+      // Biểu đồ đơn giản: luôn giữ thứ tự cố định.
+      const barLabels = orderedLabels;
+      const barValues = orderedKeys.map((key) => bucket.get(key) || 0);
+      const barColors = [
+        '#1d4ed8', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd',
+        '#22c55e', '#f59e0b', '#ef4444', '#9ca3af'
+      ];
+
+      const barValueLabelPlugin = {
+        id: 'branchBarValueLabelPlugin',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          const meta = chart.getDatasetMeta(0);
+          const values = chart.data.datasets[0].data || [];
+          ctx.save();
+          ctx.font = '600 11px Inter, sans-serif';
+          ctx.fillStyle = '#111827';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          meta.data.forEach((bar, idx) => {
+            const value = Number(values[idx] || 0);
+            ctx.fillText(value.toLocaleString('vi-VN'), bar.x, bar.y - 4);
+          });
+          ctx.restore();
+        }
+      };
+
+      window.statsGenderBarChart = new Chart(barCtx, {
         type: 'bar',
+        plugins: [barValueLabelPlugin],
         data: {
-          labels,
+          labels: barLabels,
           datasets: [{
             label: 'Số lượng',
-            data: values,
-            backgroundColor: ['#1976d2', '#e91e63', '#9e9e9e']
+            data: barValues,
+            backgroundColor: barColors,
+            borderRadius: 4,
+            maxBarThickness: 34
           }]
         },
         options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: { top: 12, bottom: 0, left: 0, right: 4 }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  const value = Number(context.parsed.y || 0);
+                  return `Số lượng: ${value.toLocaleString('vi-VN')}`;
+                }
+              }
+            }
+          },
           scales: {
             y: {
               beginAtZero: true,
-              ticks: { precision: 0 }
+              ticks: {
+                precision: 0,
+                maxTicksLimit: 8
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.08)'
+              }
+            },
+            x: {
+              ticks: {
+                autoSkip: false,
+                maxRotation: 20,
+                minRotation: 0,
+                color: '#374151',
+                font: { size: 11 }
+              },
+              grid: { display: false }
             }
           }
         }
@@ -3161,6 +3426,20 @@
     }
 
     function renderDegreeRankChart(degreeCategories) {
+      // Chế độ rút gọn: render vào card nhỏ phía trên "Thống Kê Thành Viên"
+      const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = Number(value || 0).toLocaleString('vi-VN');
+      };
+      setText('degreeCountBachelor', degreeCategories['Cử nhân']);
+      setText('degreeCountMaster', degreeCategories['Thạc sĩ']);
+      setText('degreeCountDoctor', degreeCategories['Tiến sĩ']);
+      setText('degreeCountAssocProf', degreeCategories['Phó Giáo sư']);
+      setText('degreeCountProf', degreeCategories['Giáo sư']);
+
+      // Không vẽ biểu đồ lớn để tiết kiệm diện tích.
+      return;
+
       const ctx = document.getElementById('degreeRankChart')?.getContext('2d');
       if (!ctx || typeof Chart === 'undefined') return;
 
@@ -3329,12 +3608,18 @@
       const ctx = document.getElementById('generationBarChart')?.getContext('2d');
       if (!ctx || typeof Chart === 'undefined') return;
 
-      // Sắp xếp theo generation_level
-      const sorted = generationCounts.sort((a, b) => a.generation_level - b.generation_level);
-      const labels = sorted.map(g => `Đời ${g.generation_level}`);
-      const values = sorted.map(g => g.count);
+      if (window.statsGenerationBarChart) {
+        try { window.statsGenerationBarChart.destroy(); } catch (e) { /* ignore */ }
+        window.statsGenerationBarChart = null;
+      }
 
-      // Màu sắc khác nhau cho từng đời
+      // Sắp xếp theo generation_level; ẩn cột Đời 8 (theo yêu cầu giao diện)
+      const sorted = [...generationCounts].sort((a, b) => a.generation_level - b.generation_level);
+      const filtered = sorted.filter((g) => Number(g.generation_level) !== 8);
+      const labels = filtered.map(g => `Đời ${g.generation_level}`);
+      const values = filtered.map(g => g.count);
+
+      // Màu sắc khác nhau cho từng đời (1–7)
       const colors = [
         '#8B0000', // Đời 1 - Dark red
         '#CD853F', // Đời 2 - Peru
@@ -3342,12 +3627,31 @@
         '#B8860B', // Đời 4 - Dark goldenrod
         '#9ACD32', // Đời 5 - Yellow green
         '#9370DB', // Đời 6 - Medium purple
-        '#20B2AA', // Đời 7 - Light sea green
-        '#FF6347'  // Đời 8 - Tomato
+        '#20B2AA'  // Đời 7 - Light sea green
       ];
 
-      new Chart(ctx, {
+      const genBarValueLabelPlugin = {
+        id: 'genBarValueLabelPlugin',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          const meta = chart.getDatasetMeta(0);
+          const vals = chart.data.datasets[0].data || [];
+          ctx.save();
+          ctx.font = '600 11px Inter, sans-serif';
+          ctx.fillStyle = '#111827';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          meta.data.forEach((bar, idx) => {
+            const value = Number(vals[idx] || 0);
+            ctx.fillText(value.toLocaleString('vi-VN'), bar.x, bar.y - 4);
+          });
+          ctx.restore();
+        }
+      };
+
+      window.statsGenerationBarChart = new Chart(ctx, {
         type: 'bar',
+        plugins: [genBarValueLabelPlugin],
         data: {
           labels: labels,
           datasets: [{
@@ -3355,12 +3659,17 @@
             data: values,
             backgroundColor: colors.slice(0, labels.length),
             borderColor: colors.slice(0, labels.length).map(c => c + 'DD'),
-            borderWidth: 2
+            borderWidth: 2,
+            borderRadius: 4,
+            maxBarThickness: 42
           }]
         },
         options: {
           responsive: true,
-          maintainAspectRatio: true,
+          maintainAspectRatio: false,
+          layout: {
+            padding: { top: 12, bottom: 0, left: 0, right: 4 }
+          },
           plugins: {
             legend: {
               display: false
@@ -3378,9 +3687,13 @@
               beginAtZero: true,
               ticks: {
                 precision: 0,
+                maxTicksLimit: 8,
                 callback: function(value) {
                   return value.toLocaleString('vi-VN');
                 }
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.08)'
               }
             },
             x: {
@@ -3388,7 +3701,8 @@
                 font: {
                   size: 12
                 }
-              }
+              },
+              grid: { display: false }
             }
           }
         }
@@ -4210,6 +4524,9 @@
      */
     function selectPerson(personId) {
       selectedPersonId = personId;
+      if (typeof window !== 'undefined') {
+        window.selectedPersonId = personId;
+      }
       
       // Update highlight in tree (will be handled by family tree renderer)
       if (typeof window.setSelectedPerson === 'function') {
@@ -4469,6 +4786,147 @@
     let currentGravePerson = null;
     let graveEditMode = false;
     let graveSearchTimeout = null;
+    /** Chế độ xem cây theo family — tách biệt tìm kiếm mộ phần */
+    let familyViewMode = 'list';
+
+    function markActiveFamilyViewButton(mode) {
+      document.querySelectorAll('#familyViewSwitcher .family-view-btn').forEach((btn) => {
+        const isActive = btn.dataset.view === mode;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+    }
+
+    /** Người làm trọng tâm Mindmap: chọn trên cây / sau tìm kiếm; fallback tổ gốc */
+    function getMindmapFocusPersonId(options) {
+      const explicit = options && options.personId;
+      if (explicit) return explicit;
+      if (typeof window !== 'undefined' && window.selectedPersonId) {
+        return window.selectedPersonId;
+      }
+      if (typeof window !== 'undefined' && window.founderId) {
+        return window.founderId;
+      }
+      return null;
+    }
+
+    /**
+     * Mindmap: dữ liệu từ /api/members (cùng trang Thành viên). Không dùng logic mộ phần.
+     */
+    async function setFamilyViewMode(mode, options = {}) {
+      familyViewMode = mode;
+      markActiveFamilyViewButton(mode);
+
+      const treeContainer = document.getElementById('treeContainer');
+      const treeWrapper = document.querySelector('.tree-container-wrapper');
+
+      if (mode === 'list') {
+        if (typeof resetToDefault === 'function') {
+          resetToDefault();
+        } else if (typeof renderDefaultTree === 'function') {
+          const genFilter = document.getElementById('genFilter');
+          const maxGen = genFilter ? parseInt(genFilter.value, 10) : 5;
+          const maxGenSafe = Number.isFinite(maxGen) && maxGen > 0 ? maxGen : 5;
+          const availableGraph = (typeof window !== 'undefined' && window.graph)
+            ? window.graph
+            : (typeof graph !== 'undefined' ? graph : null);
+          renderDefaultTree(availableGraph, maxGenSafe);
+        }
+        if (treeWrapper) {
+          treeWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        requestAnimationFrame(() => {
+          if (typeof window.fitTreeToView === 'function') window.fitTreeToView();
+        });
+        return;
+      }
+
+      if (!treeContainer) return;
+
+      const genFilter = document.getElementById('genFilter');
+      const maxGen = genFilter ? parseInt(genFilter.value, 10) : 5;
+      const maxGenSafe = Number.isFinite(maxGen) && maxGen > 0 ? maxGen : 5;
+      const availableGraph = (typeof window !== 'undefined' && window.graph)
+        ? window.graph
+        : (typeof graph !== 'undefined' ? graph : null);
+
+      if (mode === 'tree') {
+        if (typeof renderDefaultTree === 'function') {
+          renderDefaultTree(availableGraph, maxGenSafe);
+          requestAnimationFrame(() => {
+            if (typeof window.fitTreeToView === 'function') window.fitTreeToView();
+          });
+        }
+      }
+
+      if (mode === 'mindmap') {
+        const personId = getMindmapFocusPersonId(options);
+        if (!personId) {
+          alert('Chưa xác định được người để làm trọng tâm Mindmap. Hãy chọn một người trên cây hoặc dùng ô tìm kiếm phía trên.');
+          familyViewMode = 'list';
+          markActiveFamilyViewButton('list');
+          return;
+        }
+
+        try {
+          const membersRes = await fetch('/api/members', {
+            method: 'GET',
+            credentials: 'include',
+            headers: { Accept: 'application/json' }
+          });
+
+          if (!membersRes.ok) {
+            const hint = (membersRes.status === 401 || membersRes.status === 403)
+              ? 'Mindmap dùng dữ liệu giống trang Thành viên.\n\nVui lòng mở /members, đăng nhập cổng Thành viên trong cùng trình duyệt, rồi chọn Mindmap lại.'
+              : ('Không tải được dữ liệu Thành viên (HTTP ' + membersRes.status + ').');
+            alert(hint);
+            familyViewMode = 'list';
+            markActiveFamilyViewButton('list');
+            return;
+          }
+
+          const membersPayload = await membersRes.json();
+          if (!membersPayload.success || !Array.isArray(membersPayload.data)) {
+            alert('Dữ liệu Thành viên không hợp lệ. Vui lòng thử lại sau.');
+            familyViewMode = 'list';
+            markActiveFamilyViewButton('list');
+            return;
+          }
+
+          if (typeof loadTreeData !== 'function') {
+            alert('Lỗi: không tìm thấy loadTreeData (family-tree-core).');
+            familyViewMode = 'list';
+            markActiveFamilyViewButton('list');
+            return;
+          }
+
+          treeContainer.innerHTML = '<div class="tree-loading">Đang tải cây gia phả (dữ liệu Thành viên)...</div>';
+
+          await loadTreeData(maxGenSafe, 'P-1-1');
+
+          if (typeof renderFocusTree === 'function') {
+            renderFocusTree(personId);
+          } else {
+            treeContainer.innerHTML = '<div class="error">Không tìm thấy renderFocusTree</div>';
+            return;
+          }
+
+          requestAnimationFrame(() => {
+            if (typeof window.fitTreeToView === 'function') window.fitTreeToView();
+          });
+        } catch (err) {
+          console.error('[Family Mindmap]', err);
+          alert('Lỗi Mindmap: ' + (err && err.message ? err.message : String(err)));
+          familyViewMode = 'list';
+          markActiveFamilyViewButton('list');
+          return;
+        }
+      }
+
+      if (treeWrapper) {
+        treeWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
 
     /**
      * Xử lý khi người dùng gõ vào ô tìm kiếm mộ phần (autocomplete)
@@ -4767,8 +5225,8 @@
         
         // Hiển thị bản đồ
         await renderGraveMap(coords, person);
-        
-        // Scroll to result
+
+        // Scroll tới kết quả mộ phần (độc lập với Mindmap / chế độ xem cây)
         resultDiv?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         
       } catch (err) {
@@ -5586,7 +6044,13 @@
           }
         });
       }
-      
+
+      document.querySelectorAll('#familyViewSwitcher .family-view-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const mode = btn.dataset.view || 'list';
+          void setFamilyViewMode(mode);
+        });
+      });
     });
 
     // Touch-friendly interactions for mobile

@@ -905,7 +905,10 @@ function redistributeNodesByGeneration(levelPositions) {
 function resetToDefault() {
   currentMode = 'default';
   focusedPersonId = null;
-  
+  if (typeof window !== 'undefined') {
+    window.selectedPersonId = null;
+  }
+
   const btnDefaultMode = document.getElementById("btnDefaultMode");
   const btnFocusMode = document.getElementById("btnFocusMode");
   const genealogyString = document.getElementById("genealogyString");
@@ -1037,6 +1040,9 @@ function setupSearch() {
  */
 function focusOnPerson(personId) {
   focusedPersonId = personId;
+  if (typeof window !== 'undefined') {
+    window.selectedPersonId = personId;
+  }
   switchToFocusMode();
 }
 

@@ -26,9 +26,205 @@ const CONNECTOR_GENERATION_PALETTE = [
   "#64748b", "#ca8a04"
 ];
 
+// Dynamic spacing state (recomputed every render)
+let currentLevelDensityMap = new Map();
+
 function getGenerationColor(generation) {
   const gen = Math.max(0, Math.floor(Number(generation) || 0));
   return CONNECTOR_GENERATION_PALETTE[gen % CONNECTOR_GENERATION_PALETTE.length] || "#64748b";
+}
+
+/**
+ * Build density map (generation -> visible nodes count)
+ * Used to increase horizontal gap on crowded generations.
+ * @param {Object} root
+ * @returns {Map<number, number>}
+ */
+function buildLevelDensityMap(root) {
+  const density = new Map();
+
+  function walk(node) {
+    if (!node) return;
+    if (collapsedFamilies.has(node.id)) return;
+
+    const level = node.family ? node.family.generation : (node.person ? node.person.generation : 0);
+    density.set(level, (density.get(level) || 0) + 1);
+
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => walk(child));
+    }
+  }
+
+  walk(root);
+  return density;
+}
+
+/**
+ * Adaptive horizontal spacing by generation density and depth.
+ * @param {number} level
+ * @returns {number}
+ */
+function getAdaptiveHorizontalGap(level) {
+  const density = currentLevelDensityMap.get(level) || 1;
+  const baseGap = 240;
+  const densityBoost = Math.max(0, density - 4) * 14;
+  const depthBoost = Math.max(0, level - 5) * 16;
+  return Math.min(520, baseGap + densityBoost + depthBoost);
+}
+
+function getNodeHeight(node) {
+  return node.type === 'family' ? 120 : 100;
+}
+
+function getNodeSubtreeBounds(node) {
+  if (!node || collapsedFamilies.has(node.id)) return null;
+
+  const nodeWidth = getNodeWidth(node);
+  const nodeHeight = getNodeHeight(node);
+  let minX = node.x || 0;
+  let maxX = (node.x || 0) + nodeWidth;
+  let minY = node.y || 0;
+  let maxY = (node.y || 0) + nodeHeight;
+
+  if (node.children && node.children.length > 0) {
+    node.children.forEach(child => {
+      const childBounds = getNodeSubtreeBounds(child);
+      if (!childBounds) return;
+      minX = Math.min(minX, childBounds.minX);
+      maxX = Math.max(maxX, childBounds.maxX);
+      minY = Math.min(minY, childBounds.minY);
+      maxY = Math.max(maxY, childBounds.maxY);
+    });
+  }
+
+  return { minX, maxX, minY, maxY };
+}
+
+function recenterParents(node) {
+  if (!node || collapsedFamilies.has(node.id)) return;
+  if (node.children && node.children.length > 0) {
+    node.children.forEach(child => recenterParents(child));
+    const visibleChildren = node.children.filter(child => !collapsedFamilies.has(child.id));
+    if (visibleChildren.length > 0) {
+      const left = Math.min(...visibleChildren.map(child => child.x || 0));
+      const right = Math.max(...visibleChildren.map(child => (child.x || 0) + getNodeWidth(child)));
+      node.x = left + (right - left - getNodeWidth(node)) / 2;
+    }
+  }
+}
+
+function collectNodesByLevel(root) {
+  const byLevel = new Map();
+
+  function walk(node) {
+    if (!node || collapsedFamilies.has(node.id)) return;
+    const level = node.family ? node.family.generation : (node.person ? node.person.generation : 0);
+    if (!byLevel.has(level)) byLevel.set(level, []);
+    byLevel.get(level).push(node);
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => walk(child));
+    }
+  }
+
+  walk(root);
+  return byLevel;
+}
+
+/**
+ * Resolve overlaps per generation by shifting entire subtrees to the right.
+ * This keeps parent-child topology while guaranteeing minimum visual spacing.
+ * @param {Object} root
+ */
+function resolveLevelCollisions(root) {
+  const byLevel = collectNodesByLevel(root);
+  const sortedLevels = Array.from(byLevel.keys()).sort((a, b) => a - b);
+
+  sortedLevels.forEach(level => {
+    const nodes = byLevel.get(level) || [];
+    if (nodes.length < 2) return;
+
+    nodes.sort((a, b) => (a.x || 0) - (b.x || 0));
+    const density = currentLevelDensityMap.get(level) || nodes.length;
+    const minGap = Math.min(300, 160 + Math.max(0, density - 3) * 10);
+
+    for (let i = 1; i < nodes.length; i++) {
+      const prev = nodes[i - 1];
+      const cur = nodes[i];
+      const prevRight = (prev.x || 0) + getNodeWidth(prev);
+      const desiredLeft = prevRight + minGap;
+      const curLeft = cur.x || 0;
+      if (curLeft < desiredLeft) {
+        shiftSubtree(cur, desiredLeft - curLeft);
+      }
+    }
+  });
+}
+
+function stabilizeLayout(root, iterations = 3) {
+  for (let i = 0; i < iterations; i++) {
+    recenterParents(root);
+    resolveLevelCollisions(root);
+  }
+}
+
+/**
+ * Render soft lane backgrounds for each child branch so users can
+ * quickly identify which family branch each cluster belongs to.
+ * @param {Object} root
+ * @param {HTMLElement} container
+ */
+function renderFamilyBranchLanes(root, container) {
+  if (!root || !container) return;
+
+  function createLane(label, color, bounds) {
+    const lane = document.createElement('div');
+    lane.className = 'family-branch-lane';
+    lane.style.position = 'absolute';
+    lane.style.left = `${Math.max(0, bounds.minX - 16)}px`;
+    lane.style.top = `${Math.max(0, bounds.minY - 18)}px`;
+    lane.style.width = `${Math.max(0, bounds.maxX - bounds.minX + 32)}px`;
+    lane.style.height = `${Math.max(0, bounds.maxY - bounds.minY + 28)}px`;
+    lane.style.border = `2px dashed ${color}`;
+    lane.style.borderRadius = '14px';
+    lane.style.background = `${color}1A`; // ~10% alpha
+    lane.style.pointerEvents = 'none';
+    lane.style.zIndex = '0';
+
+    const laneLabel = document.createElement('div');
+    laneLabel.textContent = label;
+    laneLabel.style.position = 'absolute';
+    laneLabel.style.left = '8px';
+    laneLabel.style.top = '-12px';
+    laneLabel.style.padding = '2px 8px';
+    laneLabel.style.fontSize = '11px';
+    laneLabel.style.fontWeight = '700';
+    laneLabel.style.borderRadius = '8px';
+    laneLabel.style.background = color;
+    laneLabel.style.color = '#fff';
+    laneLabel.style.whiteSpace = 'nowrap';
+    lane.appendChild(laneLabel);
+
+    container.appendChild(lane);
+  }
+
+  function walk(node) {
+    if (!node || collapsedFamilies.has(node.id)) return;
+    if (node.children && node.children.length > 1) {
+      node.children.forEach(child => {
+        const bounds = getNodeSubtreeBounds(child);
+        if (!bounds) return;
+        const color = child.branchColor || '#64748b';
+        const fallbackName = child.family?.spouse1Name || child.family?.spouse2Name || child.id;
+        createLane(`Nhánh: ${fallbackName}`, color, bounds);
+      });
+    }
+
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => walk(child));
+    }
+  }
+
+  walk(root);
 }
 
 /**
@@ -134,14 +330,18 @@ function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
   
   // Assign branch keys và colors
   assignBranchKeys(familyTree);
+
+  // Recompute node density for adaptive spacing at each generation.
+  currentLevelDensityMap = buildLevelDensityMap(familyTree);
   
   // Render tree với hierarchical layout
   const treeDiv = document.createElement("div");
   treeDiv.className = "tree family-tree";
   treeDiv.style.position = "relative";
   
-  // Calculate positions using new tidy tree layout
+  // Calculate positions using tidy tree layout
   layoutFamilyTreeSubtree(familyTree);
+  stabilizeLayout(familyTree, 4);
   
   // Calculate container size với padding (before adjusting positions)
   let maxX = 0, maxY = 0, minX = Infinity, minY = Infinity;
@@ -194,6 +394,9 @@ function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
   
   console.log('[FamilyTree] Family renderer + branch coloring enabled');
   
+  // Render branch lanes first so they stay behind nodes/connectors.
+  renderFamilyBranchLanes(familyTree, treeDiv);
+
   // Render nodes và connectors (after positions are adjusted)
   renderFamilyTreeNodes(familyTree, treeDiv, familyGraph);
   
@@ -226,10 +429,13 @@ function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
     }
     return count;
   }
-  updateStats(countNodes(familyTree), maxGeneration);
+  const renderedNodeCount = countNodes(familyTree);
+  updateStats(renderedNodeCount, maxGeneration);
 
   requestAnimationFrame(function () {
-    if (typeof window !== 'undefined' && typeof window.fitTreeToView === 'function') {
+    // Avoid over-shrinking dense trees (gen 8+) which hurts readability.
+    const shouldAutoFit = maxGeneration <= 5 && renderedNodeCount <= 70;
+    if (shouldAutoFit && typeof window !== 'undefined' && typeof window.fitTreeToView === 'function') {
       window.fitTreeToView();
     }
   });
@@ -694,7 +900,7 @@ function layoutFamilyTreeSubtree(node) {
   }
 
   // Node has children: layout children first (bottom-up)
-  const gapX = 240; // Khoảng cách ngang giữa các nhánh (tăng để ô không sát nhau)
+  const gapX = getAdaptiveHorizontalGap(level) + 70;
   let cursor = 0;
   const childBounds = [];
 
