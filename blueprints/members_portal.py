@@ -463,7 +463,19 @@ def bulk_update_members_branch():
     if ext not in {'.xlsx', '.csv'}:
         return (jsonify({'success': False, 'error': 'Chỉ hỗ trợ file .xlsx hoặc .csv'}), 400)
 
-    allowed_branches = {'Một', 'Hai', 'Ba', 'Bốn'}
+    # Cho phép cả dạng text (Một/Hai/...) và dạng code số (0..7, -1)
+    branch_code_to_name = {
+        '0': 'Tổ tiên',
+        '1': 'Một',
+        '2': 'Hai',
+        '3': 'Ba',
+        '4': 'Bốn',
+        '5': 'Năm',
+        '6': 'Sáu',
+        '7': 'Bảy',
+        '-1': 'Khác',
+    }
+    allowed_branch_names = set(branch_code_to_name.values())
     id_regex = re.compile(r'^P-\d+-\d+$')
 
     # Validate + map: {person_id: branch_name}
@@ -508,11 +520,17 @@ def bulk_update_members_branch():
                 if not id_regex.match(id_str):
                     error_count += 1
                     continue
-                if branch_str not in allowed_branches:
+                canonical_branch = None
+                if branch_str in allowed_branch_names:
+                    canonical_branch = branch_str
+                elif branch_str in branch_code_to_name:
+                    canonical_branch = branch_code_to_name[branch_str]
+
+                if not canonical_branch:
                     error_count += 1
                     continue
 
-                valid_to_update[id_str] = branch_str
+                valid_to_update[id_str] = canonical_branch
 
         else:
             # CSV
@@ -538,11 +556,17 @@ def bulk_update_members_branch():
                 if not id_regex.match(id_str):
                     error_count += 1
                     continue
-                if branch_str not in allowed_branches:
+                canonical_branch = None
+                if branch_str in allowed_branch_names:
+                    canonical_branch = branch_str
+                elif branch_str in branch_code_to_name:
+                    canonical_branch = branch_code_to_name[branch_str]
+
+                if not canonical_branch:
                     error_count += 1
                     continue
 
-                valid_to_update[id_str] = branch_str
+                valid_to_update[id_str] = canonical_branch
 
     except Exception as e:
         logger.error(f'Failed to parse uploaded branch file: {e}', exc_info=True)

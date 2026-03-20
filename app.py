@@ -3687,17 +3687,35 @@ def update_person_members(person_id):
             update_fields.append('generation_level = %s')
             update_values.append(data.get('generation_number'))
         # Nhánh: nếu persons có cột branch_name thì lưu thẳng, không phụ thuộc bảng branches
+        branch_code_to_name = {
+            '0': 'Tổ tiên',
+            '1': 'Một',
+            '2': 'Hai',
+            '3': 'Ba',
+            '4': 'Bốn',
+            '5': 'Năm',
+            '6': 'Sáu',
+            '7': 'Bảy',
+            '-1': 'Khác',
+        }
+
         if 'branch_name' in columns:
             update_fields.append('branch_name = %s')
             v = data.get('branch_name')
             v = str(v).strip() if v is not None else None
+            if v in branch_code_to_name:
+                v = branch_code_to_name[v]
             update_values.append(v if v else None)
         # Nhánh: map branch_name -> branch_id (tự tạo branch nếu chưa có)
         if 'branch_id' in columns and data.get('branch_name'):
             try:
                 cursor.execute("\n                    SELECT TABLE_NAME FROM information_schema.TABLES\n                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'branches'\n                    LIMIT 1\n                ")
                 if cursor.fetchone():
-                    branch_id = get_or_create_branch(cursor, data.get('branch_name'))
+                    bn = data.get('branch_name')
+                    bn = str(bn).strip() if bn is not None else bn
+                    if bn in branch_code_to_name:
+                        bn = branch_code_to_name[bn]
+                    branch_id = get_or_create_branch(cursor, bn)
                     update_fields.append('branch_id = %s')
                     update_values.append(branch_id)
             except Exception as e:
