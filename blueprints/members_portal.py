@@ -3,8 +3,13 @@
 Cổng nội bộ Members - /members, /members/verify, /members/logout, /api/members
 """
 import logging
+import os
+import re
+from datetime import date, datetime
 from io import BytesIO
-from flask import Blueprint, render_template, request, jsonify, session, send_file
+from pathlib import Path
+
+from flask import Blueprint, redirect, render_template, request, jsonify, session, send_file
 
 logger = logging.getLogger(__name__)
 members_portal_bp = Blueprint('members_portal', __name__)
@@ -659,6 +664,335 @@ def bulk_update_members_branch():
     except Exception as e:
         connection.rollback()
         logger.error(f'Error in bulk_update_members_branch: {e}', exc_info=True)
+        return (jsonify({'success': False, 'error': str(e)}), 500)
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if connection and getattr(connection, 'is_connected', lambda: False)():
+            try:
+                connection.close()
+            except Exception:
+                pass
+
+
+def _sll_cell_nonempty(val):
+    if val is None:
+        return False
+    if isinstance(val, str) and not val.strip():
+        return False
+    return True
+
+
+def _sll_normalize_cell(val):
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.strftime('%Y-%m-%d')
+    if isinstance(val, date):
+        return val.isoformat()
+    if isinstance(val, float):
+        if val == int(val):
+            return int(val)
+    return val
+
+
+def _sll_branch_code_to_name():
+    return {
+        '0': 'Tổ tiên',
+        '1': 'Một',
+        '2': 'Hai',
+        '3': 'Ba',
+        '4': 'Bốn',
+        '5': 'Năm',
+        '6': 'Sáu',
+        '7': 'Bảy',
+        '-1': 'Khác',
+    }
+
+
+def _sll_canonical_branch(val):
+    if val is None:
+        return None
+    s = str(val).strip()
+    if not s:
+        return None
+    m = _sll_branch_code_to_name()
+    if s in m.values():
+        return s
+    if s in m:
+        return m[s]
+    return s
+
+
+def _sll_base_payload(cursor, person_id, rel_data):
+    cursor.execute('SELECT * FROM persons WHERE person_id = %s', (person_id,))
+    p = cursor.fetchone()
+    if not p:
+        return None
+    pid = person_id
+    parent = rel_data['parent_data'].get(pid, {})
+    spouse_names = (
+        rel_data['spouse_data_from_table'].get(pid)
+        or rel_data['spouse_data_from_marriages'].get(pid)
+        or rel_data['spouse_data_from_csv'].get(pid)
+        or []
+    )
+    children = rel_data['children_map'].get(pid, [])
+    siblings = rel_data['siblings_map'].get(pid, [])
+
+    def semi(xs):
+        if not xs:
+            return None
+        if isinstance(xs, list):
+            return '; '.join(xs)
+        return str(xs)
+
+    branch_name = p.get('branch_name')
+    if not branch_name and p.get('branch_id'):
+        cursor.execute('SELECT branch_name FROM branches WHERE branch_id = %s', (p['branch_id'],))
+        br = cursor.fetchone()
+        if br:
+            branch_name = br.get('branch_name')
+
+    def fmt_date(d):
+        if d is None:
+            return None
+        if hasattr(d, 'isoformat'):
+            s = d.isoformat()
+            return s[:10] if len(s) >= 10 else s
+        return str(d)
+
+    fm = p.get('father_mother_id')
+    if fm is None:
+        fm = p.get('fm_id')
+
+    return {
+        'full_name': p.get('full_name'),
+        'alias': p.get('alias'),
+        'fm_id': fm,
+        'gender': p.get('gender'),
+        'status': p.get('status'),
+        'generation_number': p.get('generation_level'),
+        'branch_name': branch_name,
+        'birth_date_solar': fmt_date(p.get('birth_date_solar')),
+        'birth_date_lunar': fmt_date(p.get('birth_date_lunar')),
+        'death_date_solar': fmt_date(p.get('death_date_solar')),
+        'death_date_lunar': fmt_date(p.get('death_date_lunar')),
+        'grave_info': p.get('grave_info'),
+        'place_of_death': p.get('place_of_death'),
+        'father_name': parent.get('father_name'),
+        'mother_name': parent.get('mother_name'),
+        'spouse_info': semi(spouse_names),
+        'children_info': semi(children),
+        'siblings_info': semi(siblings),
+        'occupation': p.get('occupation'),
+        'academic_rank': p.get('academic_rank'),
+        'academic_degree': p.get('academic_degree'),
+        'phone': p.get('phone'),
+        'email': p.get('email'),
+        'biography': p.get('biography'),
+        'personal_image_url': p.get('personal_image_url') or p.get('personal_image'),
+    }
+
+
+def _sll_merge_excel_into_payload(base, excel_by_internal_key):
+    """Chỉ ghi đè các ô Excel khác rỗng; map spouses/children/siblings/grave -> đúng key form."""
+    out = dict(base)
+    key_map = {
+        'spouses': 'spouse_info',
+        'children': 'children_info',
+        'siblings': 'siblings_info',
+        'grave': 'grave_info',
+    }
+    for k, v in excel_by_internal_key.items():
+        if k == 'person_id':
+            continue
+        if not _sll_cell_nonempty(v):
+            continue
+        nv = _sll_normalize_cell(v)
+        pk = key_map.get(k, k)
+        if pk == 'branch_name':
+            nv = _sll_canonical_branch(nv)
+        out[pk] = nv
+    return out
+
+
+_EXCEL_HEADER_TO_KEY = {header: key for key, header in _EXCEL_COLUMNS}
+
+
+@members_portal_bp.route('/members/template/Template_updatetbqc.xlsx')
+def download_template_update_sll():
+    """File mẫu Update SLL (cùng cấu trúc Xuất Excel)."""
+    if not session.get('members_gate_ok'):
+        return redirect('/members')
+    root = Path(__file__).resolve().parent.parent
+    path = root / 'Template_updatetbqc.xlsx'
+    if not path.is_file():
+        return (jsonify({'success': False, 'error': 'Không tìm thấy Template_updatetbqc.xlsx trên server'}), 404)
+    return send_file(path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', as_attachment=True, download_name='Template_updatetbqc.xlsx')
+
+
+@members_portal_bp.route('/api/members/bulk-update-sll', methods=['POST'])
+def bulk_update_members_sll():
+    """
+    Cập nhật nhiều thành viên từ Excel/CSV (cùng template Xuất Excel / Template_updatetbqc.xlsx).
+    Mỗi dòng: ID bắt buộc; ô trống = giữ nguyên giá trị hiện có trong DB (merge).
+    """
+    import csv
+    import io
+
+    from app import (
+        apply_person_members_update_core,
+        get_db_connection,
+        get_members_password,
+        load_relationship_data,
+        secure_compare,
+    )
+
+    if not session.get('members_gate_ok'):
+        logger.warning('Unauthorized access to /api/members/bulk-update-sll')
+        return (jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401)
+
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        password = (request.form.get('password') or '').strip()
+    else:
+        payload = request.get_json(silent=True) or {}
+        password = (payload.get('password') or '').strip()
+
+    correct_password = get_members_password()
+    if not password or not secure_compare(password, correct_password):
+        return (jsonify({'success': False, 'error': 'Mật khẩu không đúng hoặc chưa được cung cấp'}), 403)
+
+    uploaded_file = request.files.get('file')
+    if not uploaded_file or not uploaded_file.filename:
+        return (jsonify({'success': False, 'error': 'Chưa nhận được file'}), 400)
+
+    filename = uploaded_file.filename.strip()
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in {'.xlsx', '.csv'}:
+        return (jsonify({'success': False, 'error': 'Chỉ hỗ trợ file .xlsx hoặc .csv'}), 400)
+
+    file_bytes = uploaded_file.read()
+    if not file_bytes:
+        return (jsonify({'success': False, 'error': 'File rỗng'}), 400)
+
+    id_regex = re.compile(r'^P-\d+-\d+$')
+    rows_to_process = []
+
+    try:
+        if ext == '.xlsx':
+            from openpyxl import load_workbook
+
+            buf = io.BytesIO(file_bytes)
+            wb = load_workbook(filename=buf, read_only=True, data_only=True)
+            ws = wb.active
+            header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
+            if not header_row:
+                return (jsonify({'success': False, 'error': 'Không tìm thấy header trong file'}), 400)
+            header_cells = [(str(c).strip() if c is not None else '') for c in header_row]
+            idx_map = {}
+            for i, h in enumerate(header_cells):
+                if h in _EXCEL_HEADER_TO_KEY:
+                    idx_map[_EXCEL_HEADER_TO_KEY[h]] = i
+            if 'person_id' not in idx_map:
+                return (jsonify({'success': False, 'error': 'File phải có cột ID (đúng template Xuất Excel)'}), 400)
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                row = list(row) if row else []
+                id_val = row[idx_map['person_id']] if idx_map['person_id'] < len(row) else None
+                id_str = str(id_val).strip() if id_val is not None else ''
+                if not id_str:
+                    continue
+                excel_dict = {}
+                for key, col_idx in idx_map.items():
+                    cell = row[col_idx] if col_idx < len(row) else None
+                    excel_dict[key] = cell
+                rows_to_process.append((id_str, excel_dict))
+        else:
+            text = file_bytes.decode('utf-8-sig', errors='replace')
+            reader = csv.DictReader(io.StringIO(text))
+            if not reader.fieldnames:
+                return (jsonify({'success': False, 'error': 'Không tìm thấy header trong file CSV'}), 400)
+            norm = {(fn or '').strip(): fn for fn in reader.fieldnames if fn is not None}
+            if 'ID' not in norm:
+                return (jsonify({'success': False, 'error': 'File phải có cột ID'}), 400)
+            id_key = norm['ID']
+            for r in reader:
+                id_val = r.get(id_key)
+                id_str = str(id_val).strip() if id_val is not None else ''
+                if not id_str:
+                    continue
+                excel_dict = {}
+                for header, ikey in _EXCEL_HEADER_TO_KEY.items():
+                    if header not in norm:
+                        continue
+                    excel_dict[ikey] = r.get(norm[header])
+                rows_to_process.append((id_str, excel_dict))
+
+    except Exception as e:
+        logger.error(f'Failed to parse SLL file: {e}', exc_info=True)
+        return (jsonify({'success': False, 'error': f'Lỗi đọc file: {str(e)}'}), 400)
+
+    connection = get_db_connection()
+    if not connection:
+        return (jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500)
+
+    cursor = None
+    updated_count = 0
+    error_count = 0
+    skipped_count = 0
+
+    try:
+        cursor = connection.cursor(dictionary=True)
+        rel_data = load_relationship_data(cursor)
+
+        for id_str, excel_dict in rows_to_process:
+            if not id_regex.match(id_str):
+                error_count += 1
+                continue
+            cursor.execute('SELECT person_id FROM persons WHERE person_id = %s', (id_str,))
+            if not cursor.fetchone():
+                skipped_count += 1
+                continue
+            base = _sll_base_payload(cursor, id_str, rel_data)
+            if not base:
+                skipped_count += 1
+                continue
+            merged = _sll_merge_excel_into_payload(base, excel_dict)
+            try:
+                ok, err, _code = apply_person_members_update_core(connection, cursor, id_str, merged, None, None)
+                if ok:
+                    updated_count += 1
+                    rel_data = load_relationship_data(cursor)
+                else:
+                    error_count += 1
+                    logger.warning(f'bulk-update-sll row {id_str}: {err}')
+            except Exception as row_err:
+                try:
+                    connection.rollback()
+                except Exception:
+                    pass
+                error_count += 1
+                logger.warning(f'bulk-update-sll row {id_str} exception: {row_err}', exc_info=True)
+
+        try:
+            from app import cache
+            if cache:
+                cache.delete('api_members_data')
+        except Exception as e:
+            logger.warning(f'Cache invalidation error (bulk SLL): {e}')
+
+        return jsonify({
+            'success': True,
+            'updated_count': updated_count,
+            'error_count': error_count,
+            'skipped_count': skipped_count,
+        })
+
+    except Exception as e:
+        logger.error(f'Error in bulk_update_members_sll: {e}', exc_info=True)
         return (jsonify({'success': False, 'error': str(e)}), 500)
     finally:
         if cursor:

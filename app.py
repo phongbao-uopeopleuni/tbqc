@@ -3619,6 +3619,265 @@ def create_person():
             cursor.close()
             connection.close()
 
+def apply_person_members_update_core(connection, cursor, person_id, data, personal_image_file=None, before_data=None):
+    """
+    Logic cập nhật một thành viên (members portal). Dùng cho PUT /api/persons/<id> và bulk Update SLL.
+    Thành công: commit, ghi log, xóa cache; trả về (True, None, None).
+    Lỗi validate: trả (False, message, http_code), không commit.
+    """
+    if before_data is None:
+        cursor.execute(
+            """
+            SELECT full_name, gender, status, generation_level, birth_date_solar,
+                   death_date_solar, place_of_death, biography, academic_rank,
+                   academic_degree, phone, email, occupation
+            FROM persons
+            WHERE person_id = %s
+            """,
+            (person_id,),
+        )
+        before_data = cursor.fetchone()
+
+    if data.get('csv_id'):
+        cursor.execute("\n                SELECT COLUMN_NAME \n                FROM information_schema.COLUMNS \n                WHERE TABLE_SCHEMA = DATABASE() \n                AND TABLE_NAME = 'persons'\n                AND COLUMN_NAME = 'csv_id'\n            ")
+        has_csv_id = cursor.fetchone()
+        if has_csv_id:
+            cursor.execute('SELECT person_id FROM persons WHERE csv_id = %s AND person_id != %s', (data['csv_id'], person_id))
+            if cursor.fetchone():
+                return (False, f"ID {data['csv_id']} đã tồn tại", 400)
+        else:
+            pass
+    cursor.execute("\n            SELECT COLUMN_NAME \n            FROM information_schema.COLUMNS \n            WHERE TABLE_SCHEMA = DATABASE() \n            AND TABLE_NAME = 'persons'\n        ")
+    columns = [row['COLUMN_NAME'] for row in cursor.fetchall()]
+    update_fields = []
+    update_values = []
+    if 'full_name' in columns:
+        full_name = data.get('full_name')
+        if full_name:
+            full_name = sanitize_string(str(full_name), max_length=255, allow_empty=False)
+        update_fields.append('full_name = %s')
+        update_values.append(full_name)
+    if 'gender' in columns:
+        gender = data.get('gender')
+        if gender and gender not in ['M', 'F', 'Male', 'Female', 'Nam', 'Nữ']:
+            return (False, 'Invalid gender value', 400)
+        update_fields.append('gender = %s')
+        update_values.append(gender)
+    if 'status' in columns:
+        update_fields.append('status = %s')
+        update_values.append(data.get('status'))
+    if 'generation_level' in columns and data.get('generation_number'):
+        update_fields.append('generation_level = %s')
+        update_values.append(data.get('generation_number'))
+    # Nhánh: nếu persons có cột branch_name thì lưu thẳng, không phụ thuộc bảng branches
+    branch_code_to_name = {
+        '0': 'Tổ tiên',
+        '1': 'Một',
+        '2': 'Hai',
+        '3': 'Ba',
+        '4': 'Bốn',
+        '5': 'Năm',
+        '6': 'Sáu',
+        '7': 'Bảy',
+        '-1': 'Khác',
+    }
+
+    if 'branch_name' in columns:
+        update_fields.append('branch_name = %s')
+        v = data.get('branch_name')
+        v = str(v).strip() if v is not None else None
+        if v in branch_code_to_name:
+            v = branch_code_to_name[v]
+        update_values.append(v if v else None)
+    # Nhánh: map branch_name -> branch_id (tự tạo branch nếu chưa có)
+    if 'branch_id' in columns and data.get('branch_name'):
+        try:
+            cursor.execute("\n                    SELECT TABLE_NAME FROM information_schema.TABLES\n                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'branches'\n                    LIMIT 1\n                ")
+            if cursor.fetchone():
+                bn = data.get('branch_name')
+                bn = str(bn).strip() if bn is not None else bn
+                if bn in branch_code_to_name:
+                    bn = branch_code_to_name[bn]
+                branch_id = get_or_create_branch(cursor, bn)
+                update_fields.append('branch_id = %s')
+                update_values.append(branch_id)
+        except Exception as e:
+            logger.warning(f'Could not set branch_id on update_person_members: {e}')
+    if 'birth_date_solar' in columns:
+        update_fields.append('birth_date_solar = %s')
+        birth_date = data.get('birth_date_solar', '').strip() if data.get('birth_date_solar') else ''
+        if birth_date and len(birth_date) == 4 and birth_date.isdigit():
+            birth_date = f'{birth_date}-01-01'
+        update_values.append(birth_date if birth_date else None)
+    if 'death_date_solar' in columns:
+        update_fields.append('death_date_solar = %s')
+        death_date = data.get('death_date_solar', '').strip() if data.get('death_date_solar') else ''
+        if death_date and len(death_date) == 4 and death_date.isdigit():
+            death_date = f'{death_date}-01-01'
+        update_values.append(death_date if death_date else None)
+    if 'place_of_death' in columns:
+        update_fields.append('place_of_death = %s')
+        update_values.append(data.get('place_of_death'))
+    if 'biography' in columns:
+        update_fields.append('biography = %s')
+        biography = data.get('biography', '').strip() if data.get('biography') else None
+        update_values.append(biography if biography else None)
+    if 'academic_rank' in columns:
+        update_fields.append('academic_rank = %s')
+        academic_rank = data.get('academic_rank', '').strip() if data.get('academic_rank') else None
+        update_values.append(academic_rank if academic_rank else None)
+    if 'academic_degree' in columns:
+        update_fields.append('academic_degree = %s')
+        academic_degree = data.get('academic_degree', '').strip() if data.get('academic_degree') else None
+        update_values.append(academic_degree if academic_degree else None)
+    if 'phone' in columns:
+        update_fields.append('phone = %s')
+        phone = data.get('phone', '').strip() if data.get('phone') else None
+        update_values.append(phone if phone else None)
+    if 'email' in columns:
+        update_fields.append('email = %s')
+        email = data.get('email', '').strip() if data.get('email') else None
+        if email and '@' not in email:
+            return (False, 'Email không hợp lệ', 400)
+        update_values.append(email if email else None)
+    if 'occupation' in columns:
+        update_fields.append('occupation = %s')
+        occupation = data.get('occupation', '').strip() if data.get('occupation') else None
+        update_values.append(occupation if occupation else None)
+    if 'alias' in columns and 'alias' in data:
+        update_fields.append('alias = %s')
+        av = data.get('alias')
+        if av:
+            av = sanitize_string(str(av), max_length=255, allow_empty=True)
+        update_values.append(av if av else None)
+    if 'birth_date_lunar' in columns and 'birth_date_lunar' in data:
+        update_fields.append('birth_date_lunar = %s')
+        bd = data.get('birth_date_lunar')
+        if bd is not None and not isinstance(bd, str):
+            bd = str(bd).strip()
+        else:
+            bd = (bd or '').strip() if bd else ''
+        if bd and len(bd) == 4 and bd.isdigit():
+            bd = f'{bd}-01-01'
+        update_values.append(bd if bd else None)
+    if 'death_date_lunar' in columns and 'death_date_lunar' in data:
+        update_fields.append('death_date_lunar = %s')
+        dd = data.get('death_date_lunar')
+        if dd is not None and not isinstance(dd, str):
+            dd = str(dd).strip()
+        else:
+            dd = (dd or '').strip() if dd else ''
+        if dd and len(dd) == 4 and dd.isdigit():
+            dd = f'{dd}-01-01'
+        update_values.append(dd if dd else None)
+    if 'grave_info' in columns and ('grave_info' in data or 'grave' in data):
+        update_fields.append('grave_info = %s')
+        gv = data.get('grave_info') if 'grave_info' in data else data.get('grave')
+        if gv is not None:
+            gv = str(gv).strip() if str(gv).strip() else None
+        update_values.append(gv)
+    if (
+        'personal_image_url' in columns
+        and 'personal_image_url' in data
+        and data.get('personal_image_url')
+        and not (personal_image_file and getattr(personal_image_file, 'filename', None))
+    ):
+        update_fields.append('personal_image_url = %s')
+        update_values.append(str(data['personal_image_url']).strip())
+    elif (
+        'personal_image' in columns
+        and 'personal_image_url' in data
+        and data.get('personal_image_url')
+        and not (personal_image_file and getattr(personal_image_file, 'filename', None))
+    ):
+        update_fields.append('personal_image = %s')
+        update_values.append(str(data['personal_image_url']).strip())
+    if personal_image_file and personal_image_file.filename:
+        personal_image_file.seek(0, os.SEEK_END)
+        file_size = personal_image_file.tell()
+        personal_image_file.seek(0)
+        if file_size > 2 * 1024 * 1024:
+            return (False, 'Kích thước file ảnh vượt quá 2MB', 400)
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+        if '.' not in personal_image_file.filename or personal_image_file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            return (False, 'Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP', 400)
+        from datetime import datetime
+        import hashlib
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename_hash = hashlib.md5(f'{person_id}_{personal_image_file.filename}'.encode()).hexdigest()[:8]
+        extension = personal_image_file.filename.rsplit('.', 1)[1].lower()
+        safe_filename = secure_filename(f'personal_{person_id}_{timestamp}_{filename_hash}.{extension}')
+        volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+        if volume_mount_path and os.path.exists(volume_mount_path):
+            base_images_dir = volume_mount_path
+        else:
+            base_images_dir = os.path.join(BASE_DIR, 'static', 'images')
+        personal_dir = os.path.join(base_images_dir, 'personal')
+        os.makedirs(personal_dir, exist_ok=True)
+        file_path = os.path.join(personal_dir, safe_filename)
+        personal_image_file.save(file_path)
+        image_url = f'/static/images/personal/{safe_filename}'
+        if 'personal_image_url' in columns:
+            update_fields.append('personal_image_url = %s')
+            update_values.append(image_url)
+        elif 'personal_image' in columns:
+            update_fields.append('personal_image = %s')
+            update_values.append(image_url)
+    if 'generation_id' in columns and data.get('generation_number'):
+        cursor.execute('SELECT generation_id FROM generations WHERE generation_number = %s', (data['generation_number'],))
+        gen = cursor.fetchone()
+        if gen:
+            generation_id = gen['generation_id']
+        else:
+            cursor.execute('INSERT INTO generations (generation_number) VALUES (%s)', (data['generation_number'],))
+            generation_id = cursor.lastrowid
+        update_fields.append('generation_id = %s')
+        update_values.append(generation_id)
+    if 'father_mother_id' in columns:
+        update_fields.append('father_mother_id = %s')
+        update_values.append(data.get('fm_id'))
+    elif 'fm_id' in columns:
+        update_fields.append('fm_id = %s')
+        update_values.append(data.get('fm_id'))
+    if update_fields:
+        update_values.append(person_id)
+        update_query = f"UPDATE persons SET {', '.join(update_fields)} WHERE person_id = %s"
+        cursor.execute(update_query, update_values)
+    father_id = None
+    mother_id = None
+    if data.get('father_name'):
+        cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (data['father_name'],))
+        father = cursor.fetchone()
+        if father:
+            father_id = father['person_id']
+    if data.get('mother_name'):
+        cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (data['mother_name'],))
+        mother = cursor.fetchone()
+        if mother:
+            mother_id = mother['person_id']
+    cursor.execute("\n            DELETE FROM relationships \n            WHERE child_id = %s AND relation_type IN ('father', 'mother')\n        ", (person_id,))
+    if father_id:
+        cursor.execute("\n                INSERT INTO relationships (child_id, parent_id, relation_type)\n                VALUES (%s, %s, 'father')\n                ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)\n            ", (person_id, father_id))
+    if mother_id:
+        cursor.execute("\n                INSERT INTO relationships (child_id, parent_id, relation_type)\n                VALUES (%s, %s, 'mother')\n                ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)\n            ", (person_id, mother_id))
+    _process_children_spouse_siblings(cursor, person_id, data)
+    connection.commit()
+    try:
+        cursor.execute('\n                SELECT full_name, gender, status, generation_level, birth_date_solar,\n                       death_date_solar, place_of_death, biography, academic_rank,\n                       academic_degree, phone, email, occupation\n                FROM persons \n                WHERE person_id = %s\n            ', (person_id,))
+        after_data = cursor.fetchone()
+        if before_data and after_data:
+            log_person_update(person_id, dict(before_data), dict(after_data))
+    except Exception as log_error:
+        logger.warning(f'Failed to log person update for {person_id}: {log_error}')
+    if cache:
+        try:
+            cache.delete('api_members_data')
+            logger.debug('Cache invalidated after update_person_members')
+        except Exception as e:
+            logger.warning(f'Cache invalidation error (continuing): {e}')
+    return (True, None, None)
+
+
 def update_person_members(person_id):
     """API cập nhật thành viên từ trang members - Yêu cầu mật khẩu"""
     if request.content_type and 'multipart/form-data' in request.content_type:
@@ -3655,195 +3914,12 @@ def update_person_members(person_id):
             return (jsonify({'success': False, 'error': f'Không tìm thấy person_id: {person_id}'}), 404)
         cursor.execute('\n            SELECT full_name, gender, status, generation_level, birth_date_solar,\n                   death_date_solar, place_of_death, biography, academic_rank,\n                   academic_degree, phone, email, occupation\n            FROM persons \n            WHERE person_id = %s\n        ', (person_id,))
         before_data = cursor.fetchone()
-        if data.get('csv_id'):
-            cursor.execute("\n                SELECT COLUMN_NAME \n                FROM information_schema.COLUMNS \n                WHERE TABLE_SCHEMA = DATABASE() \n                AND TABLE_NAME = 'persons'\n                AND COLUMN_NAME = 'csv_id'\n            ")
-            has_csv_id = cursor.fetchone()
-            if has_csv_id:
-                cursor.execute('SELECT person_id FROM persons WHERE csv_id = %s AND person_id != %s', (data['csv_id'], person_id))
-                if cursor.fetchone():
-                    return (jsonify({'success': False, 'error': f"ID {data['csv_id']} đã tồn tại"}), 400)
-            else:
-                pass
-        cursor.execute("\n            SELECT COLUMN_NAME \n            FROM information_schema.COLUMNS \n            WHERE TABLE_SCHEMA = DATABASE() \n            AND TABLE_NAME = 'persons'\n        ")
-        columns = [row['COLUMN_NAME'] for row in cursor.fetchall()]
-        update_fields = []
-        update_values = []
-        if 'full_name' in columns:
-            full_name = data.get('full_name')
-            if full_name:
-                full_name = sanitize_string(str(full_name), max_length=255, allow_empty=False)
-            update_fields.append('full_name = %s')
-            update_values.append(full_name)
-        if 'gender' in columns:
-            gender = data.get('gender')
-            if gender and gender not in ['M', 'F', 'Male', 'Female', 'Nam', 'Nữ']:
-                return (jsonify({'success': False, 'error': 'Invalid gender value'}), 400)
-            update_fields.append('gender = %s')
-            update_values.append(gender)
-        if 'status' in columns:
-            update_fields.append('status = %s')
-            update_values.append(data.get('status'))
-        if 'generation_level' in columns and data.get('generation_number'):
-            update_fields.append('generation_level = %s')
-            update_values.append(data.get('generation_number'))
-        # Nhánh: nếu persons có cột branch_name thì lưu thẳng, không phụ thuộc bảng branches
-        branch_code_to_name = {
-            '0': 'Tổ tiên',
-            '1': 'Một',
-            '2': 'Hai',
-            '3': 'Ba',
-            '4': 'Bốn',
-            '5': 'Năm',
-            '6': 'Sáu',
-            '7': 'Bảy',
-            '-1': 'Khác',
-        }
-
-        if 'branch_name' in columns:
-            update_fields.append('branch_name = %s')
-            v = data.get('branch_name')
-            v = str(v).strip() if v is not None else None
-            if v in branch_code_to_name:
-                v = branch_code_to_name[v]
-            update_values.append(v if v else None)
-        # Nhánh: map branch_name -> branch_id (tự tạo branch nếu chưa có)
-        if 'branch_id' in columns and data.get('branch_name'):
-            try:
-                cursor.execute("\n                    SELECT TABLE_NAME FROM information_schema.TABLES\n                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'branches'\n                    LIMIT 1\n                ")
-                if cursor.fetchone():
-                    bn = data.get('branch_name')
-                    bn = str(bn).strip() if bn is not None else bn
-                    if bn in branch_code_to_name:
-                        bn = branch_code_to_name[bn]
-                    branch_id = get_or_create_branch(cursor, bn)
-                    update_fields.append('branch_id = %s')
-                    update_values.append(branch_id)
-            except Exception as e:
-                logger.warning(f'Could not set branch_id on update_person_members: {e}')
-        if 'birth_date_solar' in columns:
-            update_fields.append('birth_date_solar = %s')
-            birth_date = data.get('birth_date_solar', '').strip() if data.get('birth_date_solar') else ''
-            if birth_date and len(birth_date) == 4 and birth_date.isdigit():
-                birth_date = f'{birth_date}-01-01'
-            update_values.append(birth_date if birth_date else None)
-        if 'death_date_solar' in columns:
-            update_fields.append('death_date_solar = %s')
-            death_date = data.get('death_date_solar', '').strip() if data.get('death_date_solar') else ''
-            if death_date and len(death_date) == 4 and death_date.isdigit():
-                death_date = f'{death_date}-01-01'
-            update_values.append(death_date if death_date else None)
-        if 'place_of_death' in columns:
-            update_fields.append('place_of_death = %s')
-            update_values.append(data.get('place_of_death'))
-        if 'biography' in columns:
-            update_fields.append('biography = %s')
-            biography = data.get('biography', '').strip() if data.get('biography') else None
-            update_values.append(biography if biography else None)
-        if 'academic_rank' in columns:
-            update_fields.append('academic_rank = %s')
-            academic_rank = data.get('academic_rank', '').strip() if data.get('academic_rank') else None
-            update_values.append(academic_rank if academic_rank else None)
-        if 'academic_degree' in columns:
-            update_fields.append('academic_degree = %s')
-            academic_degree = data.get('academic_degree', '').strip() if data.get('academic_degree') else None
-            update_values.append(academic_degree if academic_degree else None)
-        if 'phone' in columns:
-            update_fields.append('phone = %s')
-            phone = data.get('phone', '').strip() if data.get('phone') else None
-            update_values.append(phone if phone else None)
-        if 'email' in columns:
-            update_fields.append('email = %s')
-            email = data.get('email', '').strip() if data.get('email') else None
-            if email and '@' not in email:
-                return (jsonify({'success': False, 'error': 'Email không hợp lệ'}), 400)
-            update_values.append(email if email else None)
-        if 'occupation' in columns:
-            update_fields.append('occupation = %s')
-            occupation = data.get('occupation', '').strip() if data.get('occupation') else None
-            update_values.append(occupation if occupation else None)
-        if personal_image_file and personal_image_file.filename:
-            personal_image_file.seek(0, os.SEEK_END)
-            file_size = personal_image_file.tell()
-            personal_image_file.seek(0)
-            if file_size > 2 * 1024 * 1024:
-                return (jsonify({'success': False, 'error': 'Kích thước file ảnh vượt quá 2MB'}), 400)
-            allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-            if '.' not in personal_image_file.filename or personal_image_file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
-                return (jsonify({'success': False, 'error': 'Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP'}), 400)
-            from datetime import datetime
-            import hashlib
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            filename_hash = hashlib.md5(f'{person_id}_{personal_image_file.filename}'.encode()).hexdigest()[:8]
-            extension = personal_image_file.filename.rsplit('.', 1)[1].lower()
-            safe_filename = secure_filename(f'personal_{person_id}_{timestamp}_{filename_hash}.{extension}')
-            volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
-            if volume_mount_path and os.path.exists(volume_mount_path):
-                base_images_dir = volume_mount_path
-            else:
-                base_images_dir = os.path.join(BASE_DIR, 'static', 'images')
-            personal_dir = os.path.join(base_images_dir, 'personal')
-            os.makedirs(personal_dir, exist_ok=True)
-            file_path = os.path.join(personal_dir, safe_filename)
-            personal_image_file.save(file_path)
-            image_url = f'/static/images/personal/{safe_filename}'
-            if 'personal_image_url' in columns:
-                update_fields.append('personal_image_url = %s')
-                update_values.append(image_url)
-            elif 'personal_image' in columns:
-                update_fields.append('personal_image = %s')
-                update_values.append(image_url)
-        if 'generation_id' in columns and data.get('generation_number'):
-            cursor.execute('SELECT generation_id FROM generations WHERE generation_number = %s', (data['generation_number'],))
-            gen = cursor.fetchone()
-            if gen:
-                generation_id = gen['generation_id']
-            else:
-                cursor.execute('INSERT INTO generations (generation_number) VALUES (%s)', (data['generation_number'],))
-                generation_id = cursor.lastrowid
-            update_fields.append('generation_id = %s')
-            update_values.append(generation_id)
-        if 'father_mother_id' in columns:
-            update_fields.append('father_mother_id = %s')
-            update_values.append(data.get('fm_id'))
-        elif 'fm_id' in columns:
-            update_fields.append('fm_id = %s')
-            update_values.append(data.get('fm_id'))
-        if update_fields:
-            update_values.append(person_id)
-            update_query = f"UPDATE persons SET {', '.join(update_fields)} WHERE person_id = %s"
-            cursor.execute(update_query, update_values)
-        father_id = None
-        mother_id = None
-        if data.get('father_name'):
-            cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (data['father_name'],))
-            father = cursor.fetchone()
-            if father:
-                father_id = father['person_id']
-        if data.get('mother_name'):
-            cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (data['mother_name'],))
-            mother = cursor.fetchone()
-            if mother:
-                mother_id = mother['person_id']
-        cursor.execute("\n            DELETE FROM relationships \n            WHERE child_id = %s AND relation_type IN ('father', 'mother')\n        ", (person_id,))
-        if father_id:
-            cursor.execute("\n                INSERT INTO relationships (child_id, parent_id, relation_type)\n                VALUES (%s, %s, 'father')\n                ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)\n            ", (person_id, father_id))
-        if mother_id:
-            cursor.execute("\n                INSERT INTO relationships (child_id, parent_id, relation_type)\n                VALUES (%s, %s, 'mother')\n                ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)\n            ", (person_id, mother_id))
-        _process_children_spouse_siblings(cursor, person_id, data)
-        connection.commit()
-        try:
-            cursor.execute('\n                SELECT full_name, gender, status, generation_level, birth_date_solar,\n                       death_date_solar, place_of_death, biography, academic_rank,\n                       academic_degree, phone, email, occupation\n                FROM persons \n                WHERE person_id = %s\n            ', (person_id,))
-            after_data = cursor.fetchone()
-            if before_data and after_data:
-                log_person_update(person_id, dict(before_data), dict(after_data))
-        except Exception as log_error:
-            logger.warning(f'Failed to log person update for {person_id}: {log_error}')
-        if cache:
-            try:
-                cache.delete('api_members_data')
-                logger.debug('Cache invalidated after update_person_members')
-            except Exception as e:
-                logger.warning(f'Cache invalidation error (continuing): {e}')
+        ok, err, code = apply_person_members_update_core(
+            connection, cursor, person_id, data, personal_image_file, before_data
+        )
+        if not ok:
+            connection.rollback()
+            return (jsonify({'success': False, 'error': err}), code or 400)
         return jsonify({'success': True, 'message': 'Cập nhật thành viên thành công'})
     except Error as e:
         connection.rollback()

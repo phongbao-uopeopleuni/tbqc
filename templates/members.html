@@ -200,6 +200,16 @@
       transform: translateY(-2px);
     }
 
+    .btn-sll-update {
+      background: #00897B;
+      color: white;
+    }
+
+    .btn-sll-update:hover {
+      background: #00695C;
+      transform: translateY(-2px);
+    }
+
     .btn-delete {
       background: #f44336;
       color: white;
@@ -613,6 +623,7 @@
         <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">➕ Thêm</button>
         <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">✏️ Cập nhật</button>
         <button class="btn btn-branch-update" onclick="openBranchUploadModal()" id="btnUpdateBranch">Update Nhánh</button>
+        <button class="btn btn-sll-update" onclick="openSllUploadModal()" id="btnUpdateSll" title="Cập nhật nhiều thành viên từ Excel (cùng file Xuất Excel / Template_updatetbqc)">Update SLL</button>
         <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">🗑️ Xóa</button>
       </div>
     </div>
@@ -806,6 +817,27 @@
       <div class="modal-footer">
         <button type="button" class="btn-modal btn-modal-cancel" onclick="closeBranchUploadModal()">Hủy</button>
         <button type="button" class="btn-modal btn-modal-save" onclick="uploadBranchExcel()">Upload</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Update SLL (bulk nhiều cột từ Excel/CSV) -->
+  <div id="sllUploadModal" class="modal">
+    <div class="modal-content" style="max-width: 650px;">
+      <span class="close" onclick="closeSllUploadModal()">&times;</span>
+      <h2>Update SLL từ Excel/CSV</h2>
+      <p style="font-size: 0.95rem; color: #555; margin-bottom: 12px;">
+        Dùng cùng cấu trúc Xuất Excel hoặc
+        <a href="/members/template/Template_updatetbqc.xlsx" download>Template_updatetbqc.xlsx</a>.
+        Ô trống = giữ nguyên dữ liệu hiện có trên hệ thống.
+      </p>
+      <div class="form-group">
+        <label for="sllUploadFile">Chọn file .xlsx hoặc .csv</label>
+        <input type="file" id="sllUploadFile" name="sllUploadFile" accept=".xlsx,.csv">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-modal btn-modal-cancel" onclick="closeSllUploadModal()">Hủy</button>
+        <button type="button" class="btn-modal btn-modal-save" onclick="uploadSllExcel()">Upload</button>
       </div>
     </div>
   </div>
@@ -1376,6 +1408,65 @@
       }
     }
 
+    function openSllUploadModal() {
+      const modal = document.getElementById('sllUploadModal');
+      const fileInput = document.getElementById('sllUploadFile');
+      if (fileInput) fileInput.value = '';
+      modal.style.display = 'block';
+    }
+
+    function closeSllUploadModal() {
+      const modal = document.getElementById('sllUploadModal');
+      modal.style.display = 'none';
+    }
+
+    async function uploadSllExcel() {
+      const fileInput = document.getElementById('sllUploadFile');
+      const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+      if (!file) {
+        alert('Vui lòng chọn file .xlsx hoặc .csv');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('password', getAuthPassword());
+
+      try {
+        const response = await fetch('/api/members/bulk-update-sll', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (response.ok && result.success) {
+          const updatedCount = result.updated_count || 0;
+          const errorCount = result.error_count || 0;
+          const skippedCount = result.skipped_count || 0;
+          let message = `✅ Update SLL: ${updatedCount} dòng đã cập nhật`;
+          if (skippedCount > 0) message += `\n⏭ Bỏ qua (không có ID trong DB): ${skippedCount}`;
+          if (errorCount > 0) message += `\n⚠️ Dòng lỗi: ${errorCount}`;
+          alert(message);
+
+          closeSllUploadModal();
+          loadMembers();
+          return;
+        }
+
+        if (response.status === 403) {
+          alert('Mật khẩu hệ thống không đúng. Vui lòng kiểm tra lại cấu hình server.');
+          return;
+        }
+
+        alert('Lỗi: ' + (result.error || result.message || 'Không thể cập nhật SLL'));
+      } catch (error) {
+        console.error('[Members] Error updating SLL bulk:', error);
+        alert('Lỗi kết nối: ' + error.message);
+      }
+    }
+
     // Validate image size
     function validateImageSize(input) {
       const file = input.files[0];
@@ -1559,12 +1650,16 @@
     window.onclick = function(event) {
       const modal = document.getElementById('memberModal');
       const branchModal = document.getElementById('branchUploadModal');
+      const sllModal = document.getElementById('sllUploadModal');
       const passwordModal = document.getElementById('passwordModal');
       if (event.target == modal) {
         closeModal();
       }
       if (branchModal && event.target == branchModal) {
         closeBranchUploadModal();
+      }
+      if (sllModal && event.target == sllModal) {
+        closeSllUploadModal();
       }
       if (event.target == passwordModal) {
         closePasswordModal();
