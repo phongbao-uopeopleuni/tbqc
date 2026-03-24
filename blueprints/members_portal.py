@@ -5,6 +5,7 @@ Cổng nội bộ Members - /members, /members/verify, /members/logout, /api/mem
 import logging
 import os
 import re
+import unicodedata
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
@@ -13,6 +14,9 @@ from flask import Blueprint, redirect, render_template, request, jsonify, sessio
 
 logger = logging.getLogger(__name__)
 members_portal_bp = Blueprint('members_portal', __name__)
+
+# Bulk Update SLL: bật/tắt endpoint /api/members/bulk-update-sll (nút Update SLL trên members.html).
+BULK_UPDATE_SLL_ENABLED = True
 
 
 @members_portal_bp.route('/members', strict_slashes=False)
@@ -101,7 +105,7 @@ def get_members():
         cursor.execute("""
             SELECT COLUMN_NAME FROM information_schema.COLUMNS
             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons'
-            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death', 'occupation')
+            AND COLUMN_NAME IN ('csv_id', 'personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death', 'occupation')
         """)
         _col_rows = cursor.fetchall()
         available_columns = set()
@@ -152,6 +156,7 @@ def get_members():
         select_fields.append('p.phone' if 'phone' in available_columns else 'NULL AS phone')
         select_fields.append('p.email' if 'email' in available_columns else 'NULL AS email')
         select_fields.append('p.occupation' if 'occupation' in available_columns else 'NULL AS occupation')
+        select_fields.append('p.csv_id' if 'csv_id' in available_columns else 'NULL AS csv_id')
         if has_branch_name_col:
             select_fields.append('p.branch_name AS branch_name')
         else:
@@ -183,7 +188,7 @@ def get_members():
             siblings = siblings_map.get(person_id, [])
             children = children_map.get(person_id, [])
             member = {
-                'person_id': person_id, 'csv_id': person_id, 'fm_id': person.get('fm_id'), 'full_name': person.get('full_name'),
+                'person_id': person_id, 'csv_id': person.get('csv_id') or person_id, 'fm_id': person.get('fm_id'), 'full_name': person.get('full_name'),
                 'alias': person.get('alias'), 'gender': person.get('gender'), 'status': person.get('status'),
                 'generation_number': person.get('generation_number'),
                 'birth_date_solar': str(person['birth_date_solar']) if person.get('birth_date_solar') else None,
@@ -245,7 +250,7 @@ def _fetch_members_list():
         cursor.execute("""
             SELECT COLUMN_NAME FROM information_schema.COLUMNS
             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons'
-            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death', 'occupation')
+            AND COLUMN_NAME IN ('csv_id', 'personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death', 'occupation')
         """)
         _col_rows = cursor.fetchall()
         available_columns = set()
@@ -296,6 +301,7 @@ def _fetch_members_list():
         select_fields.append('p.phone' if 'phone' in available_columns else 'NULL AS phone')
         select_fields.append('p.email' if 'email' in available_columns else 'NULL AS email')
         select_fields.append('p.occupation' if 'occupation' in available_columns else 'NULL AS occupation')
+        select_fields.append('p.csv_id' if 'csv_id' in available_columns else 'NULL AS csv_id')
         if has_branch_name_col:
             select_fields.append('p.branch_name AS branch_name')
         else:
@@ -327,7 +333,7 @@ def _fetch_members_list():
             siblings = siblings_map.get(person_id, [])
             children = children_map.get(person_id, [])
             member = {
-                'person_id': person_id, 'csv_id': person_id, 'fm_id': person.get('fm_id'), 'full_name': person.get('full_name'),
+                'person_id': person_id, 'csv_id': person.get('csv_id') or person_id, 'fm_id': person.get('fm_id'), 'full_name': person.get('full_name'),
                 'alias': person.get('alias'), 'gender': person.get('gender'), 'status': person.get('status'),
                 'generation_number': person.get('generation_number'),
                 'birth_date_solar': str(person['birth_date_solar']) if person.get('birth_date_solar') else None,
@@ -699,6 +705,19 @@ def _sll_normalize_cell(val):
     return val
 
 
+def _normalize_sll_row_id(val):
+    """Chuẩn hóa ô cột ID từ Excel/CSV (float 1.0, khoảng trắng, v.v.)."""
+    if val is None:
+        return ''
+    if isinstance(val, float):
+        if val == int(val):
+            return str(int(val))
+        return str(val).strip()
+    if isinstance(val, (datetime, date)):
+        return str(val).strip()
+    return str(val).strip()
+
+
 def _sll_branch_code_to_name():
     return {
         '0': 'Tổ tiên',
@@ -820,7 +839,59 @@ def _sll_merge_excel_into_payload(base, excel_by_internal_key):
     return out
 
 
-_EXCEL_HEADER_TO_KEY = {header: key for key, header in _EXCEL_COLUMNS}
+def _normalize_excel_header(header):
+    if header is None:
+        return ''
+    s = str(header).strip().lower()
+    if not s:
+        return ''
+    # Bỏ dấu tiếng Việt để map được các biến thể header.
+    s = ''.join(ch for ch in unicodedata.normalize('NFD', s) if unicodedata.category(ch) != 'Mn')
+    s = s.replace('đ', 'd')
+    # Gom mọi ký tự ngăn cách về 1 dấu cách.
+    s = re.sub(r'[^a-z0-9]+', ' ', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+
+_EXCEL_HEADER_ALIASES = {
+    'person_id': ['ID'],
+    'fm_id': ['FM_ID', 'FM-ID', 'FM ID', 'Father_Mother_ID', 'Father-Mother-ID', 'Father Mother ID'],
+    'branch_name': ['Nhánh', 'Nhanh'],
+    'full_name': ['Họ và tên', 'Ho va ten', 'Họ tên', 'Ho ten'],
+    'alias': ['Tên gọi khác', 'Ten goi khac', 'Tên khác', 'Ten khac'],
+    'gender': ['Giới tính', 'Gioi tinh'],
+    'status': ['Trạng thái', 'Trang thai'],
+    'generation_number': ['Đời', 'Doi'],
+    'birth_date_solar': ['Ngày sinh (dương lịch)', 'Ngay sinh duong lich', 'Ngay sinh (duong lich)'],
+    'birth_date_lunar': ['Ngày sinh (âm lịch)', 'Ngay sinh am lich', 'Ngay sinh (am lich)'],
+    'death_date_solar': ['Ngày mất (dương lịch)', 'Ngay mat duong lich', 'Ngay mat (duong lich)'],
+    'death_date_lunar': ['Ngày mất (âm lịch)', 'Ngay mat am lich', 'Ngay mat (am lich)'],
+    'grave': ['Mộ', 'Mo'],
+    'place_of_death': ['Nơi mất', 'Noi mat'],
+    'father_name': ['Cha', 'Tên bố', 'Ten bo', 'Bo'],
+    'mother_name': ['Mẹ', 'Tên mẹ', 'Ten me', 'Me'],
+    'spouses': ['Vợ/Chồng', 'Vo/Chong', 'Vo chong', 'Hôn phối', 'Hon phoi'],
+    # File thực tế đôi khi ghi nhầm "Con cái anh em".
+    'siblings': ['Anh chị em', 'Anh chi em', 'Con cái anh em', 'Con cai anh em'],
+    'children': ['Con', 'Con cái', 'Con cai'],
+    'occupation': ['Nghề nghiệp', 'Nghe nghiep'],
+    'academic_rank': ['Học hàm', 'Hoc ham'],
+    'academic_degree': ['Học vị', 'Hoc vi'],
+    'phone': ['Điện thoại', 'Dien thoai'],
+    'email': ['Email'],
+    'biography': ['Tiểu sử', 'Tieu su'],
+    'personal_image_url': ['URL ảnh', 'Url anh', 'URL anh', 'Personal image URL'],
+}
+
+
+_EXCEL_HEADER_TO_KEY = {}
+for _key, _aliases in _EXCEL_HEADER_ALIASES.items():
+    for _alias in _aliases:
+        _EXCEL_HEADER_TO_KEY[_normalize_excel_header(_alias)] = _key
+# Giữ tương thích ngược với cặp key/header chuẩn.
+for _key, _header in _EXCEL_COLUMNS:
+    _EXCEL_HEADER_TO_KEY[_normalize_excel_header(_header)] = _key
 
 
 @members_portal_bp.route('/members/template/Template_updatetbqc.xlsx')
@@ -855,6 +926,17 @@ def bulk_update_members_sll():
     if not session.get('members_gate_ok'):
         logger.warning('Unauthorized access to /api/members/bulk-update-sll')
         return (jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401)
+
+    if not BULK_UPDATE_SLL_ENABLED:
+        return (
+            jsonify(
+                {
+                    'success': False,
+                    'error': 'Chức năng Update SLL đang tạm dừng. Vui lòng dùng Thêm hoặc Cập nhật từng thành viên.',
+                }
+            ),
+            503,
+        )
 
     if request.content_type and 'multipart/form-data' in request.content_type:
         password = (request.form.get('password') or '').strip()
@@ -895,14 +977,15 @@ def bulk_update_members_sll():
             header_cells = [(str(c).strip() if c is not None else '') for c in header_row]
             idx_map = {}
             for i, h in enumerate(header_cells):
-                if h in _EXCEL_HEADER_TO_KEY:
-                    idx_map[_EXCEL_HEADER_TO_KEY[h]] = i
+                hk = _normalize_excel_header(h)
+                if hk in _EXCEL_HEADER_TO_KEY:
+                    idx_map[_EXCEL_HEADER_TO_KEY[hk]] = i
             if 'person_id' not in idx_map:
                 return (jsonify({'success': False, 'error': 'File phải có cột ID (đúng template Xuất Excel)'}), 400)
             for row in ws.iter_rows(min_row=2, values_only=True):
                 row = list(row) if row else []
                 id_val = row[idx_map['person_id']] if idx_map['person_id'] < len(row) else None
-                id_str = str(id_val).strip() if id_val is not None else ''
+                id_str = _normalize_sll_row_id(id_val)
                 if not id_str:
                     continue
                 excel_dict = {}
@@ -915,20 +998,21 @@ def bulk_update_members_sll():
             reader = csv.DictReader(io.StringIO(text))
             if not reader.fieldnames:
                 return (jsonify({'success': False, 'error': 'Không tìm thấy header trong file CSV'}), 400)
-            norm = {(fn or '').strip(): fn for fn in reader.fieldnames if fn is not None}
-            if 'ID' not in norm:
+            norm = {_normalize_excel_header(fn): fn for fn in reader.fieldnames if fn is not None}
+            person_id_header = norm.get(_normalize_excel_header('ID'))
+            if not person_id_header:
                 return (jsonify({'success': False, 'error': 'File phải có cột ID'}), 400)
-            id_key = norm['ID']
+            id_key = person_id_header
             for r in reader:
                 id_val = r.get(id_key)
-                id_str = str(id_val).strip() if id_val is not None else ''
+                id_str = _normalize_sll_row_id(id_val)
                 if not id_str:
                     continue
                 excel_dict = {}
-                for header, ikey in _EXCEL_HEADER_TO_KEY.items():
-                    if header not in norm:
+                for header_norm, ikey in _EXCEL_HEADER_TO_KEY.items():
+                    if header_norm not in norm:
                         continue
-                    excel_dict[ikey] = r.get(norm[header])
+                    excel_dict[ikey] = r.get(norm[header_norm])
                 rows_to_process.append((id_str, excel_dict))
 
     except Exception as e:
@@ -947,35 +1031,74 @@ def bulk_update_members_sll():
     try:
         cursor = connection.cursor(dictionary=True)
         rel_data = load_relationship_data(cursor)
+        has_csv_id_col = False
+        try:
+            cursor.execute(
+                """
+                SELECT COLUMN_NAME
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'persons'
+                  AND COLUMN_NAME = 'csv_id'
+                LIMIT 1
+                """
+            )
+            has_csv_id_col = bool(cursor.fetchone())
+        except Exception as schema_err:
+            logger.warning(f'bulk-update-sll: could not detect csv_id column: {schema_err}')
+            has_csv_id_col = False
 
         for id_str, excel_dict in rows_to_process:
-            if not id_regex.match(id_str):
-                error_count += 1
+            target_person_id = None
+
+            if id_regex.match(id_str):
+                cursor.execute('SELECT person_id FROM persons WHERE person_id = %s', (id_str,))
+                found = cursor.fetchone()
+                if found:
+                    target_person_id = found.get('person_id')
+
+            # Fallback theo csv_id để hỗ trợ file có ID hiển thị khác person_id.
+            if not target_person_id and has_csv_id_col:
+                cursor.execute('SELECT person_id FROM persons WHERE csv_id = %s LIMIT 1', (id_str,))
+                found = cursor.fetchone()
+                if found:
+                    target_person_id = found.get('person_id')
+
+            if not target_person_id:
+                if id_regex.match(id_str) or has_csv_id_col:
+                    skipped_count += 1
+                else:
+                    error_count += 1
                 continue
-            cursor.execute('SELECT person_id FROM persons WHERE person_id = %s', (id_str,))
-            if not cursor.fetchone():
+
+            if not id_regex.match(target_person_id):
                 skipped_count += 1
                 continue
-            base = _sll_base_payload(cursor, id_str, rel_data)
+
+            base = _sll_base_payload(cursor, target_person_id, rel_data)
             if not base:
                 skipped_count += 1
                 continue
             merged = _sll_merge_excel_into_payload(base, excel_dict)
             try:
-                ok, err, _code = apply_person_members_update_core(connection, cursor, id_str, merged, None, None)
+                ok, err, _code = apply_person_members_update_core(connection, cursor, target_person_id, merged, None, None)
                 if ok:
                     updated_count += 1
                     rel_data = load_relationship_data(cursor)
                 else:
                     error_count += 1
-                    logger.warning(f'bulk-update-sll row {id_str}: {err}')
+                    logger.warning(f'bulk-update-sll row {id_str} ({target_person_id}): {err}')
+                    try:
+                        connection.rollback()
+                    except Exception:
+                        pass
             except Exception as row_err:
                 try:
                     connection.rollback()
                 except Exception:
                     pass
                 error_count += 1
-                logger.warning(f'bulk-update-sll row {id_str} exception: {row_err}', exc_info=True)
+                logger.warning(f'bulk-update-sll row {id_str} ({target_person_id}) exception: {row_err}', exc_info=True)
 
         try:
             from app import cache

@@ -1128,18 +1128,33 @@ function displayPersonInfo(personData) {
     `;
   }
   
-  // Thông tin cơ bản - Thứ tự mới: Tên thường gọi, Nguyên quán, Ngày sinh, Ngày mất, Mộ phần
+  // Thông tin cơ bản - Thứ tự: Tên thường gọi, Nhánh, Nguyên quán, Ngày sinh, Ngày mất, Mộ phần
   html += `<div style="margin-bottom: var(--space-4);">`;
   
-  // Tên thường gọi (alias) - nếu có
-  if (personData.alias) {
-    html += `
+  // Tên thường gọi (alias / common_name) — strip tiền tố nếu trùng với nhãn UI
+  const aliasRaw = personData.alias || personData.common_name;
+  if (aliasRaw) {
+    const aliasDisplay = typeof stripDuplicateAliasLabel === 'function'
+      ? stripDuplicateAliasLabel(aliasRaw)
+      : String(aliasRaw).replace(/^(\s*Tên\s+thường\s+gọi\s*:\s*)+/i, '').trim();
+    if (aliasDisplay) {
+      html += `
       <div style="margin-bottom: var(--space-2); display: flex;">
         <strong style="min-width: 120px; color: var(--color-text-muted);">Tên thường gọi:</strong>
-        <span style="color: var(--color-text);">${escapeHtml(personData.alias)}</span>
+        <span style="color: var(--color-text);">${escapeHtml(aliasDisplay)}</span>
       </div>
     `;
+    }
   }
+  
+  // Nhánh
+  const branchName = (personData.branch_name || personData.branch || '').toString().trim();
+  html += `
+      <div style="margin-bottom: var(--space-2); display: flex;">
+        <strong style="min-width: 120px; color: var(--color-text-muted);">Nhánh:</strong>
+        <span style="color: var(--color-text);">${escapeHtml(branchName || 'Chưa có thông tin')}</span>
+      </div>
+    `;
   
   // Nguyên quán
   const hometown = personData.hometown || personData.birth_place || null;

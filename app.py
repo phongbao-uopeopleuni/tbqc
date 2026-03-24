@@ -1649,7 +1649,7 @@ def get_person(person_id):
     cursor = None
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("\n            SELECT COLUMN_NAME \n            FROM information_schema.COLUMNS \n            WHERE TABLE_SCHEMA = DATABASE() \n            AND TABLE_NAME = 'persons'\n            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email')\n        ")
+        cursor.execute("\n            SELECT COLUMN_NAME \n            FROM information_schema.COLUMNS \n            WHERE TABLE_SCHEMA = DATABASE() \n            AND TABLE_NAME = 'persons'\n            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'branch_name')\n        ")
         available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
         select_fields = ['p.person_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status', 'p.generation_level', 'p.birth_date_solar', 'p.birth_date_lunar', 'p.death_date_solar', 'p.death_date_lunar', 'p.home_town', 'p.nationality', 'p.religion', 'p.place_of_death', 'p.grave_info', 'p.contact', 'p.social', 'p.occupation', 'p.education', 'p.events', 'p.titles', 'p.blood_type', 'p.genetic_disease', 'p.note', 'p.father_mother_id']
         if 'personal_image_url' in available_columns:
@@ -1678,6 +1678,10 @@ def get_person(person_id):
             select_fields.append('p.email')
         else:
             select_fields.append('NULL AS email')
+        if 'branch_name' in available_columns:
+            select_fields.append('p.branch_name')
+        else:
+            select_fields.append('NULL AS branch_name')
         cursor.execute(f"\n            SELECT \n                {', '.join(select_fields)}\n            FROM persons p\n            WHERE p.person_id = %s\n        ", (person_id,))
         person = cursor.fetchone()
         if not person:
@@ -1690,19 +1694,23 @@ def get_person(person_id):
         if 'birth_location' not in person:
             person['birth_location'] = None
         try:
-            cursor.execute("SHOW COLUMNS FROM persons LIKE 'branch_id'")
-            has_branch_id = cursor.fetchone()
-            if has_branch_id:
-                cursor.execute('SELECT branch_id FROM persons WHERE person_id = %s', (person_id,))
-                branch_row = cursor.fetchone()
-                if branch_row and branch_row.get('branch_id'):
-                    cursor.execute('SELECT branch_name FROM branches WHERE branch_id = %s', (branch_row['branch_id'],))
-                    branch = cursor.fetchone()
-                    person['branch_name'] = branch['branch_name'] if branch else None
+            bn_col = person.get('branch_name')
+            if bn_col and str(bn_col).strip():
+                person['branch_name'] = str(bn_col).strip()
+            else:
+                cursor.execute("SHOW COLUMNS FROM persons LIKE 'branch_id'")
+                has_branch_id = cursor.fetchone()
+                if has_branch_id:
+                    cursor.execute('SELECT branch_id FROM persons WHERE person_id = %s', (person_id,))
+                    branch_row = cursor.fetchone()
+                    if branch_row and branch_row.get('branch_id'):
+                        cursor.execute('SELECT branch_name FROM branches WHERE branch_id = %s', (branch_row['branch_id'],))
+                        branch = cursor.fetchone()
+                        person['branch_name'] = branch['branch_name'] if branch else None
+                    else:
+                        person['branch_name'] = None
                 else:
                     person['branch_name'] = None
-            else:
-                person['branch_name'] = None
         except Exception as e:
             logger.warning(f'Could not fetch branch_name: {e}')
             person['branch_name'] = None
@@ -2982,6 +2990,8 @@ def get_or_create_generation(cursor, generation_number):
     cursor.execute('SELECT generation_id FROM generations WHERE generation_number = %s', (gen_num,))
     result = cursor.fetchone()
     if result:
+        if isinstance(result, dict):
+            return result.get('generation_id')
         return result[0]
     cursor.execute('INSERT INTO generations (generation_number) VALUES (%s)', (gen_num,))
     return cursor.lastrowid
@@ -2994,6 +3004,8 @@ def get_or_create_branch(cursor, branch_name):
     cursor.execute('SELECT branch_id FROM branches WHERE branch_name = %s', (branch_name,))
     result = cursor.fetchone()
     if result:
+        if isinstance(result, dict):
+            return result.get('branch_id')
         return result[0]
     cursor.execute('INSERT INTO branches (branch_name) VALUES (%s)', (branch_name,))
     return cursor.lastrowid
@@ -3008,7 +3020,11 @@ def find_person_by_name(cursor, name, generation_id=None):
     else:
         cursor.execute('\n            SELECT person_id FROM persons \n            WHERE full_name = %s\n            LIMIT 1\n        ', (name,))
     result = cursor.fetchone()
-    return result[0] if result else None
+    if not result:
+        return None
+    if isinstance(result, dict):
+        return result.get('person_id')
+    return result[0]
 
 @login_required
 def update_person(person_id):
@@ -3220,6 +3236,12 @@ def normalize_search_query(q):
     normalized_query = q
     return (normalized_query, person_id_patterns)
 
+def _split_semicolon_values(raw_value):
+    if not raw_value:
+        return []
+    return [s.strip() for s in str(raw_value).split(';') if s and str(s).strip()]
+
+
 def load_relationship_data(cursor):
     """
     Helper function để load tất cả relationship data (spouse, children, siblings, parents)
@@ -3236,18 +3258,94 @@ def load_relationship_data(cursor):
         - siblings_map: {person_id: [sibling_name1, sibling_name2, ...]}
         - person_name_map: {person_id: full_name}
     """
-    result = {'spouse_data_from_table': {}, 'spouse_data_from_marriages': {}, 'spouse_data_from_csv': {}, 'parent_data': {}, 'parent_ids_map': {}, 'children_map': {}, 'siblings_map': {}, 'person_name_map': {}}
+    result = {
+        'spouse_data_from_table': {},
+        'spouse_data_from_marriages': {},
+        'spouse_data_from_csv': {},
+        'parent_data': {},
+        'parent_ids_map': {},
+        'children_map': {},
+        'siblings_map': {},
+        'person_name_map': {},
+        # Dữ liệu text fallback khi chưa map được sang person_id.
+        'children_text_map': {},
+        'siblings_text_map': {},
+        'parent_text_map': {},
+    }
     try:
         cursor.execute("\n            SELECT TABLE_NAME \n            FROM information_schema.TABLES \n            WHERE TABLE_SCHEMA = DATABASE() \n            AND TABLE_NAME = 'spouse_sibling_children'\n        ")
         spouse_table_exists = cursor.fetchone() is not None
         if spouse_table_exists:
-            cursor.execute("\n                SELECT person_id, spouse_name \n                FROM spouse_sibling_children \n                WHERE spouse_name IS NOT NULL AND spouse_name != ''\n            ")
-            for row in cursor.fetchall():
-                person_id_key = row.get('person_id')
-                spouse_name_str = row.get('spouse_name', '').strip()
-                if person_id_key and spouse_name_str:
-                    spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
-                    result['spouse_data_from_table'][person_id_key] = spouse_names
+            cursor.execute(
+                """
+                SELECT COLUMN_NAME
+                FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'spouse_sibling_children'
+                """
+            )
+            ssc_columns = {str((r or {}).get('COLUMN_NAME') or '').strip() for r in (cursor.fetchall() or [])}
+
+            if 'spouse_name' in ssc_columns:
+                cursor.execute("\n                    SELECT person_id, spouse_name \n                    FROM spouse_sibling_children \n                    WHERE spouse_name IS NOT NULL AND spouse_name != ''\n                ")
+                for row in cursor.fetchall():
+                    person_id_key = row.get('person_id')
+                    spouse_name_str = row.get('spouse_name', '').strip()
+                    if person_id_key and spouse_name_str:
+                        result['spouse_data_from_table'][person_id_key] = _split_semicolon_values(spouse_name_str)
+
+            siblings_col = 'siblings_infor' if 'siblings_infor' in ssc_columns else ('siblings_info' if 'siblings_info' in ssc_columns else None)
+            if siblings_col:
+                cursor.execute(
+                    f"""
+                    SELECT person_id, {siblings_col} AS siblings_text
+                    FROM spouse_sibling_children
+                    WHERE {siblings_col} IS NOT NULL AND {siblings_col} != ''
+                    """
+                )
+                for row in cursor.fetchall():
+                    person_id_key = row.get('person_id')
+                    siblings_text = row.get('siblings_text')
+                    if person_id_key and siblings_text:
+                        result['siblings_text_map'][person_id_key] = _split_semicolon_values(siblings_text)
+
+            children_col = 'children_infor' if 'children_infor' in ssc_columns else ('children_info' if 'children_info' in ssc_columns else None)
+            if children_col:
+                cursor.execute(
+                    f"""
+                    SELECT person_id, {children_col} AS children_text
+                    FROM spouse_sibling_children
+                    WHERE {children_col} IS NOT NULL AND {children_col} != ''
+                    """
+                )
+                for row in cursor.fetchall():
+                    person_id_key = row.get('person_id')
+                    children_text = row.get('children_text')
+                    if person_id_key and children_text:
+                        result['children_text_map'][person_id_key] = _split_semicolon_values(children_text)
+
+            if 'father_name' in ssc_columns or 'mother_name' in ssc_columns:
+                select_parts = ['person_id']
+                if 'father_name' in ssc_columns:
+                    select_parts.append('father_name')
+                else:
+                    select_parts.append('NULL AS father_name')
+                if 'mother_name' in ssc_columns:
+                    select_parts.append('mother_name')
+                else:
+                    select_parts.append('NULL AS mother_name')
+                cursor.execute(f"SELECT {', '.join(select_parts)} FROM spouse_sibling_children")
+                for row in cursor.fetchall():
+                    person_id_key = row.get('person_id')
+                    if not person_id_key:
+                        continue
+                    father_name = (row.get('father_name') or '').strip() if row.get('father_name') is not None else ''
+                    mother_name = (row.get('mother_name') or '').strip() if row.get('mother_name') is not None else ''
+                    if father_name or mother_name:
+                        result['parent_text_map'][person_id_key] = {
+                            'father_name': father_name or None,
+                            'mother_name': mother_name or None,
+                        }
     except Exception as e:
         logger.debug(f'Could not load spouse data from table: {e}')
     try:
@@ -3340,6 +3438,25 @@ def load_relationship_data(cursor):
         logger.debug(f"Loaded siblings for {len(result['siblings_map'])} persons")
     except Exception as e:
         logger.warning(f'Error loading siblings: {e}')
+
+    # Fallback text data cho các trường quan hệ nhập tay chưa map sang person_id.
+    try:
+        for person_id_key, names in result.get('children_text_map', {}).items():
+            if person_id_key not in result['children_map'] or not result['children_map'].get(person_id_key):
+                result['children_map'][person_id_key] = names
+        for person_id_key, names in result.get('siblings_text_map', {}).items():
+            if person_id_key not in result['siblings_map'] or not result['siblings_map'].get(person_id_key):
+                result['siblings_map'][person_id_key] = names
+        for person_id_key, parent_names in result.get('parent_text_map', {}).items():
+            if person_id_key not in result['parent_data']:
+                result['parent_data'][person_id_key] = {'father_name': None, 'mother_name': None}
+            if not result['parent_data'][person_id_key].get('father_name') and parent_names.get('father_name'):
+                result['parent_data'][person_id_key]['father_name'] = parent_names.get('father_name')
+            if not result['parent_data'][person_id_key].get('mother_name') and parent_names.get('mother_name'):
+                result['parent_data'][person_id_key]['mother_name'] = parent_names.get('mother_name')
+    except Exception as e:
+        logger.warning(f'Error applying fallback relationship text data: {e}')
+
     return result
 
 def _process_children_spouse_siblings(cursor, person_id, data):
@@ -3348,6 +3465,13 @@ def _process_children_spouse_siblings(cursor, person_id, data):
     Parse tên từ textarea (phân cách bằng ;) và tạo relationships/marriages
     """
     try:
+        # Chuẩn hóa các chuỗi nhập tay để lưu fallback text (khi không map được person_id).
+        children_names = _split_semicolon_values(data.get('children_info')) if 'children_info' in data else None
+        spouse_names = _split_semicolon_values(data.get('spouse_info')) if 'spouse_info' in data else None
+        siblings_names = _split_semicolon_values(data.get('siblings_info')) if 'siblings_info' in data else None
+        father_name_text = (data.get('father_name') or '').strip() if 'father_name' in data else ''
+        mother_name_text = (data.get('mother_name') or '').strip() if 'mother_name' in data else ''
+
         cursor.execute('SELECT gender FROM persons WHERE person_id = %s', (person_id,))
         person_gender = cursor.fetchone()
         person_gender = person_gender['gender'] if person_gender else None
@@ -3357,8 +3481,7 @@ def _process_children_spouse_siblings(cursor, person_id, data):
             if old_children:
                 placeholders = ','.join(['%s'] * len(old_children))
                 cursor.execute(f'\n                    DELETE FROM relationships \n                    WHERE parent_id = %s AND child_id IN ({placeholders})\n                ', [person_id] + old_children)
-            if data.get('children_info'):
-                children_names = [name.strip() for name in data['children_info'].split(';') if name.strip()]
+            if children_names:
                 for child_name in children_names:
                     cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (child_name,))
                     child = cursor.fetchone()
@@ -3368,46 +3491,76 @@ def _process_children_spouse_siblings(cursor, person_id, data):
                         cursor.execute('\n                            INSERT INTO relationships (child_id, parent_id, relation_type)\n                            VALUES (%s, %s, %s)\n                            ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id), relation_type = VALUES(relation_type)\n                        ', (child_id, person_id, relation_type))
         if 'spouse_info' in data:
             cursor.execute('\n                DELETE FROM marriages \n                WHERE person_id = %s OR spouse_person_id = %s\n            ', (person_id, person_id))
-            if data.get('spouse_info'):
-                spouse_names = [name.strip() for name in data['spouse_info'].split(';') if name.strip()]
+            if spouse_names:
                 for spouse_name in spouse_names:
                     cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (spouse_name,))
                     spouse = cursor.fetchone()
                     if spouse:
                         spouse_id = spouse['person_id']
                         cursor.execute("\n                            INSERT INTO marriages (person_id, spouse_person_id, status)\n                            VALUES (%s, %s, 'active')\n                        ", (person_id, spouse_id))
-        if 'siblings_info' in data:
-            try:
-                cursor.execute("\n                    SELECT TABLE_NAME \n                    FROM information_schema.TABLES \n                    WHERE TABLE_SCHEMA = DATABASE() \n                    AND TABLE_NAME = 'spouse_sibling_children'\n                ")
-                table_exists = cursor.fetchone()
-                if table_exists:
-                    cursor.execute("\n                        SELECT COLUMN_NAME \n                        FROM information_schema.COLUMNS \n                        WHERE TABLE_SCHEMA = DATABASE() \n                        AND TABLE_NAME = 'spouse_sibling_children'\n                        AND COLUMN_NAME = 'siblings_infor'\n                    ")
-                    column_exists = cursor.fetchone()
-                    if not column_exists:
-                        logger.warning(f"Column 'siblings_infor' does not exist in spouse_sibling_children table for person_id {person_id}")
-                        return
+        # Lưu text fallback cho các trường quan hệ để không mất dữ liệu nhập tay.
+        try:
+            cursor.execute(
+                """
+                SELECT TABLE_NAME
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'spouse_sibling_children'
+                """
+            )
+            table_exists = bool(cursor.fetchone())
+            if table_exists:
+                cursor.execute(
+                    """
+                    SELECT COLUMN_NAME
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'spouse_sibling_children'
+                    """
+                )
+                ssc_columns = {str((r or {}).get('COLUMN_NAME') or '').strip() for r in (cursor.fetchall() or [])}
+                # Tự mở rộng schema nhẹ để lưu text cha/mẹ khi chưa map được quan hệ theo person_id.
+                if 'father_name' in data and 'father_name' not in ssc_columns:
                     try:
-                        cursor.execute('\n                            DELETE FROM spouse_sibling_children \n                            WHERE person_id = %s\n                        ', (person_id,))
-                        logger.debug(f'Deleted old siblings data for person_id {person_id}')
-                    except Exception as delete_error:
-                        logger.warning(f'Error deleting old siblings for person_id {person_id}: {delete_error}')
-                    if data.get('siblings_info'):
-                        siblings_names = [name.strip() for name in data['siblings_info'].split(';') if name.strip()]
-                        if siblings_names:
-                            siblings_str = '; '.join(siblings_names)
-                            try:
-                                cursor.execute('\n                                    INSERT INTO spouse_sibling_children (person_id, siblings_infor)\n                                    VALUES (%s, %s)\n                                ', (person_id, siblings_str))
-                                logger.debug(f'Inserted siblings data for person_id {person_id}: {siblings_str}')
-                            except Exception as insert_error:
-                                error_code = insert_error.errno if hasattr(insert_error, 'errno') else None
-                                error_msg = str(insert_error)
-                                logger.error(f'Error inserting siblings into spouse_sibling_children for person_id {person_id}: [{error_code}] {error_msg}')
-                else:
-                    logger.debug(f'Table spouse_sibling_children does not exist, skipping siblings data save for person_id {person_id}')
-            except Exception as siblings_error:
-                error_code = siblings_error.errno if hasattr(siblings_error, 'errno') else None
-                error_msg = str(siblings_error)
-                logger.warning(f'Error processing siblings for person_id {person_id}: [{error_code}] {error_msg}')
+                        cursor.execute("ALTER TABLE spouse_sibling_children ADD COLUMN father_name VARCHAR(255) NULL")
+                        ssc_columns.add('father_name')
+                    except Exception as e:
+                        logger.debug(f'Could not add father_name column to spouse_sibling_children: {e}')
+                if 'mother_name' in data and 'mother_name' not in ssc_columns:
+                    try:
+                        cursor.execute("ALTER TABLE spouse_sibling_children ADD COLUMN mother_name VARCHAR(255) NULL")
+                        ssc_columns.add('mother_name')
+                    except Exception as e:
+                        logger.debug(f'Could not add mother_name column to spouse_sibling_children: {e}')
+                row_payload = {}
+                if 'spouse_name' in ssc_columns and spouse_names is not None:
+                    row_payload['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                if 'siblings_infor' in ssc_columns and siblings_names is not None:
+                    row_payload['siblings_infor'] = '; '.join(siblings_names) if siblings_names else None
+                elif 'siblings_info' in ssc_columns and siblings_names is not None:
+                    row_payload['siblings_info'] = '; '.join(siblings_names) if siblings_names else None
+                if 'children_infor' in ssc_columns and children_names is not None:
+                    row_payload['children_infor'] = '; '.join(children_names) if children_names else None
+                elif 'children_info' in ssc_columns and children_names is not None:
+                    row_payload['children_info'] = '; '.join(children_names) if children_names else None
+                if 'father_name' in ssc_columns and 'father_name' in data:
+                    row_payload['father_name'] = father_name_text if father_name_text else None
+                if 'mother_name' in ssc_columns and 'mother_name' in data:
+                    row_payload['mother_name'] = mother_name_text if mother_name_text else None
+
+                if row_payload:
+                    cols = ['person_id'] + list(row_payload.keys())
+                    vals = [person_id] + [row_payload[k] for k in row_payload.keys()]
+                    placeholders = ', '.join(['%s'] * len(cols))
+                    update_clause = ', '.join([f"{c} = VALUES({c})" for c in row_payload.keys()])
+                    cursor.execute(
+                        f"INSERT INTO spouse_sibling_children ({', '.join(cols)}) VALUES ({placeholders}) "
+                        f"ON DUPLICATE KEY UPDATE {update_clause}",
+                        vals,
+                    )
+        except Exception as relation_text_error:
+            err_code = relation_text_error.errno if hasattr(relation_text_error, 'errno') else None
+            logger.warning(f'Error saving relation text fallback for {person_id}: [{err_code}] {relation_text_error}')
     except Exception as e:
         error_code = e.errno if hasattr(e, 'errno') else None
         error_msg = str(e)
@@ -3638,9 +3791,10 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
         )
         before_data = cursor.fetchone()
 
+    has_csv_id = False
     if data.get('csv_id'):
         cursor.execute("\n                SELECT COLUMN_NAME \n                FROM information_schema.COLUMNS \n                WHERE TABLE_SCHEMA = DATABASE() \n                AND TABLE_NAME = 'persons'\n                AND COLUMN_NAME = 'csv_id'\n            ")
-        has_csv_id = cursor.fetchone()
+        has_csv_id = bool(cursor.fetchone())
         if has_csv_id:
             cursor.execute('SELECT person_id FROM persons WHERE csv_id = %s AND person_id != %s', (data['csv_id'], person_id))
             if cursor.fetchone():
@@ -3666,6 +3820,11 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
     if 'status' in columns:
         update_fields.append('status = %s')
         update_values.append(data.get('status'))
+    # Chỉ cập nhật csv_id khi schema hỗ trợ để tương thích DB cũ.
+    if has_csv_id and 'csv_id' in columns and 'csv_id' in data:
+        csv_id = str(data.get('csv_id') or '').strip()
+        update_fields.append('csv_id = %s')
+        update_values.append(csv_id if csv_id else None)
     if 'generation_level' in columns and data.get('generation_number'):
         update_fields.append('generation_level = %s')
         update_values.append(data.get('generation_number'))

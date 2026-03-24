@@ -52,6 +52,12 @@ document.addEventListener('DOMContentLoaded', function() {
   setActiveMenuItem();
 });
 
+// Bỏ tiền tố trùng khi dữ liệu alias/common_name đã chứa "Tên thường gọi:" (template vẫn in nhãn riêng)
+function stripDuplicateAliasLabel(text) {
+  if (text == null || text === '') return '';
+  return String(text).replace(/^(\s*Tên\s+thường\s+gọi\s*:\s*)+/i, '').trim();
+}
+
 // Escape HTML helper
 function escapeHtml(text) {
   if (text === null || text === undefined) return '';

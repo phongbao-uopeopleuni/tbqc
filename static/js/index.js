@@ -1114,7 +1114,7 @@
             ${person.alias ? `
             <div class="form-group">
               <label>Tên thường gọi:</label>
-              <div class="detail-value">${person.alias}</div>
+              <div class="detail-value">${escapeHtml(stripDuplicateAliasLabel(person.alias))}</div>
             </div>
             ` : ''}
             <div class="form-group">
@@ -2695,7 +2695,7 @@
           return `
             <div class="search-result" data-person-id="${person.person_id}">
               <strong>${escapeHtml(person.full_name)}</strong>
-              ${person.common_name ? ` (${escapeHtml(person.common_name)})` : ''}
+              ${person.common_name ? ` (${escapeHtml(stripDuplicateAliasLabel(person.common_name))})` : ''}
               ${gen ? ` - ${gen}` : ''}${loc}
             </div>
           `;
@@ -2796,7 +2796,8 @@
         let html = `
           <div class="person-info-header">
             <h4 class="person-info-name">${escapeHtml(person.full_name || '')}</h4>
-            ${person.common_name ? `<p class="person-info-line"><strong>Tên thường gọi:</strong> ${escapeHtml(person.common_name)}</p>` : ''}
+            ${person.common_name ? `<p class="person-info-line"><strong>Tên thường gọi:</strong> ${escapeHtml(stripDuplicateAliasLabel(person.common_name))}</p>` : ''}
+            <p class="person-info-line"><strong>Nhánh:</strong> ${escapeHtml((person.branch_name || person.branch || '').toString().trim() || 'Chưa có thông tin')}</p>
             ${person.generation_number ? `<p class="person-info-line"><strong>Đời:</strong> ${person.generation_number}</p>` : ''}
             ${person.gender ? `<p class="person-info-line"><strong>Giới tính:</strong> ${escapeHtml(person.gender)}</p>` : ''}
             ${person.status ? `<p class="person-info-line"><strong>Trạng thái:</strong> ${escapeHtml(person.status)}</p>` : ''}

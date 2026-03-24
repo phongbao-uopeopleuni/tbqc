@@ -652,7 +652,7 @@
       <form id="memberForm" onsubmit="saveMember(event)">
         <div class="form-row">
           <div class="form-group">
-            <label for="csv_id">ID (CSV_ID) *</label>
+            <label for="csv_id">ID *</label>
             <input type="text" id="csv_id" name="csv_id" required>
           </div>
           <div class="form-group">
@@ -821,7 +821,7 @@
     </div>
   </div>
 
-  <!-- Modal Update SLL (bulk nhiều cột từ Excel/CSV) -->
+  <!-- Modal Update SLL (bulk; ô trống = giữ nguyên trong DB) -->
   <div id="sllUploadModal" class="modal">
     <div class="modal-content" style="max-width: 650px;">
       <span class="close" onclick="closeSllUploadModal()">&times;</span>
@@ -956,13 +956,14 @@
     let filteredData = [];
 
     // Load members data
-    async function loadMembers() {
+    async function loadMembers(forceRefresh = false) {
       const container = document.getElementById('membersTableContainer');
       container.innerHTML = '<div class="loading">Đang tải dữ liệu...</div>';
       
       try {
         console.log('[Members] Fetching /api/members...');
-        const response = await fetch('/api/members', {
+        const membersUrl = forceRefresh ? `/api/members?t=${Date.now()}` : '/api/members';
+        const response = await fetch(membersUrl, {
           credentials: 'include'  // Quan trọng: gửi session cookie
         });
         
@@ -1228,8 +1229,50 @@
       document.getElementById('modalTitle').textContent = 'Thêm thành viên mới';
       document.getElementById('memberForm').reset();
       document.getElementById('person_id').value = '';
+      const csvInput = document.getElementById('csv_id');
+      if (csvInput) {
+        csvInput.readOnly = false;
+        csvInput.title = '';
+      }
       document.getElementById('imagePreview').style.display = 'none';
       document.getElementById('memberModal').style.display = 'block';
+    }
+
+    function setBranchSelectValue(value) {
+      const branchSelect = document.getElementById('branch_name');
+      if (!branchSelect) return;
+      const raw = (value || '').toString().trim();
+      const branchNameToCode = {
+        'Tổ tiên': '0',
+        'Một': '1',
+        'Hai': '2',
+        'Ba': '3',
+        'Bốn': '4',
+        'Năm': '5',
+        'Sáu': '6',
+        'Bảy': '7',
+        'Khác': '-1'
+      };
+      if (!raw) {
+        branchSelect.value = '';
+      } else if (Object.prototype.hasOwnProperty.call(branchNameToCode, raw)) {
+        branchSelect.value = branchNameToCode[raw];
+      } else {
+        branchSelect.value = raw;
+      }
+    }
+
+    function ensureMemberFormEditable() {
+      const form = document.getElementById('memberForm');
+      if (!form) return;
+      const controls = form.querySelectorAll('input, select, textarea');
+      controls.forEach((el) => {
+        if (el.id === 'person_id') return;
+        el.disabled = false;
+        if (typeof el.readOnly !== 'undefined') {
+          el.readOnly = false;
+        }
+      });
     }
 
     // Open update modal
@@ -1248,9 +1291,17 @@
         return;
       }
 
+      // Đảm bảo tất cả field có thể nhập (trừ ID hệ thống).
+      ensureMemberFormEditable();
+
       document.getElementById('modalTitle').textContent = 'Cập nhật thành viên';
       document.getElementById('person_id').value = member.person_id;
       document.getElementById('csv_id').value = member.csv_id || '';
+      const csvInput = document.getElementById('csv_id');
+      if (csvInput) {
+        csvInput.readOnly = true;
+        csvInput.title = 'ID hệ thống chỉ được đổi bằng luồng quản trị dữ liệu';
+      }
       document.getElementById('fm_id').value = member.fm_id || '';
       document.getElementById('full_name').value = member.full_name || '';
       document.getElementById('gender').value = member.gender || '';
@@ -1259,7 +1310,7 @@
       document.getElementById('birth_date_solar').value = member.birth_date_solar || '';
       document.getElementById('death_date_solar').value = member.death_date_solar || '';
       document.getElementById('place_of_death').value = member.place_of_death || '';
-      document.getElementById('branch_name').value = member.branch_name || '';
+      setBranchSelectValue(member.branch_name || '');
       document.getElementById('grave_info').value = member.grave_info || '';
       document.getElementById('father_name').value = member.father_name || '';
       document.getElementById('mother_name').value = member.mother_name || '';
@@ -1392,7 +1443,7 @@
           alert(message);
 
           closeBranchUploadModal();
-          loadMembers();
+          loadMembers(true);
           return;
         }
 
@@ -1412,12 +1463,12 @@
       const modal = document.getElementById('sllUploadModal');
       const fileInput = document.getElementById('sllUploadFile');
       if (fileInput) fileInput.value = '';
-      modal.style.display = 'block';
+      if (modal) modal.style.display = 'block';
     }
 
     function closeSllUploadModal() {
       const modal = document.getElementById('sllUploadModal');
-      modal.style.display = 'none';
+      if (modal) modal.style.display = 'none';
     }
 
     async function uploadSllExcel() {
@@ -1451,7 +1502,12 @@
           alert(message);
 
           closeSllUploadModal();
-          loadMembers();
+          loadMembers(true);
+          return;
+        }
+
+        if (response.status === 503) {
+          alert(result.error || 'Chức năng Update SLL đang tạm dừng trên server.');
           return;
         }
 
@@ -1568,7 +1624,7 @@
         if (response.ok && result.success) {
           alert(isUpdate ? 'Cập nhật thành công!' : 'Thêm thành công!');
           closeModal();
-          loadMembers();
+          loadMembers(true);
         } else {
           // Xử lý lỗi 403 (unauthorized) - yêu cầu nhập lại password
           if (response.status === 403) {

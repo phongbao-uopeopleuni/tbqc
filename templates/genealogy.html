@@ -3037,7 +3037,7 @@
             <strong>Tên đầy đủ:</strong> ${person.full_name || 'Chưa có thông tin'}
       </div>
           ${person.personal_image_url ? `<div style="margin-bottom: var(--space-4); text-align: center;"><img src="${escapeHtml(person.personal_image_url)}" alt="Hình ${escapeHtml(person.full_name || '')}" style="max-width: 200px; max-height: 200px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>` : ''}
-          ${person.alias ? `<div style="margin-bottom: var(--space-3);"><strong>Tên thường gọi:</strong> ${person.alias}</div>` : ''}
+          ${person.alias ? `<div style="margin-bottom: var(--space-3);"><strong>Tên thường gọi:</strong> ${escapeHtml(stripDuplicateAliasLabel(person.alias))}</div>` : ''}
           <div style="margin-bottom: var(--space-3);">
             <strong>Đời:</strong> ${person.generation_number || person.generation_level || 'Chưa có thông tin'}
     </div>
@@ -5140,7 +5140,7 @@
           personInfoDiv.innerHTML = `
             <div><strong>Person ID:</strong> ${person.person_id || 'Chưa có'}</div>
             <div><strong>Tên đầy đủ:</strong> ${person.full_name || 'Chưa có'}</div>
-            ${person.alias ? `<div><strong>Tên thường gọi:</strong> ${person.alias}</div>` : ''}
+            ${person.alias ? `<div><strong>Tên thường gọi:</strong> ${escapeHtml(stripDuplicateAliasLabel(person.alias))}</div>` : ''}
             <div><strong>Đời:</strong> ${person.generation_level || 'Chưa có'}</div>
             <div><strong>Giới tính:</strong> ${person.gender || 'Chưa có'}</div>
             ${person.birth_date ? `<div><strong>Ngày sinh:</strong> ${person.birth_date}</div>` : ''}
