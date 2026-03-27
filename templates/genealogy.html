@@ -307,6 +307,18 @@
       align-items: flex-start;
       gap: 0.2rem;
       min-width: 0;
+      border-radius: 6px;
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    /* Rê chuột: cả dòng (kèm đường cây) nổi bật để biết sẽ bấm vào nhánh đó */
+    .multilevel-genealogy-li:hover > .multilevel-genealogy-row {
+      background: var(--color-surface-hover, rgba(0, 0, 0, 0.06));
+      box-shadow: inset 0 0 0 1px var(--color-border, rgba(0, 0, 0, 0.12));
+    }
+
+    .multilevel-genealogy-li--selected:hover > .multilevel-genealogy-row {
+      box-shadow: inset 0 0 0 1px var(--color-primary);
     }
 
     .multilevel-genealogy-tree-guides {
@@ -392,6 +404,9 @@
 
     .multilevel-genealogy-details {
       margin-top: var(--space-2);
+      /* Thụt theo cap: ~bang mot cot duong cay moi cap (1.1em) + le nho */
+      padding-left: calc(var(--space-2, 8px) + var(--ml-depth, 0) * 1.1em);
+      box-sizing: border-box;
     }
 
     .multilevel-genealogy-summary {
@@ -399,6 +414,23 @@
       color: var(--color-primary);
       font-size: var(--font-size-base);
       user-select: none;
+      list-style-position: outside;
+      padding: var(--space-1) var(--space-2);
+      margin-left: calc(-1 * var(--space-2));
+      border-radius: 6px;
+      transition: background-color 0.15s ease, color 0.15s ease, text-decoration-color 0.15s ease;
+    }
+
+    .multilevel-genealogy-summary:hover {
+      background: var(--color-surface-hover, rgba(0, 0, 0, 0.07));
+      color: var(--color-primary-strong, var(--color-primary));
+      text-decoration: underline;
+      text-decoration-color: var(--color-primary);
+    }
+
+    .multilevel-genealogy-summary:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
     }
 
     .multilevel-genealogy-empty {
@@ -1331,23 +1363,19 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
-    }
-
-    @media (min-width: 1201px) {
-      .tree-info-panel {
-        max-height: 70vh;
-      }
+      /* Đủ cao để danh sách con dài vẫn cuộn trong khung, không bị cắt */
+      max-height: min(88vh, 960px);
     }
 
     @media (max-width: 1200px) {
       .tree-info-panel {
-        max-height: min(42vh, 300px);
+        max-height: min(72vh, 560px);
       }
     }
 
     @media (max-width: 768px) {
       .tree-info-panel {
-        max-height: min(38vh, 260px);
+        max-height: min(65vh, 480px);
       }
     }
     
@@ -1361,10 +1389,13 @@
     .tree-info-content {
       color: var(--color-text);
       line-height: var(--line-height-relaxed);
-      flex: 1;
+      flex: 1 1 0%;
       min-height: 0;
       overflow-y: auto;
+      overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
+      scrollbar-gutter: stable;
+      padding-bottom: var(--space-2);
     }
     
     .tree-info-content p {
@@ -1674,7 +1705,7 @@
             <div class="card lineage-card family-view-switcher-card">
               <p class="family-view-switcher-label">Chế độ xem gia phả</p>
               <p class="family-view-switcher-hint" style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin: 0 0 var(--space-3) 0; line-height: 1.5;">
-                <strong>Mindmap</strong> hiển thị nhánh theo người đang chọn trên cây hoặc sau khi tìm kiếm; dữ liệu đồng bộ với <a href="/members" target="_blank" rel="noopener noreferrer">Thành viên</a> (đăng nhập cổng Thành viên trên cùng trình duyệt).
+                <strong>Mindmap</strong> dùng cùng kiểu <strong>sơ đồ cây</strong> (ô cặp vợ chồng, đường nối trực giao), chỉ hiển thị đường dòng từ tổ tiên đến người bạn chọn và các con cháu; cần chọn một người trên cây hoặc tìm kiếm. Dữ liệu đồng bộ với <a href="/members" target="_blank" rel="noopener noreferrer">Thành viên</a> (đăng nhập cổng Thành viên trên cùng trình duyệt).
               </p>
               <div class="family-view-switcher" id="familyViewSwitcher" aria-label="Chọn kiểu hiển thị cây gia phả">
                 <button type="button" class="family-view-btn active" data-view="list">Danh sách</button>
@@ -2097,8 +2128,9 @@
   <!-- Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
-  <!-- PDF Export Library -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- PDF Export: html2pdf (bundles jsPDF); html2canvas riêng để fallback chụp .tree -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
   
   <!-- Leaflet for maps -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -2246,78 +2278,150 @@
               return;
             }
             
-            // Find the actual tree element
+            // Find the actual tree element (person-tree hoặc family-tree đều dùng .tree)
             const treeElement = treeContainer.querySelector('.tree');
             if (!treeElement) {
               alert('Không tìm thấy nội dung cây gia phả');
               return;
             }
             
-            // Get the tree container wrapper
-            const treeWrapper = treeContainer.closest('.tree-container-wrapper') || treeContainer;
-            
-            // Create a temporary container for PDF export
-            // Position on-screen but make it invisible so html2canvas can capture it
-            const pdfContainer = document.createElement('div');
-            pdfContainer.style.position = 'fixed';
-            pdfContainer.style.left = '0';
-            pdfContainer.style.top = '0';
-            pdfContainer.style.width = '100vw';
-            pdfContainer.style.height = '100vh';
-            pdfContainer.style.overflow = 'auto';
-            pdfContainer.style.backgroundColor = '#fff';
-            pdfContainer.style.padding = '20px';
-            pdfContainer.style.zIndex = '-9999'; // Behind everything
-            pdfContainer.style.opacity = '0'; // Invisible but still in DOM
-            pdfContainer.style.pointerEvents = 'none'; // Don't intercept clicks
-            
-            // Clone the tree wrapper content
-            const clonedWrapper = treeWrapper.cloneNode(true);
-            // Remove zoom transform for PDF
-            const clonedTree = clonedWrapper.querySelector('.tree');
-            if (clonedTree) {
-              clonedTree.style.transform = 'none';
-            }
-            clonedWrapper.style.position = 'relative';
-            clonedWrapper.style.width = '100%';
-            pdfContainer.appendChild(clonedWrapper);
-            document.body.appendChild(pdfContainer);
-            
-            // Get dimensions after appending - need longer wait for layout
-            await new Promise(resolve => setTimeout(resolve, 300)); // Wait for layout
-            const width = clonedWrapper.scrollWidth || treeElement.scrollWidth;
-            const height = clonedWrapper.scrollHeight || treeElement.scrollHeight;
-            
-            // PDF options
-            const opt = {
-              margin: [5, 5, 5, 5],
-              filename: `Gia_pha_Den_doi_${maxGen}_${new Date().toISOString().slice(0, 10)}.pdf`,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { 
-                scale: 1.5,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                width: width,
-                height: height
-              },
-              jsPDF: { 
-                unit: 'mm', 
-                format: [Math.max(width * 0.264583, 210), Math.max(height * 0.264583, 297)], // Convert px to mm, min A4
-                orientation: width > height ? 'landscape' : 'portrait'
+            // Chụp TRỰC TIẾP .tree đang hiển thị (clone đặt left:-N px bị .tree-container-wrapper { overflow:auto } cắt → canvas trắng)
+            const treeWrap = treeContainer.closest('.tree-container-wrapper');
+            const prevScroll = treeWrap ? { left: treeWrap.scrollLeft, top: treeWrap.scrollTop } : null;
+            const prevTransform = treeElement.style.transform;
+            const prevTransformOrigin = treeElement.style.transformOrigin;
+            const overlay = document.createElement('div');
+            overlay.id = 'treePdfExportOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,.9);z-index:999999;display:flex;align-items:center;justify-content:center;font-size:1.05rem;font-weight:600;color:var(--color-primary,#333);';
+            overlay.textContent = 'Đang xuất PDF...';
+            document.body.appendChild(overlay);
+            try {
+              if (treeWrap) {
+                treeWrap.scrollLeft = 0;
+                treeWrap.scrollTop = 0;
               }
-            };
-            
-            // Export to PDF
-            if (typeof html2pdf !== 'undefined') {
-              await html2pdf().set(opt).from(pdfContainer).save();
-              alert(`Đã xuất PDF thành công!\nFile: Gia_pha_Den_doi_${maxGen}_${new Date().toISOString().slice(0, 10)}.pdf`);
-            } else {
-              alert('Thư viện xuất PDF chưa được tải. Vui lòng refresh trang và thử lại.');
+              treeElement.style.transform = 'none';
+              treeElement.style.transformOrigin = 'top left';
+              await new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
+              await new Promise(function (r) { setTimeout(r, 200); });
+              
+              const w = Math.max(treeElement.scrollWidth, treeElement.offsetWidth, 1);
+              const h = Math.max(treeElement.scrollHeight, treeElement.offsetHeight, 1);
+              const scale = w > 8000 || h > 8000 ? 0.85 : w > 5000 || h > 5000 ? 1 : 1.25;
+              
+              const filename = `Gia_pha_Den_doi_${maxGen}_${new Date().toISOString().slice(0, 10)}.pdf`;
+              const baseOpt = {
+                margin: [4, 4, 4, 4],
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.92 },
+                html2canvas: {
+                  scale: scale,
+                  useCORS: true,
+                  allowTaint: true,
+                  logging: false,
+                  backgroundColor: '#ffffff',
+                  scrollX: 0,
+                  scrollY: 0,
+                  foreignObjectRendering: false,
+                  onclone: function (doc, cloned) {
+                    if (cloned && cloned.style) {
+                      cloned.style.opacity = '1';
+                      cloned.style.visibility = 'visible';
+                    }
+                  }
+                },
+                jsPDF: {
+                  unit: 'mm',
+                  format: 'a4',
+                  orientation: w > h ? 'landscape' : 'portrait'
+                }
+              };
+              
+              const runHtml2Pdf = async function (sc) {
+                const o = Object.assign({}, baseOpt, {
+                  html2canvas: Object.assign({}, baseOpt.html2canvas, { scale: sc })
+                });
+                await html2pdf().set(o).from(treeElement).save();
+              };
+              
+              if (typeof html2pdf === 'undefined') {
+                alert('Thư viện xuất PDF chưa được tải. Vui lòng refresh trang và thử lại.');
+              } else {
+                var exportOk = false;
+                try {
+                  await runHtml2Pdf(scale);
+                  exportOk = true;
+                } catch (e1) {
+                  console.warn('[PDF] Lần 1 thất bại, thử scale thấp hơn:', e1);
+                  try {
+                    await runHtml2Pdf(Math.max(0.35, scale * 0.42));
+                    exportOk = true;
+                  } catch (e2) {
+                    console.warn('[PDF] Lần 2 thất bại, dùng html2canvas + jsPDF:', e2);
+                    if (typeof html2canvas !== 'function') throw e2;
+                    var canvas = await html2canvas(treeElement, {
+                      scale: Math.max(0.35, scale * 0.4),
+                      backgroundColor: '#ffffff',
+                      useCORS: true,
+                      allowTaint: true,
+                      logging: false,
+                      scrollX: 0,
+                      scrollY: 0,
+                      foreignObjectRendering: false,
+                      onclone: function (doc, cloned) {
+                        if (cloned && cloned.style) {
+                          cloned.style.opacity = '1';
+                          cloned.style.visibility = 'visible';
+                        }
+                      }
+                    });
+                    if (canvas.width < 2 || canvas.height < 2) {
+                      throw new Error('Ảnh chụp cây rỗng (0×0). Thử zoom nhỏ hơn hoặc tải lại trang.');
+                    }
+                    var imgData = canvas.toDataURL('image/jpeg', 0.92);
+                    var jspdfMod = window.jspdf;
+                    if (!jspdfMod || typeof jspdfMod.jsPDF !== 'function') throw e2;
+                    var JsPDF = jspdfMod.jsPDF;
+                    var pdf = new JsPDF({
+                      unit: 'mm',
+                      format: 'a4',
+                      orientation: canvas.width > canvas.height ? 'l' : 'p'
+                    });
+                    var pageW = pdf.internal.pageSize.getWidth();
+                    var pageH = pdf.internal.pageSize.getHeight();
+                    var m = 4;
+                    var maxW = pageW - 2 * m;
+                    var maxH = pageH - 2 * m;
+                    var cw = canvas.width;
+                    var ch = canvas.height;
+                    var rw = maxW;
+                    var rh = (ch * rw) / cw;
+                    if (rh > maxH) {
+                      rh = maxH;
+                      rw = (cw * rh) / ch;
+                    }
+                    var ox = m + (maxW - rw) / 2;
+                    var oy = m + (maxH - rh) / 2;
+                    pdf.addImage(imgData, 'JPEG', ox, oy, rw, rh);
+                    pdf.save(filename);
+                    exportOk = true;
+                  }
+                }
+                if (exportOk) {
+                  alert('Đã xuất PDF thành công!\nFile: ' + filename);
+                }
+              }
+            } finally {
+              treeElement.style.transform = prevTransform;
+              treeElement.style.transformOrigin = prevTransformOrigin;
+              if (treeWrap && prevScroll) {
+                treeWrap.scrollLeft = prevScroll.left;
+                treeWrap.scrollTop = prevScroll.top;
+              }
+              if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+              }
             }
-            
-            // Clean up
-            document.body.removeChild(pdfContainer);
             
           } catch (error) {
             console.error('Error exporting PDF:', error);
@@ -5114,10 +5218,15 @@
             : Math.max(8, maxGenSafe);
           await loadTreeData(fetchGenMindmap, 'P-1-1');
 
-          if (typeof renderFocusTree === 'function') {
+          const familyGraphMindmap =
+            (typeof window !== 'undefined' && window.familyGraph) ? window.familyGraph
+              : (typeof familyGraph !== 'undefined' ? familyGraph : null);
+          if (familyGraphMindmap && typeof renderFamilyFocusTree === 'function') {
+            renderFamilyFocusTree(familyGraphMindmap, maxGenSafe, personId);
+          } else if (typeof renderFocusTree === 'function') {
             renderFocusTree(personId);
           } else {
-            treeContainer.innerHTML = '<div class="error">Không tìm thấy renderFocusTree</div>';
+            treeContainer.innerHTML = '<div class="error">Không tìm thấy renderFamilyFocusTree / renderFocusTree</div>';
             return;
           }
 

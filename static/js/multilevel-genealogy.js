@@ -204,6 +204,7 @@
     if (collapseGen >= COLLAPSE_FROM_GEN) {
       var details = document.createElement('details');
       details.className = 'multilevel-genealogy-details';
+      details.style.setProperty('--ml-depth', String(depth));
       var summary = document.createElement('summary');
       summary.className = 'multilevel-genealogy-summary';
       summary.textContent = 'Mở nhánh con (' + node.children.length + ')';
@@ -261,6 +262,7 @@
     if (gen >= COLLAPSE_FROM_GEN) {
       var details = document.createElement('details');
       details.className = 'multilevel-genealogy-details';
+      details.style.setProperty('--ml-depth', String(depth));
       var summary = document.createElement('summary');
       summary.className = 'multilevel-genealogy-summary';
       summary.textContent = 'Mở nhánh con (' + node.children.length + ')';

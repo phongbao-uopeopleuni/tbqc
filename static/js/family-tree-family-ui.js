@@ -298,34 +298,150 @@ function propagateBranch(node, branchKey) {
 }
 
 /**
+ * Tìm các nút gia đình (family) mà focusPerson là vợ/chồng; ưu tiên nút sâu nhất (đời gần người xem nhất).
+ */
+function findFocusFamilyMatchesInTree(root, focusPersonId) {
+  const matches = [];
+  const fid = String(focusPersonId);
+  function walk(n, depth) {
+    if (!n) return;
+    const f = n.family;
+    if (f && (String(f.spouse1Id) === fid || String(f.spouse2Id) === fid)) {
+      matches.push({ node: n, depth });
+    }
+    (n.children || []).forEach(function (c) {
+      walk(c, depth + 1);
+    });
+  }
+  walk(root, 0);
+  return matches;
+}
+
+/**
+ * Cắt cây family: chỉ đường từ gốc xuống gia đình của người trọng tâm + toàn bộ con cháu phía dưới.
+ * Dùng cho Mindmap để cùng layout/connector với Sơ đồ cây.
+ * @returns {{ root: Object, focusFamilyId: string }|null}
+ */
+function pruneFamilyTreeForFocus(root, focusPersonId) {
+  const matches = findFocusFamilyMatchesInTree(root, focusPersonId);
+  if (!matches.length) return null;
+  matches.sort(function (a, b) {
+    return b.depth - a.depth;
+  });
+  const target = matches[0].node;
+
+  const pathIds = new Set();
+  let cur = target;
+  while (cur) {
+    pathIds.add(cur.id);
+    cur = cur.parent;
+  }
+  const descIds = new Set();
+  function collectDesc(n) {
+    if (!n) return;
+    descIds.add(n.id);
+    (n.children || []).forEach(collectDesc);
+  }
+  collectDesc(target);
+  const keepIds = new Set(pathIds);
+  descIds.forEach(function (id) {
+    keepIds.add(id);
+  });
+
+  function pruneClone(n) {
+    if (!n || !keepIds.has(n.id)) return null;
+    const children = (n.children || [])
+      .map(function (c) {
+        return pruneClone(c);
+      })
+      .filter(Boolean);
+    const out = Object.assign({}, n, { children: children, parent: null });
+    children.forEach(function (child) {
+      child.parent = out;
+    });
+    return out;
+  }
+
+  if (!keepIds.has(root.id)) return null;
+  const pruned = pruneClone(root);
+  return pruned ? { root: pruned, focusFamilyId: target.id } : null;
+}
+
+/**
+ * Mindmap: cùng renderer với Sơ đồ cây (family node + đường trực giao), chỉ nhánh liên quan người chọn.
+ */
+function renderFamilyFocusTree(familyGraph, maxGeneration, focusPersonId) {
+  if (!familyGraph || !familyGraph.familyNodes || familyGraph.familyNodes.length === 0) {
+    if (typeof renderFocusTree === 'function') renderFocusTree(focusPersonId);
+    return;
+  }
+  collapsedFamilies.clear();
+  const fullTree = buildFamilyTree(familyGraph, maxGeneration);
+  if (!fullTree) {
+    if (typeof renderFocusTree === 'function') renderFocusTree(focusPersonId);
+    return;
+  }
+  const pruned = pruneFamilyTreeForFocus(fullTree, focusPersonId);
+  if (!pruned) {
+    console.warn('[FamilyTree] Mindmap: không khớp nút gia đình, dùng sơ đồ cá nhân');
+    if (typeof renderFocusTree === 'function') renderFocusTree(focusPersonId);
+    return;
+  }
+  renderFamilyDefaultTree(familyGraph, maxGeneration, {
+    prebuiltTree: pruned.root,
+    showGenealogyForId: focusPersonId,
+    focusHighlightFamilyId: pruned.focusFamilyId,
+    forceFit: true
+  });
+}
+
+/**
  * Render default tree với family nodes
  * @param {Object} familyGraph - Family graph từ buildRenderGraph
  * @param {number} maxGeneration - Max generation to display
+ * @param {Object} [options]
+ * @param {Object} [options.prebuiltTree] - cây đã build sẵn (Mindmap)
+ * @param {string} [options.showGenealogyForId] - hiện chuỗi phả hệ cho người này
+ * @param {string} [options.focusHighlightFamilyId] - tô sáng nút gia đình
+ * @param {boolean} [options.forceFit] - luôn fit vào khung
  */
-function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
+function renderFamilyDefaultTree(familyGraph, maxGeneration = 5, options) {
+  const opts = options || {};
   const container = document.getElementById("treeContainer");
   if (!container) {
     console.error('[FamilyTree] treeContainer not found');
     return;
   }
   container.innerHTML = "";
-  
+  highlightedNodes.clear();
+
   if (!familyGraph || !familyGraph.familyNodes || familyGraph.familyNodes.length === 0) {
     container.innerHTML = '<div class="error">Chưa có dữ liệu family graph</div>';
     return;
   }
-  
-  // Ẩn chuỗi phả hệ
+
   const genealogyString = document.getElementById("genealogyString");
   if (genealogyString) {
-    genealogyString.style.display = "none";
+    if (opts.showGenealogyForId && typeof getGenealogyString === 'function') {
+      genealogyString.style.display = 'block';
+      genealogyString.textContent = getGenealogyString(opts.showGenealogyForId);
+    } else {
+      genealogyString.style.display = 'none';
+    }
   }
-  
-  // Build hierarchical structure từ family graph
-  const familyTree = buildFamilyTree(familyGraph, maxGeneration);
+
+  // Build hierarchical structure từ family graph (hoặc dùng cây có sẵn)
+  let familyTree = opts.prebuiltTree || null;
+  if (!familyTree) {
+    familyTree = buildFamilyTree(familyGraph, maxGeneration);
+  }
   if (!familyTree) {
     container.innerHTML = '<div class="error">Không thể xây dựng cây gia phả</div>';
     return;
+  }
+
+  if (opts.focusHighlightFamilyId) {
+    highlightedNodes.add(opts.focusHighlightFamilyId);
   }
   
   // Assign branch keys và colors
@@ -432,9 +548,13 @@ function renderFamilyDefaultTree(familyGraph, maxGeneration = 5) {
   const renderedNodeCount = countNodes(familyTree);
   updateStats(renderedNodeCount, maxGeneration);
 
+  if (typeof notifyMultilevelGenealogy === 'function') {
+    notifyMultilevelGenealogy();
+  }
+
   requestAnimationFrame(function () {
-    // Avoid over-shrinking dense trees (gen 8+) which hurts readability.
-    const shouldAutoFit = maxGeneration <= 5 && renderedNodeCount <= 70;
+    const shouldAutoFit =
+      opts.forceFit || (maxGeneration <= 5 && renderedNodeCount <= 70);
     if (shouldAutoFit && typeof window !== 'undefined' && typeof window.fitTreeToView === 'function') {
       window.fitTreeToView();
     }
@@ -1107,6 +1227,8 @@ function drawFamilyConnector(parentNode, childNode, container, color) {
 // Export
 if (typeof window !== 'undefined') {
   window.renderFamilyDefaultTree = renderFamilyDefaultTree;
+  window.renderFamilyFocusTree = renderFamilyFocusTree;
+  window.pruneFamilyTreeForFocus = pruneFamilyTreeForFocus;
   window.buildFamilyTree = buildFamilyTree;
 }
 
