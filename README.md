@@ -69,6 +69,7 @@ Tài liệu này mô tả phiên bản mã nguồn và cách triển khai tại 
 | `audit_log.py` | Ghi nhật ký thao tác |
 | `folder_py/` | `db_config.py` — kết nối MySQL, override từ env |
 | `templates/`, `static/` | HTML, JS (cây gia phả: nhiều file trong `static/js/`) |
+| `docs/GENEALOGY_QA_CHECKLIST.md` | Checklist kiểm thử regression sau khi sửa trang Gia phả |
 | `scripts/` | Tiện ích: backup DB, liệt kê route, kiểm tra blueprint, … (không bắt buộc khi chạy web) |
 
 ---

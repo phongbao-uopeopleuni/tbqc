@@ -34,6 +34,17 @@ function getGenerationColor(generation) {
   return CONNECTOR_GENERATION_PALETTE[gen % CONNECTOR_GENERATION_PALETTE.length] || "#64748b";
 }
 
+/** Sau khi vẽ cây mặc định — cập nhật phả hệ theo nhánh (genealogy.html / multilevel-genealogy.js) */
+function notifyMultilevelGenealogy() {
+  try {
+    if (typeof window.renderMultilevelGenealogy === "function") {
+      window.renderMultilevelGenealogy();
+    }
+  } catch (e) {
+    console.error("[MultilevelGenealogy]", e);
+  }
+}
+
 // Drag-to-pan state
 let isPanning = false;
 let panStartClientX = 0;
@@ -65,6 +76,7 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
     console.log('[Tree] Using family-node renderer, familyNodes:', availableFamilyGraph.familyNodes?.length || 0);
     try {
       renderFamilyDefaultTree(availableFamilyGraph, maxGeneration);
+      notifyMultilevelGenealogy();
       return;
     } catch (error) {
       console.error('[Tree] Error rendering family tree:', error);
@@ -204,6 +216,8 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   requestAnimationFrame(function () {
     if (typeof fitTreeToView === 'function') fitTreeToView();
   });
+
+  notifyMultilevelGenealogy();
 }
 
 /**
@@ -1108,6 +1122,20 @@ function displayPersonInfo(personData) {
     div.textContent = text;
     return div.innerHTML;
   }
+
+  /** Trên mobile: gói nội dung trong <details> để giảm chiều cao panel chi tiết */
+  const isMobileInfo =
+    typeof window.matchMedia === "function" && window.matchMedia("(max-width: 768px)").matches;
+
+  function foldableSection(title, bodyHtml, openOnMobile) {
+    const border =
+      "margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);";
+    if (isMobileInfo) {
+      const openAttr = openOnMobile ? " open" : "";
+      return `<details class="tree-info-fold"${openAttr} style="${border}"><summary class="tree-info-fold-summary">${escapeHtml(title)}</summary><div class="tree-info-fold-body">${bodyHtml}</div></details>`;
+    }
+    return `<div style="${border}"><h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">${escapeHtml(title)}</h5>${bodyHtml}</div>`;
+  }
   
   let html = '';
   
@@ -1247,14 +1275,8 @@ function displayPersonInfo(personData) {
   
   // Tiểu sử - sau phần "Thông tin bổ sung"
   if (personData.biography) {
-    html += `
-      <div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">
-        <h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Tiểu sử</h5>
-        <div style="color: var(--color-text); white-space: pre-wrap; line-height: 1.6;">
-          ${escapeHtml(personData.biography)}
-        </div>
-      </div>
-    `;
+    const bioBody = `<div style="color: var(--color-text); white-space: pre-wrap; line-height: 1.6;">${escapeHtml(personData.biography)}</div>`;
+    html += foldableSection("Tiểu sử", bioBody, false);
   }
   
   // Tên bố và tên mẹ
@@ -1297,15 +1319,14 @@ function displayPersonInfo(personData) {
       return genA - genB; // Tăng dần: đời 1, đời 2, đời 3...
     });
     
-    html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
-    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Tổ tiên</h5>`;
-    html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
+    let ancestorsInner = `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
     sortedAncestors.forEach((ancestor, index) => {
       const gen = ancestor.generation_number || ancestor.generation_level || '';
       const genText = gen ? ` (Đời ${gen})` : '';
-      html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(ancestor.full_name || ancestor.name || '')}${genText}</li>`;
+      ancestorsInner += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(ancestor.full_name || ancestor.name || '')}${genText}</li>`;
     });
-    html += `</ul></div>`;
+    ancestorsInner += `</ul>`;
+    html += foldableSection("Tổ tiên", ancestorsInner, false);
   }
   
   // Con (Descendants) - Đổi từ "Con cháu" thành "Con:" và đánh số thứ tự
@@ -1320,31 +1341,29 @@ function displayPersonInfo(personData) {
   }
   
   if (childrenList.length > 0) {
-    html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
-    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Con:</h5>`;
-    html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
+    let childrenInner = `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
     childrenList.forEach((child, index) => {
       const gen = child.generation_number || child.generation_level || '';
       const genText = gen ? ` (Đời ${gen})` : '';
       const childName = child.full_name || child.name || child.child_name || '';
-      const childNumber = index + 1; // Đánh số từ 1
-      html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${childNumber}. ${escapeHtml(childName)}${genText}</li>`;
+      const childNumber = index + 1;
+      childrenInner += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${childNumber}. ${escapeHtml(childName)}${genText}</li>`;
     });
-    html += `</ul></div>`;
+    childrenInner += `</ul>`;
+    html += foldableSection("Con:", childrenInner, false);
   }
   
   // Hôn phối
   if (personData.marriages && personData.marriages.length > 0) {
-    html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
-    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Hôn phối</h5>`;
-    html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
+    let marriagesInner = `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
     personData.marriages.forEach((marriage, index) => {
       const spouseName = marriage.spouse_name || 'Chưa rõ tên';
       const date = marriage.marriage_date_solar ? ` (${escapeHtml(marriage.marriage_date_solar)})` : '';
       const place = marriage.marriage_place ? ` - ${escapeHtml(marriage.marriage_place)}` : '';
-      html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(spouseName)}${date}${place}</li>`;
+      marriagesInner += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${escapeHtml(spouseName)}${date}${place}</li>`;
     });
-    html += `</ul></div>`;
+    marriagesInner += `</ul>`;
+    html += foldableSection("Hôn phối", marriagesInner, false);
   }
   
   // Anh chị em - Đánh số thứ tự
@@ -1353,60 +1372,53 @@ function displayPersonInfo(personData) {
       ? personData.siblings.split(';').map(s => s.trim()).filter(s => s)
       : [];
     if (siblings.length > 0) {
-      html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
-      html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Anh chị em</h5>`;
-      html += `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
+      let siblingsInner = `<ul style="margin: 0; padding-left: var(--space-5); list-style-type: none;">`;
       siblings.forEach((sibling, index) => {
-        const siblingNumber = index + 1; // Đánh số từ 1
-        html += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${siblingNumber}. ${escapeHtml(sibling)}</li>`;
+        const siblingNumber = index + 1;
+        siblingsInner += `<li style="margin-bottom: var(--space-1); color: var(--color-text);">${siblingNumber}. ${escapeHtml(sibling)}</li>`;
       });
-      html += `</ul></div>`;
+      siblingsInner += `</ul>`;
+      html += foldableSection("Anh chị em", siblingsInner, false);
     }
   }
   
   // Thông tin liên hệ và học vấn - sau phần "Anh chị em"
   const hasContactInfo = personData.academic_rank || personData.academic_degree || personData.phone || personData.email;
   if (hasContactInfo) {
-    html += `<div style="margin-bottom: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--color-border);">`;
-    html += `<h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Thông tin liên hệ và học vấn</h5>`;
-    
+    let contactInner = "";
     if (personData.academic_rank) {
-      html += `
+      contactInner += `
         <div style="margin-bottom: var(--space-2); display: flex;">
           <strong style="min-width: 120px; color: var(--color-text-muted);">Học hàm:</strong>
           <span style="color: var(--color-text);">${escapeHtml(personData.academic_rank)}</span>
         </div>
       `;
     }
-    
     if (personData.academic_degree) {
-      html += `
+      contactInner += `
         <div style="margin-bottom: var(--space-2); display: flex;">
           <strong style="min-width: 120px; color: var(--color-text-muted);">Học vị:</strong>
           <span style="color: var(--color-text);">${escapeHtml(personData.academic_degree)}</span>
         </div>
       `;
     }
-    
     if (personData.phone) {
-      html += `
+      contactInner += `
         <div style="margin-bottom: var(--space-2); display: flex;">
           <strong style="min-width: 120px; color: var(--color-text-muted);">Điện thoại:</strong>
           <span style="color: var(--color-text);">${escapeHtml(personData.phone)}</span>
         </div>
       `;
     }
-    
     if (personData.email) {
-      html += `
+      contactInner += `
         <div style="margin-bottom: var(--space-2); display: flex;">
           <strong style="min-width: 120px; color: var(--color-text-muted);">Email:</strong>
           <a href="mailto:${escapeHtml(personData.email)}" style="color: var(--color-primary); text-decoration: none;">${escapeHtml(personData.email)}</a>
         </div>
       `;
     }
-    
-    html += `</div>`;
+    html += foldableSection("Thông tin liên hệ và học vấn", contactInner, false);
   }
   
   infoContent.innerHTML = html || '<div style="padding: 20px; color: var(--color-text-muted);">Không có thông tin chi tiết</div>';
@@ -1533,6 +1545,7 @@ if (typeof window !== 'undefined') {
   window.resetZoom = resetZoom;
   window.fitTreeToView = fitTreeToView;
   window.applyZoom = applyZoom;
+  window.showPersonInfo = showPersonInfo;
 }
 
 // ============================================

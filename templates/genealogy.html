@@ -245,7 +245,6 @@
       .tree-info-panel {
         grid-column: 1;
         order: -1;
-        max-height: 300px;
         position: sticky;
         top: var(--navbar-height, 70px);
         z-index: 10;
@@ -267,10 +266,145 @@
       }
 
       .tree-info-panel {
-        max-height: 250px;
         font-size: var(--font-size-sm, 14px);
         padding: var(--space-3, 12px);
       }
+    }
+
+    /* Danh sách đa cấp — full width, đồng bộ lineage-card */
+    .multilevel-genealogy-section {
+      width: 100%;
+      max-width: 100%;
+      margin-top: var(--space-6);
+    }
+
+    .multilevel-genealogy-body {
+      padding: var(--space-4);
+      text-align: left;
+    }
+
+    .multilevel-genealogy-root,
+    .multilevel-genealogy-nested {
+      margin: 0;
+      list-style: none;
+    }
+
+    .multilevel-genealogy-nested {
+      padding-left: 0.35rem;
+    }
+
+    .multilevel-genealogy-root {
+      padding-left: 0;
+    }
+
+    .multilevel-genealogy-li {
+      margin: var(--space-2) 0;
+      line-height: 1.45;
+    }
+
+    .multilevel-genealogy-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.2rem;
+      min-width: 0;
+    }
+
+    .multilevel-genealogy-tree-guides {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: stretch;
+      user-select: none;
+      color: var(--color-text-muted);
+      opacity: 0.88;
+      font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+      font-size: 0.95em;
+      line-height: inherit;
+    }
+
+    .multilevel-genealogy-tree-cell {
+      display: inline-block;
+      width: 1.05em;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .multilevel-genealogy-tree-elbow {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .multilevel-genealogy-item-label {
+      color: var(--color-text);
+      font-weight: 500;
+      font-size: var(--font-size-lg);
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 0.25em;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .multilevel-genealogy-name-part {
+      min-width: 0;
+    }
+
+    .multilevel-genealogy-life-years {
+      color: var(--color-text-muted);
+      font-weight: 400;
+      font-size: 0.95em;
+      white-space: nowrap;
+    }
+
+    .multilevel-genealogy-gen-suffix {
+      font-weight: 500;
+    }
+
+    .multilevel-genealogy-item-label--clickable {
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: transparent;
+      transition: text-decoration-color 0.15s ease, color 0.15s ease;
+    }
+
+    .multilevel-genealogy-item-label--clickable:hover,
+    .multilevel-genealogy-item-label--clickable:focus {
+      color: var(--color-primary);
+      text-decoration-color: var(--color-primary);
+      outline: none;
+    }
+
+    .multilevel-genealogy-item-label--clickable:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .multilevel-genealogy-li--selected > .multilevel-genealogy-row .multilevel-genealogy-item-label--clickable {
+      color: var(--color-primary);
+      font-weight: 600;
+      text-decoration-color: var(--color-primary);
+    }
+
+    .multilevel-genealogy-li--selected > .multilevel-genealogy-row .multilevel-genealogy-life-years {
+      color: var(--color-primary);
+      opacity: 0.92;
+    }
+
+    .multilevel-genealogy-details {
+      margin-top: var(--space-2);
+    }
+
+    .multilevel-genealogy-summary {
+      cursor: pointer;
+      color: var(--color-primary);
+      font-size: var(--font-size-base);
+      user-select: none;
+    }
+
+    .multilevel-genealogy-empty {
+      color: var(--color-text-muted);
+      font-style: italic;
+      margin: 0;
     }
 
     /* Stats Layout Responsive */
@@ -1189,28 +1323,75 @@
     
     .tree-info-panel {
       padding: var(--space-5);
-      max-height: 70vh;
-      overflow-y: auto;
+      overflow: hidden;
       position: sticky;
       top: var(--space-4);
       background: var(--color-surface);
       box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    @media (min-width: 1201px) {
+      .tree-info-panel {
+        max-height: 70vh;
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .tree-info-panel {
+        max-height: min(42vh, 300px);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .tree-info-panel {
+        max-height: min(38vh, 260px);
+      }
     }
     
     .tree-info-panel h3 {
       color: var(--color-primary);
       margin-bottom: var(--space-4);
       font-size: var(--font-size-lg);
+      flex-shrink: 0;
     }
     
     .tree-info-content {
       color: var(--color-text);
       line-height: var(--line-height-relaxed);
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     
     .tree-info-content p {
       color: var(--color-text-muted);
       font-style: italic;
+    }
+
+    /* Accordion mục dài trên mobile (displayPersonInfo — family-tree-ui.js) */
+    .tree-info-content .tree-info-fold {
+      border-radius: var(--radius-sm);
+    }
+
+    .tree-info-content .tree-info-fold-summary {
+      cursor: pointer;
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold, 600);
+      font-size: var(--font-size-base);
+      padding: var(--space-1) 0;
+      list-style: none;
+    }
+
+    .tree-info-content .tree-info-fold-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .tree-info-content .tree-info-fold-body {
+      padding-top: var(--space-2);
     }
     
     #searchResults {
@@ -1520,6 +1701,14 @@
           </div>
         </div>
       </div>
+
+      <!-- Phả hệ theo nhánh (tách biệt mộ phần; hiện khi chế độ Danh sách) -->
+      <section id="multilevelGenealogySection" class="card lineage-card multilevel-genealogy-section" aria-labelledby="multilevelGenealogyHeading">
+        <div class="lineage-header">
+          <h2 id="multilevelGenealogyHeading">Phả hệ theo nhánh</h2>
+        </div>
+        <div id="multilevelGenealogyBody" class="multilevel-genealogy-body"></div>
+      </section>
 
       <!-- Phần dưới: Tra cứu chuỗi phả hệ -->
       <div class="lineage-panel" style="display: none;">
@@ -1923,6 +2112,7 @@
   <script src="/static/js/family-tree-family-renderer.js"></script>
   <script src="/static/js/family-tree-ui.js"></script>
   <script src="/static/js/family-tree-family-ui.js"></script>
+  <script src="/static/js/multilevel-genealogy.js"></script>
   <script src="/static/js/genealogy-lineage.js"></script>
   
   <!-- Tree controls event listeners -->
@@ -2016,7 +2206,10 @@
                 if (container) {
                   container.innerHTML = '<div class="tree-loading">Đang tải lại cây gia phả...</div>';
                 }
-                const { graph: newGraph } = await loadTreeData(maxGen, 'P-1-1');
+                const fetchGen = typeof window.genealogyFetchMaxGeneration === 'function'
+                  ? window.genealogyFetchMaxGeneration(maxGen)
+                  : Math.max(8, maxGen);
+                const { graph: newGraph } = await loadTreeData(fetchGen, 'P-1-1');
                 if (newGraph && typeof renderDefaultTree === 'function') {
                   renderDefaultTree(newGraph, maxGen);
                 }
@@ -2150,9 +2343,12 @@
               container.innerHTML = '<div class="tree-loading">Đang tải cây gia phả...</div>';
             }
             
-            // Load lại tree data với maxGeneration mới
+            // Load lại tree data với maxGeneration mới (tải tối thiểu đủ cho multilevel đời 8)
             if (typeof loadTreeData === 'function') {
-              const { graph: newGraph } = await loadTreeData(maxGen, 'P-1-1');
+              const fetchGen = typeof window.genealogyFetchMaxGeneration === 'function'
+                ? window.genealogyFetchMaxGeneration(maxGen)
+                : Math.max(8, maxGen);
+              const { graph: newGraph } = await loadTreeData(fetchGen, 'P-1-1');
               
               // Render generation tabs (will use cache if available)
               // Note: We don't rebuild generation stats here, only when data changes
@@ -2262,9 +2458,12 @@
                       container.innerHTML = '<div class="tree-loading">Đang tải cây gia phả (chỉ hiển thị các node liên quan)...</div>';
                     }
                     
-                    // Load lại tree data với maxGeneration
+                    // Load lại tree data với maxGeneration (tải tối thiểu đủ cho multilevel đời 8)
                     if (typeof loadTreeData === 'function') {
-                      const { graph: newGraph } = await loadTreeData(maxGen, 'P-1-1');
+                      const fetchGen = typeof window.genealogyFetchMaxGeneration === 'function'
+                        ? window.genealogyFetchMaxGeneration(maxGen)
+                        : Math.max(8, maxGen);
+                      const { graph: newGraph } = await loadTreeData(fetchGen, 'P-1-1');
                       // Luôn dùng renderFocusTree để chỉ hiển thị các node liên quan
                       if (newGraph && typeof renderFocusTree === 'function') {
                         renderFocusTree(personId);
@@ -4605,7 +4804,10 @@
             container.innerHTML = '<div class="tree-loading">Đang tải lại cây gia phả...</div>';
           }
           
-          const { graph: newGraph } = await loadTreeData(maxGen, rootPersonId);
+          const fetchGen = typeof window.genealogyFetchMaxGeneration === 'function'
+            ? window.genealogyFetchMaxGeneration(maxGen)
+            : Math.max(8, maxGen);
+          const { graph: newGraph } = await loadTreeData(fetchGen, rootPersonId);
           
           // Rebuild person tree and generation stats (force rebuild)
           if (newGraph && typeof window.personMap !== 'undefined' && typeof window.childrenMap !== 'undefined') {
@@ -4815,6 +5017,7 @@
      */
     async function setFamilyViewMode(mode, options = {}) {
       familyViewMode = mode;
+      if (typeof window !== 'undefined') window.familyViewMode = mode;
       markActiveFamilyViewButton(mode);
 
       const treeContainer = document.getElementById('treeContainer');
@@ -4864,6 +5067,7 @@
         if (!personId) {
           alert('Chưa xác định được người để làm trọng tâm Mindmap. Hãy chọn một người trên cây hoặc dùng ô tìm kiếm phía trên.');
           familyViewMode = 'list';
+          if (typeof window !== 'undefined') window.familyViewMode = 'list';
           markActiveFamilyViewButton('list');
           return;
         }
@@ -4881,6 +5085,7 @@
               : ('Không tải được dữ liệu Thành viên (HTTP ' + membersRes.status + ').');
             alert(hint);
             familyViewMode = 'list';
+            if (typeof window !== 'undefined') window.familyViewMode = 'list';
             markActiveFamilyViewButton('list');
             return;
           }
@@ -4889,6 +5094,7 @@
           if (!membersPayload.success || !Array.isArray(membersPayload.data)) {
             alert('Dữ liệu Thành viên không hợp lệ. Vui lòng thử lại sau.');
             familyViewMode = 'list';
+            if (typeof window !== 'undefined') window.familyViewMode = 'list';
             markActiveFamilyViewButton('list');
             return;
           }
@@ -4896,13 +5102,17 @@
           if (typeof loadTreeData !== 'function') {
             alert('Lỗi: không tìm thấy loadTreeData (family-tree-core).');
             familyViewMode = 'list';
+            if (typeof window !== 'undefined') window.familyViewMode = 'list';
             markActiveFamilyViewButton('list');
             return;
           }
 
           treeContainer.innerHTML = '<div class="tree-loading">Đang tải cây gia phả (dữ liệu Thành viên)...</div>';
 
-          await loadTreeData(maxGenSafe, 'P-1-1');
+          const fetchGenMindmap = typeof window.genealogyFetchMaxGeneration === 'function'
+            ? window.genealogyFetchMaxGeneration(maxGenSafe)
+            : Math.max(8, maxGenSafe);
+          await loadTreeData(fetchGenMindmap, 'P-1-1');
 
           if (typeof renderFocusTree === 'function') {
             renderFocusTree(personId);
@@ -4918,6 +5128,7 @@
           console.error('[Family Mindmap]', err);
           alert('Lỗi Mindmap: ' + (err && err.message ? err.message : String(err)));
           familyViewMode = 'list';
+          if (typeof window !== 'undefined') window.familyViewMode = 'list';
           markActiveFamilyViewButton('list');
           return;
         }
@@ -4925,6 +5136,10 @@
 
       if (treeWrapper) {
         treeWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      if (typeof window.updateMultilevelGenealogySectionVisibility === 'function') {
+        window.updateMultilevelGenealogySectionVisibility();
       }
     }
 

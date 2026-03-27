@@ -11,6 +11,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def _json_date(val: Any) -> Optional[str]:
+    """Chuẩn hóa ngày từ DB (date/datetime/str) để JSON và client sắp anh em."""
+    if val is None:
+        return None
+    if hasattr(val, "isoformat"):
+        s = val.isoformat()
+        return s[:10] if len(s) >= 10 else s
+    s = str(val).strip()
+    return s if s else None
+
+
 def build_tree(
     root_id: str,
     persons_by_id: Dict[str, Dict],
@@ -49,6 +60,10 @@ def build_tree(
         "status": person.get("status"),
         "gender": person.get("gender"),
         "home_town": person.get("home_town"),
+        "birth_date_solar": _json_date(person.get("birth_date_solar")),
+        "birth_date_lunar": _json_date(person.get("birth_date_lunar")),
+        "death_date_solar": _json_date(person.get("death_date_solar")),
+        "death_date_lunar": _json_date(person.get("death_date_lunar")),
         "children": []
     }
     

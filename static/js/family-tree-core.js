@@ -110,16 +110,21 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
         const membersData = await membersResponse.json();
         if (membersData.success && membersData.data) {
           membersData.data.forEach(member => {
-            if (member.person_id && member.fm_id) {
-              membersDataMap.set(member.person_id, {
-                fm_id: member.fm_id,
-                father_name: member.father_name,
-                mother_name: member.mother_name,
-                spouses: member.spouses,
-                siblings: member.siblings,
-                children: member.children
-              });
-            }
+            if (!member.person_id) return;
+            const prev = membersDataMap.get(member.person_id) || {};
+            membersDataMap.set(member.person_id, {
+              ...prev,
+              fm_id: member.fm_id || prev.fm_id,
+              father_name: member.father_name ?? prev.father_name,
+              mother_name: member.mother_name ?? prev.mother_name,
+              spouses: member.spouses ?? prev.spouses,
+              siblings: member.siblings ?? prev.siblings,
+              children: member.children ?? prev.children,
+              birth_date_solar: member.birth_date_solar || prev.birth_date_solar,
+              birth_date_lunar: member.birth_date_lunar || prev.birth_date_lunar,
+              death_date_solar: member.death_date_solar || prev.death_date_solar,
+              death_date_lunar: member.death_date_lunar || prev.death_date_lunar
+            });
           });
           console.log('[Tree] Loaded fm_id data from /api/members:', membersDataMap.size, 'persons');
         }
@@ -341,7 +346,11 @@ function convertTreeToGraph(treeData, membersDataMap = new Map()) {
       father_id: node.father_id || null,
       mother_id: node.mother_id || null,
       fm_id: fm_id, // NEW: father_mother_id để group siblings
-      marriages: node.marriages || [] // Extract marriages
+      marriages: node.marriages || [], // Extract marriages
+      birth_date_solar: (memberData?.birth_date_solar || node.birth_date_solar || '').toString().trim() || null,
+      birth_date_lunar: (memberData?.birth_date_lunar || node.birth_date_lunar || '').toString().trim() || null,
+      death_date_solar: (memberData?.death_date_solar || node.death_date_solar || '').toString().trim() || null,
+      death_date_lunar: (memberData?.death_date_lunar || node.death_date_lunar || '').toString().trim() || null
     };
     
     // Tìm father_id và mother_id từ parentMap nếu chưa có
@@ -491,7 +500,11 @@ function extractPersonsFromTree(treeNode) {
       mother_name: node.mother_name || personFromMap?.mother_name || null,
       father_id: node.father_id || personFromMap?.father_id || null,
       mother_id: node.mother_id || personFromMap?.mother_id || null,
-      marriages: node.marriages || personFromMap?.marriages || marriagesMap.get(node.person_id) || []
+      marriages: node.marriages || personFromMap?.marriages || marriagesMap.get(node.person_id) || [],
+      birth_date_solar: node.birth_date_solar || personFromMap?.birth_date_solar || null,
+      birth_date_lunar: node.birth_date_lunar || personFromMap?.birth_date_lunar || null,
+      death_date_solar: node.death_date_solar || personFromMap?.death_date_solar || null,
+      death_date_lunar: node.death_date_lunar || personFromMap?.death_date_lunar || null
     };
     
     persons.push(person);
@@ -542,7 +555,11 @@ function buildGraph(persons, relations) {
       status: p.status,
       commonName: p.common_name,
       father_name: p.father_name || null,
-      mother_name: p.mother_name || null
+      mother_name: p.mother_name || null,
+      birth_date_solar: p.birth_date_solar || null,
+      birth_date_lunar: p.birth_date_lunar || null,
+      death_date_solar: p.death_date_solar || null,
+      death_date_lunar: p.death_date_lunar || null
     };
     
     personMap.set(person.id, person);
@@ -714,6 +731,44 @@ function getGenealogyString(personId) {
 // ============================================
 
 /**
+ * Khóa so sánh anh em: ưu tiên dương lịch, không có thì âm lịch; null nếu trống.
+ */
+function getBirthSortKey(person) {
+  if (!person) return null;
+  const s = (person.birth_date_solar || '').toString().trim();
+  const l = (person.birth_date_lunar || '').toString().trim();
+  const raw = s || l;
+  if (!raw) return null;
+  const m = raw.match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?/);
+  if (m) {
+    const y = m[1];
+    const mo = (m[2] || '01').padStart(2, '0');
+    const d = (m[3] || '01').padStart(2, '0');
+    return `${y}-${mo}-${d}`;
+  }
+  return raw;
+}
+
+/**
+ * Sắp anh em: cả hai đều có ngày sinh (dương/âm) thì theo ngày; không thì theo tên (mặc định ổn định).
+ */
+function compareSiblingPersonIds(aId, bId) {
+  const personA = personMap.get(aId);
+  const personB = personMap.get(bId);
+  const keyA = getBirthSortKey(personA);
+  const keyB = getBirthSortKey(personB);
+  if (keyA && keyB && keyA !== keyB) {
+    return keyA.localeCompare(keyB);
+  }
+  return (personA?.name || '').localeCompare(personB?.name || '', 'vi');
+}
+
+if (typeof window !== 'undefined') {
+  window.getBirthSortKey = getBirthSortKey;
+  window.compareSiblingPersonIds = compareSiblingPersonIds;
+}
+
+/**
  * Build tree node từ person ID với giới hạn generation
  * @param {number} personId 
  * @param {number} depth 
@@ -765,12 +820,7 @@ function buildTreeNode(personId, depth = 0, parentNode = null, maxGeneration = n
   
   // Build nodes cho children có fm_id (group siblings)
   childrenByFmId.forEach((siblingIds, fmId) => {
-    // Sắp xếp siblings theo tên
-    siblingIds.sort((a, b) => {
-      const personA = personMap.get(a);
-      const personB = personMap.get(b);
-      return (personA?.name || '').localeCompare(personB?.name || '', 'vi');
-    });
+    siblingIds.sort(compareSiblingPersonIds);
     
     // Build nodes cho từng sibling
     siblingIds.forEach(childId => {
@@ -784,7 +834,9 @@ function buildTreeNode(personId, depth = 0, parentNode = null, maxGeneration = n
       }
     });
   });
-  
+
+  childrenWithoutFmId.sort(compareSiblingPersonIds);
+
   // Build nodes cho children không có fm_id
   childrenWithoutFmId.forEach(childId => {
     const child = personMap.get(childId);
@@ -806,6 +858,8 @@ function buildTreeNode(personId, depth = 0, parentNode = null, maxGeneration = n
       if (a.fm_id !== b.fm_id) {
         return a.fm_id.localeCompare(b.fm_id);
       }
+      const sib = compareSiblingPersonIds(a.id, b.id);
+      if (sib !== 0) return sib;
     } else if (a.fm_id) return -1;
     else if (b.fm_id) return 1;
     
@@ -834,8 +888,8 @@ function buildTreeNode(personId, depth = 0, parentNode = null, maxGeneration = n
     } else if (fatherNameA) return -1;
     else if (fatherNameB) return 1;
     
-    // Ưu tiên 3: Sắp xếp theo tên
-    return (personA?.name || '').localeCompare(personB?.name || '', 'vi');
+    // Ưu tiên 3: Cùng cha — ngày sinh (nếu có đủ) rồi tên
+    return compareSiblingPersonIds(a.id, b.id);
   });
   
   node.children = childNodes;

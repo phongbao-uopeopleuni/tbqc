@@ -88,6 +88,19 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
     }
     familyGroups.get(familyKey).push(person.id);
   });
+
+  // Sắp anh em trong từng nhóm: có ngày sinh (dương/âm) thì theo ngày; không thì theo tên
+  familyGroups.forEach((childIds) => {
+    if (typeof window !== 'undefined' && typeof window.compareSiblingPersonIds === 'function') {
+      childIds.sort((a, b) => window.compareSiblingPersonIds(a, b));
+    } else {
+      childIds.sort((a, b) => {
+        const pa = personNodeMap.get(a);
+        const pb = personNodeMap.get(b);
+        return (pa?.name || '').localeCompare(pb?.name || '', 'vi');
+      });
+    }
+  });
   
   // Step 3: Create family nodes từ groups (sibling-group families)
   familyGroups.forEach((childIds, familyKey) => {
@@ -222,10 +235,20 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
         const finalSpouse2 = spouse2 || (spouse2Id === person.id ? person : null);
         
         // Tìm children của marriage này (nếu có)
-        const marriageChildren = (spouse1Id && spouse2Id)
+        const marriageChildrenRaw = (spouse1Id && spouse2Id)
           ? findMarriageChildren(spouse1Id, spouse2Id, childrenMap, parentMap)
           : (childrenMap.get(person.id) || []);
-        
+        const marriageChildren = [...marriageChildrenRaw];
+        if (typeof window !== 'undefined' && typeof window.compareSiblingPersonIds === 'function') {
+          marriageChildren.sort((a, b) => window.compareSiblingPersonIds(a, b));
+        } else {
+          marriageChildren.sort((a, b) => {
+            const pa = personNodeMap.get(a);
+            const pb = personNodeMap.get(b);
+            return (pa?.name || '').localeCompare(pb?.name || '', 'vi');
+          });
+        }
+
         const marriageFamilyNode = {
           id: marriageFamilyId,
           spouse1Id: spouse1Id || person.id,
