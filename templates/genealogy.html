@@ -136,7 +136,7 @@
       font-size: var(--font-size-base);
       padding: var(--space-3);
       border-radius: 6px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--color-border);
     }
 
     @media (max-width: 768px) {
@@ -184,17 +184,22 @@
     .page-header {
       text-align: center;
       margin-bottom: var(--space-8);
+      max-width: 48rem;
+      margin-left: auto;
+      margin-right: auto;
     }
     
     .page-header h1 {
       font-size: var(--font-size-4xl);
       color: var(--color-primary);
       margin-bottom: var(--space-3);
+      letter-spacing: -0.02em;
     }
     
     .page-subtitle {
       font-size: var(--font-size-lg);
       color: var(--color-text-muted);
+      line-height: var(--line-height-relaxed);
     }
     
     /* Layout dọc: Cây trên, Tra cứu dưới */
@@ -215,39 +220,120 @@
       width: 100%;
       max-width: 100%;
       display: grid;
-      grid-template-columns: 1fr 350px;
+      grid-template-columns: 1fr;
       gap: var(--space-4);
       align-items: start;
     }
 
     .tree-panel > .card.tree-controls,
     .tree-panel > .family-view-switcher-wrap {
-      grid-column: 1 / -1;
+      grid-column: 1;
     }
     
     .tree-container-wrapper {
       grid-column: 1;
+      width: 100%;
+    }
+
+    /* Hàng dưới cây: hai cột đều — Thông tin chi tiết (trái) | Tìm mộ phần (phải) */
+    .tree-detail-grave-row {
+      grid-column: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+      width: 100%;
+    }
+
+    .tree-detail-grave-row .tree-info-panel,
+    .tree-detail-grave-row .grave-search-panel {
+      min-width: 0;
+    }
+
+    /* Khung cố định giống .tree-info-panel: header + vùng cuộn */
+    .grave-search-panel {
+      margin-top: 0;
+      min-width: 0;
+      align-self: start;
+      position: sticky;
+      top: var(--space-4);
+      padding: var(--space-5);
+      overflow: hidden;
+      background: var(--color-surface);
+      box-shadow: var(--shadow-md);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: var(--space-3);
+      min-height: 0;
+      height: min(78vh, 880px);
+      max-height: min(78vh, 880px);
+    }
+
+    .grave-search-panel-header {
+      grid-row: 1;
+      flex-shrink: 0;
+    }
+
+    .grave-search-panel-header h3 {
+      color: var(--color-primary);
+      margin: 0 0 var(--space-2) 0;
+      font-size: var(--font-size-lg);
+    }
+
+    .grave-search-intro {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin: 0 0 var(--space-4) 0;
+      line-height: 1.5;
+    }
+
+    .grave-search-panel-header .lineage-controls {
+      margin-bottom: 0;
+    }
+
+    .grave-search-content {
+      grid-row: 2;
+      min-height: 0;
+      max-height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-gutter: stable;
+      padding-bottom: var(--space-2);
+      overscroll-behavior: contain;
+    }
+
+    /* Cột hẹp: tách «Thông tin người» / «Thông tin mộ» xếp dọc */
+    @media (min-width: 1200px) and (max-width: 1599px) {
+      .grave-search-panel .grave-info-section {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+    @media (min-width: 1200px) and (max-width: 1399px) {
+      .tree-info-panel,
+      .grave-search-panel {
+        height: min(85vh, 900px);
+        max-height: min(85vh, 900px);
+      }
     }
     
-    .tree-info-panel {
-      grid-column: 2;
-    }
-    
-    @media (max-width: 1200px) {
-      .tree-panel {
+    @media (max-width: 1199px) {
+      .tree-detail-grave-row {
         grid-template-columns: 1fr;
       }
-      
-      .tree-container-wrapper {
-        grid-column: 1;
-      }
-      
+
       .tree-info-panel {
-        grid-column: 1;
         order: -1;
         position: sticky;
         top: var(--navbar-height, 70px);
         z-index: 10;
+      }
+
+      .grave-search-panel {
+        position: static;
+        height: min(78vh, 880px);
+        max-height: min(78vh, 880px);
       }
     }
 
@@ -268,6 +354,12 @@
       .tree-info-panel {
         font-size: var(--font-size-sm, 14px);
         padding: var(--space-3, 12px);
+      }
+
+      .grave-search-panel {
+        padding: var(--space-3, 12px);
+        height: min(80vh, 720px);
+        max-height: min(80vh, 720px);
       }
     }
 
@@ -602,15 +694,36 @@
     }
 
     .family-view-btn:hover {
-      background: #f3f4f6;
+      background: var(--color-bg);
       color: var(--color-text);
     }
 
     .family-view-btn.active {
-      background: #ffffff;
+      background: var(--color-surface);
       color: var(--color-primary);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
       border: 1px solid rgba(139, 0, 0, 0.2);
+    }
+
+    /* Thu phóng / toàn màn hình — cùng khối «Chế độ xem gia phả» */
+    .tree-zoom-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      align-items: center;
+      margin-top: var(--space-3);
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--color-border);
+    }
+
+    .tree-zoom-toolbar .btn {
+      min-height: 36px;
+    }
+
+    .tree-zoom-toolbar .tree-zoom-btn-text {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      white-space: nowrap;
     }
     
     .lineage-input-group {
@@ -870,7 +983,7 @@
       border: none;
     }
     
-    .tree-container-wrapper.fullscreen ~ .tree-info-panel {
+    .tree-container-wrapper.fullscreen ~ .tree-detail-grave-row {
       display: none;
     }
     
@@ -1358,24 +1471,29 @@
       overflow: hidden;
       position: sticky;
       top: var(--space-4);
+      align-self: start;
       background: var(--color-surface);
       box-shadow: var(--shadow-md);
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 0;
       min-height: 0;
-      /* Đủ cao để danh sách con dài vẫn cuộn trong khung, không bị cắt */
-      max-height: min(88vh, 960px);
+      /* Thấp hơn trước vì nội dung 2 cột — ít cuộn dọc hơn */
+      height: min(78vh, 880px);
+      max-height: min(78vh, 880px);
     }
 
     @media (max-width: 1200px) {
       .tree-info-panel {
-        max-height: min(72vh, 560px);
+        height: min(85vh, 900px);
+        max-height: min(85vh, 900px);
       }
     }
 
     @media (max-width: 768px) {
       .tree-info-panel {
-        max-height: min(65vh, 480px);
+        height: min(80vh, 720px);
+        max-height: min(80vh, 720px);
       }
     }
     
@@ -1383,19 +1501,42 @@
       color: var(--color-primary);
       margin-bottom: var(--space-4);
       font-size: var(--font-size-lg);
-      flex-shrink: 0;
+      grid-row: 1;
     }
     
     .tree-info-content {
       color: var(--color-text);
       line-height: var(--line-height-relaxed);
-      flex: 1 1 0%;
+      grid-row: 2;
       min-height: 0;
+      max-height: 100%;
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
       scrollbar-gutter: stable;
-      padding-bottom: var(--space-2);
+      padding-bottom: var(--space-4);
+      overscroll-behavior: contain;
+    }
+
+    /* Desktop: hiển thị 2 cột ngang — giảm chiều dọc, tận dụng chiều rộng panel */
+    @media (min-width: 1201px) {
+      .tree-info-content {
+        column-count: 2;
+        column-gap: var(--space-6);
+        column-fill: balance;
+      }
+      /* Tên + (tuỳ chọn) ảnh: full width trước khi chia 2 cột */
+      .tree-info-content > div:first-child {
+        column-span: all;
+      }
+      .tree-info-content > div:nth-child(2):has(img) {
+        column-span: all;
+      }
+      .tree-info-content > * {
+        break-inside: avoid;
+        -webkit-column-break-inside: avoid;
+        page-break-inside: avoid;
+      }
     }
     
     .tree-info-content p {
@@ -1483,16 +1624,17 @@
     .gate-container {
       max-width: 400px;
       width: 100%;
-      background: var(--color-surface, #fff);
+      background: var(--color-surface);
       padding: var(--space-6);
-      border-radius: var(--border-radius-lg, 8px);
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--color-border);
     }
     
     .gate-container h2 {
       text-align: center;
       margin-bottom: var(--space-4);
-      color: var(--color-primary, #2563eb);
+      color: var(--color-primary);
     }
     
     .gate-form {
@@ -1504,30 +1646,43 @@
     .gate-form input {
       width: 100%;
       padding: var(--space-3);
-      border: 1px solid var(--color-border, #e5e7eb);
-      border-radius: var(--border-radius, 4px);
-      font-size: var(--font-size-base, 16px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    }
+
+    .gate-form input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-light);
     }
     
     .gate-form button {
       width: 100%;
       padding: var(--space-3);
-      background: var(--color-primary, #2563eb);
-      color: white;
+      background: var(--color-primary);
+      color: var(--color-surface);
       border: none;
-      border-radius: var(--border-radius, 4px);
-      font-size: var(--font-size-base, 16px);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background var(--transition-base), transform var(--transition-fast);
     }
     
     .gate-form button:hover {
-      background: var(--color-primary-dark, #1d4ed8);
+      background: var(--color-primary-strong);
+    }
+
+    .gate-form button:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 3px;
     }
     
     .gate-error {
-      color: var(--color-error, #dc3545);
-      font-size: var(--font-size-sm, 14px);
+      color: var(--color-error);
+      font-size: var(--font-size-sm);
       margin-top: var(--space-2);
       display: none;
     }
@@ -1538,8 +1693,8 @@
     
     .gate-note {
       margin-top: var(--space-3);
-      font-size: var(--font-size-sm, 14px);
-      color: var(--color-text-muted, #6b7280);
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
       text-align: center;
       display: none;
     }
@@ -1552,7 +1707,7 @@
       width: 20px;
       height: 20px;
       cursor: pointer;
-      accent-color: var(--color-primary, #2563eb);
+      accent-color: var(--color-primary);
       margin-right: 8px;
       flex-shrink: 0;
     }
@@ -1560,38 +1715,71 @@
     .gate-form label[for="rememberPassphrase"] {
       cursor: pointer;
       user-select: none;
-      font-size: 14px;
-      color: #333;
-      font-weight: 500;
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+      font-weight: var(--font-weight-medium);
       display: flex;
       align-items: center;
-      transition: color 0.2s ease;
+      transition: color var(--transition-base);
     }
     
     .gate-form label[for="rememberPassphrase"]:hover {
-      color: var(--color-primary, #2563eb);
+      color: var(--color-primary-strong);
     }
     
     .gate-form input[type="checkbox"]:checked + label[for="rememberPassphrase"] {
-      color: var(--color-primary, #2563eb);
-      font-weight: 600;
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
     }
     
     .remember-passphrase-container {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-top: 12px;
-      padding: 10px;
-      background: rgba(37, 99, 235, 0.03);
-      border-radius: 8px;
-      border: 1px solid rgba(37, 99, 235, 0.1);
-      transition: background 0.2s ease, border-color 0.2s ease;
+      gap: var(--space-2);
+      margin-top: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-primary-light);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(139, 0, 0, 0.15);
+      transition: background var(--transition-base), border-color var(--transition-base);
     }
     
     .remember-passphrase-container:hover {
-      background: rgba(37, 99, 235, 0.05);
-      border-color: rgba(37, 99, 235, 0.2);
+      background: rgba(139, 0, 0, 0.12);
+      border-color: rgba(139, 0, 0, 0.22);
+    }
+
+    /* Skip link — chỉ hiện khi focus (keyboard / screen reader) */
+    .genealogy-skip-link {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .genealogy-skip-link:focus {
+      position: fixed;
+      left: var(--space-4);
+      top: var(--space-4);
+      z-index: calc(var(--z-tooltip) + 10);
+      width: auto;
+      height: auto;
+      margin: 0;
+      clip: auto;
+      overflow: visible;
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      color: var(--color-text);
+      font-weight: var(--font-weight-semibold);
+      font-size: var(--font-size-sm);
+      box-shadow: var(--shadow-lg);
+      text-decoration: none;
     }
     
     #genealogy-content {
@@ -1627,8 +1815,9 @@
     </script>
 </head>
 <body>
-  <nav class="navbar">
-    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+  <a href="#genealogy-content" class="genealogy-skip-link">Đi tới nội dung chính</a>
+  <nav class="navbar" aria-label="Điều hướng chính">
+    <button type="button" class="navbar-toggle" onclick="toggleNavbar()" aria-label="Mở hoặc đóng menu">☰</button>
     <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
@@ -1658,11 +1847,10 @@
   </div>
 
   <!-- Genealogy Content -->
-  <div id="genealogy-content">
+  <div id="genealogy-content" role="main" aria-label="Cây gia phả và tra cứu">
     <div class="container genealogy-page">
     <div class="page-header">
       <h1>Cây Gia Phả</h1>
-      <p class="page-subtitle">Cây Gia Phả Tương Tác và Tra Cứu Chuỗi Phả Hệ</p>
     </div>
 
     <div class="genealogy-layout">
@@ -1685,15 +1873,6 @@
               <button id="syncBtn" class="btn btn-secondary" title="Đồng bộ / làm mới từ database mới nhất (trang Thành viên)">🔄 Đồng bộ</button>
               <button id="updateInfoBtn" class="btn btn-secondary" title="Cập nhật thông tin hôn phối và tổ tiên">📝 Cập nhật thông tin</button>
               <button id="exportPdfBtn" class="btn btn-secondary" title="Xuất Family Tree ra file PDF">📄 Xuất PDF</button>
-              
-              <!-- Zoom Controls -->
-              <div style="display: flex; gap: var(--space-2); align-items: center; margin-left: var(--space-2); border-left: 1px solid var(--color-border); padding-left: var(--space-2);">
-                <button id="zoomOutBtn" class="btn btn-secondary" title="Thu nhỏ" onclick="if(typeof window.zoomOut === 'function') window.zoomOut();">🔍-</button>
-                <button id="resetZoomBtn" class="btn btn-secondary" title="Đặt lại zoom mặc định" onclick="if(typeof window.resetZoom === 'function') window.resetZoom();">⌂</button>
-                <button id="fitToViewBtn" class="btn btn-secondary" title="Vừa khung (tự điều chỉnh để xem toàn bộ cây)" onclick="if(typeof window.fitTreeToView === 'function') window.fitTreeToView();">⊡</button>
-                <button id="zoomInBtn" class="btn btn-secondary" title="Phóng to" onclick="if(typeof window.zoomIn === 'function') window.zoomIn();">🔍+</button>
-                <button id="fullscreenBtn" class="btn btn-secondary" title="Xem toàn màn hình" onclick="toggleFullscreen()">⛶</button>
-              </div>
             </div>
             
             <!-- Search Results -->
@@ -1712,6 +1891,13 @@
                 <button type="button" class="family-view-btn" data-view="tree">Sơ đồ cây</button>
                 <button type="button" class="family-view-btn" data-view="mindmap">Mindmap</button>
               </div>
+              <div class="tree-zoom-toolbar" role="toolbar" aria-label="Thu phóng và toàn màn hình cây gia phả">
+                <button type="button" id="zoomOutBtn" class="btn btn-secondary tree-zoom-btn-text" title="Thu nhỏ cây gia phả" onclick="if(typeof window.zoomOut === 'function') window.zoomOut();">Thu nhỏ</button>
+                <button type="button" id="resetZoomBtn" class="btn btn-secondary tree-zoom-btn-text" title="Đặt lại zoom mặc định" onclick="if(typeof window.resetZoom === 'function') window.resetZoom();">Đặt lại</button>
+                <button type="button" id="fitToViewBtn" class="btn btn-secondary tree-zoom-btn-text" title="Vừa khung — tự căn để xem toàn bộ cây" onclick="if(typeof window.fitTreeToView === 'function') window.fitTreeToView();">Vừa khung</button>
+                <button type="button" id="zoomInBtn" class="btn btn-secondary tree-zoom-btn-text" title="Phóng to cây gia phả" onclick="if(typeof window.zoomIn === 'function') window.zoomIn();">Phóng to</button>
+                <button type="button" id="fullscreenBtn" class="btn btn-secondary tree-zoom-btn-text" title="Xem toàn màn hình" onclick="toggleFullscreen()">Toàn màn hình</button>
+              </div>
             </div>
           </div>
           
@@ -1722,13 +1908,181 @@
               <div class="tree-loading">Đang tải cây gia phả...</div>
             </div>
           </div>
-          
+
+          <div class="tree-detail-grave-row">
           <!-- Info Panel -->
           <div class="card tree-info-panel" id="infoPanel">
             <h3>Thông tin chi tiết</h3>
             <div class="tree-info-content" id="infoContent">
               <p>Chọn một người trong cây để xem thông tin</p>
             </div>
+          </div>
+
+          <!-- Phần tìm kiếm mộ phần — khung cố định giống «Thông tin chi tiết» -->
+          <div class="card grave-search-panel" id="graveSearchPanel">
+            <div class="grave-search-panel-header">
+              <h3>🪦 Tìm kiếm mộ phần</h3>
+              <p class="grave-search-intro">Tìm kiếm thông tin mộ phần của những người đã mất. Hệ thống sẽ hiển thị vị trí trên bản đồ.</p>
+              <div class="lineage-controls">
+                <div class="lineage-input-group">
+                  <label for="graveSearchInput">Tên hoặc ID (tìm kiếm thông minh):</label>
+                  <input type="text" class="input" id="graveSearchInput" placeholder="Ví dụ: Nguyễn Văn A hoặc P-1-1..." 
+                         autocomplete="off" oninput="handleGraveSearchInput()">
+                  <div id="graveSearchSuggestions" class="suggestions-dropdown" style="display: none;">
+                    <!-- Suggestions sẽ được điền bằng JavaScript -->
+                  </div>
+                </div>
+                <button id="btnSearchGrave" onclick="searchGrave()" class="btn btn-primary">Tìm mộ phần</button>
+              </div>
+            </div>
+
+            <div class="grave-search-content">
+              <!-- Kết quả tìm kiếm mộ phần -->
+              <div class="grave-result card" id="graveResult" style="display: none; margin-top: 0;">
+                <div class="grave-result-header" style="margin-bottom: var(--space-4);">
+                  <h3 id="graveResultTitle" style="color: var(--color-primary); margin-bottom: var(--space-2);"></h3>
+                </div>
+                
+                <div class="grave-info-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4);">
+                  <!-- Thông tin người -->
+                  <div class="card" style="padding: var(--space-4);">
+                    <h4 style="color: var(--color-primary); margin-bottom: var(--space-3); font-size: var(--font-size-lg);">Thông tin người</h4>
+                    <div id="gravePersonInfo" style="line-height: 1.8; color: var(--color-text);">
+                      <!-- Thông tin sẽ được điền bằng JavaScript -->
+                    </div>
+                  </div>
+                  
+                  <!-- Thông tin mộ phần -->
+                  <div class="card" style="padding: var(--space-4);">
+                    <h4 style="color: var(--color-primary); margin-bottom: var(--space-3); font-size: var(--font-size-lg);">Thông tin mộ phần</h4>
+                    <div id="graveInfoText" style="line-height: 1.8; color: var(--color-text); margin-bottom: var(--space-3);">
+                      <!-- Thông tin mộ phần sẽ được điền bằng JavaScript -->
+                    </div>
+                    <div id="graveCoordinates" style="font-size: var(--font-size-sm); color: var(--color-text-muted); font-family: monospace; margin-bottom: var(--space-3);">
+                      <!-- Tọa độ sẽ được hiển thị ở đây -->
+                    </div>
+                    
+                    <!-- Phần hiển thị ảnh mộ phần -->
+                    <div id="graveImageSection" style="margin-top: var(--space-4); display: none;">
+                      <h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">📷 Ảnh mộ phần</h5>
+                      <div id="graveImageContainer" style="margin-bottom: var(--space-3);">
+                        <img id="graveImage" src="" alt="Ảnh mộ phần" style="max-width: 100%; max-height: 400px; border-radius: var(--radius-md); border: 1px solid var(--color-border); cursor: pointer; display: none;" onclick="openGraveImageModal()">
+                      </div>
+                      <div style="display: flex; gap: var(--space-2);">
+                        <button id="btnUploadGraveImage" onclick="showGraveImageUpload()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border); flex: 1;">
+                          📤 Upload ảnh mộ phần
+                        </button>
+                        <button id="btnDeleteGraveImage" onclick="showDeleteGraveImageConfirm()" class="btn" style="background: var(--color-error, #dc3545); color: white; border: none; display: none;">
+                          🗑️ Xóa ảnh
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- Form upload ảnh (ẩn mặc định) -->
+                    <div id="graveImageUploadForm" style="display: none; margin-top: var(--space-3); padding: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                      <h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Upload ảnh mộ phần</h5>
+                      <p style="color: var(--color-text-muted); font-size: var(--font-size-sm); margin-bottom: var(--space-3);">
+                        Chọn ảnh để upload (PNG, JPG, JPEG, GIF, WEBP - tối đa 10MB)
+                      </p>
+                      <input type="file" id="graveImageInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style="margin-bottom: var(--space-3); width: 100%;">
+                      <div style="display: flex; gap: var(--space-2);">
+                        <button id="btnSubmitGraveImage" onclick="uploadGraveImage()" class="btn btn-primary" style="flex: 1;">
+                          📤 Upload
+                        </button>
+                        <button onclick="hideGraveImageUpload()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+                          Hủy
+                        </button>
+                      </div>
+                      <div id="graveImageUploadStatus" style="margin-top: var(--space-2); font-size: var(--font-size-sm); display: none;"></div>
+                    </div>
+                    
+                    <!-- Modal xác nhận xóa ảnh -->
+                    <div id="deleteGraveImageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10000; justify-content: center; align-items: center;">
+                      <div style="background: white; padding: var(--space-6); border-radius: var(--radius-lg); max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
+                        <h3 style="color: var(--color-error, #dc3545); margin-bottom: var(--space-4); font-size: var(--font-size-xl);">⚠️ Xác nhận xóa ảnh</h3>
+                        <p style="color: var(--color-text); margin-bottom: var(--space-4); line-height: 1.6;">
+                          Bạn có chắc chắn muốn xóa ảnh mộ phần này không? Hành động này không thể hoàn tác.
+                        </p>
+                        <div style="margin-bottom: var(--space-4);">
+                          <label for="deleteGraveImagePassword" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); color: var(--color-text);">
+                            🔒 Nhập mật khẩu để xác nhận:
+                          </label>
+                          <input type="password" id="deleteGraveImagePassword" placeholder="Nhập mật khẩu..." class="input" style="width: 100%;" onkeypress="if(event.key==='Enter') confirmDeleteGraveImage()">
+                        </div>
+                        <div id="deleteGraveImageStatus" style="margin-bottom: var(--space-3); font-size: var(--font-size-sm); display: none;"></div>
+                        <div style="display: flex; gap: var(--space-3); justify-content: flex-end;">
+                          <button onclick="hideDeleteGraveImageConfirm()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+                            Hủy
+                          </button>
+                          <button onclick="confirmDeleteGraveImage()" class="btn" style="background: var(--color-error, #dc3545); color: white; border: none;">
+                            🗑️ Xóa ảnh
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bản đồ -->
+                <div class="grave-map-section" style="margin-bottom: var(--space-4);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3);">
+                    <h4 style="color: var(--color-primary); font-size: var(--font-size-lg); margin: 0;">Bản đồ định vị</h4>
+                    <button id="btnUpdateGraveLocation" onclick="enableGraveLocationEdit()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+                      ✏️ Cập nhật vị trí
+                    </button>
+                  </div>
+                  <div id="graveMap" style="width: 100%; height: 400px; border: 1px solid var(--color-border); border-radius: var(--radius-md); position: relative;">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-text-muted);">
+                      Đang tải bản đồ...
+                    </div>
+                  </div>
+                  <div id="graveMapControls" style="display: none; margin-top: var(--space-3); padding: var(--space-4); background: var(--color-bg); border-radius: var(--radius-md);">
+                    <p style="color: var(--color-text-muted); margin-bottom: var(--space-3);">
+                      💡 Tìm kiếm địa chỉ hoặc nhấp vào bản đồ để đặt marker tại vị trí mộ phần. Sau đó nhấn "Lưu" để cập nhật.
+                    </p>
+                    
+                    <!-- Thanh tìm kiếm địa chỉ -->
+                    <div style="margin-bottom: var(--space-3);">
+                      <label for="graveAddressSearch" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); color: var(--color-primary); font-size: var(--font-size-sm);">
+                        🔍 Tìm kiếm địa chỉ:
+                      </label>
+                      <div style="display: flex; gap: var(--space-2);">
+                        <input type="text" id="graveAddressSearch" placeholder="Ví dụ: Phú Thượng, Phú Vang, Thừa Thiên Huế" 
+                               class="input" style="flex: 1;" 
+                               onkeypress="if(event.key==='Enter') searchGraveAddress()">
+                        <button onclick="searchGraveAddress()" class="btn btn-primary" style="white-space: nowrap;">
+                          Tìm kiếm
+                        </button>
+                      </div>
+                      <div id="graveAddressSuggestions" style="display: none; margin-top: var(--space-2); max-height: 200px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface);">
+                        <!-- Suggestions sẽ được điền bằng JavaScript -->
+                      </div>
+                    </div>
+                    
+                    <!-- Nút định vị bằng điện thoại -->
+                    <div style="margin-bottom: var(--space-3); padding: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                      <p style="color: var(--color-text-muted); margin-bottom: var(--space-2); font-size: var(--font-size-sm);">
+                        📱 Định vị bằng điện thoại:
+                      </p>
+                      <button id="btnGetCurrentLocation" onclick="getCurrentLocation()" class="btn btn-primary" style="width: 100%;">
+                        📍 Định vị bằng điện thoại
+                      </button>
+                      <div id="locationStatus" style="margin-top: var(--space-2); font-size: var(--font-size-sm); color: var(--color-text-muted); display: none;"></div>
+                    </div>
+                    
+                    <div style="display: flex; gap: var(--space-3); align-items: center;">
+                      <button id="btnSaveGraveLocation" onclick="saveGraveLocation()" class="btn btn-primary">
+                        💾 Lưu vị trí
+                      </button>
+                      <button id="btnCancelGraveLocation" onclick="cancelGraveLocationEdit()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
+                        Hủy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           </div>
         </div>
       </div>
@@ -1779,173 +2133,6 @@
             </div>
             <div class="lineage-result-content" id="lineageResultContent">
               <!-- Kết quả sẽ được điền bằng JavaScript -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Phần tìm kiếm mộ phần -->
-      <div class="grave-search-panel" style="margin-top: var(--space-8);">
-        <div class="card lineage-card">
-          <div class="lineage-header">
-            <h2>🪦 Tìm kiếm mộ phần</h2>
-            <p>Tìm kiếm thông tin mộ phần của những người đã mất. Hệ thống sẽ hiển thị vị trí trên bản đồ.</p>
-          </div>
-          
-          <div class="lineage-controls">
-            <div class="lineage-input-group">
-              <label for="graveSearchInput">Tên hoặc ID (tìm kiếm thông minh):</label>
-              <input type="text" class="input" id="graveSearchInput" placeholder="Ví dụ: Nguyễn Văn A hoặc P-1-1..." 
-                     autocomplete="off" oninput="handleGraveSearchInput()">
-              <div id="graveSearchSuggestions" class="suggestions-dropdown" style="display: none;">
-                <!-- Suggestions sẽ được điền bằng JavaScript -->
-              </div>
-            </div>
-            <button id="btnSearchGrave" onclick="searchGrave()" class="btn btn-primary">Tìm mộ phần</button>
-          </div>
-
-          <!-- Kết quả tìm kiếm mộ phần -->
-          <div class="grave-result card" id="graveResult" style="display: none; margin-top: var(--space-4);">
-            <div class="grave-result-header" style="margin-bottom: var(--space-4);">
-              <h3 id="graveResultTitle" style="color: var(--color-primary); margin-bottom: var(--space-2);"></h3>
-            </div>
-            
-            <div class="grave-info-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-4);">
-              <!-- Thông tin người -->
-              <div class="card" style="padding: var(--space-4);">
-                <h4 style="color: var(--color-primary); margin-bottom: var(--space-3); font-size: var(--font-size-lg);">Thông tin người</h4>
-                <div id="gravePersonInfo" style="line-height: 1.8; color: var(--color-text);">
-                  <!-- Thông tin sẽ được điền bằng JavaScript -->
-                </div>
-              </div>
-              
-              <!-- Thông tin mộ phần -->
-              <div class="card" style="padding: var(--space-4);">
-                <h4 style="color: var(--color-primary); margin-bottom: var(--space-3); font-size: var(--font-size-lg);">Thông tin mộ phần</h4>
-                <div id="graveInfoText" style="line-height: 1.8; color: var(--color-text); margin-bottom: var(--space-3);">
-                  <!-- Thông tin mộ phần sẽ được điền bằng JavaScript -->
-                </div>
-                <div id="graveCoordinates" style="font-size: var(--font-size-sm); color: var(--color-text-muted); font-family: monospace; margin-bottom: var(--space-3);">
-                  <!-- Tọa độ sẽ được hiển thị ở đây -->
-                </div>
-                
-                <!-- Phần hiển thị ảnh mộ phần -->
-                <div id="graveImageSection" style="margin-top: var(--space-4); display: none;">
-                  <h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">📷 Ảnh mộ phần</h5>
-                  <div id="graveImageContainer" style="margin-bottom: var(--space-3);">
-                    <img id="graveImage" src="" alt="Ảnh mộ phần" style="max-width: 100%; max-height: 400px; border-radius: var(--radius-md); border: 1px solid var(--color-border); cursor: pointer; display: none;" onclick="openGraveImageModal()">
-                  </div>
-                  <div style="display: flex; gap: var(--space-2);">
-                    <button id="btnUploadGraveImage" onclick="showGraveImageUpload()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border); flex: 1;">
-                      📤 Upload ảnh mộ phần
-                    </button>
-                    <button id="btnDeleteGraveImage" onclick="showDeleteGraveImageConfirm()" class="btn" style="background: var(--color-error, #dc3545); color: white; border: none; display: none;">
-                      🗑️ Xóa ảnh
-                    </button>
-                  </div>
-                </div>
-                
-                <!-- Form upload ảnh (ẩn mặc định) -->
-                <div id="graveImageUploadForm" style="display: none; margin-top: var(--space-3); padding: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                  <h5 style="color: var(--color-primary); margin-bottom: var(--space-2); font-size: var(--font-size-base);">Upload ảnh mộ phần</h5>
-                  <p style="color: var(--color-text-muted); font-size: var(--font-size-sm); margin-bottom: var(--space-3);">
-                    Chọn ảnh để upload (PNG, JPG, JPEG, GIF, WEBP - tối đa 10MB)
-                  </p>
-                  <input type="file" id="graveImageInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" style="margin-bottom: var(--space-3); width: 100%;">
-                  <div style="display: flex; gap: var(--space-2);">
-                    <button id="btnSubmitGraveImage" onclick="uploadGraveImage()" class="btn btn-primary" style="flex: 1;">
-                      📤 Upload
-                    </button>
-                    <button onclick="hideGraveImageUpload()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
-                      Hủy
-                    </button>
-                  </div>
-                  <div id="graveImageUploadStatus" style="margin-top: var(--space-2); font-size: var(--font-size-sm); display: none;"></div>
-                </div>
-                
-                <!-- Modal xác nhận xóa ảnh -->
-                <div id="deleteGraveImageModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 10000; justify-content: center; align-items: center;">
-                  <div style="background: white; padding: var(--space-6); border-radius: var(--radius-lg); max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);">
-                    <h3 style="color: var(--color-error, #dc3545); margin-bottom: var(--space-4); font-size: var(--font-size-xl);">⚠️ Xác nhận xóa ảnh</h3>
-                    <p style="color: var(--color-text); margin-bottom: var(--space-4); line-height: 1.6;">
-                      Bạn có chắc chắn muốn xóa ảnh mộ phần này không? Hành động này không thể hoàn tác.
-                    </p>
-                    <div style="margin-bottom: var(--space-4);">
-                      <label for="deleteGraveImagePassword" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); color: var(--color-text);">
-                        🔒 Nhập mật khẩu để xác nhận:
-                      </label>
-                      <input type="password" id="deleteGraveImagePassword" placeholder="Nhập mật khẩu..." class="input" style="width: 100%;" onkeypress="if(event.key==='Enter') confirmDeleteGraveImage()">
-                    </div>
-                    <div id="deleteGraveImageStatus" style="margin-bottom: var(--space-3); font-size: var(--font-size-sm); display: none;"></div>
-                    <div style="display: flex; gap: var(--space-3); justify-content: flex-end;">
-                      <button onclick="hideDeleteGraveImageConfirm()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
-                        Hủy
-                      </button>
-                      <button onclick="confirmDeleteGraveImage()" class="btn" style="background: var(--color-error, #dc3545); color: white; border: none;">
-                        🗑️ Xóa ảnh
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Bản đồ -->
-            <div class="grave-map-section" style="margin-bottom: var(--space-4);">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3);">
-                <h4 style="color: var(--color-primary); font-size: var(--font-size-lg); margin: 0;">Bản đồ định vị</h4>
-                <button id="btnUpdateGraveLocation" onclick="enableGraveLocationEdit()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
-                  ✏️ Cập nhật vị trí
-                </button>
-              </div>
-              <div id="graveMap" style="width: 100%; height: 400px; border: 1px solid var(--color-border); border-radius: var(--radius-md); position: relative;">
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--color-text-muted);">
-                  Đang tải bản đồ...
-                </div>
-              </div>
-              <div id="graveMapControls" style="display: none; margin-top: var(--space-3); padding: var(--space-4); background: var(--color-bg); border-radius: var(--radius-md);">
-                <p style="color: var(--color-text-muted); margin-bottom: var(--space-3);">
-                  💡 Tìm kiếm địa chỉ hoặc nhấp vào bản đồ để đặt marker tại vị trí mộ phần. Sau đó nhấn "Lưu" để cập nhật.
-                </p>
-                
-                <!-- Thanh tìm kiếm địa chỉ -->
-                <div style="margin-bottom: var(--space-3);">
-                  <label for="graveAddressSearch" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); color: var(--color-primary); font-size: var(--font-size-sm);">
-                    🔍 Tìm kiếm địa chỉ:
-                  </label>
-                  <div style="display: flex; gap: var(--space-2);">
-                    <input type="text" id="graveAddressSearch" placeholder="Ví dụ: Phú Thượng, Phú Vang, Thừa Thiên Huế" 
-                           class="input" style="flex: 1;" 
-                           onkeypress="if(event.key==='Enter') searchGraveAddress()">
-                    <button onclick="searchGraveAddress()" class="btn btn-primary" style="white-space: nowrap;">
-                      Tìm kiếm
-                    </button>
-                  </div>
-                  <div id="graveAddressSuggestions" style="display: none; margin-top: var(--space-2); max-height: 200px; overflow-y: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface);">
-                    <!-- Suggestions sẽ được điền bằng JavaScript -->
-                  </div>
-                </div>
-                
-                <!-- Nút định vị bằng điện thoại -->
-                <div style="margin-bottom: var(--space-3); padding: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                  <p style="color: var(--color-text-muted); margin-bottom: var(--space-2); font-size: var(--font-size-sm);">
-                    📱 Định vị bằng điện thoại:
-                  </p>
-                  <button id="btnGetCurrentLocation" onclick="getCurrentLocation()" class="btn btn-primary" style="width: 100%;">
-                    📍 Định vị bằng điện thoại
-                  </button>
-                  <div id="locationStatus" style="margin-top: var(--space-2); font-size: var(--font-size-sm); color: var(--color-text-muted); display: none;"></div>
-                </div>
-                
-                <div style="display: flex; gap: var(--space-3); align-items: center;">
-                  <button id="btnSaveGraveLocation" onclick="saveGraveLocation()" class="btn btn-primary">
-                    💾 Lưu vị trí
-                  </button>
-                  <button id="btnCancelGraveLocation" onclick="cancelGraveLocationEdit()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
-                    Hủy
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -2639,7 +2826,7 @@
       treeWrapper.classList.remove('fullscreen');
       document.body.classList.remove('fullscreen-active');
       if (fullscreenBtn) {
-        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.textContent = 'Toàn màn hình';
         fullscreenBtn.title = 'Xem toàn màn hình';
       }
     }
@@ -2661,7 +2848,7 @@
         treeWrapper.classList.add('fullscreen');
         document.body.classList.add('fullscreen-active');
         if (fullscreenBtn) {
-          fullscreenBtn.textContent = '⤓';
+          fullscreenBtn.textContent = 'Thoát toàn màn';
           fullscreenBtn.title = 'Thoát toàn màn hình';
         }
       }
@@ -4393,18 +4580,15 @@
       function traverse(node) {
         if (!node) return;
         
-        const gen = node.generation || 0;
-        // Only skip if maxGeneration is set AND generation is beyond it
-        // If maxGeneration is null, include all generations
-        if (maxGeneration !== null && gen > maxGeneration) return;
-        
-        // Only add to buckets if generation is valid (>= 1)
-        if (gen >= 1) {
-          if (!buckets.has(gen)) {
-            buckets.set(gen, []);
-          }
-          buckets.get(gen).push(node);
+        const rawGen = node.generation || 0;
+        // DB đôi khi trả 0 — vẫn hiển thị vào Thế hệ 1 để không mất bảng thống kê
+        const bucketGen = Math.max(1, rawGen);
+        if (maxGeneration !== null && bucketGen > maxGeneration) return;
+
+        if (!buckets.has(bucketGen)) {
+          buckets.set(bucketGen, []);
         }
+        buckets.get(bucketGen).push(node);
         
         // Traverse children (always traverse, even if node is beyond maxGeneration, to ensure all descendants are counted)
         if (node.children && node.children.length > 0) {
@@ -4430,6 +4614,22 @@
     // CONTROLLER: UI Updates & Interactions
     // ============================================================
     
+    /** Gốc cây cho thống kê: ưu tiên founderId từ API, sau đó P-1-1, cuối cùng một người trong map */
+    function resolveRootPersonIdForStats() {
+      try {
+        if (typeof window.founderId === 'string' && window.founderId && window.personMap?.has(window.founderId)) {
+          return window.founderId;
+        }
+        if (window.personMap?.has('P-1-1')) return 'P-1-1';
+        if (window.personMap?.size > 0) {
+          return Array.from(window.personMap.keys())[0];
+        }
+      } catch (e) {
+        console.warn('[Genealogy] resolveRootPersonIdForStats:', e);
+      }
+      return rootPersonId || 'P-1-1';
+    }
+
     /**
      * Load and build generation stats (with caching)
      * @returns {Map|null} Generation buckets or null if data not available
@@ -4451,8 +4651,13 @@
         console.log('[Genealogy] Building generation stats...');
         const startTime = performance.now();
         
+        const statsRootId = resolveRootPersonIdForStats();
+        if (statsRootId !== rootPersonId) {
+          console.log('[Genealogy] Thống kê theo gốc:', statsRootId, '(biến rootPersonId mặc định:', rootPersonId + ')');
+        }
+        
         // Build person tree
-        personTreeRoot = buildPersonTree(rootPersonId, window.personMap, window.childrenMap);
+        personTreeRoot = buildPersonTree(statsRootId, window.personMap, window.childrenMap);
         if (!personTreeRoot) {
           console.warn('[Genealogy] Failed to build person tree');
           return null;
@@ -4989,83 +5194,85 @@
     // Expose functions to global scope for tree renderer
     window.selectPerson = selectPerson;
     window.refreshTree = refreshTree;
-    
-    // Load stats and generation tabs on page load
-    document.addEventListener('DOMContentLoaded', async () => {
-      loadMemberStats();
-      
-      // Load generation tabs with full data (maxGeneration=8)
+
+    /** Tải panel Thống kê theo thế hệ — gọi lại được sau khi mở khóa cổng hoặc đồng bộ cây */
+    window._retryLoadGenerationTabs = async function loadGenerationTabsPanel() {
       const loadingEl = document.getElementById('generationStatsLoading');
       const errorEl = document.getElementById('generationStatsError');
-      
+      if (loadingEl) loadingEl.style.display = 'block';
+      if (errorEl) {
+        errorEl.style.display = 'none';
+        errorEl.textContent = 'Không thể tải thống kê. Vui lòng thử lại sau.';
+      }
+
       try {
-        // Wait for tree data to be available, with retry logic
         let retries = 0;
-        const maxRetries = 20; // Wait up to 10 seconds (20 * 500ms)
-        
+        const maxRetries = 50; // tối đa ~25 giây (API cây chậm / chờ mở khóa)
+
         const waitForTreeData = async () => {
           while (retries < maxRetries) {
-            if (typeof window.personMap !== 'undefined' && typeof window.childrenMap !== 'undefined' && 
+            if (typeof window.personMap !== 'undefined' && typeof window.childrenMap !== 'undefined' &&
                 window.personMap && window.childrenMap && window.personMap.size > 0) {
-              // Tree data is available
-              // For generation stats, we need data up to generation 8
-              // Check if we need to reload with maxGeneration=8
+              const rootForFetch = (typeof window.founderId === 'string' && window.personMap.has(window.founderId))
+                ? window.founderId
+                : (window.personMap.has('P-1-1') ? 'P-1-1' : resolveRootPersonIdForStats());
+
               if (typeof loadTreeData === 'function') {
                 const genFilter = document.getElementById('genFilter');
-                const currentMaxGen = genFilter ? parseInt(genFilter.value) : 5;
-                
-                // Check if we have data up to generation 8 by checking if there are any persons at generation 8
+                const currentMaxGen = genFilter ? parseInt(genFilter.value, 10) : 5;
                 let hasGen8Data = false;
-                if (window.personMap && window.personMap.size > 0) {
-                  for (const [personId, person] of window.personMap.entries()) {
-                    if (person.generation >= 8) {
-                      hasGen8Data = true;
-                      break;
-                    }
+                for (const [, person] of window.personMap.entries()) {
+                  const g = person.generation ?? person.generation_level ?? 0;
+                  if (g >= 8) {
+                    hasGen8Data = true;
+                    break;
                   }
                 }
-                
                 if (currentMaxGen < 8 && !hasGen8Data) {
-                  console.log('[Genealogy] Loading tree data with maxGeneration=8 for complete generation stats...');
+                  console.log('[Genealogy] Loading tree data with maxGeneration=8 for generation stats, root_id=', rootForFetch);
                   try {
-                    await loadTreeData(8, 'P-1-1');
-                    // Wait a bit for maps to be updated after loadTreeData
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await loadTreeData(8, rootForFetch);
+                    await new Promise(function (r) { setTimeout(r, 300); });
                   } catch (err) {
                     console.warn('[Genealogy] Error loading tree with maxGen=8, using existing data:', err);
                   }
                 }
               }
-              
-              // Build generation stats
-              const generationBuckets = loadGenerationStats(true); // Force rebuild
-              if (generationBuckets && generationBuckets.size > 0) {
+
+              const generationBuckets = loadGenerationStats(true);
+              if (generationBuckets != null) {
                 if (loadingEl) loadingEl.style.display = 'none';
                 if (errorEl) errorEl.style.display = 'none';
                 renderGenerationTabs(generationBuckets);
-                console.log('[Genealogy] Generation tabs loaded successfully with', generationBuckets.size, 'generations');
+                window._generationTabsLoadedOk = true;
+                console.log('[Genealogy] Generation tabs loaded; số thế hệ có dữ liệu:', generationBuckets.size);
               } else {
-                throw new Error('Failed to build generation stats or no data available');
+                throw new Error('Failed to build generation stats');
               }
               return;
             }
             retries++;
-            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
+            await new Promise(function (r) { setTimeout(r, 500); });
           }
-          
-          // If we get here, tree data is not available after max retries
           throw new Error('Tree data not available after waiting');
         };
-        
+
         await waitForTreeData();
-        
       } catch (err) {
         console.error('[Genealogy] Error loading generation tabs:', err);
+        window._generationTabsLoadedOk = false;
         if (loadingEl) loadingEl.style.display = 'none';
         if (errorEl) {
           errorEl.style.display = 'block';
           errorEl.textContent = 'Không thể tải thống kê. Vui lòng tải lại trang hoặc kiểm tra kết nối.';
         }
+      }
+    };
+    
+    document.addEventListener('DOMContentLoaded', function () {
+      loadMemberStats();
+      if (typeof window._retryLoadGenerationTabs === 'function') {
+        void window._retryLoadGenerationTabs();
       }
     });
   </script>
@@ -6470,6 +6677,11 @@
       }
       
       sessionStorage.setItem(STORAGE_KEY, 'true');
+
+      // Nếu lần đầu thống kê lỗi (cây chưa sẵn sàng khi còn cổng), thử lại sau khi mở khóa
+      if (!window._generationTabsLoadedOk && typeof window._retryLoadGenerationTabs === 'function') {
+        void window._retryLoadGenerationTabs();
+      }
     }
     
     async function handleGateSubmit(event) {

@@ -4,6 +4,87 @@ Website gia phả: cây gia phả tương tác, cổng Thành viên (members), t
 
 ---
 
+## Hướng dẫn chạy dự án cho developer
+
+Phần này mô tả thứ tự từ môi trường trống đến khi chạy được ứng dụng trên máy local. Chi tiết đầy đủ về từng biến môi trường nằm ở mục [Biến môi trường](#biến-môi-trường-bảng-tham-chiếu) bên dưới.
+
+### 1. Điều kiện cần
+
+| Yêu cầu | Ghi chú |
+|---------|---------|
+| Python | Phiên bản 3.11 trở lên (khớp với stack trong `requirements.txt`). |
+| MySQL | Một instance MySQL (cài trên máy hoặc dịch vụ cloud) và một database đã có schema tương thích với phiên bản mã nguồn hiện tại. Script SQL tham khảo và migration nằm trong `folder_sql/`; các file lịch sử hoặc bản đầy đủ hơn có trong `folder_sql/archive/`. Nếu nhận file dump `.sql` từ team, import vào MySQL rồi cấu hình `DB_*` trỏ đúng database đó. |
+| Git | Để clone repository (nếu chưa có mã nguồn). |
+
+### 2. Lấy mã nguồn và vào thư mục dự án
+
+Clone repository (hoặc giải nén bản đã tải), sau đó mở terminal tại thư mục gốc: cùng cấp với `app.py`, `requirements.txt`, `folder_py/`.
+
+### 3. Môi trường ảo Python và cài phụ thuộc
+
+Tạo virtual environment:
+
+```bash
+python -m venv .venv
+```
+
+Kích hoạt venv:
+
+- Windows (PowerShell): `.\.venv\Scripts\Activate.ps1`
+- macOS/Linux: `source .venv/bin/activate`
+
+Cài package:
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. File cấu hình `.env`
+
+Ứng dụng đọc biến môi trường từ file `.env` đặt **ngay tại thư mục gốc repo** (cùng cấp với `app.py`). Sao chép từ `.env.example`, đổi tên thành `.env`, rồi điền giá trị thật. Không commit file `.env` lên Git.
+
+Tối thiểu để chạy được (kết nối DB và session):
+
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` — khớp với MySQL và tên database đã tạo hoặc đã import.
+- `SECRET_KEY` — chuỗi bí mật cho Flask session; bắt buộc khi triển khai production.
+
+Các biến tùy chọn (mật khẩu members/admin, Geoapify, Facebook, cookie production, v.v.) được liệt kê trong bảng ở mục [Biến môi trường](#biến-môi-trường-bảng-tham-chiếu).
+
+### 5. Khởi động server development
+
+Với venv đã kích hoạt, từ thư mục gốc repo:
+
+```bash
+python app.py
+```
+
+Ứng dụng lắng nghe trên mọi interface (`0.0.0.0`). Cổng lấy từ biến môi trường `PORT` nếu có; nếu không, mặc định **5000**. Trên trình duyệt mở `http://127.0.0.1:5000` (hoặc đổi cổng nếu đã đặt `PORT`).
+
+Trong `app.py`, Flask chạy với `use_reloader=False` để tránh process con không đồng bộ biến môi trường với process cha. Sau khi sửa code, dừng tiến trình (Ctrl+C) rồi chạy lại `python app.py`.
+
+Kiểm tra nhanh sau khi khởi động: gửi request `GET /api/health` (ví dụ `http://127.0.0.1:5000/api/health`) để xem trạng thái ứng dụng và kết nối database.
+
+### 6. Chạy bằng Gunicorn (giống production, tùy chọn)
+
+Trên Linux/macOS hoặc môi trường có `gunicorn` trong PATH, có thể chạy giống file `Procfile` (Railway dùng cổng 8080):
+
+```text
+gunicorn app:app --bind 0.0.0.0:8080 --workers 1 --threads 4 --timeout 120 --preload --max-requests 1000 --max-requests-jitter 50
+```
+
+Đặt biến `PORT` hoặc tham số `--bind` phù hợp với nền tảng triển khai. Trên Windows, thường dùng `python app.py` cho dev; production thường chạy trên Linux container hoặc VPS với Gunicorn.
+
+### 7. Xử lý sự cố thường gặp khi chạy local
+
+| Hiện tượng | Hướng xử lý |
+|------------|-------------|
+| Không kết nối được MySQL | Kiểm tra MySQL đang chạy, user có quyền truy cập từ host của bạn (đặc biệt nếu DB trên server khác), firewall, và `DB_*` trong `.env` đúng chính tả. |
+| Cổng đã được sử dụng | Đặt `PORT` khác trong `.env` hoặc tắt tiến trình đang chiếm cổng. |
+| Đã sửa `.env` nhưng app vẫn không thấy `DB_HOST` | Xem log khi khởi động; đảm bảo mỗi dòng đúng dạng `KEY=value`, không có khoảng trắng thừa quanh dấu `=`, file lưu UTF-8. |
+| Trang web lỗi do thiếu bảng hoặc schema cũ | Đối chiếu database với script trong `folder_sql/` hoặc import lại dump chuẩn từ team. |
+
+---
+
 ## Bản ghi tham chiếu vận hành — snapshot **21/03/2026**
 
 ### Mục đích
@@ -72,46 +153,7 @@ Tài liệu này mô tả phiên bản mã nguồn và cách triển khai tại 
 | `docs/GENEALOGY_QA_CHECKLIST.md` | Checklist kiểm thử regression sau khi sửa trang Gia phả |
 | `scripts/` | Tiện ích: backup DB, liệt kê route, kiểm tra blueprint, … (không bắt buộc khi chạy web) |
 
----
-
-## Chạy local
-
-### 1. Môi trường ảo
-
-```bash
-python -m venv .venv
-```
-
-Windows (PowerShell):
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-macOS/Linux:
-
-```bash
-source .venv/bin/activate
-```
-
-### 2. Cài phụ thuộc
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Biến môi trường
-
-Sao chép `.env.example` thành `.env` và điền giá trị (**không** commit `.env`).
-
-### 4. Chạy
-
-```bash
-python app.py
-```
-
-- Mặc định: `PORT` từ env hoặc **5000**.
-- Comment trong `app.py`: nên một process, cẩn thận với reloader/env khi dev.
+Hướng dẫn chạy từng bước (venv, `.env`, lệnh khởi động) nằm ở mục [Hướng dẫn chạy dự án cho developer](#hướng-dẫn-chạy-dự-án-cho-developer) đầu file.
 
 ---
 

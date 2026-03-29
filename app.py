@@ -230,6 +230,14 @@ if limiter:
         print('OK: Rate limit exempt cho members_portal (trang Members + Xuat Excel)')
     except Exception as e:
         print(f'WARNING: Khong exempt duoc members_portal: {e}')
+    # Phục vụ ảnh qua blueprint gallery — endpoint thực tế không kế thừa exempt từ hàm trong app.py
+    try:
+        from blueprints.gallery import gallery_bp
+        limiter.exempt(gallery_bp.view_functions['serve_image_static'])
+        limiter.exempt(gallery_bp.view_functions['serve_image'])
+        print('OK: Rate limit exempt cho /static/images va /images (gallery)')
+    except Exception as e:
+        print(f'WARNING: Khong exempt duoc gallery static images: {e}')
 try:
     from admin_routes import register_admin_routes
 except ImportError:

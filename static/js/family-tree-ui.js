@@ -1123,6 +1123,15 @@ function displayPersonInfo(personData) {
     return div.innerHTML;
   }
 
+  /** Bỏ chuỗi tọa độ lat/lng gắn sau mô tả mộ (vẫn lưu đầy đủ trong DB) */
+  function stripGraveCoordinatesForDisplay(text) {
+    if (text == null || text === '') return '';
+    let s = String(text).trim();
+    s = s.replace(/\s*\|\s*lat\s*:\s*[\d.-]+(?:\s*,\s*|\s+)lng\s*:\s*[\d.-]+/gi, '');
+    s = s.replace(/\s+lat\s*:\s*[\d.-]+(?:\s*,\s*|\s+)lng\s*:\s*[\d.-]+/gi, '');
+    return s.trim();
+  }
+
   /** Trên mobile: gói nội dung trong <details> để giảm chiều cao panel chi tiết */
   const isMobileInfo =
     typeof window.matchMedia === "function" && window.matchMedia("(max-width: 768px)").matches;
@@ -1237,15 +1246,18 @@ function displayPersonInfo(personData) {
       `;
     }
     
-    // Mộ phần (nếu trạng thái "Đã mất")
+    // Mộ phần (nếu trạng thái "Đã mất") — không hiển thị lat/lng trong panel (chỉ mô tả địa chỉ)
     const graveInfo = personData.grave_info || personData.grave || personData.grave_location || null;
     if (graveInfo) {
-      html += `
-        <div style="margin-bottom: var(--space-2); display: flex;">
-          <strong style="min-width: 120px; color: var(--color-text-muted);">Mộ phần:</strong>
-          <span style="color: var(--color-text);">${escapeHtml(graveInfo)}</span>
+      const graveDisplay = stripGraveCoordinatesForDisplay(graveInfo);
+      if (graveDisplay) {
+        html += `
+        <div style="margin-bottom: var(--space-2); display: flex; align-items: flex-start; gap: var(--space-2);">
+          <strong style="min-width: 120px; flex-shrink: 0; color: var(--color-text-muted);">Mộ phần:</strong>
+          <span style="color: var(--color-text); flex: 1; min-width: 0; word-break: break-word;">${escapeHtml(graveDisplay)}</span>
         </div>
       `;
+      }
     }
   }
   
