@@ -172,6 +172,17 @@
       width: 100%;
       max-width: 100%;
     }
+
+    /* iOS Safari: nội dung cuối trang không bị thanh địa chỉ / home indicator che */
+    @media (max-width: 768px) {
+      .genealogy-page {
+        padding-bottom: calc(var(--space-10) + env(safe-area-inset-bottom, 12px));
+      }
+      .genealogy-page .container {
+        padding-left: max(var(--space-4), env(safe-area-inset-left, 0px));
+        padding-right: max(var(--space-4), env(safe-area-inset-right, 0px));
+      }
+    }
     
     /* Override container max-width để full width */
     .genealogy-page .container {
@@ -345,6 +356,16 @@
       .tree-container-wrapper {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+        height: 58vh;
+        min-height: 200px;
+        max-height: 70vh;
+      }
+
+      @supports (height: 58dvh) {
+        .tree-container-wrapper {
+          height: 58dvh;
+          max-height: 70dvh;
+        }
       }
 
       #treeContainer {
@@ -354,12 +375,33 @@
       .tree-info-panel {
         font-size: var(--font-size-sm, 14px);
         padding: var(--space-3, 12px);
+        height: min(72vh, 640px);
+        max-height: min(72vh, 640px);
+      }
+
+      @supports (height: 72dvh) {
+        .tree-info-panel {
+          height: min(72dvh, 640px);
+          max-height: min(72dvh, 640px);
+        }
       }
 
       .grave-search-panel {
         padding: var(--space-3, 12px);
-        height: min(80vh, 720px);
-        max-height: min(80vh, 720px);
+        height: min(72vh, 640px);
+        max-height: min(72vh, 640px);
+        margin-bottom: env(safe-area-inset-bottom, 0px);
+      }
+
+      @supports (height: 72dvh) {
+        .grave-search-panel {
+          height: min(72dvh, 640px);
+          max-height: min(72dvh, 640px);
+        }
+      }
+
+      .grave-search-content {
+        padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
       }
     }
 
@@ -1492,8 +1534,15 @@
 
     @media (max-width: 768px) {
       .tree-info-panel {
-        height: min(80vh, 720px);
-        max-height: min(80vh, 720px);
+        height: min(72vh, 640px);
+        max-height: min(72vh, 640px);
+      }
+
+      @supports (height: 72dvh) {
+        .tree-info-panel {
+          height: min(72dvh, 640px);
+          max-height: min(72dvh, 640px);
+        }
       }
     }
     
@@ -1595,7 +1644,13 @@
     @media (max-width: 1023px) {
       .tree-container-wrapper {
         height: 75vh;
-        min-height: 600px;
+        min-height: 360px;
+      }
+
+      @supports (height: 75dvh) {
+        .tree-container-wrapper {
+          height: 75dvh;
+        }
       }
       
       .tree-controls-row {
@@ -1609,6 +1664,12 @@
       
       .lineage-panel {
         max-width: 100%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .tree-container-wrapper {
+        min-height: 200px;
       }
     }
     
