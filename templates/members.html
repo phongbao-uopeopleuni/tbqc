@@ -907,6 +907,28 @@
       confirmAction(createBackup);
     }
 
+    /** Tải file .sql về máy (thư mục do trình duyệt đặt, thường là Tải xuống). */
+    async function downloadBackupFileToClient(filename) {
+      if (!filename || typeof filename !== 'string') return false;
+      const url = '/api/admin/backup/' + encodeURIComponent(filename);
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) {
+        console.warn('[Members] Download backup failed:', res.status);
+        return false;
+      }
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      return true;
+    }
+
     // Create backup
     async function createBackup() {
       const backupBtn = document.getElementById('btnBackup');
@@ -933,7 +955,16 @@
         
         if (result.success) {
           const fileSize = result.file_size ? (result.file_size / 1024 / 1024).toFixed(2) : 'N/A';
-          alert(`✅ Backup thành công!\n\nFile: ${result.backup_file}\nKích thước: ${fileSize} MB`);
+          let downloadOk = false;
+          try {
+            downloadOk = await downloadBackupFileToClient(result.backup_file);
+          } catch (e) {
+            console.error('[Members] Auto-download backup:', e);
+          }
+          const dlNote = downloadOk
+            ? '\n\nĐã bắt đầu tải bản sao .sql về máy (thường vào thư mục Tải xuống). Bản trên server đã lưu trong thư mục backups của ứng dụng (ví dụ D:\\tbqc\\backups khi chạy local).'
+            : '\n\nKhông tự tải được bản sao; mở /api/admin/backup/' + encodeURIComponent(result.backup_file) + ' trong trình duyệt để tải thủ công.';
+          alert(`✅ Backup thành công!\n\nFile: ${result.backup_file}\nKích thước: ${fileSize} MB` + dlNote);
         } else {
           // Xử lý lỗi 403 (unauthorized)
           if (response.status === 403) {

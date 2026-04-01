@@ -6,20 +6,24 @@ Routes: /api/family-tree, /api/tree, /api/ancestors/<person_id>, /api/descendant
 """
 from flask import Blueprint
 
+from extensions import rate_limit
+
 family_tree_bp = Blueprint('family_tree', __name__)
 
 
 def _call_app(handler_name, *args, **kwargs):
-    """Gọi handler từ app (late import tránh circular import)."""
-    from app import (
+    """Gọi handler từ app / family_tree_service (late import tránh circular import)."""
+    from services.family_tree_service import (
         get_family_tree,
         get_relationships,
         get_children,
+        get_generations_api,
+    )
+    from app import (
         sync_genealogy_from_members,
         get_tree,
         get_ancestors,
         get_descendants,
-        get_generations_api,
     )
     handlers = {
         'get_family_tree': get_family_tree,
@@ -51,11 +55,13 @@ def get_children(parent_id):
 
 
 @family_tree_bp.route('/api/genealogy/sync', methods=['POST'])
+@rate_limit("10 per hour")
 def sync_genealogy_from_members():
     return _call_app('sync_genealogy_from_members')
 
 
 @family_tree_bp.route('/api/tree', methods=['GET'], strict_slashes=False)
+@rate_limit("60 per minute")
 def get_tree():
     return _call_app('get_tree')
 

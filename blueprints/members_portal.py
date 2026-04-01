@@ -12,6 +12,8 @@ from pathlib import Path
 
 from flask import Blueprint, redirect, render_template, request, jsonify, session, send_file
 
+from extensions import rate_limit
+
 logger = logging.getLogger(__name__)
 members_portal_bp = Blueprint('members_portal', __name__)
 
@@ -24,13 +26,14 @@ def members():
     """Trang danh sách thành viên - hiển thị cổng đăng nhập hoặc trang members."""
     if not session.get('members_gate_ok'):
         return render_template('members_gate.html')
-    from app import get_members_password
+    from services.members_service import get_members_password
     members_password = get_members_password()
     gate_username = session.get('members_gate_user', '')
     return render_template('members.html', members_password=members_password or '', gate_username=gate_username)
 
 
 @members_portal_bp.route('/members/verify', methods=['POST'])
+@rate_limit("25 per minute")
 def members_verify():
     """API xác thực đăng nhập cho cổng Members. Nhận JSON hoặc form."""
     try:
@@ -72,6 +75,7 @@ def members_logout():
 
 
 @members_portal_bp.route('/api/members')
+@rate_limit("120 per minute")
 def get_members():
     """
     API lấy danh sách thành viên (source of truth).
@@ -83,7 +87,7 @@ def get_members():
         logger.warning('Unauthorized access to /api/members')
         return (jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401)
     try:
-        from app import cache
+        from extensions import cache
     except Exception:
         cache = None
     cache_key = 'api_members_data'
@@ -94,7 +98,8 @@ def get_members():
                 return jsonify(cached_data)
         except Exception as e:
             logger.warning(f'Cache get error: {e}')
-    from app import get_db_connection, load_relationship_data
+    from db import get_db_connection
+    from services.person_service import load_relationship_data
     connection = None
     cursor = None
     try:
@@ -238,7 +243,8 @@ def _fetch_members_list():
     Lấy danh sách thành viên (giống /api/members), không dùng cache.
     Returns (list of member dicts, None) hoặc (None, error_message).
     """
-    from app import get_db_connection, load_relationship_data
+    from db import get_db_connection
+    from services.person_service import load_relationship_data
     from mysql.connector import Error as MySqlError
     connection = None
     cursor = None
@@ -386,6 +392,7 @@ _EXCEL_COLUMNS = [
 
 
 @members_portal_bp.route('/members/export/excel')
+@rate_limit("20 per hour")
 def export_members_excel():
     """Xuất toàn bộ danh sách thành viên ra file Excel. Yêu cầu đã đăng nhập cổng Members."""
     if not session.get('members_gate_ok'):
@@ -430,6 +437,7 @@ def export_members_excel():
 
 
 @members_portal_bp.route('/api/members/bulk-update-branch', methods=['POST'])
+@rate_limit("30 per hour")
 def bulk_update_members_branch():
     """
     Bulk update cột "Nhánh" cho members từ file Excel/CSV.
@@ -448,7 +456,10 @@ def bulk_update_members_branch():
     import re
     import csv
 
-    from app import get_db_connection, get_or_create_branch, get_members_password, secure_compare
+    from db import get_db_connection
+    from services.person_service import get_or_create_branch
+    from services.members_service import get_members_password
+    from utils.validation import secure_compare
 
     if not session.get('members_gate_ok'):
         logger.warning('Unauthorized access to /api/members/bulk-update-branch')
@@ -659,7 +670,7 @@ def bulk_update_members_branch():
 
         # Invalidate members cache
         try:
-            from app import cache
+            from extensions import cache
             if cache:
                 cache.delete('api_members_data')
         except Exception as e:
@@ -907,6 +918,7 @@ def download_template_update_sll():
 
 
 @members_portal_bp.route('/api/members/bulk-update-sll', methods=['POST'])
+@rate_limit("15 per hour")
 def bulk_update_members_sll():
     """
     Cập nhật nhiều thành viên từ Excel/CSV (cùng template Xuất Excel / Template_updatetbqc.xlsx).
@@ -915,13 +927,10 @@ def bulk_update_members_sll():
     import csv
     import io
 
-    from app import (
-        apply_person_members_update_core,
-        get_db_connection,
-        get_members_password,
-        load_relationship_data,
-        secure_compare,
-    )
+    from db import get_db_connection
+    from services.members_service import get_members_password
+    from services.person_service import apply_person_members_update_core, load_relationship_data
+    from utils.validation import secure_compare
 
     if not session.get('members_gate_ok'):
         logger.warning('Unauthorized access to /api/members/bulk-update-sll')
@@ -1101,7 +1110,7 @@ def bulk_update_members_sll():
                 logger.warning(f'bulk-update-sll row {id_str} ({target_person_id}) exception: {row_err}', exc_info=True)
 
         try:
-            from app import cache
+            from extensions import cache
             if cache:
                 cache.delete('api_members_data')
         except Exception as e:

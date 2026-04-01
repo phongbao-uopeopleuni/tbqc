@@ -6,12 +6,14 @@ Routes: /api/person/<id>, /api/persons, /api/persons/batch, /api/search, /api/pe
 """
 from flask import Blueprint
 
+from extensions import rate_limit
+
 persons_bp = Blueprint('persons', __name__)
 
 
 def _call_app(handler_name, *args, **kwargs):
-    """Gọi handler từ app (late import tránh circular import)."""
-    from app import (
+    """Gọi handler từ services.person_service (late import tránh circular import)."""
+    from services.person_service import (
         get_persons,
         get_person,
         search_persons,
@@ -99,5 +101,6 @@ def update_genealogy_info():
 
 
 @persons_bp.route('/api/persons/batch', methods=['DELETE'])
+@rate_limit("20 per hour")
 def delete_persons_batch():
     return _call_app('delete_persons_batch')

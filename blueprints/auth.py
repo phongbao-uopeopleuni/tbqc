@@ -4,6 +4,7 @@ from mysql.connector import Error
 
 # Tái sử dụng các module nội bộ từ gốc
 from auth import get_user_by_username, verify_password, User
+from extensions import rate_limit
 try:
     from folder_py.db_config import get_db_connection
 except ImportError:
@@ -34,6 +35,7 @@ def admin_login_page():
     return render_template('login.html', admin_mode=True)
 
 @auth_bp.route('/api/login', methods=['POST'])
+@rate_limit("20 per minute")
 def api_login():
     """API xử lý logic Login"""
     username = request.form.get('username', '').strip()

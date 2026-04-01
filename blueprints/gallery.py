@@ -7,12 +7,14 @@ Routes: /api/geoapify-key, /api/grave/*, /api/upload-image, /api/gallery/anh1,
 """
 from flask import Blueprint
 
+from extensions import rate_limit
+
 gallery_bp = Blueprint('gallery', __name__)
 
 
 def _call_app(handler_name, *args, **kwargs):
-    """Gọi handler từ app (late import tránh circular import)."""
-    from app import (
+    """Gọi handler từ services.gallery_service (late import tránh circular import)."""
+    from services.gallery_service import (
         get_geoapify_api_key,
         update_grave_location,
         upload_grave_image,
@@ -100,6 +102,7 @@ def serve_genealogy_js():
 
 
 @gallery_bp.route('/static/images/<path:filename>')
+@rate_limit("500 per minute; 20000 per hour; 500000 per day", override_defaults=True)
 def serve_image_static(filename):
     return _call_app('serve_image_static', filename)
 
@@ -135,5 +138,6 @@ def api_get_album_images(album_id):
 
 
 @gallery_bp.route('/images/<path:filename>')
+@rate_limit("500 per minute; 20000 per hour; 500000 per day", override_defaults=True)
 def serve_image(filename):
     return _call_app('serve_image', filename)

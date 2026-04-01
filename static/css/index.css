@@ -538,6 +538,25 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
 
+    /* Ảnh chân dung: căn giữa, không full cột */
+    .about-image--compact-sm {
+      max-width: min(100%, 400px);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Gia Long: chỉ rộng hơn ảnh Minh Mạng một chút (mốc 400px → 418px) */
+    .about-image--compact {
+      max-width: min(100%, 418px);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .about-image--compact-sm img,
+    .about-image--compact img {
+      margin: 0 auto;
+    }
+
     blockquote {
       background: linear-gradient(135deg, #FFF8DC 0%, #FFFEF9 100%);
       border-left: 5px solid #DAA520;
@@ -1514,6 +1533,20 @@
       text-align: center;
       margin: var(--space-6) 0;
       width: 100%;
+    }
+
+    .post-content .about-image.about-image--compact-sm {
+      width: auto;
+      max-width: min(100%, 400px);
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .post-content .about-image.about-image--compact {
+      width: auto;
+      max-width: min(100%, 418px);
+      margin-left: auto;
+      margin-right: auto;
     }
     
     .post-content img {

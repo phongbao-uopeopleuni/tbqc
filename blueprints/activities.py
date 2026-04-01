@@ -117,7 +117,8 @@ def api_activities_post_login():
 def api_activities():
     """GET: lay danh sach bai viet.  POST: tao bai moi (yeu cau quyen)."""
     try:
-        from app import get_db_connection, ensure_activities_table
+        from db import get_db_connection
+        from services.activities_service import ensure_activities_table
     except ImportError:
         return jsonify({'success': False, 'error': 'Server config error'}), 500
 
@@ -208,7 +209,8 @@ def api_activities():
 def api_activity_detail(activity_id):
     """Chi tiet / cap nhat / xoa mot bai viet."""
     try:
-        from app import get_db_connection, ensure_activities_table
+        from db import get_db_connection
+        from services.activities_service import ensure_activities_table
     except ImportError:
         return jsonify({'success': False, 'error': 'Server config error'}), 500
 
