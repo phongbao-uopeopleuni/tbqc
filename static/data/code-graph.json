@@ -12,6 +12,8 @@
           "buildStylesheet",
           "clearHighlight",
           "applyHoverHighlight",
+          "countEdges",
+          "layoutOptions",
           "renderDetail",
           "escapeHtml",
           "passesFilters",
@@ -317,12 +319,278 @@
         ],
         "exports": []
       }
+    },
+    {
+      "data": {
+        "id": "templates/activities.html",
+        "label": "activities.html",
+        "path": "templates/activities.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "templates/activity_detail.html",
+        "label": "activity_detail.html",
+        "path": "templates/activity_detail.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "templates/admin/users.html",
+        "label": "users.html",
+        "path": "templates/admin/users.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "templates/contact.html",
+        "label": "contact.html",
+        "path": "templates/contact.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "templates/genealogy.html",
+        "label": "genealogy.html",
+        "path": "templates/genealogy.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "templates/index.html",
+        "label": "index.html",
+        "path": "templates/index.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "templates/login.html",
+        "label": "login.html",
+        "path": "templates/login.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "templates/members.html",
+        "label": "members.html",
+        "path": "templates/members.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
     }
   ],
-  "edges": [],
+  "edges": [
+    {
+      "data": {
+        "id": "e_1",
+        "source": "templates/activities.html",
+        "target": "device-detection.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_2",
+        "source": "templates/activities.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_3",
+        "source": "templates/activity_detail.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_4",
+        "source": "templates/admin/users.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_5",
+        "source": "templates/contact.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_6",
+        "source": "templates/contact.html",
+        "target": "device-detection.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_7",
+        "source": "templates/genealogy.html",
+        "target": "device-detection.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_8",
+        "source": "templates/genealogy.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_9",
+        "source": "templates/genealogy.html",
+        "target": "family-tree-core.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_10",
+        "source": "templates/genealogy.html",
+        "target": "family-tree-graph-builder.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_11",
+        "source": "templates/genealogy.html",
+        "target": "family-tree-family-renderer.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_12",
+        "source": "templates/genealogy.html",
+        "target": "family-tree-ui.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_13",
+        "source": "templates/genealogy.html",
+        "target": "family-tree-family-ui.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_14",
+        "source": "templates/genealogy.html",
+        "target": "multilevel-genealogy.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_15",
+        "source": "templates/genealogy.html",
+        "target": "genealogy-lineage.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_16",
+        "source": "templates/index.html",
+        "target": "device-detection.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_17",
+        "source": "templates/index.html",
+        "target": "genealogy-lineage.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_18",
+        "source": "templates/index.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_19",
+        "source": "templates/index.html",
+        "target": "index.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_20",
+        "source": "templates/login.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_21",
+        "source": "templates/members.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_22",
+        "source": "templates/members.html",
+        "target": "device-detection.js",
+        "label": "loads"
+      }
+    }
+  ],
   "meta": {
     "scannedRoot": "D:\\tbqc\\static\\js",
-    "generatedAt": "2026-04-12T12:04:48.459Z",
-    "fileCount": 12
+    "generatedAt": "2026-04-12T12:09:14.798Z",
+    "fileCount": 12,
+    "templateEdgesMerged": 22
   }
 }

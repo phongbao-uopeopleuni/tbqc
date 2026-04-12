@@ -6,10 +6,14 @@
   'use strict';
 
   var COLORS = {
-    js: '#e8c547',
-    css: '#2d8a6e',
-    html: '#e07c3e',
+    js: '#f5d565',
+    jsBorder: '#b8860b',
+    css: '#34a37a',
+    cssBorder: '#166534',
+    html: '#f0a060',
+    htmlBorder: '#c2410c',
     other: '#94a3b8',
+    edge: '#64748b',
   };
 
   function extOf(node) {
@@ -26,63 +30,95 @@
         selector: 'node',
         style: {
           label: 'data(label)',
-          'font-size': '10px',
+          'font-size': '9px',
+          'font-weight': '600',
           'text-wrap': 'wrap',
-          'text-max-width': '100px',
-          color: '#111827',
+          'text-max-width': '88px',
+          color: '#1e293b',
+          'text-outline-width': 2,
+          'text-outline-color': '#ffffff',
+          'text-outline-opacity': 0.95,
           'background-color': COLORS.other,
-          'border-width': 1,
+          'border-width': 2,
           'border-color': '#64748b',
           shape: 'roundrectangle',
-          width: 56,
-          height: 56,
-          padding: '6px',
+          width: 42,
+          height: 42,
+          padding: '8px',
           'text-valign': 'center',
           'text-halign': 'center',
+          'min-zoomed-font-size': 6,
         },
       },
       {
         selector: 'node[extension = "js"], node[extension = "jsx"], node[extension = "mjs"], node[extension = "cjs"]',
-        style: { 'background-color': COLORS.js, 'border-color': '#b8860b' },
+        style: {
+          'background-color': COLORS.js,
+          'border-color': COLORS.jsBorder,
+        },
       },
       {
         selector: 'node[extension = "css"]',
-        style: { 'background-color': COLORS.css, color: '#f8fafc', 'border-color': '#166534' },
+        style: {
+          'background-color': COLORS.css,
+          color: '#f8fafc',
+          'text-outline-color': '#14532d',
+          'border-color': COLORS.cssBorder,
+        },
       },
       {
         selector: 'node[extension = "html"]',
-        style: { 'background-color': COLORS.html, 'border-color': '#c2410c' },
+        style: {
+          'background-color': COLORS.html,
+          'border-color': COLORS.htmlBorder,
+        },
       },
       {
         selector: 'edge',
         style: {
-          width: 1.5,
-          'line-color': '#94a3b8',
-          'target-arrow-color': '#94a3b8',
+          width: 1.8,
+          'line-color': COLORS.edge,
+          'target-arrow-color': COLORS.edge,
           'target-arrow-shape': 'triangle',
+          'target-arrow-size': 8,
           'curve-style': 'bezier',
-          opacity: 0.85,
+          'arrow-scale': 1,
+          opacity: 0.88,
+          label: 'data(label)',
+          'font-size': '8px',
+          color: '#475569',
+          'text-background-color': '#f1f5f9',
+          'text-background-opacity': 0.92,
+          'text-background-padding': '3px',
+          'text-border-width': 1,
+          'text-border-color': '#e2e8f0',
+          'text-border-opacity': 1,
         },
       },
       {
         selector: 'node.dim',
-        style: { opacity: 0.12 },
+        style: { opacity: 0.1 },
       },
       {
         selector: 'edge.dim',
-        style: { opacity: 0.08 },
+        style: { opacity: 0.06 },
       },
       {
         selector: 'node.hl',
         style: {
           'border-width': 3,
-          'border-color': '#111827',
+          'border-color': '#0f172a',
           opacity: 1,
         },
       },
       {
         selector: 'edge.hl',
-        style: { 'line-color': '#111827', 'target-arrow-color': '#111827', width: 2.5, opacity: 1 },
+        style: {
+          'line-color': '#0f172a',
+          'target-arrow-color': '#0f172a',
+          width: 2.8,
+          opacity: 1,
+        },
       },
     ];
   }
@@ -99,6 +135,59 @@
     cy.edges().not(nb).addClass('dim');
     nb.nodes().addClass('hl');
     nb.edges().addClass('hl');
+  }
+
+  function countEdges(elements) {
+    var n = 0;
+    for (var i = 0; i < elements.length; i++) {
+      if (elements[i].data && elements[i].data.source) n++;
+    }
+    return n;
+  }
+
+  function layoutOptions(elements) {
+    var ec = countEdges(elements);
+    if (ec === 0) {
+      return {
+        name: 'circle',
+        padding: 48,
+        spacingFactor: 1.45,
+        avoidOverlap: true,
+        radius: null,
+        startAngle: -Math.PI / 2,
+        sweep: 2 * Math.PI,
+        animate: true,
+        animationDuration: 450,
+        animationEasing: 'ease-out',
+        fit: true,
+      };
+    }
+    return {
+      name: 'cose',
+      animate: true,
+      animationDuration: 550,
+      animationEasing: 'ease-out',
+      fit: true,
+      padding: 48,
+      nodeDimensionsIncludeLabels: true,
+      randomize: false,
+      componentSpacing: 100,
+      nodeOverlap: 28,
+      refresh: 20,
+      idealEdgeLength: function () {
+        return 95;
+      },
+      edgeElasticity: 0.42,
+      nestingFactor: 0.12,
+      gravity: 0.42,
+      numIter: 2800,
+      initialTemp: 220,
+      coolingFactor: 0.96,
+      minTemp: 1.0,
+      nodeRepulsion: function () {
+        return 520000;
+      },
+    };
   }
 
   function renderDetail(container, d) {
@@ -178,14 +267,20 @@
         }
         if (hintEl) hintEl.style.display = 'none';
 
+        var els = data.nodes.concat(data.edges || []);
         var cy = cytoscape({
           container: container,
-          elements: data.nodes.concat(data.edges),
+          elements: els,
           style: buildStylesheet(),
-          layout: { name: 'cose', animate: false, randomize: true, componentSpacing: 40 },
-          minZoom: 0.2,
-          maxZoom: 3,
-          wheelSensitivity: 0.35,
+          layout: layoutOptions(els),
+          minZoom: 0.15,
+          maxZoom: 3.2,
+          wheelSensitivity: 0.32,
+          boxSelectionEnabled: false,
+        });
+
+        cy.one('layoutstop', function () {
+          cy.fit(undefined, 50);
         });
 
         cy.on('tap', function (evt) {
@@ -220,8 +315,7 @@
 
         function applySidebarFilter() {
           var f = readFilters();
-          var any =
-            f.extJs || f.extCss || f.extHtml || f.extOther;
+          var any = f.extJs || f.extCss || f.extHtml || f.extOther;
           cy.batch(function () {
             cy.nodes().forEach(function (n) {
               var show = !any || passesFilters(n, f);
@@ -234,6 +328,7 @@
               e.style('display', ok ? 'element' : 'none');
             });
           });
+          cy.fit(undefined, 50);
         }
 
         ['cg-filter-js', 'cg-filter-css', 'cg-filter-html', 'cg-filter-other'].forEach(function (id) {
@@ -242,7 +337,6 @@
         });
 
         applySidebarFilter();
-        cy.fit(undefined, 40);
       })
       .catch(function (e) {
         console.error(e);

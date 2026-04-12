@@ -19,6 +19,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   let root = path.join(REPO_ROOT, 'src');
   let out = path.join(REPO_ROOT, 'static', 'data', 'code-graph.json');
+  let mergeTemplates = true;
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--root' && args[i + 1]) {
       const raw = args[++i];
@@ -26,9 +27,11 @@ function parseArgs() {
     } else if (args[i] === '--out' && args[i + 1]) {
       const raw = args[++i];
       out = path.isAbsolute(raw) ? path.normalize(raw) : path.join(REPO_ROOT, raw);
+    } else if (args[i] === '--no-templates') {
+      mergeTemplates = false;
     }
   }
-  return { root, out };
+  return { root, out, mergeTemplates };
 }
 
 const TEXT_EXT = new Set(['.js', '.jsx', '.mjs', '.cjs', '.css', '.html']);
@@ -209,8 +212,51 @@ function parseJsFile(fullPath, rel, fileIndexAbsToRel) {
   };
 }
 
+/** Cạnh từ templates/*.html → /static/js/*.js (script src) — tạo quan hệ thực tế khi không có ES import giữa các file JS */
+function mergeTemplateScriptEdges(repoRoot, nodes, edgeKeys, addEdge) {
+  const templatesDir = path.join(repoRoot, 'templates');
+  if (!fs.existsSync(templatesDir)) return 0;
+  const nodeIds = new Set(nodes.map((n) => n.data.id));
+  let added = 0;
+  const htmlFiles = walkFiles(templatesDir, templatesDir).filter((f) => f.ext === '.html');
+
+  const scriptSrcRe = /<script[^>]+src\s*=\s*["']([^"']+)["']/gi;
+
+  for (const f of htmlFiles) {
+    const relFromRepo = path.relative(repoRoot, f.full).split(path.sep).join('/');
+    const content = fs.readFileSync(f.full, 'utf8');
+    let m;
+    scriptSrcRe.lastIndex = 0;
+    while ((m = scriptSrcRe.exec(content)) !== null) {
+      const src = m[1].trim();
+      const match = src.match(/(?:^|\/)(?:static\/)?js\/([^?'"]+\.js)/i);
+      if (!match) continue;
+      const jsBasename = path.basename(match[1]);
+      if (!nodeIds.has(jsBasename)) continue;
+      if (!nodeIds.has(relFromRepo)) {
+        nodes.push({
+          data: {
+            id: relFromRepo,
+            label: path.basename(relFromRepo),
+            path: relFromRepo,
+            kind: 'template',
+            extension: 'html',
+            functions: [],
+            exports: [],
+          },
+        });
+        nodeIds.add(relFromRepo);
+      }
+      const before = edgeKeys.size;
+      addEdge(relFromRepo, jsBasename, 'loads');
+      if (edgeKeys.size > before) added += 1;
+    }
+  }
+  return added;
+}
+
 function main() {
-  const { root, out } = parseArgs();
+  const { root, out, mergeTemplates } = parseArgs();
   const rootNorm = path.normalize(path.resolve(root));
 
   if (!fs.existsSync(rootNorm)) {
@@ -240,7 +286,7 @@ function main() {
   const edgeKeys = new Set();
   const edges = [];
 
-  function addEdge(fromRel, toRel) {
+  function addEdge(fromRel, toRel, edgeLabel = 'imports') {
     if (!fromRel || !toRel || fromRel === toRel) return;
     const k = `${fromRel}-->${toRel}`;
     if (edgeKeys.has(k)) return;
@@ -250,7 +296,7 @@ function main() {
         id: `e_${edges.length + 1}`,
         source: fromRel,
         target: toRel,
-        label: 'imports',
+        label: edgeLabel,
       },
     });
   }
@@ -309,6 +355,11 @@ function main() {
     }
   }
 
+  let templateEdgeCount = 0;
+  if (mergeTemplates) {
+    templateEdgeCount = mergeTemplateScriptEdges(REPO_ROOT, nodes, edgeKeys, addEdge);
+  }
+
   const payload = {
     nodes,
     edges,
@@ -316,6 +367,7 @@ function main() {
       scannedRoot: rootNorm,
       generatedAt: new Date().toISOString(),
       fileCount: files.length,
+      templateEdgesMerged: mergeTemplates ? templateEdgeCount : 0,
     },
   };
 

@@ -10,10 +10,12 @@ npm install
 npm run scan
 ```
 
-Hoặc quét thư mục khác (ví dụ `static/js`):
+Hoặc quét `static/js` (mặc định gộp thêm cạnh từ `templates/**/*.html` → script):
 
 ```bash
 npm run scan:static
 ```
+
+Tắt gộp template: thêm `--no-templates` vào lệnh `node scan.mjs`.
 
 Đầu ra: `static/data/code-graph.json`.
