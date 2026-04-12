@@ -1,0 +1,328 @@
+{
+  "nodes": [
+    {
+      "data": {
+        "id": "admin-code-graph.js",
+        "label": "admin-code-graph.js",
+        "path": "admin-code-graph.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "extOf",
+          "buildStylesheet",
+          "clearHighlight",
+          "applyHoverHighlight",
+          "renderDetail",
+          "escapeHtml",
+          "passesFilters",
+          "readFilters",
+          "applySidebarFilter",
+          "init"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "common.js",
+        "label": "common.js",
+        "path": "common.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "toggleNavbar",
+          "setActiveMenuItem",
+          "stripDuplicateAliasLabel",
+          "escapeHtml",
+          "formatDate",
+          "formatDateTime",
+          "fetchJson"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "device-detection.js",
+        "label": "device-detection.js",
+        "path": "device-detection.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "family-tree-core.js",
+        "label": "family-tree-core.js",
+        "path": "family-tree-core.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "fetchWithTimeout",
+          "loadTreeData",
+          "traverseNode",
+          "convertTreeToGraph",
+          "traverse",
+          "extractPersonsFromTree",
+          "loadData",
+          "buildGraph",
+          "normalize",
+          "traverseUp",
+          "getAncestors",
+          "traverseDown",
+          "getDescendants",
+          "getGenealogyString",
+          "getBirthSortKey",
+          "compareSiblingPersonIds",
+          "buildTreeNode",
+          "buildDefaultTree",
+          "filterRelatedNodes",
+          "findNode",
+          "buildFocusTree",
+          "getPersonsByGeneration"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "family-tree-family-renderer.js",
+        "label": "family-tree-family-renderer.js",
+        "path": "family-tree-family-renderer.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "renderFamilyNode",
+          "createSpouseHalf",
+          "createFamilyBadge"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "family-tree-family-ui.js",
+        "label": "family-tree-family-ui.js",
+        "path": "family-tree-family-ui.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "getGenerationColor",
+          "walk",
+          "buildLevelDensityMap",
+          "getAdaptiveHorizontalGap",
+          "getNodeHeight",
+          "getNodeSubtreeBounds",
+          "recenterParents",
+          "collectNodesByLevel",
+          "resolveLevelCollisions",
+          "stabilizeLayout",
+          "createLane",
+          "renderFamilyBranchLanes",
+          "getBranchColor",
+          "assignBranchKeys",
+          "propagateBranch",
+          "findFocusFamilyMatchesInTree",
+          "collectDesc",
+          "pruneClone",
+          "pruneFamilyTreeForFocus",
+          "renderFamilyFocusTree",
+          "findMaxBounds",
+          "adjustPositions",
+          "countNodes",
+          "renderFamilyDefaultTree",
+          "isValidSpouseName",
+          "scoreRootCandidate",
+          "buildNode",
+          "countTreeNodes",
+          "countChildrenInTree",
+          "buildFamilyTree",
+          "getNodeWidth",
+          "getLevelY",
+          "shiftSubtree",
+          "layoutFamilyTreeSubtree",
+          "renderFamilyTreeNodes",
+          "drawFamilyConnector"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "family-tree-graph-builder.js",
+        "label": "family-tree-graph-builder.js",
+        "path": "family-tree-graph-builder.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "buildRenderGraph",
+          "generateFamilyGroupId",
+          "generateFamilyMarriageId",
+          "generateFamilyId",
+          "findMarriageChildren",
+          "getMarriageLabel"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "family-tree-ui.js",
+        "label": "family-tree-ui.js",
+        "path": "family-tree-ui.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "getGenerationColor",
+          "notifyMultilevelGenealogy",
+          "adjustParents",
+          "renderNode",
+          "findMaxBounds",
+          "countNodes",
+          "renderDefaultTree",
+          "renderFocusTree",
+          "createNodeElement",
+          "findNodeById",
+          "drawConnectorToSiblings",
+          "drawConnector",
+          "findGenerationRange",
+          "getResponsiveSpacing",
+          "updateChildPositions",
+          "calculatePositions",
+          "adjustHorizontalPositions",
+          "redistributeNodesByGeneration",
+          "resetToDefault",
+          "switchToDefaultMode",
+          "switchToFocusMode",
+          "setupSearch",
+          "focusOnPerson",
+          "updateStats",
+          "showPersonInfo",
+          "escapeHtml",
+          "stripGraveCoordinatesForDisplay",
+          "foldableSection",
+          "formatDate",
+          "displayPersonInfo",
+          "closeModal",
+          "resetView",
+          "zoomIn",
+          "zoomOut",
+          "resetZoom",
+          "fitTreeToView",
+          "applyZoom",
+          "startPan",
+          "onPanMove",
+          "endPan",
+          "setupPanOnTreeContainer",
+          "init"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "genealogy-lineage.js",
+        "label": "genealogy-lineage.js",
+        "path": "genealogy-lineage.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "normalizeName",
+          "normalizeForSearch",
+          "simpleLevenshtein",
+          "namesMatch",
+          "buildNameIndex",
+          "updateNameIndex",
+          "initGenealogyLineage",
+          "findPersonByNameAndGeneration",
+          "findFather",
+          "buildPaternalLine",
+          "buildAncestorChain",
+          "formatLineageAsText",
+          "formatLineageAsHTML",
+          "resolveCandidatesByFatherAndGeneration",
+          "searchPersonsByName",
+          "formatSuggestion",
+          "updatePerson",
+          "formatLineageAsHTMLWithParents",
+          "findPersonById",
+          "buildCompleteLineageById",
+          "buildCompleteLineage",
+          "buildLineageFromGeneration1"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "index.js",
+        "label": "index.js",
+        "path": "index.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "minimal-family-tree.js",
+        "label": "minimal-family-tree.js",
+        "path": "minimal-family-tree.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "buildIndexes",
+          "getSiblings",
+          "buildVisibleGraph",
+          "computeLayout",
+          "formatLifeSpan",
+          "render",
+          "setFocusPerson",
+          "toggleCollapse",
+          "fitToScreen",
+          "updateView",
+          "traverseNode",
+          "convertApiDataToGraph",
+          "loadTreeData",
+          "updateResponsiveMode",
+          "initMinimalFamilyTree"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "multilevel-genealogy.js",
+        "label": "multilevel-genealogy.js",
+        "path": "multilevel-genealogy.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "formatMultilevelCode",
+          "yearFromDateField",
+          "formatLifeYearsSpan",
+          "getPersonFromMap",
+          "appendNameLifeGen",
+          "appendOne",
+          "appendFamilyLabel",
+          "buildTreeGuides",
+          "renderPersonNodeLi",
+          "renderFamilyNodeLi",
+          "navigateToPersonFromMultilevel",
+          "ensureMultilevelDelegation",
+          "updateMultilevelSectionVisibility"
+        ],
+        "exports": []
+      }
+    }
+  ],
+  "edges": [],
+  "meta": {
+    "scannedRoot": "D:\\tbqc\\static\\js",
+    "generatedAt": "2026-04-12T12:04:48.459Z",
+    "fileCount": 12
+  }
+}

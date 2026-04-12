@@ -87,3 +87,6 @@ install_requests.ps1
 fix_index_js.py
 cleanup_unused_files.py
 start_server.py
+
+# Node (code-graph scanner)
+scripts/code-graph/node_modules/

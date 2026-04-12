@@ -1,0 +1,15 @@
+{
+  "name": "tbqc-code-graph",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Quét src/ hoặc thư mục JS → JSON Cytoscape",
+  "scripts": {
+    "scan": "node scan.mjs",
+    "scan:static": "node scan.mjs --root static/js"
+  },
+  "dependencies": {
+    "acorn": "^8.14.0",
+    "acorn-walk": "^8.3.4"
+  }
+}
