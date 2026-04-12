@@ -8,6 +8,24 @@
   <p class="text-muted admin-desc">Ghi lại tất cả các thay đổi và hoạt động trong website</p>
 </div>
 
+<div class="dashboard-grid log-stats-grid" id="logStatsGrid" style="margin-bottom: var(--admin-space-6);">
+  <div class="stat-card">
+    <div class="icon">👁️</div>
+    <div class="value" id="statPvMonth">—</div>
+    <div class="label">Lượt xem trang (tháng này)</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon">📅</div>
+    <div class="value" id="statPvToday">—</div>
+    <div class="label">Lượt xem hôm nay</div>
+  </div>
+  <div class="stat-card">
+    <div class="icon">💾</div>
+    <div class="value" id="statLogBytes">—</div>
+    <div class="label">Dung lượng log trong DB (ước lượng)</div>
+  </div>
+</div>
+
 <div class="filter-bar">
   <div>
     <label for="filterAction">Hành động:</label>
@@ -388,8 +406,46 @@
     }
   }
 
+  function formatBytes(n) {
+    if (n == null || n === '') return '—';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let i = 0;
+    let v = Number(n);
+    if (Number.isNaN(v)) return '—';
+    while (v >= 1024 && i < units.length - 1) {
+      v /= 1024;
+      i++;
+    }
+    return (i === 0 ? v : v.toFixed(2)) + ' ' + units[i];
+  }
+
+  async function loadLogStats() {
+    try {
+      const res = await fetch('/api/admin/log-stats', { credentials: 'include', headers: { Accept: 'application/json' } });
+      const data = await res.json();
+      if (!data.success) {
+        document.getElementById('statPvMonth').textContent = '—';
+        document.getElementById('statPvToday').textContent = '—';
+        document.getElementById('statLogBytes').textContent = data.error === 'no_db' ? 'Lỗi DB' : '—';
+        return;
+      }
+      document.getElementById('statPvMonth').textContent = data.page_views_month != null ? String(data.page_views_month) : '0';
+      document.getElementById('statPvToday').textContent = data.page_views_today != null ? String(data.page_views_today) : '0';
+      let bytes = data.total_log_bytes;
+      if (bytes == null) {
+        let a = data.activity_logs_bytes;
+        let p = data.page_views_bytes;
+        if (a != null || p != null) bytes = (a || 0) + (p || 0);
+      }
+      document.getElementById('statLogBytes').textContent = formatBytes(bytes);
+    } catch (e) {
+      console.error('loadLogStats', e);
+    }
+  }
+
   // Initialize activity logs on page load
   document.addEventListener('DOMContentLoaded', () => {
+    loadLogStats();
     loadActivityLogs();
   });
 </script>

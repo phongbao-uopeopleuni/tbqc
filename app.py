@@ -115,6 +115,12 @@ if register_admin_routes:
     except Exception as e:
         print(f'WARNING: Loi khi dang ky admin routes: {e}')
 
+try:
+    from services.page_views import register_page_views
+
+    register_page_views(app)
+except Exception as e:
+    print(f'WARNING: Khong dang ky page_views: {e}')
 
 
 # NOTE: /members/verify va /api/members da duoc dang ky boi blueprints.members_portal
