@@ -1,11 +1,11 @@
 Ảnh bài giới thiệu trên trang chủ (templates/index.html) — đặt trực tiếp trong thư mục này:
 
-- 1. vua-gia-long.jpg
-- 2. vua-minh-mang.jpg
-- 3. kim sach de he thi.jpg
-- 4. kinh-thanh-hue.jpg
-- 5. phu-tuy-bien.jpg
-- 6. trong nha tho.jpg
+- 1-vua-gia-long.jpg
+- 2-vua-minh-mang.jpg
+- 3-kim-sach-de-he-thi.jpg
+- 4-kinh-thanh-hue.jpg
+- 5-phu-tuy-bien.jpg
+- 6-trong-nha-tho.jpg
 
 Ảnh hero: anh1/anhhome.jpg
 

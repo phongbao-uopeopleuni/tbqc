@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <!--
   CHANGELOG:
+  - W3C Nu HTML: URL-safe image filenames; nav without redundant role; iframe width in px;
+    #about/#temple-interior as divs; removed stray closing div; map width via CSS (.about-map iframe)
   - Added post layout grid (article + sidebar) for blog-style reading experience
   - Enabled TOC sidebar + active tracking with IntersectionObserver
   - Added responsive TOC for mobile (toggle button + accordion)
@@ -59,7 +61,7 @@
   <!-- Site Header -->
   <header>
     <!-- Navbar -->
-    <nav class="navbar" role="navigation" aria-label="Main navigation">
+    <nav class="navbar" aria-label="Main navigation">
       <button class="navbar-toggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
       <ul class="navbar-menu" id="navbarMenu">
         <li><a href="/">Trang chủ</a></li>
@@ -92,7 +94,7 @@
   <!-- Section: About + Temple Interior with shared Sidebar -->
   <div class="post-layout">
     <div class="post-main-column">
-      <section id="about">
+      <div id="about">
       <article class="post-content">
         <div class="section-container">
           <h2 class="section-title" id="gioi-thieu">Giới Thiệu</h2>
@@ -106,7 +108,7 @@
           </p>
           
           <div class="about-image about-image--compact">
-            <img src="/static/images/1. vua-gia-long.jpg" alt="Vua Gia Long" loading="lazy">
+            <img src="/static/images/1-vua-gia-long.jpg" alt="Vua Gia Long" loading="lazy">
           </div>
           
           <p>
@@ -114,7 +116,7 @@
           </p>
           
           <div class="about-image about-image--compact-sm">
-            <img src="/static/images/2. vua-minh-mang.jpg" alt="Vua Minh Mạng" loading="lazy">
+            <img src="/static/images/2-vua-minh-mang.jpg" alt="Vua Minh Mạng" loading="lazy">
           </div>
           
           <p>
@@ -140,7 +142,7 @@
           </blockquote>
           
           <div class="about-image">
-            <img src="/static/images/3. kim sach de he thi.jpg" alt="Kim sách Đế Hệ Thi" loading="lazy">
+            <img src="/static/images/3-kim-sach-de-he-thi.jpg" alt="Kim sách Đế Hệ Thi" loading="lazy">
           </div>
           
           <p>
@@ -148,7 +150,7 @@
           </p>
           
           <div class="about-image">
-            <img src="/static/images/4. kinh-thanh-hue.jpg" alt="Kinh thành Huế" loading="lazy">
+            <img src="/static/images/4-kinh-thanh-hue.jpg" alt="Kinh thành Huế" loading="lazy">
           </div>
 
           <h3 id="tuy-bien-quan-cong">Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</h3>
@@ -300,14 +302,14 @@
           </blockquote>
           
           <div class="about-image">
-            <img src="/static/images/5. phu-tuy-bien.jpg" alt="Phủ Tuy Biên" loading="lazy">
+            <img src="/static/images/5-phu-tuy-bien.jpg" alt="Phủ Tuy Biên" loading="lazy">
           </div>
           
           <!-- Google Maps -->
           <div class="about-map">
             <iframe 
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3826.8494473948927!2d107.59601731485532!3d16.49516058864719!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3141a0c29d9b7599%3A0xe46d1cf33efaad01!2zUGjDsm5nIFR1eSBCacOqbiBRdeG6rW4gQ8O0bmc!5e0!3m2!1svi!2s!4v1736438400000!5m2!1svi!2s&output=embed" 
-              width="100%" 
+              width="600" 
               height="450" allowfullscreen="" 
               loading="lazy" 
               referrerpolicy="no-referrer-when-downgrade"
@@ -322,10 +324,10 @@
       </div>
         </div>
       </article>
-      </section>
+      </div>
 
       <!-- Section: Temple Interior -->
-      <section id="temple-interior">
+      <div id="temple-interior">
     <div class="section-container">
       <h2 class="section-title" id="hinh-anh-nha-tho">Hình Ảnh Bên Trong Nhà Thờ</h2>
       <div class="about-content">
@@ -335,7 +337,7 @@
           </p>
           
           <div class="about-image">
-            <img src="/static/images/6. trong nha tho.jpg" alt="Hình ảnh bên trong nhà thờ Phòng Tuy Biên Quận Công" class="js-hide-on-error" data-image-name="6. trong nha tho.jpg">
+            <img src="/static/images/6-trong-nha-tho.jpg" alt="Hình ảnh bên trong nhà thờ Phòng Tuy Biên Quận Công" class="js-hide-on-error" data-image-name="6-trong-nha-tho.jpg">
           </div>
 
           <h3 class="temple-heading">1️⃣ Hoành phi ở chính giữa (phía trên)</h3>
@@ -412,8 +414,8 @@
           </div>
         </div>
       </div>
-    </div>
-      </section>
+      </div>
+      </div>
     </div>
 
       <!-- Sidebar -->
@@ -472,7 +474,6 @@
         </div>
       </aside>
     </div>
-  </div>
   
   <div class="toc-overlay-mobile" id="tocOverlayMobile"></div>
 
@@ -557,7 +558,7 @@
   </footer>
 
   <script src="/static/js/common.js"></script>
-  <script src="/static/js/index.js?v=20260414b" defer></script>
+  <script src="/static/js/index.js?v=20260414c" defer></script>
   <script>
     (function() {
       'use strict';

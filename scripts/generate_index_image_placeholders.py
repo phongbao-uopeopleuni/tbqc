@@ -53,14 +53,14 @@ def main() -> None:
             ["Ảnh minh họa — Hero"],
             "(Thay bằng ảnh thật: anhhome.jpg)",
         )
-    # Tên file khớp README + templates/index.html
+    # Tên file khớp README + templates/index.html (URL-safe, không khoảng trắng)
     specs: list[tuple[str, tuple[int, int], list[str], str | None]] = [
-        (os.path.join(root, "1. vua-gia-long.jpg"), (680, 420), ["1. Vua Gia Long"], None),
-        (os.path.join(root, "2. vua-minh-mang.jpg"), (680, 420), ["2. Vua Minh Mạng"], None),
-        (os.path.join(root, "3. kim sach de he thi.jpg"), (680, 420), ["3. Kim sách Đế Hệ Thi"], None),
-        (os.path.join(root, "4. kinh-thanh-hue.jpg"), (680, 420), ["4. Kinh thành Huế"], None),
-        (os.path.join(root, "5. phu-tuy-bien.jpg"), (680, 420), ["5. Phủ Tuy Biên"], None),
-        (os.path.join(root, "6. trong nha tho.jpg"), (680, 420), ["6. Trong nhà thờ"], None),
+        (os.path.join(root, "1-vua-gia-long.jpg"), (680, 420), ["1. Vua Gia Long"], None),
+        (os.path.join(root, "2-vua-minh-mang.jpg"), (680, 420), ["2. Vua Minh Mạng"], None),
+        (os.path.join(root, "3-kim-sach-de-he-thi.jpg"), (680, 420), ["3. Kim sách Đế Hệ Thi"], None),
+        (os.path.join(root, "4-kinh-thanh-hue.jpg"), (680, 420), ["4. Kinh thành Huế"], None),
+        (os.path.join(root, "5-phu-tuy-bien.jpg"), (680, 420), ["5. Phủ Tuy Biên"], None),
+        (os.path.join(root, "6-trong-nha-tho.jpg"), (680, 420), ["6. Trong nhà thờ"], None),
     ]
     if hero_spec is not None:
         specs.insert(0, hero_spec)

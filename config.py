@@ -50,6 +50,20 @@ def load_env():
         print("WARNING: No .env at", env_path)
 
 
+def is_production_env() -> bool:
+    """Giống điều kiện production trong Config.init_app (Railway, Render, COOKIE_DOMAIN, ...)."""
+    return (
+        os.environ.get("RAILWAY_ENVIRONMENT") == "production"
+        or os.environ.get("RAILWAY") == "true"
+        or os.environ.get("RENDER") == "true"
+        or (os.environ.get("ENVIRONMENT") == "production")
+        or (
+            os.environ.get("COOKIE_DOMAIN") is not None
+            and os.environ.get("COOKIE_DOMAIN") != ""
+        )
+    )
+
+
 class Config:
     """Flask config giữ nguyên logic hiện tại, tách khỏi app.py."""
 
@@ -57,16 +71,7 @@ class Config:
 
     @staticmethod
     def init_app(app):
-        is_production = (
-            os.environ.get("RAILWAY_ENVIRONMENT") == "production"
-            or os.environ.get("RAILWAY") == "true"
-            or os.environ.get("RENDER") == "true"
-            or (os.environ.get("ENVIRONMENT") == "production")
-            or (
-                os.environ.get("COOKIE_DOMAIN") is not None
-                and os.environ.get("COOKIE_DOMAIN") != ""
-            )
-        )
+        is_production = is_production_env()
 
         app.config["DEBUG"] = (
             False

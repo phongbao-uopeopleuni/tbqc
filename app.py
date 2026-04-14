@@ -19,7 +19,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from audit_log import log_person_update, log_person_create, log_activity
-from config import Config, load_env
+from config import Config, is_production_env, load_env
 from extensions import init_extensions, cache, limiter, rate_limit
 logger = logging.getLogger(__name__)
 
@@ -71,6 +71,14 @@ try:
     allowed_origins = app.config.get('CORS_ALLOWED_ORIGINS', [])
     CORS(app, origins=allowed_origins, supports_credentials=True)
     init_extensions(app)
+
+    @app.after_request
+    def _add_hsts_header(response):
+        """HSTS: Railway chấm dứt TLS phía trước; ProxyFix (x_proto) giúp request.is_secure đúng với HTTPS."""
+        if request.is_secure:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000'
+        return response
+
     print('OK: Flask app da duoc khoi tao')
     print(f'   Static folder: {app.static_folder}')
     print(f'   Template folder: {app.template_folder}')
@@ -224,6 +232,42 @@ if FIXED_MEMBERS_PASSWORDS:
         len(FIXED_MEMBERS_PASSWORDS),
     )
 external_posts_cache = {'data': None, 'timestamp': None, 'cache_duration': timedelta(minutes=30)}
+
+
+def _health_detail_authorized():
+    """Đầy đủ chi tiết /api/health khi đặt HEALTH_DETAIL_SECRET và gửi đúng header."""
+    secret = (os.environ.get('HEALTH_DETAIL_SECRET') or '').strip()
+    if not secret:
+        return False
+    key = (request.headers.get('X-Health-Detail-Key') or '').strip()
+    return bool(key) and secrets.compare_digest(key, secret)
+
+
+def _public_health_payload(full: dict) -> dict:
+    """Bản health công khai: không lộ host DB, user, port, lỗi nội bộ chi tiết."""
+    out = {
+        'server': full.get('server', 'ok'),
+        'database': full.get('database', 'unknown'),
+        'blueprints_registered': full.get('blueprints_registered', True),
+        'stats': full.get('stats', {'persons_count': 0, 'relationships_count': 0}),
+    }
+    if full.get('database', '').startswith('error:'):
+        out['database'] = 'error'
+    return out
+
+
+def _external_posts_mutation_authorized():
+    """
+    clear-cache / refresh: nếu EXTERNAL_POSTS_CACHE_SECRET không đặt → giữ hành vi cũ (mở).
+    Nếu đặt → bắt buộc header X-External-Posts-Token hoặc X-Cache-Token (hoặc ?token= cho GET).
+    """
+    secret = (os.environ.get('EXTERNAL_POSTS_CACHE_SECRET') or '').strip()
+    if not secret:
+        return True
+    token = (request.headers.get('X-External-Posts-Token') or request.headers.get('X-Cache-Token') or '').strip()
+    if not token:
+        token = (request.args.get('token') or '').strip()
+    return bool(token) and secrets.compare_digest(token, secret)
 # RSS chính thức của NukeViet cho mục Hoạt động Hội đồng NPT VN (khác /feed/ — trang đó redirect về trang chủ)
 NPT_COUNCIL_RSS_URL = 'https://nguyenphuoctoc.info/rss/hoat-dong-hoi-dong-npt-vn/'
 
@@ -1402,9 +1446,13 @@ def api_health():
                 health_status['connection_error'] = str(e)
         if BLUEPRINTS_ERROR:
             health_status['blueprints_error'] = BLUEPRINTS_ERROR
+        if is_production_env() and not _health_detail_authorized():
+            return jsonify(_public_health_payload(health_status))
         return jsonify(health_status)
     except Exception as e:
         logger.error(f'api_health error: {e}', exc_info=True)
+        if is_production_env() and not _health_detail_authorized():
+            return jsonify({'server': 'ok', 'database': 'error'}), 500
         return jsonify({'server': 'ok', 'database': 'error', 'error': str(e)}), 500
 
 
@@ -1444,7 +1492,9 @@ def get_external_posts():
 
 @app.route('/api/external-posts/clear-cache', methods=['POST'])
 def clear_external_posts_cache():
-    """Xóa cache RSS (ví dụ sau khi deploy). Không yêu cầu auth để tránh kẹt khi admin lỗi."""
+    """Xóa cache RSS. Tùy chọn: EXTERNAL_POSTS_CACHE_SECRET + header X-External-Posts-Token."""
+    if not _external_posts_mutation_authorized():
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     external_posts_cache['data'] = None
     external_posts_cache['timestamp'] = None
     return jsonify({'success': True, 'message': 'Đã xóa cache external-posts'})
@@ -1452,7 +1502,9 @@ def clear_external_posts_cache():
 
 @app.route('/api/external-posts/refresh', methods=['GET', 'POST'])
 def refresh_external_posts():
-    """Bỏ qua cache và tải lại RSS."""
+    """Bỏ qua cache và tải lại RSS. Cùng quy tắc token với clear-cache khi đặt EXTERNAL_POSTS_CACHE_SECRET."""
+    if not _external_posts_mutation_authorized():
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
     now = datetime.now(timezone.utc)
     try:
         limit = min(max(int(request.args.get('limit', 15)), 1), 50)
