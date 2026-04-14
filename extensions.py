@@ -115,3 +115,12 @@ def init_extensions(app):
     except Exception as e:
         print(f"WARNING: Loi khi khoi tao rate limiter: {e}")
 
+    # Giảm nguy cơ ghi password/token dạng key=value vào log (không đổi hành vi request)
+    try:
+        from utils.logging_redact import install_root_log_redaction
+
+        install_root_log_redaction()
+        print("OK: Log redaction filter (sensitive key=value)")
+    except Exception as e:
+        print(f"WARNING: Log redaction filter: {e}")
+

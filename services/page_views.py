@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Ghi lượt xem trang (GET) vào bảng page_views + API thống kê cho admin /admin/logs.
+
+Tránh lỗi MySQL «Unread result found»: cursor buffered=True, đọc hết sau SET time_zone,
+đóng cursor trong finally ở get_log_stats_payload. Nếu production vẫn báo lỗi, kiểm tra pool/phiên bản driver.
 """
 import logging
 from flask import request, jsonify
@@ -14,9 +17,14 @@ _VN_TZ_SQL = "+07:00"
 
 
 def _session_timezone_vn(conn):
+    """Đặt timezone session; buffered + fetchall tránh Unread result found trên connection."""
     try:
-        c = conn.cursor()
+        c = conn.cursor(buffered=True)
         c.execute("SET SESSION time_zone = %s", (_VN_TZ_SQL,))
+        try:
+            c.fetchall()
+        except Exception:
+            pass
         c.close()
     except Exception as e:
         logger.debug("page_views SET time_zone: %s", e)
@@ -51,7 +59,7 @@ def _ensure_dedup_index(conn):
     if _dedup_index_ready:
         return
     try:
-        cur = conn.cursor()
+        cur = conn.cursor(buffered=True)
         cur.execute("SHOW INDEX FROM page_views WHERE Key_name = 'idx_pv_ip_path_created'")
         if cur.fetchone():
             _dedup_index_ready = True
@@ -77,7 +85,7 @@ def _ensure_page_views_table(conn):
         _ensure_dedup_index(conn)
         return True
     try:
-        cur = conn.cursor()
+        cur = conn.cursor(buffered=True)
         cur.execute(CREATE_PAGE_VIEWS_SQL)
         conn.commit()
         cur.close()
@@ -138,7 +146,8 @@ def _record_page_view():
         ua = _truncate(request.headers.get("User-Agent"), 512)
         ref = _truncate(request.headers.get("Referer"), 512)
         ip_key = ip if ip is not None else ""
-        cur = conn.cursor()
+        # buffered=True: luôn đọc hết result set — tránh Unread result found khi dùng lại connection từ pool
+        cur = conn.cursor(buffered=True)
         cur.execute(
             """
             SELECT 1 FROM page_views
@@ -256,10 +265,11 @@ def get_log_stats_payload():
         out["success"] = False
         out["error"] = "no_db"
         return out
+    cur = None
     try:
         _session_timezone_vn(conn)
         _ensure_page_views_table(conn)
-        cur = conn.cursor(dictionary=True)
+        cur = conn.cursor(dictionary=True, buffered=True)
         cur.execute("SHOW TABLES LIKE 'page_views'")
         if not cur.fetchone():
             out["page_views_table_exists"] = False
@@ -272,14 +282,21 @@ def get_log_stats_payload():
         cur.execute("SHOW TABLES LIKE 'activity_logs'")
         if cur.fetchone():
             out["activity_logs_bytes"] = _table_bytes(cur, "activity_logs")
-        cur.close()
     except Error as e:
         logger.error("get_log_stats: %s", e)
         out["success"] = False
         out["error"] = str(e)
     finally:
-        if conn.is_connected():
-            conn.close()
+        try:
+            if cur is not None:
+                cur.close()
+        except Exception:
+            pass
+        try:
+            if conn.is_connected():
+                conn.close()
+        except Exception:
+            pass
     total = 0
     for k in ("activity_logs_bytes", "page_views_bytes"):
         v = out.get(k)

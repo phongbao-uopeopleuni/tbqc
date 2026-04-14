@@ -2879,7 +2879,6 @@
         }
       }
     }
-    */
 
 // Helper function để escape HTML
     function escapeHtml(text) {
@@ -3088,10 +3087,36 @@
       document.getElementById('categorySections').innerHTML = categoriesHtml || '<div class="placeholder placeholder--muted">Chưa có bài viết</div>';
     }
 
-    // Load external posts from nguyenphuoctoc.info
+    function renderNptCouncilSidebar(posts) {
+      const sidebar = document.getElementById('nptCouncilList');
+      if (!sidebar) return;
+
+      const homeLi = `
+            <li><a href="https://nguyenphuoctoc.info" target="_blank" rel="noopener noreferrer">Trang chủ Hội đồng NPT VN <span class="external-link-icon">↗</span></a></li>`;
+      const fallbackLi = `
+            <li><a href="https://nguyenphuoctoc.info/hoat-dong-hoi-dong-npt-vn/" target="_blank" rel="noopener noreferrer">Xem tất cả hoạt động tại nguyenphuoctoc.info</a></li>`;
+
+      if (!Array.isArray(posts) || posts.length === 0) {
+        sidebar.innerHTML = homeLi + fallbackLi;
+        return;
+      }
+
+      const max = 5;
+      const items = posts.filter(p => p && p.title && p.link).slice(0, max);
+      let html = homeLi;
+      items.forEach(post => {
+        const badge = post.is_new
+          ? ' <span class="new-info-badge">Thông tin mới</span>'
+          : '';
+        html += `
+            <li><a href="${escapeHtml(post.link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(post.title)}${badge}</a></li>`;
+      });
+      sidebar.innerHTML = html;
+    }
+
+    // Load external posts from nguyenphuoctoc.info (RSS qua /api/external-posts)
     async function loadExternalPosts() {
       const container = document.getElementById('externalPosts');
-      if (!container) return;
 
       const fallbackHtml = `
         <div class="external-posts-fallback placeholder placeholder--lg">
@@ -3104,34 +3129,43 @@
         </div>
       `;
 
+      let _nptFetchTimer;
       try {
-        const response = await fetch('/api/external-posts');
-        
-        // Kiểm tra response.ok TRƯỚC khi parse JSON
+        const ctrl = new AbortController();
+        _nptFetchTimer = setTimeout(function () { try { ctrl.abort(); } catch (e) { /* noop */ } }, 25000);
+        const response = await fetch('/api/external-posts', { signal: ctrl.signal });
+        clearTimeout(_nptFetchTimer);
+        _nptFetchTimer = null;
+
         if (!response.ok) {
           console.error(`External posts API error: HTTP ${response.status}`);
-          container.innerHTML = fallbackHtml;
+          renderNptCouncilSidebar([]);
+          if (container) container.innerHTML = fallbackHtml;
           return;
         }
-        
+
         const result = await response.json().catch(err => {
           console.error('JSON parse error for external posts:', err);
           throw err;
         });
-        
-        // Kiểm tra kết quả
+
         if (!result || result.success === false) {
           console.error('External posts API returned error:', result?.error || 'Unknown error');
-          container.innerHTML = fallbackHtml;
+          renderNptCouncilSidebar([]);
+          if (container) container.innerHTML = fallbackHtml;
           return;
         }
-        
-        if (result.success && result.data && Array.isArray(result.data) && result.data.length > 0) {
+
+        const posts = Array.isArray(result.data) ? result.data : [];
+        renderNptCouncilSidebar(posts);
+
+        if (!container) return;
+
+        if (posts.length > 0) {
           let html = '';
-          
-          result.data.forEach(post => {
+          posts.forEach(post => {
             if (!post || !post.title) return; // Bỏ qua post không hợp lệ
-            
+
             html += `
               <div class="external-post-item">
                 <div class="external-post-thumbnail">
@@ -3169,19 +3203,20 @@
               </div>
             `;
           });
-          
+
           if (html) {
             container.innerHTML = html;
           } else {
             container.innerHTML = fallbackHtml;
           }
         } else {
-          // Không có dữ liệu hoặc dữ liệu rỗng
           container.innerHTML = fallbackHtml;
         }
       } catch (error) {
+        if (_nptFetchTimer) clearTimeout(_nptFetchTimer);
         console.error('Error loading external posts:', error);
-        container.innerHTML = fallbackHtml;
+        renderNptCouncilSidebar([]);
+        if (container) container.innerHTML = fallbackHtml;
       }
     }
 

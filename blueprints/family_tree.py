@@ -40,16 +40,19 @@ def _call_app(handler_name, *args, **kwargs):
 
 
 @family_tree_bp.route('/api/family-tree')
+@rate_limit("90 per minute")
 def get_family_tree():
     return _call_app('get_family_tree')
 
 
 @family_tree_bp.route('/api/relationships')
+@rate_limit("90 per minute")
 def get_relationships():
     return _call_app('get_relationships')
 
 
 @family_tree_bp.route('/api/children/<parent_id>')
+@rate_limit("90 per minute")
 def get_children(parent_id):
     return _call_app('get_children', parent_id)
 
@@ -67,15 +70,18 @@ def get_tree():
 
 
 @family_tree_bp.route('/api/ancestors/<person_id>', methods=['GET'])
+@rate_limit("90 per minute")
 def get_ancestors(person_id):
     return _call_app('get_ancestors', person_id)
 
 
 @family_tree_bp.route('/api/descendants/<person_id>', methods=['GET'])
+@rate_limit("90 per minute")
 def get_descendants(person_id):
     return _call_app('get_descendants', person_id)
 
 
 @family_tree_bp.route('/api/generations', methods=['GET'], strict_slashes=False)
+@rate_limit("90 per minute")
 def get_generations_api():
     return _call_app('get_generations_api')

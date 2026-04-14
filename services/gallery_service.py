@@ -16,38 +16,88 @@ from services.activities_service import is_admin_user
 logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+
+def _load_env_file_safe():
+    try:
+        from folder_py.db_config import load_env_file
+    except ImportError:
+        from db_config import load_env_file  # type: ignore
+    return load_env_file
+
+
+def _geoapify_server_key_from_env():
+    """Chỉ dùng phía server — không gửi ra JSON."""
+    api_key = (os.environ.get("GEOAPIFY_API_KEY") or "").strip()
+    if api_key:
+        return api_key
+    try:
+        load_env_file = _load_env_file_safe()
+        env_file = os.path.join(BASE_DIR, "tbqc_db.env")
+        if os.path.exists(env_file):
+            env_vars = load_env_file(env_file)
+            file_api_key = (env_vars.get("GEOAPIFY_API_KEY") or "").strip()
+            if file_api_key:
+                os.environ["GEOAPIFY_API_KEY"] = file_api_key
+                logger.info("GEOAPIFY_API_KEY loaded from tbqc_db.env (local dev)")
+                return file_api_key
+    except Exception as e:
+        logger.error("Could not load GEOAPIFY_API_KEY: %s", e)
+    return ""
+
+
+def _geoapify_browser_key_from_env():
+    """Key dành cho client (nên tạo key riêng + giới hạn HTTP Referrer trên Geoapify)."""
+    k = (os.environ.get("GEOAPIFY_BROWSER_KEY") or "").strip()
+    if k:
+        return k
+    try:
+        load_env_file = _load_env_file_safe()
+        env_file = os.path.join(BASE_DIR, "tbqc_db.env")
+        if os.path.exists(env_file):
+            env_vars = load_env_file(env_file)
+            bk = (env_vars.get("GEOAPIFY_BROWSER_KEY") or "").strip()
+            if bk:
+                os.environ["GEOAPIFY_BROWSER_KEY"] = bk
+                return bk
+    except Exception as e:
+        logger.debug("GEOAPIFY_BROWSER_KEY from file: %s", e)
+    return ""
+
+
 def get_geoapify_api_key():
     """
-    Lấy Geoapify API key từ environment variable hoặc tbqc_db.env.
-    Priority: Environment variable > tbqc_db.env
-    
-    Get Geoapify API key from environment variable or tbqc_db.env.
-    Priority: Environment variable > tbqc_db.env
-    
-    Returns:
-        JSON response chứa api_key
-        JSON response containing api_key
+    Không trả GEOAPIFY_API_KEY ra trình duyệt (tránh lạm dụng quota).
+
+    - GEOAPIFY_API_KEY: chỉ server / geocoding phía sau (giữ trong env).
+    - GEOAPIFY_BROWSER_KEY (tùy chọn): key riêng cho client; cấu hình giới hạn domain trên Geoapify.
+    - GEOAPIFY_EXPOSE_SERVER_KEY_TO_BROWSER=1: chỉ bật tạm nếu cần tương thích cũ (không khuyến nghị).
     """
-    api_key = os.environ.get('GEOAPIFY_API_KEY', '')
-    if not api_key:
-        try:
-            env_file = os.path.join(BASE_DIR, 'tbqc_db.env')
-            if os.path.exists(env_file):
-                env_vars = load_env_file(env_file)
-                file_api_key = env_vars.get('GEOAPIFY_API_KEY', '')
-                if file_api_key:
-                    api_key = file_api_key
-                    os.environ['GEOAPIFY_API_KEY'] = api_key
-                    logger.info('GEOAPIFY_API_KEY loaded from tbqc_db.env (local dev)')
-            else:
-                logger.debug(f'File tbqc_db.env không tồn tại (production mode), sử dụng environment variables')
-        except Exception as e:
-            logger.error(f'Could not load GEOAPIFY_API_KEY from tbqc_db.env: {e}')
-            import traceback
-            logger.error(traceback.format_exc())
-    if not api_key:
-        logger.warning('GEOAPIFY_API_KEY chưa được cấu hình trong environment variables hoặc tbqc_db.env')
-    return jsonify({'api_key': api_key})
+    server_key = _geoapify_server_key_from_env()
+    if not server_key:
+        logger.warning(
+            "GEOAPIFY_API_KEY chưa được cấu hình — map Geoapify phía server (nếu có) sẽ không dùng được."
+        )
+
+    legacy = (os.environ.get("GEOAPIFY_EXPOSE_SERVER_KEY_TO_BROWSER") or "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if legacy and server_key:
+        logger.warning("GEOAPIFY_EXPOSE_SERVER_KEY_TO_BROWSER active — server key exposed to browser")
+        return jsonify({"api_key": server_key, "warning": "legacy_server_key_exposed"})
+
+    browser_key = _geoapify_browser_key_from_env()
+    if browser_key:
+        return jsonify({"api_key": browser_key, "source": "browser_key"})
+
+    return jsonify(
+        {
+            "api_key": "",
+            "server_key_configured": bool(server_key),
+            "message": "Server Geoapify key is not exposed. Set GEOAPIFY_BROWSER_KEY for a referrer-restricted client key, or GEOAPIFY_EXPOSE_SERVER_KEY_TO_BROWSER=1 only as a temporary fallback.",
+        }
+    )
 
 @limiter.limit('10 per hour') if limiter else lambda f: f
 def update_grave_location():

@@ -130,3 +130,6 @@ class Config:
 
         app.config["CORS_ALLOWED_ORIGINS"] = allowed_origins
 
+        # CSRF (Flask-WTF): bật mặc định; form/fetch gửi X-CSRFToken (meta csrf-token trong template).
+        app.config.setdefault("WTF_CSRF_ENABLED", True)
+

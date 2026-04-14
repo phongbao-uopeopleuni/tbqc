@@ -9,6 +9,12 @@ import json
 import os
 from datetime import datetime
 from flask import request
+
+try:
+    from utils.sensitive_redact import redact_for_audit
+except ImportError:
+    def redact_for_audit(data):
+        return data
 from flask_login import current_user
 import mysql.connector
 from mysql.connector import Error
@@ -68,9 +74,11 @@ def log_activity(action, target_type=None, target_id=None, before_data=None, aft
         ip_address = request.remote_addr if request else None
         user_agent = request.headers.get('User-Agent') if request else None
         
-        # Convert dict to JSON string
-        before_json = json.dumps(before_data, ensure_ascii=False) if before_data else None
-        after_json = json.dumps(after_data, ensure_ascii=False) if after_data else None
+        # Không lưu mật khẩu / token vào activity_logs (bản sao đã redact)
+        safe_before = redact_for_audit(before_data) if before_data else None
+        safe_after = redact_for_audit(after_data) if after_data else None
+        before_json = json.dumps(safe_before, ensure_ascii=False) if safe_before else None
+        after_json = json.dumps(safe_after, ensure_ascii=False) if safe_after else None
         
         # Kiểm tra xem bảng activity_logs có tồn tại không
         cursor = connection.cursor()

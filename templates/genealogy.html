@@ -5805,6 +5805,22 @@
     }
 
     /**
+     * Chỉ lấy năm (4 chữ số) cho khu vực kết quả mộ phần — tránh chuỗi dạng "Sun, 21 Jun 1885 00:00:00 GMT".
+     */
+    function graveYearOnly(value) {
+      if (value == null || value === '') return '';
+      const s = String(value).trim();
+      if (!s) return '';
+      const d = new Date(s);
+      if (!Number.isNaN(d.getTime())) {
+        const y = d.getFullYear();
+        if (y >= 1000 && y <= 2200) return String(y);
+      }
+      const m = s.match(/\b(1[0-9]{3}|20[0-9]{2})\b/);
+      return m ? m[1] : '';
+    }
+
+    /**
      * Extract coordinates from grave_info string
      */
     function extractCoordinates(graveInfo) {
@@ -5896,8 +5912,8 @@
             ${person.alias ? `<div><strong>Tên thường gọi:</strong> ${escapeHtml(stripDuplicateAliasLabel(person.alias))}</div>` : ''}
             <div><strong>Đời:</strong> ${person.generation_level || 'Chưa có'}</div>
             <div><strong>Giới tính:</strong> ${person.gender || 'Chưa có'}</div>
-            ${person.birth_date ? `<div><strong>Ngày sinh:</strong> ${person.birth_date}</div>` : ''}
-            ${person.death_date ? `<div><strong>Ngày mất:</strong> ${person.death_date}</div>` : ''}
+            ${graveYearOnly(person.birth_date) ? `<div><strong>Ngày sinh:</strong> ${graveYearOnly(person.birth_date)}</div>` : ''}
+            ${graveYearOnly(person.death_date) ? `<div><strong>Ngày mất:</strong> ${graveYearOnly(person.death_date)}</div>` : ''}
             ${person.place_of_death ? `<div><strong>Nơi mất:</strong> ${person.place_of_death}</div>` : ''}
             ${person.home_town ? `<div><strong>Quê quán:</strong> ${person.home_town}</div>` : ''}
           `;

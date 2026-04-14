@@ -46,16 +46,19 @@ def _call_app(handler_name, *args, **kwargs):
 
 
 @persons_bp.route('/api/persons')
+@rate_limit("90 per minute")
 def get_persons():
     return _call_app('get_persons')
 
 
 @persons_bp.route('/api/person/<person_id>')
+@rate_limit("90 per minute")
 def get_person(person_id):
     return _call_app('get_person', person_id)
 
 
 @persons_bp.route('/api/search', methods=['GET'])
+@rate_limit("90 per minute")
 def search_persons():
     return _call_app('search_persons')
 

@@ -13,12 +13,14 @@ import csv
 import sys
 import logging
 import re
+import xml.etree.ElementTree as ET
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from audit_log import log_person_update, log_person_create, log_activity
 from config import Config, load_env
-from extensions import init_extensions, cache, limiter
+from extensions import init_extensions, cache, limiter, rate_limit
 logger = logging.getLogger(__name__)
 
 # Load .env first so DB_*, SECRET_KEY, etc. are available before db_config and the rest of the app
@@ -216,7 +218,79 @@ def _load_fixed_members_passwords():
     return result
 FIXED_MEMBERS_PASSWORDS = _load_fixed_members_passwords()
 MEMBERS_GATE_ACCOUNTS = [{'username': k, 'password': v} for k, v in FIXED_MEMBERS_PASSWORDS.items()]
+if FIXED_MEMBERS_PASSWORDS:
+    logger.info(
+        'Members gate: %d fixed account(s) from MEMBERS_FIXED_ACCOUNTS — chỉ cấu hình trên server; đổi định kỳ nếu nghi lộ.',
+        len(FIXED_MEMBERS_PASSWORDS),
+    )
 external_posts_cache = {'data': None, 'timestamp': None, 'cache_duration': timedelta(minutes=30)}
+# RSS chính thức của NukeViet cho mục Hoạt động Hội đồng NPT VN (khác /feed/ — trang đó redirect về trang chủ)
+NPT_COUNCIL_RSS_URL = 'https://nguyenphuoctoc.info/rss/hoat-dong-hoi-dong-npt-vn/'
+
+
+def _npt_post_is_new(pub_date_str: str, days: int = 60) -> bool:
+    """Đánh dấu tin còn mới (dùng cho badge Thông tin mới)."""
+    if not pub_date_str or not pub_date_str.strip():
+        return False
+    try:
+        dt = parsedate_to_datetime(pub_date_str.strip())
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        return (now - dt).total_seconds() <= days * 86400
+    except Exception:
+        return False
+
+
+def _fetch_npt_council_rss(limit: int = 15):
+    """
+    Lấy danh sách bài từ RSS NukeViet. Phản hồi có thể có cảnh báo PHP trước <?xml — cần cắt bỏ.
+    """
+    headers = {
+        'User-Agent': 'PhongTuyBienQuanCong/1.0 (+https://www.phongtuybienquancong.info)',
+        'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+        # Một số máy chủ IIS gắn Content-Encoding: gzip không khớp nội dung — tắt nén để tránh lỗi giải mã
+        'Accept-Encoding': 'identity',
+    }
+    r = requests.get(NPT_COUNCIL_RSS_URL, timeout=30, headers=headers)
+    r.raise_for_status()
+    r.encoding = r.apparent_encoding or 'utf-8'
+    text = r.text
+    idx = text.find('<?xml')
+    if idx > 0:
+        text = text[idx:]
+    root = ET.fromstring(text)
+    channel = root.find('channel')
+    if channel is None:
+        return []
+    out = []
+    for item in channel.findall('item')[:limit]:
+        title = (item.findtext('title') or '').strip()
+        link = (item.findtext('link') or '').strip()
+        pub = (item.findtext('pubDate') or '').strip()
+        desc_html = (item.findtext('description') or '').strip()
+        if not title or not link:
+            continue
+        thumb = None
+        plain = ''
+        if desc_html:
+            soup = BeautifulSoup(desc_html, 'lxml')
+            img = soup.find('img')
+            if img and img.get('src'):
+                thumb = img['src'].strip()
+            plain = soup.get_text(separator=' ', strip=True)
+            if len(plain) > 500:
+                plain = plain[:500].rsplit(' ', 1)[0] + '…'
+        out.append({
+            'title': title,
+            'link': link,
+            'date': pub,
+            'description': plain,
+            'thumbnail': thumb,
+            'is_new': _npt_post_is_new(pub),
+        })
+    return out
+
 
 def sync_members_gate_accounts_from_db():
     """
@@ -231,7 +305,7 @@ def sync_members_gate_accounts_from_db():
         return
     try:
         cursor = connection.cursor(dictionary=True)
-        logger.debug('MEMBERS_GATE_ACCOUNTS sync: Using hardcoded passwords (sync manually when updating)')
+        logger.debug('MEMBERS_GATE_ACCOUNTS sync: skipped (update accounts via env when needed)')
     except Exception as e:
         logger.error(f'Error syncing MEMBERS_GATE_ACCOUNTS: {e}')
     finally:
@@ -469,6 +543,56 @@ def sync_genealogy_from_members():
         except Exception as e:
             logger.debug(f'Error closing connection: {e}')
 
+
+def _collect_person_ids_from_tree_node(node):
+    """Thu thập mọi person_id trong cây JSON do build_tree trả về."""
+    if not node:
+        return set()
+    out = set()
+    pid = node.get("person_id")
+    if pid:
+        out.add(str(pid))
+    for ch in node.get("children") or []:
+        out |= _collect_person_ids_from_tree_node(ch)
+    return out
+
+
+def _fetch_marriage_pairs_in_scope(cursor, id_set):
+    """
+    Các cặp trong bảng marriages mà cả person_id và spouse_person_id đều nằm trong id_set
+    (đồng bộ với phạm vi cây đang tải). Trả về [[a,b], ...] với a <= b (sort chuỗi).
+    """
+    if not id_set:
+        return []
+    ids = tuple(id_set)
+    placeholders = ",".join(["%s"] * len(ids))
+    cursor.execute(
+        f"""
+        SELECT person_id, spouse_person_id FROM marriages
+        WHERE person_id IN ({placeholders}) AND spouse_person_id IN ({placeholders})
+        """,
+        ids + ids,
+    )
+    rows = cursor.fetchall()
+    pairs = []
+    seen = set()
+    for row in rows or []:
+        if isinstance(row, dict):
+            a = row.get("person_id")
+            b = row.get("spouse_person_id")
+        else:
+            a, b = row[0], row[1]
+        if not a or not b or a == b:
+            continue
+        a, b = str(a), str(b)
+        key = tuple(sorted((a, b)))
+        if key in seen:
+            continue
+        seen.add(key)
+        pairs.append([key[0], key[1]])
+    return pairs
+
+
 def get_tree():
     """
     Get genealogy tree from root_id up to max_gen (schema mới).
@@ -573,6 +697,12 @@ def get_tree():
                 ),
                 500,
             )
+        try:
+            tree_ids = _collect_person_ids_from_tree_node(tree)
+            tree["marriage_pairs"] = _fetch_marriage_pairs_in_scope(cursor, tree_ids)
+        except Exception as e:
+            logger.warning("Could not attach marriage_pairs to /api/tree: %s", e)
+            tree["marriage_pairs"] = []
         logger.info(
             f'Built tree for root_id={root_id}, max_gen={max_gen}, nodes={len(persons_by_id)}'
         )
@@ -939,6 +1069,7 @@ def get_descendants(person_id):
 
 
 @app.route('/api/stats')
+@rate_limit("90 per minute")
 def get_stats():
     """Lấy thống kê"""
     connection = get_db_connection()
@@ -1275,6 +1406,75 @@ def api_health():
     except Exception as e:
         logger.error(f'api_health error: {e}', exc_info=True)
         return jsonify({'server': 'ok', 'database': 'error', 'error': str(e)}), 500
+
+
+@app.route('/api/external-posts', methods=['GET'])
+def get_external_posts():
+    """
+    Tin Hoạt động Hội đồng NPT VN từ RSS nguyenphuoctoc.info (cache 30 phút).
+    """
+    now = datetime.now(timezone.utc)
+    cache = external_posts_cache
+    try:
+        limit = min(max(int(request.args.get('limit', 15)), 1), 50)
+    except (TypeError, ValueError):
+        limit = 15
+    if cache['data'] is not None and cache['timestamp'] is not None:
+        age = now - cache['timestamp']
+        if age < cache['cache_duration']:
+            return jsonify({'success': True, 'data': cache['data'], 'cached': True, 'source': NPT_COUNCIL_RSS_URL})
+    try:
+        data = _fetch_npt_council_rss(limit=limit)
+        cache['data'] = data
+        cache['timestamp'] = now
+        return jsonify({'success': True, 'data': data, 'cached': False, 'source': NPT_COUNCIL_RSS_URL})
+    except Exception as e:
+        logger.exception('get_external_posts: RSS fetch failed: %s', e)
+        if cache['data']:
+            return jsonify({
+                'success': True,
+                'data': cache['data'],
+                'cached': True,
+                'stale': True,
+                'warning': 'Không tải được RSS mới; đang dùng dữ liệu cache.',
+                'source': NPT_COUNCIL_RSS_URL,
+            })
+        return jsonify({'success': False, 'error': 'Không thể tải tin từ Hội đồng NPT VN', 'detail': str(e)}), 502
+
+
+@app.route('/api/external-posts/clear-cache', methods=['POST'])
+def clear_external_posts_cache():
+    """Xóa cache RSS (ví dụ sau khi deploy). Không yêu cầu auth để tránh kẹt khi admin lỗi."""
+    external_posts_cache['data'] = None
+    external_posts_cache['timestamp'] = None
+    return jsonify({'success': True, 'message': 'Đã xóa cache external-posts'})
+
+
+@app.route('/api/external-posts/refresh', methods=['GET', 'POST'])
+def refresh_external_posts():
+    """Bỏ qua cache và tải lại RSS."""
+    now = datetime.now(timezone.utc)
+    try:
+        limit = min(max(int(request.args.get('limit', 15)), 1), 50)
+    except (TypeError, ValueError):
+        limit = 15
+    try:
+        data = _fetch_npt_council_rss(limit=limit)
+        external_posts_cache['data'] = data
+        external_posts_cache['timestamp'] = now
+        return jsonify({'success': True, 'data': data, 'cached': False, 'source': NPT_COUNCIL_RSS_URL})
+    except Exception as e:
+        logger.exception('refresh_external_posts failed: %s', e)
+        if external_posts_cache['data']:
+            return jsonify({
+                'success': True,
+                'data': external_posts_cache['data'],
+                'stale': True,
+                'warning': str(e),
+                'source': NPT_COUNCIL_RSS_URL,
+            })
+        return jsonify({'success': False, 'error': str(e)}), 502
+
 
 @app.route('/api/stats/members', methods=['GET'])
 def api_member_stats():

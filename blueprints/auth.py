@@ -35,7 +35,7 @@ def admin_login_page():
     return render_template('login.html', admin_mode=True)
 
 @auth_bp.route('/api/login', methods=['POST'])
-@rate_limit("20 per minute")
+@rate_limit("20 per minute")  # + default_limits (extensions); CSRF qua X-CSRFToken từ login.html
 def api_login():
     """API xử lý logic Login"""
     username = request.form.get('username', '').strip()

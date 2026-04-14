@@ -57,6 +57,7 @@ def _call_app(handler_name, *args, **kwargs):
 
 
 @gallery_bp.route('/api/geoapify-key')
+@rate_limit("60 per minute")
 def get_geoapify_api_key():
     return _call_app('get_geoapify_api_key')
 
@@ -113,6 +114,7 @@ def api_gallery_anh1():
 
 
 @gallery_bp.route('/api/albums', methods=['GET'])
+@rate_limit("90 per minute")
 def api_get_albums():
     return _call_app('api_get_albums')
 

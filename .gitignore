@@ -18,9 +18,18 @@ ENV/
 
 # Environment & Config files with sensitive data
 .env
+.env.*
+!.env.example
 *.env
 !*.env.example
 tbqc_db.env
+secrets/
+credentials.json
+*.pem
+!*.pem.example
+id_rsa
+id_rsa.pub
+*.p12
 .db_resolved.json
 .smtp_config
 *.config

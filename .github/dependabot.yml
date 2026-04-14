@@ -1,0 +1,10 @@
+# Gợi ý nâng cấp dependency định kỳ; merge PR sau khi chạy scripts/run_pre_upgrade.py trong môi trường thử.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"

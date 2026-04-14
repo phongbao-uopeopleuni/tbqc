@@ -49,6 +49,29 @@ def members_verify():
         password = data.get('password', '')
         if not username or not password:
             return (jsonify({'success': False, 'error': 'Tên đăng nhập và mật khẩu không được để trống'}), 400)
+        # Tùy chọn: giới hạn IP cho tài khoản cố định (MEMBERS_FIXED_ACCOUNTS) — chỉ khi MEMBERS_GATE_IP_ALLOWLIST được đặt
+        raw_allow = (os.environ.get('MEMBERS_GATE_IP_ALLOWLIST') or '').strip()
+        if raw_allow:
+            from app import FIXED_MEMBERS_PASSWORDS
+            from utils.client_ip import get_client_ip
+
+            if username in FIXED_MEMBERS_PASSWORDS:
+                allowed = {x.strip() for x in raw_allow.split(',') if x.strip()}
+                client_ip = get_client_ip() or ''
+                if client_ip not in allowed:
+                    logger.warning(
+                        'Members gate: fixed account login denied (IP not in MEMBERS_GATE_IP_ALLOWLIST): user=%s',
+                        username,
+                    )
+                    return (
+                        jsonify(
+                            {
+                                'success': False,
+                                'error': 'Đăng nhập từ IP này không được phép. Liên hệ quản trị nếu cần mở IP.',
+                            }
+                        ),
+                        403,
+                    )
         from app import validate_tbqc_gate
         if validate_tbqc_gate(username, password):
             session['members_gate_ok'] = True
@@ -57,7 +80,8 @@ def members_verify():
             session.modified = True
             logger.info(f'Members gate login successful: {username}')
             return jsonify({'success': True, 'message': 'Đăng nhập thành công'})
-        logger.warning(f'Members gate login failed: username={username!r} (len_pwd={len(password)})')
+        # Không log mật khẩu hay độ dài mật khẩu (tránh hỗ trợ dò mật khẩu)
+        logger.warning('Members gate login failed (invalid credentials) for username=%s', username)
         return (jsonify({'success': False, 'error': 'Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.'}), 401)
     except Exception as e:
         logger.error(f'Error in members_verify: {e}', exc_info=True)

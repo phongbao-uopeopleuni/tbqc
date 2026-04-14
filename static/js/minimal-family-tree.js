@@ -695,17 +695,20 @@ function updateView() {
 function convertApiDataToGraph(treeData) {
   const persons = [];
   const relationships = [];
+  const personIdSet = new Set();
 
   function traverseNode(node) {
     if (!node) return;
 
     // Add person
+    const pid = node.person_id;
     persons.push({
-      id: node.person_id,
+      id: pid,
       name: node.full_name || node.common_name || '',
       birthDate: node.birth_date_solar || node.birth_date_lunar || '',
       deathDate: node.death_date_solar || node.death_date_lunar || ''
     });
+    personIdSet.add(pid);
 
     // Add parent-child relationships
     if (node.children && Array.isArray(node.children)) {
@@ -723,7 +726,29 @@ function convertApiDataToGraph(treeData) {
 
   traverseNode(treeData);
 
-  // TODO: Add spouse relationships from marriages API if needed
+  // Quan hệ vợ/chồng từ DB (bảng marriages), đính kèm trong /api/tree dưới key marriage_pairs
+  const pairs = treeData.marriage_pairs;
+  if (Array.isArray(pairs)) {
+    const seenSpouse = new Set();
+    pairs.forEach(pair => {
+      if (!Array.isArray(pair) || pair.length < 2) return;
+      let a = String(pair[0]).trim();
+      let b = String(pair[1]).trim();
+      if (!a || !b || a === b) return;
+      if (!personIdSet.has(a) || !personIdSet.has(b)) return;
+      const key = a < b ? `${a}|${b}` : `${b}|${a}`;
+      if (seenSpouse.has(key)) return;
+      seenSpouse.add(key);
+      const from = a < b ? a : b;
+      const to = a < b ? b : a;
+      relationships.push({
+        id: `rel_spouse_${from}_${to}`,
+        type: 'spouse',
+        from,
+        to
+      });
+    });
+  }
 
   return { persons, relationships };
 }
