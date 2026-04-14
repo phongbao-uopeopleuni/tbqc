@@ -1672,7 +1672,29 @@
       position: relative;
     }
 
-    .toc-list li::before {
+    /* Chỉ mục cấp 1 (H2): căn mũi tên theo dòng tiêu đề, không dùng 50% chiều cao cả
+       khối — nếu không, mũi tên của <li> cha (có cả .toc-sublist) sẽ trùng một hàng
+       với mục H3/H4 giữa danh sách (hai mũi tên). */
+    .toc-list > li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      top: 22px;
+      transform: translateY(-50%);
+      color: var(--color-primary);
+      font-weight: bold;
+      font-size: 12px;
+      opacity: 0.6;
+      transition: all 0.3s ease;
+    }
+
+    .toc-list > li:hover::before {
+      opacity: 1;
+      color: var(--color-accent);
+      transform: translateY(-50%) translateX(3px);
+    }
+
+    .toc-sublist li::before {
       content: "▸";
       position: absolute;
       left: 0;
@@ -1685,7 +1707,7 @@
       transition: all 0.3s ease;
     }
 
-    .toc-list li:hover::before {
+    .toc-sublist li:hover::before {
       opacity: 1;
       color: var(--color-accent);
       transform: translateY(-50%) translateX(3px);
@@ -1740,6 +1762,7 @@
     }
     
     .toc-sublist li {
+      position: relative;
       margin-bottom: var(--space-2);
     }
     
