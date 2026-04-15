@@ -58,11 +58,11 @@ function stripDuplicateAliasLabel(text) {
   return String(text).replace(/^(\s*Tên\s+thường\s+gọi\s*:\s*)+/i, '').trim();
 }
 
-// Escape HTML helper
+// Escape HTML helper (text + attribute values in double-quoted HTML)
 function escapeHtml(text) {
   if (text === null || text === undefined) return '';
   const div = document.createElement('div');
-  div.textContent = text;
+  div.textContent = String(text);
   return div.innerHTML;
 }
 

@@ -62,3 +62,9 @@ def documents_page():
     Documents page - template documents.html
     """
     return render_template('documents.html')
+
+
+@main_bp.route('/privacy', strict_slashes=False)
+def privacy_page():
+    """Chính sách bảo mật — template privacy.html"""
+    return render_template('privacy.html')

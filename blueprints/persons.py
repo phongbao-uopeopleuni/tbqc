@@ -11,6 +11,12 @@ from extensions import rate_limit
 persons_bp = Blueprint('persons', __name__)
 
 
+def _require_data_maintenance_auth():
+    from utils.api_auth import authorize_data_maintenance_route
+
+    return authorize_data_maintenance_route()
+
+
 def _call_app(handler_name, *args, **kwargs):
     """Gọi handler từ services.person_service (late import tránh circular import)."""
     from services.person_service import (
@@ -95,11 +101,17 @@ def update_person_members(person_id):
 
 @persons_bp.route('/api/fix/p-1-1-parents', methods=['GET', 'POST'])
 def fix_p1_1_parents():
+    denied = _require_data_maintenance_auth()
+    if denied is not None:
+        return denied
     return _call_app('fix_p1_1_parents')
 
 
 @persons_bp.route('/api/genealogy/update-info', methods=['POST'])
 def update_genealogy_info():
+    denied = _require_data_maintenance_auth()
+    if denied is not None:
+        return denied
     return _call_app('update_genealogy_info')
 
 

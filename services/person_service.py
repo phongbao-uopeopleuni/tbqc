@@ -5,6 +5,7 @@ import re
 import csv
 import json
 import logging
+import math
 from datetime import datetime, date
 from flask import jsonify, request
 from flask_login import login_required, current_user
@@ -65,7 +66,30 @@ def get_persons():
             select_fields.append('p.email')
         else:
             select_fields.append('NULL AS email')
-        cursor.execute(f"\n            SELECT \n                {', '.join(select_fields)},\n\n                -- Cha từ relationships\n                father.person_id AS father_id,\n                father.full_name AS father_name,\n\n                -- Mẹ từ relationships\n                mother.person_id AS mother_id,\n                mother.full_name AS mother_name,\n\n                -- Con cái\n                GROUP_CONCAT(\n                    DISTINCT child.full_name\n                    ORDER BY child.full_name\n                    SEPARATOR '; '\n                ) AS children\n            FROM persons p\n\n            -- Cha từ relationships (relation_type = 'father')\n            LEFT JOIN relationships rel_father\n                ON rel_father.child_id = p.person_id \n                AND rel_father.relation_type = 'father'\n            LEFT JOIN persons father\n                ON rel_father.parent_id = father.person_id\n\n            -- Mẹ từ relationships (relation_type = 'mother')\n            LEFT JOIN relationships rel_mother\n                ON rel_mother.child_id = p.person_id \n                AND rel_mother.relation_type = 'mother'\n            LEFT JOIN persons mother\n                ON rel_mother.parent_id = mother.person_id\n\n            -- Con cái: những người có parent_id = p.person_id\n            LEFT JOIN relationships rel_child\n                ON rel_child.parent_id = p.person_id\n                AND rel_child.relation_type IN ('father', 'mother')\n            LEFT JOIN persons child\n                ON child.person_id = rel_child.child_id\n\n            GROUP BY\n                p.person_id,\n                p.full_name,\n                p.alias,\n                p.gender,\n                p.status,\n                p.generation_level,\n                p.home_town,\n                p.nationality,\n                p.religion,\n                p.birth_date_solar,\n                p.birth_date_lunar,\n                p.death_date_solar,\n                p.death_date_lunar,\n                p.place_of_death,\n                p.grave_info,\n                p.contact,\n                p.social,\n                p.occupation,\n                p.education,\n                p.events,\n                p.titles,\n                p.blood_type,\n                p.genetic_disease,\n                p.note,\n                p.father_mother_id,\n                father.person_id,\n                father.full_name,\n                mother.person_id,\n                mother.full_name\n            ORDER BY\n                p.generation_level,\n                p.full_name\n        ")
+        paginated = request.args.get('paginated', '').strip().lower() in ('1', 'true', 'yes')
+        total = None
+        page = 1
+        per_page = 20
+        if paginated:
+            try:
+                page = max(1, int(request.args.get('page', 1)))
+            except (TypeError, ValueError):
+                page = 1
+            try:
+                raw_pp = int(request.args.get('per_page', 20))
+                per_page = min(50, max(1, raw_pp))
+            except (TypeError, ValueError):
+                per_page = 20
+            cursor.execute('SELECT COUNT(*) AS c FROM persons')
+            total = cursor.fetchone()['c']
+            offset = (page - 1) * per_page
+
+        main_sql = f"\n            SELECT \n                {', '.join(select_fields)},\n\n                -- Cha từ relationships\n                father.person_id AS father_id,\n                father.full_name AS father_name,\n\n                -- Mẹ từ relationships\n                mother.person_id AS mother_id,\n                mother.full_name AS mother_name,\n\n                -- Con cái\n                GROUP_CONCAT(\n                    DISTINCT child.full_name\n                    ORDER BY child.full_name\n                    SEPARATOR '; '\n                ) AS children\n            FROM persons p\n\n            -- Cha từ relationships (relation_type = 'father')\n            LEFT JOIN relationships rel_father\n                ON rel_father.child_id = p.person_id \n                AND rel_father.relation_type = 'father'\n            LEFT JOIN persons father\n                ON rel_father.parent_id = father.person_id\n\n            -- Mẹ từ relationships (relation_type = 'mother')\n            LEFT JOIN relationships rel_mother\n                ON rel_mother.child_id = p.person_id \n                AND rel_mother.relation_type = 'mother'\n            LEFT JOIN persons mother\n                ON rel_mother.parent_id = mother.person_id\n\n            -- Con cái: những người có parent_id = p.person_id\n            LEFT JOIN relationships rel_child\n                ON rel_child.parent_id = p.person_id\n                AND rel_child.relation_type IN ('father', 'mother')\n            LEFT JOIN persons child\n                ON child.person_id = rel_child.child_id\n\n            GROUP BY\n                p.person_id,\n                p.full_name,\n                p.alias,\n                p.gender,\n                p.status,\n                p.generation_level,\n                p.home_town,\n                p.nationality,\n                p.religion,\n                p.birth_date_solar,\n                p.birth_date_lunar,\n                p.death_date_solar,\n                p.death_date_lunar,\n                p.place_of_death,\n                p.grave_info,\n                p.contact,\n                p.social,\n                p.occupation,\n                p.education,\n                p.events,\n                p.titles,\n                p.blood_type,\n                p.genetic_disease,\n                p.note,\n                p.father_mother_id,\n                father.person_id,\n                father.full_name,\n                mother.person_id,\n                mother.full_name\n            ORDER BY\n                p.generation_level,\n                p.full_name\n        "
+        if paginated:
+            main_sql += '\n            LIMIT %s OFFSET %s\n        '
+            cursor.execute(main_sql, (per_page, offset))
+        else:
+            cursor.execute(main_sql)
         persons = cursor.fetchall()
         for person in persons:
             person_id = person['person_id']
@@ -100,6 +124,15 @@ def get_persons():
                 person['spouse'] = '; '.join(spouse_names) if spouse_names else None
             else:
                 person['spouse'] = None
+        if paginated and total is not None:
+            pages = int(math.ceil(total / float(per_page))) if per_page else 0
+            return jsonify({
+                'items': persons,
+                'page': page,
+                'per_page': per_page,
+                'total': total,
+                'pages': pages,
+            })
         return jsonify(persons)
     except Error as e:
         print(f'ERROR: Loi trong /api/persons: {e}')
@@ -649,7 +682,7 @@ def search_persons():
     except (ValueError, TypeError):
         generation_level = None
     try:
-        limit = validate_integer(request.args.get('limit', 50), min_val=1, max_val=100, default=50)
+        limit = validate_integer(request.args.get('limit', 50), min_val=1, max_val=50, default=50)
     except ValueError:
         limit = 50
     connection = get_db_connection()

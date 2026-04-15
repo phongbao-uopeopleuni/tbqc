@@ -351,7 +351,7 @@
             const fmIdDisplay = person.father_mother_id || person.fm_id ? ` <span class="suggestion-fm">(FM: ${escapeHtml(person.father_mother_id || person.fm_id)})</span>` : '';
             
             return `
-              <div class="suggestion-item" data-person-id="${person.person_id}" data-suggestion-action="autocomplete">
+              <div class="suggestion-item" data-person-id="${escapeHtml(String(person.person_id ?? ''))}" data-suggestion-action="autocomplete">
                 <div class="suggestion-name">
                   ${escapeHtml(name)} – Đời ${gen}${fmIdDisplay}
                 </div>
@@ -431,7 +431,7 @@
             : window.GenealogyLineage.findPerson(person.full_name, person.generation_number, person.father_name);
           
           if (!foundPerson) {
-            resultContent.innerHTML = `<div class="lineage-error">❌ Không tìm thấy người với ID: ${person.person_id}</div>`;
+            resultContent.innerHTML = `<div class="lineage-error">❌ Không tìm thấy người với ID: ${escapeHtml(String(person.person_id ?? ''))}</div>`;
             resultTitle.textContent = 'Lỗi';
             resultDiv.style.display = 'block';
             return;
@@ -441,7 +441,7 @@
         }
         
         if (!lineage || lineage.length === 0) {
-          resultContent.innerHTML = `<div class="lineage-error">❌ Không thể xây dựng chuỗi phả hệ cho "${person.full_name}" (ID: ${person.person_id})</div>`;
+          resultContent.innerHTML = `<div class="lineage-error">❌ Không thể xây dựng chuỗi phả hệ cho "${escapeHtml(person.full_name || '')}" (ID: ${escapeHtml(String(person.person_id ?? ''))})</div>`;
           resultTitle.textContent = 'Lỗi';
           resultDiv.style.display = 'block';
           return;
@@ -494,7 +494,7 @@
         
       } catch (error) {
         console.error('Lỗi khi hiển thị lineage:', error);
-        resultContent.innerHTML = `<div class="lineage-error">❌ Lỗi: ${error.message}</div>`;
+        resultContent.innerHTML = `<div class="lineage-error">❌ Lỗi: ${escapeHtml(String(error && error.message ? error.message : error))}</div>`;
         resultTitle.textContent = 'Lỗi';
         resultDiv.style.display = 'block';
       }
@@ -565,7 +565,7 @@
               const fmIdDisplay = person.father_mother_id || person.fm_id ? ` <span class="suggestion-fm">(FM: ${escapeHtml(person.father_mother_id || person.fm_id)})</span>` : '';
               
               return `
-                <div class="suggestion-item" data-person-id="${person.person_id}" data-suggestion-action="search">
+                <div class="suggestion-item" data-person-id="${escapeHtml(String(person.person_id ?? ''))}" data-suggestion-action="search">
                   <div class="suggestion-name">
                     ${escapeHtml(name)} – Đời ${gen}${fmIdDisplay}
                   </div>
@@ -666,7 +666,7 @@
             const resultContent = document.getElementById('lineageResultContent');
             const resultTitle = document.getElementById('lineageResultTitle');
             if (resultDiv && resultContent) {
-              resultContent.innerHTML = `<div class="lineage-error">❌ Không thể tải thông tin chi tiết cho người này (ID: ${personId})</div>`;
+              resultContent.innerHTML = `<div class="lineage-error">❌ Không thể tải thông tin chi tiết cho người này (ID: ${escapeHtml(String(personId ?? ''))})</div>`;
               if (resultTitle) {
                 resultTitle.textContent = 'Lỗi';
               }
@@ -2562,7 +2562,7 @@
           container.innerHTML = `
             <div class="tree-error">
               <h3>Lỗi khi tạo cây gia phả</h3>
-              <p>${err.message}</p>
+              <p>${escapeHtml(String(err && err.message ? err.message : err))}</p>
             </div>
           `;
           throw err;
@@ -2578,7 +2578,7 @@
         if (err.name === 'AbortError') {
           loading.innerHTML = 'API không phản hồi sau 30 giây. Vui lòng kiểm tra kết nối hoặc server.';
         } else {
-          loading.innerHTML = `Không thể kết nối API (${err.message}).`;
+          loading.innerHTML = `Không thể kết nối API (${escapeHtml(String(err && err.message ? err.message : err))}).`;
         }
       }
     }
@@ -2691,9 +2691,9 @@
         
         resultsDiv.innerHTML = results.map(person => {
           const gen = person.generation_number ? `Đời ${person.generation_number}` : '';
-          const loc = person.origin_location ? `, ${person.origin_location}` : '';
+          const loc = person.origin_location ? `, ${escapeHtml(person.origin_location)}` : '';
           return `
-            <div class="search-result" data-person-id="${person.person_id}">
+            <div class="search-result" data-person-id="${escapeHtml(String(person.person_id ?? ''))}">
               <strong>${escapeHtml(person.full_name)}</strong>
               ${person.common_name ? ` (${escapeHtml(stripDuplicateAliasLabel(person.common_name))})` : ''}
               ${gen ? ` - ${gen}` : ''}${loc}
@@ -2722,7 +2722,7 @@
         }
       } catch (err) {
         console.error('Search error:', err);
-        resultsDiv.innerHTML = `<div class="search-status search-status--error">Lỗi: ${err.message}</div>`;
+        resultsDiv.innerHTML = `<div class="search-status search-status--error">Lỗi: ${escapeHtml(String(err && err.message ? err.message : err))}</div>`;
       }
     }
 
@@ -2875,18 +2875,12 @@
       } catch (err) {
         console.error('Error loading person info:', err);
         if (infoContent) {
-          infoContent.innerHTML = `<div class="info-status info-status--error">Lỗi: ${err.message}</div>`;
+          infoContent.innerHTML = `<div class="info-status info-status--error">Lỗi: ${escapeHtml(String(err && err.message ? err.message : err))}</div>`;
         }
       }
     }
 
-// Helper function để escape HTML
-    function escapeHtml(text) {
-      if (!text) return '';
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
-    }
+    // escapeHtml: dùng từ /static/js/common.js (load trước index.js)
 
     // Helper function để lấy thumbnail
     function getThumbnail(activity) {

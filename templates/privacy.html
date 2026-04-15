@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Chính sách bảo mật - Gia Phả Tuy Biên Quận Công</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    .privacy-page {
+      padding-top: var(--space-10);
+      padding-bottom: var(--space-10);
+    }
+    .page-header {
+      text-align: center;
+      margin-bottom: var(--space-8);
+    }
+    .page-header h1 {
+      font-size: var(--font-size-3xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-3);
+    }
+    .page-updated {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+    .privacy-prose {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0 var(--space-4);
+    }
+    .privacy-prose .card {
+      padding: var(--space-8);
+    }
+    .privacy-prose h2 {
+      font-size: var(--font-size-xl);
+      color: var(--color-primary);
+      margin-top: var(--space-8);
+      margin-bottom: var(--space-4);
+    }
+    .privacy-prose h2:first-of-type {
+      margin-top: 0;
+    }
+    .privacy-prose p,
+    .privacy-prose li {
+      font-size: var(--font-size-base);
+      line-height: 1.75;
+      color: var(--color-text);
+      margin-bottom: var(--space-3);
+    }
+    .privacy-prose ul {
+      padding-left: var(--space-6);
+      margin-bottom: var(--space-4);
+    }
+    .privacy-prose a {
+      color: var(--color-primary);
+      text-decoration: underline;
+    }
+    .privacy-prose a:hover {
+      color: var(--color-primary-strong);
+    }
+    .privacy-note {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      padding: var(--space-4);
+      background: var(--color-surface-muted, #f8f6f3);
+      border-radius: var(--radius-md);
+      border-left: 4px solid var(--color-primary);
+      margin-bottom: var(--space-6);
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+    <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/genealogy">Gia phả</a></li>
+      <li style="display: none;"><a href="/activities">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/admin/login">Admin</a></li>
+    </ul>
+  </nav>
+
+  <div class="container privacy-page">
+    <div class="page-header">
+      <h1>Chính sách bảo mật</h1>
+      <p class="page-updated"><strong>Gia Phả Tuy Biên Quận Công</strong> — Cập nhật lần cuối: 15/4/2026</p>
+    </div>
+
+    <div class="privacy-prose">
+      <div class="privacy-note">
+        Văn bản này nhằm minh bạch cách chúng tôi xử lý dữ liệu cá nhân trên website. Để biết thêm quyền của chủ thể dữ liệu và nghĩa vụ chi tiết, vui lòng tham khảo <strong>Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15</strong> và các văn bản hướng dẫn hiện hành của Việt Nam.
+      </div>
+
+      <div class="card">
+        <h2>1. Giới thiệu</h2>
+        <p>
+          Website <strong>Gia Phả Tuy Biên Quận Công</strong> (“chúng tôi”) cam kết tôn trọng và bảo vệ dữ liệu cá nhân của người dùng. Chính sách này giải thích cách chúng tôi thu thập, sử dụng, lưu trữ và bảo vệ thông tin khi bạn truy cập website, sử dụng các tính năng như tra cứu gia phả, xem tin hoạt động, album, cổng thành viên hoặc liên hệ với chúng tôi.
+        </p>
+
+        <h2>2. Phạm vi áp dụng</h2>
+        <p>
+          Chính sách áp dụng cho mọi hoạt động trên website và dịch vụ trực tuyến do chúng tôi vận hành cho <strong>Gia Phả Tuy Biên Quận Công</strong> tại địa chỉ bạn đang truy cập.
+        </p>
+
+        <h2>3. Dữ liệu có thể được thu thập</h2>
+        <p>Tùy tính năng bạn sử dụng, chúng tôi có thể xử lý các loại thông tin sau:</p>
+        <ul>
+          <li><strong>Dữ liệu do bạn cung cấp:</strong> nội dung trong biểu mẫu liên hệ, phản hồi, yêu cầu chỉnh sửa thông tin gia phả (nếu có), hoặc thông tin bạn gửi qua các kênh được hướng dẫn trên website.</li>
+          <li><strong>Dữ liệu tài khoản / phiên đăng nhập:</strong> khi bạn đăng nhập vào các khu vực được bảo vệ (ví dụ quản trị, cổng thành viên), hệ thống có thể xử lý định danh phiên, cookie phiên, và thông tin cần thiết để duy trì đăng nhập an toàn.</li>
+          <li><strong>Dữ liệu kỹ thuật và nhật ký:</strong> địa chỉ IP, loại trình duyệt, thiết bị, thời gian truy cập, trang đã xem — nhằm vận hành hệ thống, bảo mật, chống lạm dụng và cải thiện dịch vụ.</li>
+          <li><strong>Nội dung hiển thị trên website:</strong> thông tin gia phả, hoạt động, hình ảnh được đăng tải theo quy định nội bộ và mục đích cộng đồng; phạm vi hiển thị phụ thuộc cài đặt từng phần của website.</li>
+        </ul>
+
+        <h2>4. Mục đích sử dụng</h2>
+        <p>Chúng tôi xử lý dữ liệu nhằm: cung cấp và duy trì các tính năng website; xác thực quyền truy cập các khu vực được phép; phản hồi yêu cầu liên hệ và hỗ trợ người dùng; bảo đảm an toàn thông tin, phòng chống gian lận và truy cập trái phép; tuân thủ nghĩa vụ pháp luật khi có yêu cầu.</p>
+
+        <h2>5. Cơ sở pháp lý</h2>
+        <p>Việc xử lý dữ liệu căn cứ theo quy định của pháp luật Việt Nam, gồm các trường hợp như: sự đồng ý của chủ thể (khi áp dụng); thực hiện yêu cầu của bạn hoặc hợp đồng; nghĩa vụ pháp luật; lợi ích hợp pháp trong vận hành website và bảo mật — tùy từng trường hợp cụ thể.</p>
+
+        <h2>6. Cookie và công nghệ tương tự</h2>
+        <p>Website có thể sử dụng cookie hoặc công nghệ lưu trữ cục bộ để duy trì phiên đăng nhập, ghi nhớ tùy chọn hoặc hỗ trợ vận hành kỹ thuật. Bạn có thể điều chỉnh trình duyệt để từ chối hoặc xóa cookie; một số tính năng có thể không hoạt động đầy đủ nếu cookie bị tắt.</p>
+
+        <h2>7. Chia sẻ với bên thứ ba</h2>
+        <p>Chúng tôi không bán dữ liệu cá nhân. Thông tin chỉ được chia sẻ trong các trường hợp: nhà cung cấp hạ tầng lưu trữ, hosting, cơ sở dữ liệu — theo hợp đồng và mức cần thiết để vận hành website; dịch vụ bản đồ, mạng xã hội hoặc công cụ nhúng (nếu có) — khi bạn tương tác, các bên đó có thể thu thập dữ liệu theo chính sách riêng của họ; khi pháp luật yêu cầu hoặc để bảo vệ quyền lợi hợp pháp của người dùng và tổ chức.</p>
+
+        <h2>8. Bảo mật</h2>
+        <p>Chúng tôi áp dụng các biện pháp kỹ thuật và tổ chức phù hợp (kết nối HTTPS khi được cấu hình, kiểm soát truy cập, sao lưu theo quy trình nội bộ). Không phương thức truyền tải hoặc lưu trữ nào đảm bảo tuyệt đối an toàn; bạn cũng nên bảo vệ thông tin đăng nhập của mình.</p>
+
+        <h2>9. Thời gian lưu trữ</h2>
+        <p>Dữ liệu được lưu trong thời gian cần thiết để đạt các mục đích nêu trên hoặc theo quy định pháp luật, sau đó được xóa, ẩn danh hóa hoặc hạn chế xử lý khi không còn cần thiết.</p>
+
+        <h2>10. Quyền của chủ thể dữ liệu</h2>
+        <p>Theo quy định pháp luật Việt Nam, bạn có các quyền liên quan đến dữ liệu cá nhân (ví dụ: được thông tin về xử lý; đồng ý, từ chối hoặc rút lại đồng ý khi áp dụng; yêu cầu truy cập, chỉnh sửa, xóa, hạn chế xử lý, phản đối; khiếu nại theo quy định). Để thực hiện, vui lòng liên hệ qua trang <a href="/contact">Liên hệ</a> hoặc kênh chúng tôi công bố trên website.</p>
+
+        <h2>11. Trẻ em</h2>
+        <p>Chúng tôi không nhắm đến việc thu thập trái quy định pháp luật dữ liệu cá nhân của trẻ em; trường hợp cần sự đồng ý của người đại diện theo pháp luật sẽ được thực hiện theo Luật Bảo vệ dữ liệu cá nhân và văn bản hướng dẫn.</p>
+
+        <h2>12. Thay đổi chính sách</h2>
+        <p>Chúng tôi có thể cập nhật chính sách này. Phiên bản mới sẽ được đăng trên trang này kèm ngày cập nhật. Việc tiếp tục sử dụng website sau khi thay đổi có nghĩa là bạn chấp nhận các điều khoản mới, trừ khi pháp luật yêu cầu hình thức khác.</p>
+
+        <h2>13. Liên hệ</h2>
+        <p>Mọi câu hỏi về chính sách bảo mật hoặc dữ liệu cá nhân liên quan đến <strong>Gia Phả Tuy Biên Quận Công</strong>, vui lòng dùng trang <a href="/contact">Liên hệ</a> hoặc kênh được công bố trên website (ví dụ Facebook Phòng Tuy Biên Quận Công).</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/common.js"></script>
+  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" rel="noopener noreferrer" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  <script src="/static/js/device-detection.js"></script>
+</body>
+</html>

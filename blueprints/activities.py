@@ -10,6 +10,8 @@ import json
 from flask import Blueprint, render_template, request, jsonify, session, redirect
 from flask_login import current_user
 
+from utils.html_sanitize import sanitize_activity_html
+
 logger = logging.getLogger(__name__)
 activities_bp = Blueprint('activities', __name__)
 
@@ -134,7 +136,7 @@ def api_activities():
         # ── GET ──────────────────────────────────────────────
         if request.method == 'GET':
             status_filter = request.args.get('status')      # published / draft / None
-            limit  = min(int(request.args.get('limit',  50)), 200)
+            limit  = min(int(request.args.get('limit',  50)), 50)
             offset = max(int(request.args.get('offset', 0)),  0)
 
             where_clauses = []
@@ -157,13 +159,14 @@ def api_activities():
 
         data = request.get_json(silent=True) or {}
         title   = (data.get('title') or '').strip()
-        content = (data.get('content') or '').strip()
+        content = sanitize_activity_html((data.get('content') or '').strip())
         if not title:
             return jsonify({'success': False, 'error': 'Thieu tieu de'}), 400
         if not content:
             return jsonify({'success': False, 'error': 'Thieu noi dung'}), 400
 
-        summary   = (data.get('summary') or '').strip() or None
+        summary_raw = (data.get('summary') or '').strip() or None
+        summary = sanitize_activity_html(summary_raw) if summary_raw else None
         category  = (data.get('category') or '').strip() or None
         status    = data.get('status', 'draft')
         thumbnail = data.get('thumbnail') or None
@@ -252,7 +255,11 @@ def api_activity_detail(activity_id):
         for field in ('title', 'summary', 'category', 'content', 'status', 'thumbnail'):
             if field in data:
                 updates.append(f'{field} = %s')
-                params.append((data[field] or '').strip() if isinstance(data[field], str) else data[field])
+                raw = data[field]
+                if field in ('content', 'summary') and isinstance(raw, str):
+                    params.append(sanitize_activity_html(raw.strip()))
+                else:
+                    params.append((raw or '').strip() if isinstance(raw, str) else raw)
 
         if 'images' in data:
             images = data['images']

@@ -52,6 +52,10 @@ class TestPublicPagesAndHealth:
         r = client.get("/genealogy")
         assert r.status_code == 200
 
+    def test_privacy_page(self, client):
+        r = client.get("/privacy")
+        assert r.status_code == 200
+
 
 class TestStatsAndAdminPublicShape:
     """Một số route admin cần đăng nhập — chỉ kiểm tra không crash."""

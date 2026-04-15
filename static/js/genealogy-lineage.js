@@ -40,6 +40,17 @@ let allPersons = [];
 // UTILITY FUNCTIONS
 // ============================================
 
+/** Escape HTML — dùng window.escapeHtml từ common.js nếu có (sau khi common load). */
+function _escapeHtmlGenealogy(text) {
+  if (text === null || text === undefined) return '';
+  if (typeof window !== 'undefined' && typeof window.escapeHtml === 'function') {
+    return window.escapeHtml(text);
+  }
+  const div = document.createElement('div');
+  div.textContent = String(text);
+  return div.innerHTML;
+}
+
 /**
  * Chuẩn hóa chuỗi (trim, loại bỏ khoảng trắng thừa, xử lý gạch nối)
  * QUAN TRỌNG: Xử lý tất cả các loại gạch nối (-, –, —, ‑) thành khoảng trắng
@@ -611,11 +622,11 @@ function formatLineageAsHTML(lineage) {
   
   return lineage.map((person, index) => {
     const gen = person.generation_number || '?';
-    const name = person.full_name || 'Không rõ tên';
+    const name = _escapeHtmlGenealogy(person.full_name || 'Không rõ tên');
     const isLast = index === lineage.length - 1;
     const className = isLast ? 'lineage-item current' : 'lineage-item';
     return `<div class="${className}">
-      <span class="generation">Đời ${gen}</span>
+      <span class="generation">Đời ${_escapeHtmlGenealogy(gen)}</span>
       <span class="name">${name}</span>
     </div>`;
   }).join('');
@@ -909,7 +920,7 @@ function formatLineageAsHTMLWithParents(lineage) {
   
   return lineage.map((person, index) => {
     const gen = person.generation_number || '?';
-    const name = person.full_name || 'Không rõ tên';
+    const name = _escapeHtmlGenealogy(person.full_name || 'Không rõ tên');
     const isPlaceholder = person.isPlaceholder || false;
     const isLast = index === lineage.length - 1;
     const className = isLast ? 'lineage-item current' : 'lineage-item';
@@ -924,21 +935,23 @@ function formatLineageAsHTMLWithParents(lineage) {
       parentInfo = '';
     } else if (father && mother) {
       // Có cả cha và mẹ
-      parentInfo = `<div class="lineage-parents">Con của: <strong>Ông ${father}</strong> & <strong>Bà ${mother}</strong></div>`;
+      parentInfo = `<div class="lineage-parents">Con của: <strong>Ông ${_escapeHtmlGenealogy(father)}</strong> & <strong>Bà ${_escapeHtmlGenealogy(mother)}</strong></div>`;
     } else if (father) {
       // Chỉ có cha
-      parentInfo = `<div class="lineage-parents">Con của: <strong>Ông ${father}</strong></div>`;
+      parentInfo = `<div class="lineage-parents">Con của: <strong>Ông ${_escapeHtmlGenealogy(father)}</strong></div>`;
     } else if (mother) {
       // Chỉ có mẹ
-      parentInfo = `<div class="lineage-parents">Con của: <strong>Bà ${mother}</strong></div>`;
+      parentInfo = `<div class="lineage-parents">Con của: <strong>Bà ${_escapeHtmlGenealogy(mother)}</strong></div>`;
     }
     // Bỏ hiển thị "Chưa có thông tin cha mẹ" khi không có cả cha lẫn mẹ
     
-    const personIdAttr = person.person_id ? `data-person-id="${person.person_id}"` : '';
+    const personIdAttr = person.person_id != null && person.person_id !== ''
+      ? `data-person-id="${_escapeHtmlGenealogy(String(person.person_id))}"`
+      : '';
     
     return `<div class="${className}" ${personIdAttr}>
       <div style="display: flex; align-items: center; gap: 20px; width: 100%;">
-        <span class="generation">Đời ${gen}</span>
+        <span class="generation">Đời ${_escapeHtmlGenealogy(gen)}</span>
         <span class="name">${name}</span>
       </div>
       ${parentInfo}

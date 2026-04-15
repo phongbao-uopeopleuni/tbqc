@@ -64,6 +64,19 @@ def is_production_env() -> bool:
     )
 
 
+def is_flask_run_debug_enabled() -> bool:
+    """
+    Chỉ dùng cho app.run() / start_server (dev server Werkzeug).
+
+    DEBUG=True kích hoạt stack trace trên trình duyệt và debugger (rủi ro RCE nếu lộ ra internet).
+    - Trên production (is_production_env): luôn False.
+    - Local: chỉ True khi FLASK_DEBUG=1/true/yes (opt-in).
+    """
+    if is_production_env():
+        return False
+    return os.environ.get("FLASK_DEBUG", "").strip().lower() in ("1", "true", "yes")
+
+
 class Config:
     """Flask config giữ nguyên logic hiện tại, tách khỏi app.py."""
 
