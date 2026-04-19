@@ -173,7 +173,10 @@ ADMIN_DASHBOARD_TEMPLATE = '''
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <!-- Chart.js 4.5.1: upgrade từ 3.9.1 để có bug fix + TypeScript/
+         DPR improvement. Dashboard admin chỉ dùng API phổ thông (new Chart,
+         scales.y, plugins.legend) — tương thích thẳng, không đổi cấu hình. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
     <script>
         // Dữ liệu từ server
         const generationData = {{ stats.generation_stats|tojson|safe }};

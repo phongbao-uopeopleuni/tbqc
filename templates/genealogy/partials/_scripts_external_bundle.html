@@ -1,6 +1,8 @@
 
-  <!-- Charts -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Charts: pin Chart.js 4.5.1 (trước là @latest — dễ bị breaking khi
+       upstream release major). Trang genealogy-member-stats dùng API phổ
+       thông (new Chart, scales, plugins.legend/tooltip) → tương thích v4. -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
   
   <!-- PDF Export: html2pdf (bundles jsPDF); html2canvas riêng để fallback chụp .tree -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
