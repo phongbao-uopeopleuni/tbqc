@@ -4,7 +4,8 @@
  */
 (function () {
     /** Luôn dựng phả hệ theo nhánh đến đời này — độc lập với dropdown “Hiển thị đến đời” của cây */
-  var MULTILEVEL_TREE_MAX_GENERATION = 8;
+  /** Tải tối thiểu từ API (độ sâu cây) — tăng để đủ nhánh khi hiển thị đến đời 5–8 */
+  var MULTILEVEL_TREE_MAX_GENERATION = 14;
   if (typeof window !== 'undefined') {
     window.MULTILEVEL_TREE_MAX_GENERATION = MULTILEVEL_TREE_MAX_GENERATION;
     /** Tải tối thiểu từ API để multilevel có đủ nhánh (dùng với Math.max(..., genFilter)) */
@@ -280,14 +281,33 @@
     if (typeof window !== 'undefined') {
       window.selectedPersonId = personId;
     }
-    if (typeof window.setSelectedPerson === 'function') {
-      window.setSelectedPerson(personId);
+    var maxGen = typeof window.MULTILEVEL_TREE_MAX_GENERATION === 'number' ? window.MULTILEVEL_TREE_MAX_GENERATION : 8;
+    var gf = document.getElementById('genFilter');
+    if (gf && gf.value) {
+      var parsed = parseInt(gf.value, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        maxGen = parsed;
+      }
     }
-    if (typeof window.showPersonInfo === 'function') {
-      window.showPersonInfo(personId);
-    } else if (typeof window.selectPerson === 'function') {
-      window.selectPerson(personId);
+    var fg = typeof window !== 'undefined' && window.familyGraph ? window.familyGraph : null;
+    if (fg && typeof window.renderFamilyFocusTree === 'function') {
+      window.renderFamilyFocusTree(fg, maxGen, personId);
+      if (typeof window.scheduleGenealogyTreeFitRetries === 'function') {
+        window.scheduleGenealogyTreeFitRetries();
+      }
     }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (typeof window.setSelectedPerson === 'function') {
+          window.setSelectedPerson(personId);
+        }
+        if (typeof window.showPersonInfo === 'function') {
+          window.showPersonInfo(personId);
+        } else if (typeof window.selectPerson === 'function') {
+          window.selectPerson(personId);
+        }
+      });
+    });
     var panel = document.getElementById('infoPanel');
     if (panel && typeof panel.scrollIntoView === 'function') {
       panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

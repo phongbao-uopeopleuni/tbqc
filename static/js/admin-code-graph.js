@@ -244,7 +244,19 @@
     return false;
   }
 
-  function init() {
+  // Instance Cytoscape hiện tại — giữ ở module scope để hàm reload destroy được trước khi init lại.
+  var _currentCy = null;
+
+  function _destroyCurrentCy() {
+    if (_currentCy) {
+      try { _currentCy.destroy(); } catch (e) { /* no-op */ }
+      _currentCy = null;
+    }
+  }
+
+  function init(opts) {
+    opts = opts || {};
+    var cacheBust = !!opts.cacheBust;
     var container = document.getElementById('cy');
     var detailEl = document.getElementById('code-graph-detail');
     var hintEl = document.getElementById('code-graph-hint');
@@ -253,7 +265,17 @@
       return;
     }
 
-    fetch('/static/data/code-graph.json', { credentials: 'same-origin' })
+    _destroyCurrentCy();
+    if (detailEl) {
+      detailEl.innerHTML = '<p class="code-graph-detail-empty">Chọn một node trên đồ thị.</p>';
+    }
+    if (hintEl) {
+      hintEl.textContent = '';
+      hintEl.style.display = '';
+    }
+
+    var url = '/static/data/code-graph.json' + (cacheBust ? ('?t=' + Date.now()) : '');
+    fetch(url, { credentials: 'same-origin', cache: cacheBust ? 'no-store' : 'default' })
       .then(function (r) {
         return r.json();
       })
@@ -278,6 +300,7 @@
           wheelSensitivity: 0.32,
           boxSelectionEnabled: false,
         });
+        _currentCy = cy;
 
         cy.one('layoutstop', function () {
           cy.fit(undefined, 50);
@@ -345,8 +368,21 @@
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', function () {
+      init();
+    });
   } else {
     init();
   }
+
+  // Cho phép UI (nút "Cập nhật") gọi lại sau khi server rescan xong.
+  // Trả về Promise hoàn tất khi render xong (resolve) hoặc error (reject).
+  window.reloadCodeGraph = function reloadCodeGraph() {
+    try {
+      init({ cacheBust: true });
+    } catch (e) {
+      return Promise.reject(e);
+    }
+    return Promise.resolve();
+  };
 })();

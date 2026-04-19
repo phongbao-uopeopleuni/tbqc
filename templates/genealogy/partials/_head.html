@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Gia Phả - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <style>
+    /* CSS Variables - Desktop defaults */
+    :root {
+      --font-size-base: 16px;
+      --font-size-sm: 14px;
+      --font-size-lg: 18px;
+      --font-size-xl: 20px;
+      --font-size-2xl: 24px;
+      --font-size-3xl: 28px;
+      --font-size-4xl: 32px;
+      
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+      --space-10: 40px;
+      
+      --navbar-height: 70px;
+    }
+
+    /* Mobile overrides */
+    @media (max-width: 768px) {
+      :root {
+        --font-size-base: 14px;
+        --font-size-sm: 12px;
+        --font-size-lg: 16px;
+        --font-size-xl: 18px;
+        --font-size-2xl: 20px;
+        --font-size-3xl: 24px;
+        --font-size-4xl: 28px;
+        
+        --space-1: 3px;
+        --space-2: 6px;
+        --space-3: 10px;
+        --space-4: 12px;
+        --space-5: 16px;
+        --space-6: 20px;
+        --space-8: 24px;
+        --space-10: 32px;
+        
+        --navbar-height: 60px;
+      }
+    }
+
+    /* Tablet overrides */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      :root {
+        --font-size-base: 15px;
+        --space-4: 14px;
+        --space-6: 22px;
+      }
+    }
+
+    /* Responsive Typography */
+    h1 {
+      font-size: clamp(24px, 6vw, 36px);
+      line-height: 1.3;
+    }
+
+    h2 {
+      font-size: clamp(20px, 5vw, 28px);
+      line-height: 1.3;
+    }
+
+    h3 {
+      font-size: clamp(18px, 4vw, 22px);
+      line-height: 1.3;
+    }
+
+    p, li {
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+    }
+
+    @media (max-width: 768px) {
+      p, li {
+        line-height: 1.5;
+      }
+    }
+
+    /* Responsive Images */
+    img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      img {
+        border-radius: 6px;
+      }
+    }
+
+    /* Touch-friendly Buttons */
+    button, .btn, a.btn {
+      min-height: 44px;
+      min-width: 44px;
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--font-size-base);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    @media (max-width: 768px) {
+      button, .btn, a.btn {
+        min-height: 44px;
+        padding: var(--space-3) var(--space-4);
+      }
+    }
+
+    /* Responsive Forms */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="search"],
+    textarea,
+    select {
+      width: 100%;
+      font-size: var(--font-size-base);
+      padding: var(--space-3);
+      border-radius: 6px;
+      border: 1px solid var(--color-border);
+    }
+
+    @media (max-width: 768px) {
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      input[type="search"],
+      textarea,
+      select {
+        font-size: 16px; /* Prevent zoom on iOS */
+        min-height: 44px;
+      }
+    }
+
+    /* Responsive Cards */
+    .card, .lineage-card {
+      padding: var(--space-4);
+      margin-bottom: var(--space-4);
+    }
+
+    @media (max-width: 768px) {
+      .card, .lineage-card {
+        padding: var(--space-3);
+        margin-bottom: var(--space-3);
+        border-radius: 8px;
+      }
+    }
+
+    /* Page-specific styles */
+    .genealogy-page {
+      padding-top: var(--space-8);
+      padding-bottom: var(--space-10);
+      width: 100%;
+      max-width: 100%;
+    }
+
+    /* iOS Safari: nội dung cuối trang không bị thanh địa chỉ / home indicator che */
+    @media (max-width: 768px) {
+      .genealogy-page {
+        padding-bottom: calc(var(--space-10) + env(safe-area-inset-bottom, 12px));
+      }
+      .genealogy-page .container {
+        padding-left: max(var(--space-4), env(safe-area-inset-left, 0px));
+        padding-right: max(var(--space-4), env(safe-area-inset-right, 0px));
+      }
+    }
+    
+    /* Override container max-width để full width */
+    .genealogy-page .container {
+      max-width: 100% !important;
+      width: 100% !important;
+      padding-left: var(--space-4);
+      padding-right: var(--space-4);
+    }
+    
+    .page-header {
+      text-align: center;
+      margin-bottom: var(--space-8);
+      max-width: 48rem;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .page-header h1 {
+      font-size: var(--font-size-4xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-3);
+      letter-spacing: -0.02em;
+    }
+    
+    .page-subtitle {
+      font-size: var(--font-size-lg);
+      color: var(--color-text-muted);
+      line-height: var(--line-height-relaxed);
+    }
+    
+    /* Layout dọc: Cây trên, Tra cứu dưới */
+    .genealogy-layout {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-8);
+      margin-top: var(--space-6);
+    }
+    
+    /* Phần trên: Cây tương tác */
+    .tree-section {
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    .tree-panel {
+      width: 100%;
+      max-width: 100%;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+      align-items: start;
+    }
+
+    .tree-panel > .card.tree-controls,
+    .tree-panel > .tree-zoom-toolbar-wrap {
+      grid-column: 1;
+    }
+    
+    .tree-container-wrapper {
+      grid-column: 1;
+      width: 100%;
+    }
+
+    /* Hàng dưới cây: chỉ thông tin chi tiết (tìm mộ phần chuyển xuống cuối trang) */
+    .tree-detail-grave-row {
+      grid-column: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-4);
+      align-items: start;
+      width: 100%;
+    }
+
+    .tree-detail-grave-row .tree-info-panel {
+      min-width: 0;
+    }
+
+    /* Khối tìm mộ phần ở cuối trang */
+    .grave-search-page-section {
+      width: 100%;
+      max-width: 100%;
+      margin-top: var(--space-10);
+      padding: 0 var(--space-4);
+      box-sizing: border-box;
+    }
+
+    /* Khung cố định giống .tree-info-panel: header + vùng cuộn */
+    .grave-search-panel {
+      margin-top: 0;
+      min-width: 0;
+      align-self: start;
+      position: sticky;
+      top: var(--space-4);
+      padding: var(--space-5);
+      overflow: hidden;
+      background: var(--color-surface);
+      box-shadow: var(--shadow-md);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: var(--space-3);
+      min-height: 0;
+      height: min(78vh, 880px);
+      max-height: min(78vh, 880px);
+    }
+
+    .grave-search-page-section .grave-search-panel {
+      position: static;
+      width: 100%;
+      max-width: 1200px;
+      margin-left: auto;
+      margin-right: auto;
+      height: auto;
+      max-height: none;
+      overflow: visible;
+      grid-template-rows: auto auto;
+    }
+
+    .grave-search-page-section .grave-search-content {
+      overflow: visible;
+      max-height: none;
+      min-height: 0;
+    }
+
+    /* Kết quả: 2 cột (thông tin | bản đồ); mobile: bản đồ trước */
+    .grave-result {
+      margin-top: 0;
+      padding: var(--space-5);
+      background: var(--color-bg, #f8fafc);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .grave-result-header {
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .grave-result-title {
+      color: var(--color-primary);
+      margin: 0;
+      font-size: var(--font-size-xl);
+      line-height: 1.3;
+    }
+
+    .grave-result-layout {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-5);
+      align-items: stretch;
+    }
+
+    .grave-result-info-col {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .grave-result-map-col {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    @media (min-width: 960px) {
+      .grave-result-layout {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: var(--space-6);
+      }
+
+      .grave-result-info-col {
+        flex: 1 1 48%;
+        max-width: 52%;
+      }
+
+      .grave-result-map-col {
+        flex: 1 1 48%;
+        position: sticky;
+        top: calc(var(--navbar-height, 70px) + var(--space-3));
+        align-self: flex-start;
+      }
+    }
+
+    @media (max-width: 959px) {
+      .grave-result-map-col {
+        order: -1;
+      }
+    }
+
+    .grave-info-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--space-4);
+    }
+
+    .grave-info-card {
+      padding: var(--space-4);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    .grave-info-card-title {
+      color: var(--color-primary);
+      margin: 0 0 var(--space-3) 0;
+      font-size: var(--font-size-lg);
+      font-weight: var(--font-weight-semibold);
+    }
+
+    .grave-info-body {
+      line-height: 1.75;
+      color: var(--color-text);
+    }
+
+    .grave-coords {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      font-family: ui-monospace, monospace;
+      margin-top: var(--space-3);
+    }
+
+    .grave-directions-wrap {
+      margin-top: var(--space-3);
+    }
+
+    .grave-directions-link {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      text-decoration: none;
+    }
+
+    .grave-map-section {
+      margin-bottom: 0;
+    }
+
+    .grave-map-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+
+    .grave-map-toolbar h4 {
+      margin: 0;
+      color: var(--color-primary);
+      font-size: var(--font-size-lg);
+    }
+
+    .grave-map-host {
+      width: 100%;
+      min-height: 280px;
+      height: clamp(280px, 42vh, 520px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .grave-map-host .leaflet-container {
+      font-family: inherit;
+    }
+
+    .grave-map-loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .grave-image-block {
+      margin-top: var(--space-4);
+    }
+
+    .grave-image-block-title {
+      color: var(--color-primary);
+      margin: 0 0 var(--space-2) 0;
+      font-size: var(--font-size-base);
+    }
+
+    .grave-image-container {
+      margin-bottom: var(--space-3);
+    }
+
+    .grave-image-preview {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      cursor: pointer;
+      display: none;
+    }
+
+    .grave-image-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .btn-grave-secondary {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .btn-grave-danger {
+      background: var(--color-error, #dc3545);
+      color: white;
+      border: none;
+    }
+
+    .btn-grave-danger-solid {
+      background: var(--color-error, #dc3545);
+      color: white;
+      border: none;
+    }
+
+    .grave-upload-form {
+      margin-top: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+    }
+
+    .grave-upload-form-title {
+      color: var(--color-primary);
+      margin: 0 0 var(--space-2) 0;
+      font-size: var(--font-size-base);
+    }
+
+    .grave-upload-form-hint {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin: 0 0 var(--space-3) 0;
+    }
+
+    .grave-upload-input {
+      margin-bottom: var(--space-3);
+      width: 100%;
+    }
+
+    .grave-upload-actions {
+      display: flex;
+      gap: var(--space-2);
+      flex-wrap: wrap;
+    }
+
+    .grave-upload-actions .btn-primary {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .grave-upload-status {
+      margin-top: var(--space-2);
+      font-size: var(--font-size-sm);
+    }
+
+    .grave-delete-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      padding: var(--space-4);
+      box-sizing: border-box;
+    }
+
+    .grave-delete-modal-inner {
+      background: var(--color-surface, #fff);
+      padding: var(--space-6);
+      border-radius: var(--radius-lg);
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .grave-delete-modal-title {
+      color: var(--color-error, #dc3545);
+      margin: 0 0 var(--space-4) 0;
+      font-size: var(--font-size-xl);
+    }
+
+    .grave-delete-modal-text {
+      color: var(--color-text);
+      margin: 0 0 var(--space-4) 0;
+      line-height: 1.6;
+    }
+
+    .grave-delete-modal-field label {
+      display: block;
+      margin-bottom: var(--space-2);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+    }
+
+    .grave-delete-modal-field .input {
+      width: 100%;
+    }
+
+    .grave-delete-modal-status {
+      margin-bottom: var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+
+    .grave-delete-modal-actions {
+      display: flex;
+      gap: var(--space-3);
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .grave-search-panel-header {
+      grid-row: 1;
+      flex-shrink: 0;
+    }
+
+    .grave-search-panel-header h3 {
+      color: var(--color-primary);
+      margin: 0 0 var(--space-2) 0;
+      font-size: var(--font-size-lg);
+    }
+
+    .grave-search-intro {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin: 0 0 var(--space-4) 0;
+      line-height: 1.5;
+    }
+
+    .grave-search-panel-header .lineage-controls {
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      align-items: flex-end;
+      justify-content: flex-start;
+      width: 100%;
+    }
+
+    /* Khối nhập + nút: căn trái (ghi đè .lineage-controls { flex-direction: column } + align-items khiến khối lệch phải) */
+    #graveSearchSection .grave-search-panel-header .lineage-input-group {
+      flex: 0 1 520px;
+      min-width: min(100%, 240px);
+      max-width: 560px;
+    }
+
+    #graveSearchSection .grave-search-panel-header #btnSearchGrave {
+      flex: 0 0 auto;
+      min-height: 44px;
+      padding-left: var(--space-5);
+      padding-right: var(--space-5);
+    }
+
+    .grave-search-content {
+      grid-row: 2;
+      min-height: 0;
+      max-height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-gutter: stable;
+      padding-bottom: var(--space-2);
+      overscroll-behavior: contain;
+    }
+
+    @media (min-width: 1200px) and (max-width: 1399px) {
+      .tree-info-panel {
+        height: min(85vh, 900px);
+        max-height: min(85vh, 900px);
+      }
+    }
+    
+    @media (max-width: 1199px) {
+      .tree-detail-grave-row {
+        grid-template-columns: 1fr;
+      }
+
+      .tree-info-panel {
+        order: -1;
+        position: sticky;
+        top: var(--navbar-height, 70px);
+        z-index: 10;
+      }
+
+      .grave-search-page-section .grave-search-panel {
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .tree-panel {
+        gap: var(--space-2, 8px);
+      }
+
+      .tree-container-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        /* Cây nhiều đời: tăng vùng xem so với 58vh/70vh để zoom-out thấy nhiều hơn */
+        height: min(68vh, 900px);
+        min-height: 240px;
+        max-height: min(88vh, 1200px);
+      }
+
+      @supports (height: 68dvh) {
+        .tree-container-wrapper {
+          height: min(68dvh, 900px);
+          max-height: min(88dvh, 1200px);
+        }
+      }
+
+      #treeContainer {
+        min-width: 600px; /* Ensure tree is scrollable horizontally */
+      }
+
+      .tree-info-panel {
+        font-size: var(--font-size-sm, 14px);
+        padding: var(--space-3, 12px);
+        height: min(72vh, 640px);
+        max-height: min(72vh, 640px);
+      }
+
+      @supports (height: 72dvh) {
+        .tree-info-panel {
+          height: min(72dvh, 640px);
+          max-height: min(72dvh, 640px);
+        }
+      }
+
+      #graveSearchSection .grave-search-panel {
+        padding: var(--space-3, 12px);
+        height: auto;
+        max-height: none;
+        margin-bottom: env(safe-area-inset-bottom, 0px);
+      }
+
+      #graveSearchSection .grave-search-content {
+        padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+      }
+    }
+
+    /* Danh sách đa cấp — full width, đồng bộ lineage-card */
+    .multilevel-genealogy-section {
+      width: 100%;
+      max-width: 100%;
+      margin-top: var(--space-6);
+    }
+
+    .multilevel-genealogy-body {
+      padding: var(--space-4);
+      text-align: left;
+    }
+
+    .multilevel-genealogy-root,
+    .multilevel-genealogy-nested {
+      margin: 0;
+      list-style: none;
+    }
+
+    .multilevel-genealogy-nested {
+      padding-left: 0.35rem;
+    }
+
+    .multilevel-genealogy-root {
+      padding-left: 0;
+    }
+
+    .multilevel-genealogy-li {
+      margin: var(--space-2) 0;
+      line-height: 1.45;
+    }
+
+    .multilevel-genealogy-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.2rem;
+      min-width: 0;
+      border-radius: 6px;
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    /* Rê chuột: cả dòng (kèm đường cây) nổi bật để biết sẽ bấm vào nhánh đó */
+    .multilevel-genealogy-li:hover > .multilevel-genealogy-row {
+      background: var(--color-surface-hover, rgba(0, 0, 0, 0.06));
+      box-shadow: inset 0 0 0 1px var(--color-border, rgba(0, 0, 0, 0.12));
+    }
+
+    .multilevel-genealogy-li--selected:hover > .multilevel-genealogy-row {
+      box-shadow: inset 0 0 0 1px var(--color-primary);
+    }
+
+    .multilevel-genealogy-tree-guides {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: stretch;
+      user-select: none;
+      color: var(--color-text-muted);
+      opacity: 0.88;
+      font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+      font-size: 0.95em;
+      line-height: inherit;
+    }
+
+    .multilevel-genealogy-tree-cell {
+      display: inline-block;
+      width: 1.05em;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .multilevel-genealogy-tree-elbow {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .multilevel-genealogy-item-label {
+      color: var(--color-text);
+      font-weight: 500;
+      font-size: var(--font-size-lg);
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 0 0.25em;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .multilevel-genealogy-name-part {
+      min-width: 0;
+    }
+
+    .multilevel-genealogy-life-years {
+      color: var(--color-text-muted);
+      font-weight: 400;
+      font-size: 0.95em;
+      white-space: nowrap;
+    }
+
+    .multilevel-genealogy-gen-suffix {
+      font-weight: 500;
+    }
+
+    .multilevel-genealogy-item-label--clickable {
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: transparent;
+      transition: text-decoration-color 0.15s ease, color 0.15s ease;
+    }
+
+    .multilevel-genealogy-item-label--clickable:hover,
+    .multilevel-genealogy-item-label--clickable:focus {
+      color: var(--color-primary);
+      text-decoration-color: var(--color-primary);
+      outline: none;
+    }
+
+    .multilevel-genealogy-item-label--clickable:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .multilevel-genealogy-li--selected > .multilevel-genealogy-row .multilevel-genealogy-item-label--clickable {
+      color: var(--color-primary);
+      font-weight: 600;
+      text-decoration-color: var(--color-primary);
+    }
+
+    .multilevel-genealogy-li--selected > .multilevel-genealogy-row .multilevel-genealogy-life-years {
+      color: var(--color-primary);
+      opacity: 0.92;
+    }
+
+    .multilevel-genealogy-details {
+      margin-top: var(--space-2);
+      /* Thụt theo cap: ~bang mot cot duong cay moi cap (1.1em) + le nho */
+      padding-left: calc(var(--space-2, 8px) + var(--ml-depth, 0) * 1.1em);
+      box-sizing: border-box;
+    }
+
+    .multilevel-genealogy-summary {
+      cursor: pointer;
+      color: var(--color-primary);
+      font-size: var(--font-size-base);
+      user-select: none;
+      list-style-position: outside;
+      padding: var(--space-1) var(--space-2);
+      margin-left: calc(-1 * var(--space-2));
+      border-radius: 6px;
+      transition: background-color 0.15s ease, color 0.15s ease, text-decoration-color 0.15s ease;
+    }
+
+    .multilevel-genealogy-summary:hover {
+      background: var(--color-surface-hover, rgba(0, 0, 0, 0.07));
+      color: var(--color-primary-strong, var(--color-primary));
+      text-decoration: underline;
+      text-decoration-color: var(--color-primary);
+    }
+
+    .multilevel-genealogy-summary:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+
+    .multilevel-genealogy-empty {
+      color: var(--color-text-muted);
+      font-style: italic;
+      margin: 0;
+    }
+
+    /* Stats Layout Responsive */
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-4);
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .stats-card {
+      padding: var(--space-4);
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .stats-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Biểu đồ thống kê (theo nhánh) */
+    .stats-charts {
+      align-items: stretch;
+    }
+
+    .stats-chart-card {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .stats-chart-canvas-wrap {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      min-height: 280px;
+      max-height: 320px;
+    }
+
+    .stats-chart-canvas-wrap--branch {
+      min-height: 280px;
+      max-height: 320px;
+    }
+
+    @media (max-width: 1024px) {
+      .stats-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 720px;
+      }
+
+      .stats-charts {
+        grid-template-columns: 1fr !important;
+      }
+      
+      .degree-chart-container {
+        height: 300px !important;
+        padding: var(--space-3) !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .stats-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .degree-chart-container {
+        height: 280px !important;
+        padding: var(--space-2) !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .stats-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 100%;
+        gap: var(--space-3);
+      }
+
+      .stats-card {
+        padding: var(--space-3);
+      }
+
+      .stats-layout {
+        gap: var(--space-6) !important;
+      }
+    }
+
+    
+    /* Phần dưới: Tra cứu */
+    .lineage-panel {
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .lineage-card {
+      padding: var(--space-6);
+    }
+    
+    .lineage-header h2 {
+      font-size: var(--font-size-xl);
+      color: var(--color-primary);
+      margin-bottom: var(--space-2);
+    }
+    
+    .lineage-header p {
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      margin-bottom: var(--space-4);
+    }
+    
+    .lineage-controls {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+
+    /* Thu phóng / toàn màn hình (cây mặc định Danh sách) */
+    .tree-zoom-toolbar-wrap {
+      margin-top: var(--space-4);
+      margin-bottom: 0;
+    }
+
+    .tree-zoom-toolbar-card {
+      padding: var(--space-4) var(--space-5);
+    }
+
+    .tree-zoom-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      align-items: center;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+
+    .tree-zoom-toolbar .btn {
+      min-height: 36px;
+    }
+
+    .tree-zoom-toolbar .tree-zoom-btn-text {
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    
+    .lineage-input-group {
+      position: relative;
+    }
+    
+    .lineage-input-group label {
+      display: block;
+      margin-bottom: var(--space-2);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-primary);
+      font-size: var(--font-size-sm);
+    }
+    
+    .lineage-input-group input {
+      width: 100%;
+      height: 44px;
+      padding: 0 var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+    }
+    
+    .lineage-input-group input:focus {
+      outline: 2px solid rgba(139, 0, 0, 0.25);
+      border-color: var(--color-primary);
+    }
+    
+    .suggestions-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 100;
+      margin-top: var(--space-1);
+    }
+    
+    .suggestion-item {
+      padding: var(--space-3) var(--space-4);
+      cursor: pointer;
+      border-bottom: 1px solid var(--color-border);
+      transition: background var(--transition-fast);
+    }
+    
+    .suggestion-item:hover {
+      background: var(--color-bg);
+    }
+    
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    
+    .lineage-result {
+      margin-top: var(--space-4);
+      padding: var(--space-5);
+    }
+    
+    .lineage-result-header h3 {
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+    }
+    
+    .lineage-result-content {
+      color: var(--color-text);
+      line-height: var(--line-height-relaxed);
+    }
+    
+    .lineage-detail-panel {
+      margin-top: var(--space-4);
+      padding: var(--space-5);
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .detail-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-4);
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    .detail-panel-header h3 {
+      color: var(--color-primary);
+      margin: 0;
+    }
+    
+    /* Generation Stats Tabs */
+    .generation-tabs {
+      margin-top: var(--space-4);
+    }
+    
+    .tab-buttons {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-4);
+      border-bottom: 2px solid var(--color-border);
+      flex-wrap: wrap;
+    }
+    
+    .tab-button {
+      padding: var(--space-3) var(--space-5);
+      background: var(--color-surface);
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: var(--font-size-base);
+      color: var(--color-text);
+      transition: all 0.2s;
+      margin-bottom: -2px;
+    }
+    
+    .tab-button:hover {
+      background: var(--color-surface-hover);
+      color: var(--color-primary);
+    }
+    
+    .tab-button.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+      background: var(--color-surface);
+    }
+    
+    .tab-content {
+      display: none;
+      padding: var(--space-4);
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .generation-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: var(--space-4);
+    }
+    
+    .generation-table thead {
+      background: var(--color-primary);
+      color: white;
+    }
+    
+    .generation-table th,
+    .generation-table td {
+      padding: var(--space-3) var(--space-4);
+      text-align: left;
+      border: 1px solid var(--color-border);
+    }
+    
+    .generation-table tbody tr:nth-child(even) {
+      background: var(--color-surface);
+    }
+    
+    .generation-table tbody tr:hover {
+      background: var(--color-surface-hover);
+      cursor: pointer;
+    }
+    
+    .generation-table th {
+      font-weight: var(--font-weight-semibold);
+      position: sticky;
+      top: 0;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: var(--font-size-2xl);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition-fast);
+    }
+    
+    .close-btn:hover {
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
+    
+    /* Cây tương tác */
+    .tree-panel {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      width: 100%;
+    }
+    
+    .tree-controls {
+      padding: var(--space-5);
+    }
+    
+    .tree-controls-row {
+      display: flex;
+      gap: var(--space-4);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .tree-controls-row label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+    }
+    
+    .tree-controls-row .input-group {
+      flex: 1;
+      min-width: 300px;
+    }
+    
+    .tree-controls-row .input-group input {
+      width: 100%;
+    }
+    
+    .tree-container-wrapper {
+      position: relative;
+      /* Tăng vùng xem cây (đời 5+ rộng/cao) — cuộn nội bộ, không cắt bằng max-height thấp */
+      height: min(92vh, 1600px);
+      min-height: min(88vh, 1200px);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: auto;
+      background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+      /* Full width - mở rộng full ngang */
+      width: 100%;
+      max-width: 100%;
+      /* Smooth scrolling */
+      scroll-behavior: smooth;
+      transition: all 0.3s ease;
+    }
+    
+    /* Fullscreen mode */
+    .tree-container-wrapper.fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      min-height: 100vh;
+      z-index: 9999;
+      border-radius: 0;
+      border: none;
+    }
+    
+    .tree-container-wrapper.fullscreen ~ .tree-detail-grave-row {
+      display: none;
+    }
+
+    body.fullscreen-active #graveSearchSection {
+      display: none;
+    }
+    
+    body.fullscreen-active {
+      overflow: hidden;
+    }
+    
+    /* Fullscreen hint */
+    .fullscreen-hint {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 15px;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+      z-index: 10000;
+      display: none;
+      pointer-events: none;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .tree-container-wrapper.fullscreen .fullscreen-hint {
+      display: block;
+    }
+    
+    .fullscreen-hint kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 0.9em;
+      font-weight: bold;
+      margin: 0 2px;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* Custom scrollbar */
+    .tree-container-wrapper::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    
+    .tree-container-wrapper::-webkit-scrollbar-track {
+      background: var(--color-bg);
+      border-radius: var(--radius-sm);
+    }
+    
+    .tree-container-wrapper::-webkit-scrollbar-thumb {
+      background: var(--color-primary);
+      border-radius: var(--radius-sm);
+    }
+    
+    .tree-container-wrapper::-webkit-scrollbar-thumb:hover {
+      background: var(--color-primary-strong);
+    }
+    
+    #treeContainer {
+      width: 100%;
+      height: 100%;
+      min-height: 100%;
+      position: relative;
+      /* Cho phép tree mở rộng vượt quá container để có scroll ngang */
+      overflow: visible;
+    }
+    
+    /* Tree container cần có width lớn hơn để scroll ngang */
+    #treeContainer .tree {
+      min-width: 2000px;
+      width: auto;
+      height: 100%;
+      position: relative;
+      overflow: visible;
+    }
+
+    /* Cây gia đình (family-tree): kích thước theo JS — bỏ sàn 2000px để không xung đột cây rất rộng */
+    #treeContainer .tree.family-tree {
+      min-width: 0;
+      width: auto;
+      height: auto;
+      min-height: 0;
+    }
+    
+    /* Đảm bảo tree có thể mở rộng theo chiều ngang (chế độ nút người cũ) */
+    #treeContainer > div:not(.tree) {
+      min-width: 2000px;
+      width: auto;
+    }
+    
+    /* Tree Node Styles - ô chữ nhật rộng, dễ đọc, không sát nhau */
+    #treeContainer .node {
+      position: absolute;
+      width: 200px;
+      min-height: 115px;
+      background: var(--color-surface);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    
+    #treeContainer .node:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-primary);
+      z-index: 20;
+    }
+    
+    #treeContainer .node.founder {
+      background: linear-gradient(135deg, #FFF8DC 0%, #FFE4B5 100%);
+      border-color: var(--color-primary);
+      border-width: 3px;
+      font-weight: var(--font-weight-bold);
+    }
+    
+    #treeContainer .node.male {
+      background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%);
+      border-color: #1976D2;
+    }
+    
+    #treeContainer .node.female {
+      background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD0 100%);
+      border-color: #C2185B;
+    }
+    
+    /* Màu sắc theo đời (generation) - Bảng màu đẹp và dễ phân biệt */
+    #treeContainer .node.gen-0,
+    #treeContainer .node.gen-1 {
+      background: linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%) !important;
+      border-color: #C92A2A !important;
+      color: #ffffff !important;
+    }
+    
+    #treeContainer .node.gen-2 {
+      background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%) !important;
+      border-color: #087F5B !important;
+      color: #ffffff !important;
+    }
+    
+    #treeContainer .node.gen-3 {
+      background: linear-gradient(135deg, #FFE66D 0%, #FFD93D 100%) !important;
+      border-color: #F59F00 !important;
+      color: #1C1C1E !important;
+    }
+    
+    #treeContainer .node.gen-4 {
+      background: linear-gradient(135deg, #A8E6CF 0%, #7FCDBB 100%) !important;
+      border-color: #12B886 !important;
+      color: #1C1C1E !important;
+    }
+    
+    #treeContainer .node.gen-5 {
+      background: linear-gradient(135deg, #95E1D3 0%, #6BC5D2 100%) !important;
+      border-color: #0C8599 !important;
+      color: #1C1C1E !important;
+    }
+    
+    #treeContainer .node.gen-6 {
+      background: linear-gradient(135deg, #F38181 0%, #F38181 100%) !important;
+      border-color: #C92A2A !important;
+      color: #ffffff !important;
+    }
+    
+    #treeContainer .node.gen-7 {
+      background: linear-gradient(135deg, #AA96DA 0%, #C58FC9 100%) !important;
+      border-color: #862E9C !important;
+      color: #ffffff !important;
+    }
+    
+    #treeContainer .node.gen-8 {
+      background: linear-gradient(135deg, #FCF8E8 0%, #F8E8D3 100%) !important;
+      border-color: #D97706 !important;
+      color: #1C1C1E !important;
+    }
+    
+    #treeContainer .node[class*="gen-"]:not(.gen-0):not(.gen-1):not(.gen-2):not(.gen-3):not(.gen-4):not(.gen-5):not(.gen-6):not(.gen-7):not(.gen-8) {
+      background: linear-gradient(135deg, #E8E8E8 0%, #D0D0D0 100%) !important;
+      border-color: #6C757D !important;
+      color: #1C1C1E !important;
+    }
+    
+    /* Màu sắc theo đời cho Family nodes (couple) - Bảng màu đẹp và dễ phân biệt */
+    #treeContainer .family-node.family-gen-0,
+    #treeContainer .family-node.family-gen-1 {
+      background: linear-gradient(135deg, #FF6B6B 0%, #EE5A6F 100%) !important;
+      border-color: #C92A2A !important;
+    }
+    
+    #treeContainer .family-node.family-gen-2 {
+      background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%) !important;
+      border-color: #087F5B !important;
+    }
+    
+    #treeContainer .family-node.family-gen-3 {
+      background: linear-gradient(135deg, #FFE66D 0%, #FFD93D 100%) !important;
+      border-color: #F59F00 !important;
+    }
+    
+    #treeContainer .family-node.family-gen-4 {
+      background: linear-gradient(135deg, #A8E6CF 0%, #7FCDBB 100%) !important;
+      border-color: #12B886 !important;
+    }
+    
+    #treeContainer .family-node.family-gen-5 {
+      background: linear-gradient(135deg, #95E1D3 0%, #6BC5D2 100%) !important;
+      border-color: #0C8599 !important;
+    }
+    
+    #treeContainer .family-node.family-gen-6 {
+      background: linear-gradient(135deg, #F38181 0%, #F38181 100%) !important;
+      border-color: #C92A2A !important;
+    }
+    
+    #treeContainer .family-node.family-gen-7 {
+      background: linear-gradient(135deg, #AA96DA 0%, #C58FC9 100%) !important;
+      border-color: #862E9C !important;
+    }
+    
+    #treeContainer .family-node.family-gen-8 {
+      background: linear-gradient(135deg, #FCF8E8 0%, #F8E8D3 100%) !important;
+      border-color: #D97706 !important;
+    }
+    
+    #treeContainer .family-node[class*="family-gen-"]:not(.family-gen-0):not(.family-gen-1):not(.family-gen-2):not(.family-gen-3):not(.family-gen-4):not(.family-gen-5):not(.family-gen-6):not(.family-gen-7):not(.family-gen-8) {
+      background: linear-gradient(135deg, #E8E8E8 0%, #D0D0D0 100%) !important;
+      border-color: #6C757D !important;
+    }
+
+    /* =========================================================
+       Redesign .family-node — soft card with top accent bar.
+       Nền trắng với gradient rất nhẹ, dải màu theo đời ở đỉnh,
+       shadow mềm, hover nâng. Override các rule phía trên vì
+       được khai báo sau & cùng specificity.
+       ========================================================= */
+    #treeContainer .family-node {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+      border: 1px solid rgba(148, 163, 184, 0.35) !important;
+      border-radius: 14px !important;
+      overflow: visible !important;
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.05),
+        0 6px 16px rgba(15, 23, 42, 0.08) !important;
+      transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease !important;
+      padding-top: 6px;
+    }
+    /* Dải màu đỉnh theo đời — thay vì tô nguyên khối */
+    #treeContainer .family-node::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 5px;
+      border-top-left-radius: 13px;
+      border-top-right-radius: 13px;
+      background: var(--gen-accent, linear-gradient(90deg, #94a3b8, #cbd5e1));
+      z-index: 1;
+      pointer-events: none;
+    }
+    #treeContainer .family-node:hover {
+      transform: translateY(-2px) !important;
+      box-shadow:
+        0 2px 4px rgba(15, 23, 42, 0.06),
+        0 14px 28px rgba(15, 23, 42, 0.14) !important;
+      border-color: rgba(100, 116, 139, 0.55) !important;
+    }
+    #treeContainer .family-node.is-highlighted {
+      border-color: #2563eb !important;
+      box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.18),
+        0 10px 24px rgba(37, 99, 235, 0.22) !important;
+    }
+
+    /* Gen palette: CSS vars + nền pastel cực nhẹ (tránh “chói”) */
+    #treeContainer .family-node.family-gen-0,
+    #treeContainer .family-node.family-gen-1 {
+      --gen-accent: linear-gradient(90deg, #ef4444, #f97316);
+      background: linear-gradient(180deg, #ffffff 0%, #fff7f5 100%) !important;
+      border-color: rgba(239, 68, 68, 0.25) !important;
+    }
+    #treeContainer .family-node.family-gen-2 {
+      --gen-accent: linear-gradient(90deg, #0891b2, #14b8a6);
+      background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%) !important;
+      border-color: rgba(20, 184, 166, 0.25) !important;
+    }
+    #treeContainer .family-node.family-gen-3 {
+      --gen-accent: linear-gradient(90deg, #ca8a04, #f59e0b);
+      background: linear-gradient(180deg, #ffffff 0%, #fffbeb 100%) !important;
+      border-color: rgba(245, 158, 11, 0.28) !important;
+    }
+    #treeContainer .family-node.family-gen-4 {
+      --gen-accent: linear-gradient(90deg, #10b981, #22c55e);
+      background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%) !important;
+      border-color: rgba(34, 197, 94, 0.25) !important;
+    }
+    #treeContainer .family-node.family-gen-5 {
+      --gen-accent: linear-gradient(90deg, #0ea5e9, #06b6d4);
+      background: linear-gradient(180deg, #ffffff 0%, #f0f9ff 100%) !important;
+      border-color: rgba(14, 165, 233, 0.25) !important;
+    }
+    #treeContainer .family-node.family-gen-6 {
+      --gen-accent: linear-gradient(90deg, #e11d48, #ec4899);
+      background: linear-gradient(180deg, #ffffff 0%, #fdf2f8 100%) !important;
+      border-color: rgba(236, 72, 153, 0.28) !important;
+    }
+    #treeContainer .family-node.family-gen-7 {
+      --gen-accent: linear-gradient(90deg, #7c3aed, #a855f7);
+      background: linear-gradient(180deg, #ffffff 0%, #faf5ff 100%) !important;
+      border-color: rgba(168, 85, 247, 0.25) !important;
+    }
+    #treeContainer .family-node.family-gen-8 {
+      --gen-accent: linear-gradient(90deg, #d97706, #f59e0b);
+      background: linear-gradient(180deg, #ffffff 0%, #fffbeb 100%) !important;
+      border-color: rgba(217, 119, 6, 0.28) !important;
+    }
+
+    /* Container chia 2 nửa (chồng / vợ) */
+    #treeContainer .family-node__container {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      min-height: 96px;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+      z-index: 2;
+    }
+    #treeContainer .family-spouse-half {
+      flex: 1 1 0;
+      min-width: 0;
+      padding: 14px 10px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 2px;
+      position: relative;
+      transition: background-color 160ms ease;
+    }
+    /* Đường chia đôi mảnh bằng dashed nhẹ thay vì border cứng */
+    #treeContainer .family-spouse-half[data-side="left"]::after {
+      content: '';
+      position: absolute;
+      top: 14%;
+      bottom: 14%;
+      right: 0;
+      width: 1px;
+      background: linear-gradient(180deg,
+        rgba(148, 163, 184, 0) 0%,
+        rgba(148, 163, 184, 0.45) 20%,
+        rgba(148, 163, 184, 0.45) 80%,
+        rgba(148, 163, 184, 0) 100%);
+    }
+    /* Gender tint — chỉ áp dụng khi biết rõ giới, tránh gượng ép */
+    #treeContainer .family-spouse-half.male {
+      background:
+        radial-gradient(120% 60% at 50% 0%, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0) 70%);
+    }
+    #treeContainer .family-spouse-half.female {
+      background:
+        radial-gradient(120% 60% at 50% 0%, rgba(236, 72, 153, 0.08) 0%, rgba(236, 72, 153, 0) 70%);
+    }
+    #treeContainer .family-spouse-half:hover {
+      background-color: rgba(148, 163, 184, 0.08);
+    }
+    #treeContainer .family-spouse-name {
+      font-weight: 600;
+      font-size: 13px;
+      line-height: 1.3;
+      letter-spacing: -0.005em;
+      color: #0f172a;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      max-width: 100%;
+    }
+    #treeContainer .family-spouse-kinship {
+      font-size: 10.5px;
+      font-weight: 500;
+      color: #64748b;
+      font-style: italic;
+      letter-spacing: 0.02em;
+      margin-top: 2px;
+    }
+
+    /* Badge Đời · Chi — pill nhẹ, không quá đậm */
+    #treeContainer .family-node .family-badge {
+      position: absolute;
+      top: -11px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ffffff;
+      color: #1e3a8a;
+      border: 1px solid rgba(30, 58, 138, 0.22);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+      z-index: 4;
+    }
+
+    /* Nút thu/mở nhánh — tròn nhỏ, glass-morphism nhẹ */
+    #treeContainer .family-node .family-collapse-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #475569;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.1);
+      transition: transform 140ms ease, background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+      z-index: 5;
+      backdrop-filter: saturate(1.2) blur(2px);
+    }
+    #treeContainer .family-node .family-collapse-btn:hover {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+      transform: scale(1.08);
+    }
+    #treeContainer .family-node .family-collapse-btn:active {
+      transform: scale(0.96);
+    }
+    #treeContainer .family-node .family-collapse-btn.is-collapsed {
+      background: linear-gradient(180deg, #fef3c7, #fde68a);
+      border-color: rgba(180, 83, 9, 0.35);
+      color: #92400e;
+    }
+    #treeContainer .family-node .family-collapse-btn svg {
+      display: block;
+    }
+
+    /* Branch-colored override: giữ accent ở dải đỉnh, không vẽ border đậm */
+    #treeContainer .family-node.branch-colored {
+      border: 1px solid rgba(148, 163, 184, 0.35) !important;
+    }
+    #treeContainer .family-node.branch-colored:hover {
+      border-color: var(--branch-color, rgba(100, 116, 139, 0.6)) !important;
+    }
+    /* ========================= end redesign ========================= */
+    
+    #treeContainer .node.dead {
+      opacity: 0.7;
+      border-style: dashed;
+    }
+    
+    #treeContainer .node.highlighted {
+      border-color: #FF6B35;
+      border-width: 3px;
+      box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 15px rgba(255, 107, 53, 0.5);
+      }
+      50% {
+        box-shadow: 0 0 25px rgba(255, 107, 53, 0.8);
+      }
+    }
+    
+    /* Branch colored: chỉ áp dụng border dày cho .node cũ; .family-node dùng
+       redesign ở block phía trên (border mảnh + accent bar trên đỉnh). */
+    #treeContainer .node.branch-colored {
+      border: 2px solid var(--branch-color) !important;
+      box-shadow: 0 8px 18px rgba(0,0,0,.10);
+    }
+    #treeContainer .node.branch-colored:hover {
+      box-shadow: 0 12px 24px rgba(0,0,0,.15);
+      transform: translateY(-2px);
+    }
+    
+    /* Branch badge (optional) */
+    .branch-badge {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--branch-color);
+      border: 2px solid #fff;
+      z-index: 15;
+    }
+    
+    #treeContainer .node-name {
+      font-size: 12px;
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+      margin-bottom: 6px;
+      line-height: 1.3;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+    
+    #treeContainer .node-parents {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+      line-height: 1.35;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    
+    #treeContainer .node-generation {
+      display: inline-block;
+      background: var(--color-primary);
+      color: var(--color-surface);
+      font-size: 9px;
+      font-weight: var(--font-weight-bold);
+      padding: 2px 6px;
+      border-radius: var(--radius-full);
+      margin-top: 2px;
+    }
+    
+    /* Minimal Family Tree Styles */
+    #minimalTreeContainer {
+      position: relative;
+      width: 100%;
+      height: 70vh;
+      min-height: 600px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+      cursor: grab;
+    }
+    
+    #minimalTreeContainer:active {
+      cursor: grabbing;
+    }
+    
+    .minimal-tree-node {
+      position: absolute;
+      background: var(--color-surface);
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      padding: var(--space-2);
+      box-shadow: var(--shadow-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+    }
+    
+    .minimal-tree-node:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+      border-color: #8B0000;
+    }
+    
+    .minimal-tree-node .node-id {
+      font-size: 10px;
+      font-weight: var(--font-weight-bold);
+      color: var(--color-primary);
+      margin-bottom: 2px;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .minimal-tree-node .node-name {
+      font-size: 13px;
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-text);
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .minimal-tree-node .node-lifespan {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      font-family: 'Courier New', monospace;
+    }
+    
+    .minimal-tree-controls {
+      display: flex;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .minimal-tree-controls button {
+      padding: var(--space-2) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-text);
+      cursor: pointer;
+      font-size: var(--font-size-sm);
+      transition: all var(--transition-fast);
+    }
+    
+    .minimal-tree-controls button:hover {
+      background: var(--color-primary);
+      color: var(--color-surface);
+      border-color: var(--color-primary);
+    }
+    
+    .minimal-tree-controls input[type="number"] {
+      width: 60px;
+      padding: var(--space-2);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+    }
+    
+    .minimal-tree-controls input[type="text"] {
+      flex: 1;
+      min-width: 200px;
+      padding: var(--space-2) var(--space-4);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-sm);
+    }
+    
+    @media (max-width: 768px) {
+      .minimal-tree-node {
+        padding: var(--space-1);
+      }
+      
+      .minimal-tree-node .node-id {
+        font-size: 9px;
+      }
+      
+      .minimal-tree-node .node-name {
+        font-size: 12px;
+      }
+      
+      .minimal-tree-node .node-lifespan {
+        font-size: 9px;
+      }
+    }
+    
+    /* Connector Styles — độ dày/tương phản tốt; màu đời vẫn từ inline style (getGenerationColor) */
+    #treeContainer .connector {
+      position: absolute;
+      z-index: 3;
+      pointer-events: none;
+      transition: opacity 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    #treeContainer .connector.connector-solid {
+      box-sizing: border-box;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.35),
+        0 1px 4px rgba(0, 0, 0, 0.22);
+    }
+    
+    #treeContainer .connector.vertical {
+      width: 6px;
+      border-radius: 3px;
+    }
+    
+    #treeContainer .connector.horizontal {
+      height: 6px;
+      border-radius: 3px;
+    }
+    
+    #treeContainer .connector-junction {
+      z-index: 4;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+    }
+    
+    #treeContainer .genealogy-connectors-svg {
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 3;
+      pointer-events: none;
+      overflow: visible;
+    }
+    
+    #treeContainer .genealogy-connector-halo {
+      filter: none;
+      pointer-events: none;
+    }
+    
+    #treeContainer .genealogy-connector-stroke {
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.22));
+      pointer-events: none;
+    }
+    
+    #treeContainer .genealogy-connector-dot-halo {
+      filter: none;
+      pointer-events: none;
+    }
+    
+    #treeContainer .genealogy-connector-dot-core {
+      filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.5));
+      pointer-events: none;
+    }
+    
+    /* Nhãn tầng đời (cùng hàng = cùng đời) */
+    .genealogy-gen-row-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--color-text-muted);
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid var(--color-border);
+      border-radius: 6px;
+      padding: 2px 8px;
+      z-index: 5;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* Hover: nổi nhánh cha — con trực tiếp (nhẹ) */
+    #treeContainer .family-node {
+      z-index: 10;
+    }
+    
+    #treeContainer .tree.genealogy-hover-active .family-node.genealogy-rel-dim {
+      opacity: 0.38;
+      filter: saturate(0.75);
+      transition: opacity 0.2s ease, filter 0.2s ease;
+    }
+    
+    #treeContainer .tree .family-node.genealogy-rel-highlight {
+      opacity: 1 !important;
+      filter: none !important;
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+      z-index: 25;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    }
+    
+    /* Hover effect cho connectors khi hover vào node */
+    #treeContainer .node:hover ~ .connector,
+    #treeContainer .node:hover + .connector {
+      box-shadow: 0 4px 12px rgba(139, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    
+    .tree-loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: var(--font-size-lg);
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+    
+    .tree-info-panel {
+      padding: var(--space-5);
+      overflow: hidden;
+      position: sticky;
+      top: var(--space-4);
+      align-self: start;
+      background: var(--color-surface);
+      box-shadow: var(--shadow-md);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 0;
+      min-height: 0;
+      /* Thấp hơn trước vì nội dung 2 cột — ít cuộn dọc hơn */
+      height: min(78vh, 880px);
+      max-height: min(78vh, 880px);
+    }
+
+    @media (max-width: 1200px) {
+      .tree-info-panel {
+        height: min(85vh, 900px);
+        max-height: min(85vh, 900px);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .tree-info-panel {
+        height: min(72vh, 640px);
+        max-height: min(72vh, 640px);
+      }
+
+      @supports (height: 72dvh) {
+        .tree-info-panel {
+          height: min(72dvh, 640px);
+          max-height: min(72dvh, 640px);
+        }
+      }
+    }
+    
+    .tree-info-panel h3 {
+      color: var(--color-primary);
+      margin-bottom: var(--space-4);
+      font-size: var(--font-size-lg);
+      grid-row: 1;
+    }
+    
+    .tree-info-content {
+      color: var(--color-text);
+      line-height: var(--line-height-relaxed);
+      grid-row: 2;
+      min-height: 0;
+      max-height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-gutter: stable;
+      padding-bottom: var(--space-4);
+      overscroll-behavior: contain;
+    }
+
+    /* Desktop: hiển thị 2 cột ngang — giảm chiều dọc, tận dụng chiều rộng panel */
+    @media (min-width: 1201px) {
+      .tree-info-content {
+        column-count: 2;
+        column-gap: var(--space-6);
+        column-fill: balance;
+      }
+      /* Tên + (tuỳ chọn) ảnh: full width trước khi chia 2 cột */
+      .tree-info-content > div:first-child {
+        column-span: all;
+      }
+      .tree-info-content > div:nth-child(2):has(img) {
+        column-span: all;
+      }
+      .tree-info-content > * {
+        break-inside: avoid;
+        -webkit-column-break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+    
+    .tree-info-content p {
+      color: var(--color-text-muted);
+      font-style: italic;
+    }
+
+    /* Accordion mục dài trên mobile (displayPersonInfo — family-tree-ui.js) */
+    .tree-info-content .tree-info-fold {
+      border-radius: var(--radius-sm);
+    }
+
+    .tree-info-content .tree-info-fold-summary {
+      cursor: pointer;
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold, 600);
+      font-size: var(--font-size-base);
+      padding: var(--space-1) 0;
+      list-style: none;
+    }
+
+    .tree-info-content .tree-info-fold-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .tree-info-content .tree-info-fold-body {
+      padding-top: var(--space-2);
+    }
+    
+    #searchResults {
+      margin-top: var(--space-4);
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      background: var(--color-bg);
+      display: none;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .search-result-item {
+      padding: var(--space-3) var(--space-4);
+      margin: var(--space-2) 0;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      border-left: 3px solid var(--color-primary);
+      transition: all var(--transition-fast);
+    }
+    
+    .search-result-item:hover {
+      background: var(--color-bg);
+      transform: translateX(4px);
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 1023px) {
+      .tree-container-wrapper {
+        height: min(82vh, 1400px);
+        min-height: min(50vh, 720px);
+      }
+
+      @supports (height: 82dvh) {
+        .tree-container-wrapper {
+          height: min(82dvh, 1400px);
+        }
+      }
+      
+      .tree-controls-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .tree-controls-row .input-group {
+        min-width: auto;
+      }
+      
+      .lineage-panel {
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .tree-container-wrapper {
+        min-height: 200px;
+      }
+    }
+    
+    /* Passphrase Gate Styles */
+    #genealogy-gate {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 200px);
+      padding: var(--space-8);
+    }
+    
+    .gate-container {
+      max-width: 400px;
+      width: 100%;
+      background: var(--color-surface);
+      padding: var(--space-6);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--color-border);
+    }
+    
+    .gate-container h2 {
+      text-align: center;
+      margin-bottom: var(--space-4);
+      color: var(--color-primary);
+    }
+    
+    .gate-form {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+    }
+    
+    .gate-form input {
+      width: 100%;
+      padding: var(--space-3);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      transition: border-color var(--transition-base), box-shadow var(--transition-base);
+    }
+
+    .gate-form input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-light);
+    }
+    
+    .gate-form button {
+      width: 100%;
+      padding: var(--space-3);
+      background: var(--color-primary);
+      color: var(--color-surface);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: var(--font-size-base);
+      font-weight: var(--font-weight-semibold);
+      cursor: pointer;
+      transition: background var(--transition-base), transform var(--transition-fast);
+    }
+    
+    .gate-form button:hover {
+      background: var(--color-primary-strong);
+    }
+
+    .gate-form button:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 3px;
+    }
+    
+    .gate-error {
+      color: var(--color-error);
+      font-size: var(--font-size-sm);
+      margin-top: var(--space-2);
+      display: none;
+    }
+    
+    .gate-error.show {
+      display: block;
+    }
+    
+    .gate-note {
+      margin-top: var(--space-3);
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      text-align: center;
+      display: none;
+    }
+    
+    .gate-note.show {
+      display: block;
+    }
+    
+    .gate-form input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: var(--color-primary);
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    .gate-form label[for="rememberPassphrase"] {
+      cursor: pointer;
+      user-select: none;
+      font-size: var(--font-size-sm);
+      color: var(--color-text);
+      font-weight: var(--font-weight-medium);
+      display: flex;
+      align-items: center;
+      transition: color var(--transition-base);
+    }
+    
+    .gate-form label[for="rememberPassphrase"]:hover {
+      color: var(--color-primary-strong);
+    }
+    
+    .gate-form input[type="checkbox"]:checked + label[for="rememberPassphrase"] {
+      color: var(--color-primary);
+      font-weight: var(--font-weight-semibold);
+    }
+    
+    .remember-passphrase-container {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: var(--space-3);
+      padding: var(--space-3);
+      background: var(--color-primary-light);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(139, 0, 0, 0.15);
+      transition: background var(--transition-base), border-color var(--transition-base);
+    }
+    
+    .remember-passphrase-container:hover {
+      background: rgba(139, 0, 0, 0.12);
+      border-color: rgba(139, 0, 0, 0.22);
+    }
+
+    /* Skip link — chỉ hiện khi focus (keyboard / screen reader) */
+    .genealogy-skip-link {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .genealogy-skip-link:focus {
+      position: fixed;
+      left: var(--space-4);
+      top: var(--space-4);
+      z-index: calc(var(--z-tooltip) + 10);
+      width: auto;
+      height: auto;
+      margin: 0;
+      clip: auto;
+      overflow: visible;
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      border: 2px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      color: var(--color-text);
+      font-weight: var(--font-weight-semibold);
+      font-size: var(--font-size-sm);
+      box-shadow: var(--shadow-lg);
+      text-decoration: none;
+    }
+    
+    #genealogy-content {
+      display: none;
+    }
+    
+    #genealogy-content.unlocked {
+      display: block;
+    }
+  </style>
+
+    <!-- Global CSRF Fetch Interceptor -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) {
+          var csrfToken = metaTag.getAttribute('content');
+          var originalFetch = window.fetch;
+          window.fetch = function(url, options) {
+            options = options || {};
+            if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+              options.headers = options.headers || {};
+              // Set the token header as expected by flask_wtf.csrf
+              options.headers['X-CSRFToken'] = csrfToken;
+              if (options.body && !(options.body instanceof FormData) && !options.headers['Content-Type']) {
+                  options.headers['Content-Type'] = 'application/json';
+              }
+            }
+            return originalFetch(url, options);
+          };
+        }
+      });
+    </script>
+</head>

@@ -37,20 +37,27 @@
 
 <div class="website-structure">
   <h2>🌐 Cấu trúc Website</h2>
-  <p class="tree-desc">Các trang công khai và khu vực quản trị thực tế đang hoạt động.</p>
+  <p class="tree-desc">Tất cả trang công khai và khu vực quản trị hiện đang hoạt động.</p>
   <div class="tree-structure">
     <div class="tree-item level-0">Công khai</div>
     <div class="tree-item level-1">├── Trang chủ (/)</div>
     <div class="tree-item level-1">├── Gia phả (/genealogy) <span class="gate-badge">Cổng passphrase</span></div>
     <div class="tree-item level-1">├── Thành viên (/members) <span class="gate-badge">Cổng đăng nhập</span></div>
+    <div class="tree-item level-1">├── Đăng nhập thành viên (/login)</div>
+    <div class="tree-item level-1">├── Hoạt động (/activities)</div>
+    <div class="tree-item level-1">├── Biên tập nội dung (/editor) <span class="gate-badge">Cổng đăng nhập</span></div>
     <div class="tree-item level-1">├── Liên hệ (/contact)</div>
-    <div class="tree-item level-1">└── Tài liệu (/documents)</div>
+    <div class="tree-item level-1">├── Tài liệu (/documents)</div>
+    <div class="tree-item level-1">└── Chính sách bảo mật (/privacy)</div>
     <div class="tree-item level-0 tree-section-spacer">Admin Panel (/admin/*)</div>
+    <div class="tree-item level-1">├── Đăng nhập admin (/admin/login)</div>
     <div class="tree-item level-1">├── Dashboard (/admin/dashboard)</div>
     <div class="tree-item level-1">├── Quản lý dữ liệu (/admin/data-management)</div>
+    <div class="tree-item level-1">├── Tài khoản (/admin/users)</div>
+    <div class="tree-item level-1">├── Hoạt động (/admin/activities)</div>
     <div class="tree-item level-1">├── Log (/admin/logs)</div>
     <div class="tree-item level-1">├── Yêu cầu chỉnh sửa (/admin/requests)</div>
-    <div class="tree-item level-1">└── Tài khoản (/admin/users)</div>
+    <div class="tree-item level-1">└── Đăng xuất (/admin/logout)</div>
   </div>
 </div>
 
@@ -81,8 +88,15 @@
 </div>
 
 <div class="admin-card code-graph-section">
-  <h2>🔗 Knowledge Graph (mã nguồn)</h2>
-  <p class="text-muted admin-desc">Node = tệp; cạnh = import ES module hoặc <code>&lt;script src&gt;</code> từ template → <code>static/js</code>. Chạy <code>cd scripts/code-graph && npm install && npm run scan:static</code> để cập nhật.</p>
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--admin-space-4, 16px); flex-wrap: wrap;">
+    <h2 style="margin: 0;">🔗 Knowledge Graph (mã nguồn)</h2>
+    <div style="flex-shrink: 0; display: flex; align-items: center; gap: 10px;">
+      <span id="code-graph-refresh-status" class="text-muted" style="font-size: 13px; min-height: 1em;"></span>
+      <button class="btn btn-secondary" id="btnRescanCodeGraph" type="button" onclick="rescanCodeGraph()" title="Quét lại static/js để cập nhật đồ thị.">
+        🔄 Cập nhật
+      </button>
+    </div>
+  </div>
   <p id="code-graph-hint" class="code-graph-hint text-muted"></p>
   <div class="code-graph-wrap">
     <aside class="code-graph-sidebar" aria-label="Bộ lọc loại tệp">
@@ -177,6 +191,73 @@
     }
   }
   document.addEventListener('DOMContentLoaded', loadDashboardStats);
+
+  // ============================================================
+  // Rescan Knowledge Graph — gọi /api/admin/code-graph/rescan rồi reload đồ thị
+  // ============================================================
+  async function rescanCodeGraph() {
+    const btn = document.getElementById('btnRescanCodeGraph');
+    const statusEl = document.getElementById('code-graph-refresh-status');
+    if (!btn) return;
+
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = '⏳ Đang quét…';
+    if (statusEl) {
+      statusEl.textContent = 'Đang chạy scanner (có thể mất vài giây)…';
+      statusEl.style.color = '';
+    }
+
+    try {
+      const res = await fetch('/api/admin/code-graph/rescan', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+
+      let data = null;
+      try { data = await res.json(); } catch (e) { data = null; }
+
+      if (!res.ok || !data || !data.success) {
+        const msg = (data && data.error) || `HTTP ${res.status}: ${res.statusText}`;
+        if (statusEl) {
+          statusEl.textContent = 'Lỗi: ' + msg;
+          statusEl.style.color = 'var(--admin-danger, #d32f2f)';
+        }
+        // Log tail để dev có thể xem trong console
+        if (data && (data.stdout_tail || data.stderr_tail)) {
+          console.groupCollapsed('code-graph rescan failed');
+          if (data.stdout_tail) console.log('stdout:\n' + data.stdout_tail);
+          if (data.stderr_tail) console.log('stderr:\n' + data.stderr_tail);
+          console.groupEnd();
+        }
+        return;
+      }
+
+      // Thành công — reload đồ thị bằng cache-bust
+      if (typeof window.reloadCodeGraph === 'function') {
+        try { await window.reloadCodeGraph(); } catch (e) { console.warn('reloadCodeGraph failed', e); }
+      }
+
+      const s = (data && data.stats) || {};
+      const dur = (data && data.duration_ms) != null ? `${data.duration_ms}ms` : '';
+      const nodes = (s.nodes != null) ? s.nodes : '?';
+      const edges = (s.edges != null) ? s.edges : '?';
+      if (statusEl) {
+        statusEl.textContent = `✅ Đã cập nhật: ${nodes} nodes, ${edges} edges${dur ? ' (' + dur + ')' : ''}`;
+        statusEl.style.color = 'var(--admin-success, #2e7d32)';
+      }
+    } catch (err) {
+      if (statusEl) {
+        statusEl.textContent = 'Lỗi: ' + (err && err.message ? err.message : String(err));
+        statusEl.style.color = 'var(--admin-danger, #d32f2f)';
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  }
 </script>
 {% endblock %}
 

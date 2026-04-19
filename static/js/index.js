@@ -1759,7 +1759,7 @@
             </div>
             <div class="form-group">
               <label>Đời:</label>
-              <input type="number" name="generation_number" value="${person.generation_number || ''}" min="1" required>
+              <input type="number" name="generation_number" value="${person.generation_number ?? ''}" min="0" required>
             </div>
             <div class="form-group">
               <label>Giới tính:</label>
@@ -3504,13 +3504,17 @@ async function renderAlbums(albumsList) {
       }
     }
     
+    // TODO(tech-debt): `closePasswordModal` định nghĩa lần 2 (lần 1 ở ~line 1505).
+    // Hai body khác nhau (style.display vs classList.active) — chắc chắn phục vụ modal khác.
+    // Giữ nguyên để không đổi runtime; cần hợp nhất/đổi tên khi dọn album-UI.
+    // eslint-disable-next-line no-redeclare
     function closePasswordModal() {
       const modal = document.getElementById('passwordModal');
       if (modal) {
         modal.classList.remove('active');
       }
     }
-    
+
     function cancelAlbumAction() {
       closeAlbumModal();
       closePasswordModal();

@@ -1,0 +1,44 @@
+
+  <!-- Charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- PDF Export: html2pdf (bundles jsPDF); html2canvas riêng để fallback chụp .tree -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" crossorigin="anonymous"></script>
+  
+  <!-- Leaflet for maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Load genealogy scripts -->
+  <script src="/static/js/device-detection.js"></script>
+  <script src="/static/js/common.js"></script>
+  <!-- D3 (d3.path) for SVG connector rendering; layout unchanged -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@panzoom/panzoom@4.5.1/dist/panzoom.min.js" crossorigin="anonymous"></script>
+  <script src="/static/js/family-tree-panzoom.js"></script>
+  <script src="/static/js/family-tree-core.js"></script>
+  <script src="/static/js/family-tree-graph-builder.js"></script>
+  <script src="/static/js/family-tree-family-renderer.js"></script>
+  <script src="/static/js/family-tree-ui.js"></script>
+  <script src="/static/js/family-tree-family-ui.js"></script>
+  <script src="/static/js/multilevel-genealogy.js"></script>
+  <script src="/static/js/genealogy-lineage.js"></script>
+  <script>
+    window.genealogyTreeRootPersonId = window.genealogyTreeRootPersonId || 'P-1-1';
+    /** Mặc định "Hiển thị đến đời" khi vào trang Gia phả (trước khi API thống kê đổ dropdown) */
+    window.GENEALOGY_DEFAULT_DISPLAY_GENERATION =
+      typeof window.GENEALOGY_DEFAULT_DISPLAY_GENERATION === 'number' && window.GENEALOGY_DEFAULT_DISPLAY_GENERATION > 0
+        ? window.GENEALOGY_DEFAULT_DISPLAY_GENERATION
+        : 5;
+    /** Giá trị hiển thị đời: dropdown nếu hợp lệ, không thì mặc định ở trên */
+    window.getGenealogyDisplayMaxGen = function () {
+      const el = document.getElementById('genFilter');
+      if (el && el.value) {
+        const n = parseInt(el.value, 10);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      const d = window.GENEALOGY_DEFAULT_DISPLAY_GENERATION;
+      return typeof d === 'number' && d > 0 ? d : 5;
+    };
+  </script>

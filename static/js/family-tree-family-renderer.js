@@ -28,69 +28,64 @@ function renderFamilyNode(familyNode, x, y, options = {}) {
   familyDiv.style.position = 'absolute';
   familyDiv.style.left = x + 'px';
   familyDiv.style.top = y + 'px';
-  familyDiv.style.width = '280px'; // Width cho couple
+  familyDiv.style.width = '280px';
   familyDiv.style.minHeight = '120px';
-  familyDiv.style.borderRadius = '12px';
-  familyDiv.style.backgroundColor = '#fff';
   familyDiv.style.cursor = 'pointer';
-  familyDiv.style.transition = 'all 0.2s ease';
+  // Fallback inline nhằm tránh phụ thuộc 100% vào CSS (HTML có thể bị cache
+  // nhưng JS bundle đã mới → layout cơ bản luôn đúng, CSS chỉ tinh chỉnh thêm).
+  familyDiv.style.boxSizing = 'border-box';
+  familyDiv.style.borderRadius = '14px';
+  familyDiv.style.background = 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)';
+  familyDiv.style.border = '1px solid rgba(148, 163, 184, 0.35)';
+  familyDiv.style.boxShadow = '0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 16px rgba(15, 23, 42, 0.08)';
+  familyDiv.style.paddingTop = '6px';
+  familyDiv.style.overflow = 'visible';
   
-  // Apply branch color
   familyDiv.style.setProperty("--branch-color", branchColor);
   
-  // Thêm class để tô màu theo đời (generation)
   const generation = familyNode.generation || 0;
   if (generation !== null && generation !== undefined) {
     familyDiv.classList.add(`family-gen-${generation}`);
     familyDiv.setAttribute('data-generation', generation);
   }
   
-  // Border: highlight overrides branch color
   if (isHighlighted) {
-    familyDiv.style.border = '3px solid #0066FF';
-    familyDiv.style.boxShadow = '0 0 15px rgba(0, 102, 255, 0.5)';
-  } else {
-    familyDiv.style.border = `2px solid ${branchColor}`;
-    familyDiv.style.boxShadow = '0 8px 18px rgba(0,0,0,.10)';
+    familyDiv.classList.add('is-highlighted');
   }
   
   // Family ID attribute
   familyDiv.setAttribute('data-family-id', familyNode.id);
   
-  // Container cho 2 nửa (hoặc 1 nửa nếu không có spouse2)
   const container = document.createElement('div');
+  container.className = 'family-node__container';
   container.style.display = 'flex';
   container.style.width = '100%';
   container.style.height = '100%';
-  container.style.borderRadius = '10px';
+  container.style.minHeight = '96px';
+  container.style.borderRadius = '12px';
   container.style.overflow = 'hidden';
+  container.style.position = 'relative';
   
-  // Kiểm tra xem có spouse2 hợp lệ không
   const spouse1Name = (familyNode.spouse1Name || '').trim();
   const spouse2Name = (familyNode.spouse2Name || '').trim();
   const hasSpouse2 = spouse2Name !== '' && 
                      spouse2Name.toLowerCase() !== 'unknown' &&
-                     spouse2Name !== spouse1Name; // Không hiển thị nếu trùng tên
+                     spouse2Name !== spouse1Name;
   
-  // Nửa trái: Chồng (Nam) - Blue
   const spouse1Div = createSpouseHalf(
     familyNode.spouse1Name || 'Unknown',
     familyNode.spouse1Gender || '',
     familyNode.spouse1Id,
-    hasSpouse2 ? 'left' : 'full', // Full width nếu không có spouse2
-    '#E3F2FD' // Light blue
+    hasSpouse2 ? 'left' : 'full'
   );
-  
   container.appendChild(spouse1Div);
   
-  // Chỉ render spouse2 nếu có spouse2 hợp lệ
   if (hasSpouse2) {
     const spouse2Div = createSpouseHalf(
       familyNode.spouse2Name,
       familyNode.spouse2Gender || '',
       familyNode.spouse2Id,
-      'right',
-      '#FCE4EC' // Light pink
+      'right'
     );
     container.appendChild(spouse2Div);
   }
@@ -101,42 +96,55 @@ function renderFamilyNode(familyNode, x, y, options = {}) {
     familyDiv.appendChild(badgeDiv);
   }
   
-  // Collapse/Expand button
+  let collapseBtn = null;
   if (familyNode.children && familyNode.children.length > 0) {
-    const collapseBtn = document.createElement('button');
+    collapseBtn = document.createElement('button');
     collapseBtn.className = 'family-collapse-btn';
-    collapseBtn.innerHTML = isCollapsed ? '▶' : '▼';
+    collapseBtn.classList.toggle('is-collapsed', Boolean(isCollapsed));
+    collapseBtn.setAttribute('type', 'button');
+    collapseBtn.setAttribute('aria-label', isCollapsed ? 'Mở rộng' : 'Thu gọn');
+    collapseBtn.setAttribute('title', isCollapsed ? 'Mở rộng nhánh' : 'Thu gọn nhánh');
+    collapseBtn.innerHTML = isCollapsed
+      ? '<svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M5 3l6 5-6 5z" fill="currentColor"/></svg>'
+      : '<svg viewBox="0 0 16 16" width="10" height="10" aria-hidden="true"><path d="M3 5l5 6 5-6z" fill="currentColor"/></svg>';
+
+    // Inline fallback: nút tròn 22px ở góc trên phải
     collapseBtn.style.position = 'absolute';
-    collapseBtn.style.top = '5px';
-    collapseBtn.style.right = '5px';
-    collapseBtn.style.width = '24px';
-    collapseBtn.style.height = '24px';
-    collapseBtn.style.border = '1px solid #ccc';
-    collapseBtn.style.borderRadius = '4px';
-    collapseBtn.style.backgroundColor = '#fff';
-    collapseBtn.style.cursor = 'pointer';
-    collapseBtn.style.fontSize = '12px';
+    collapseBtn.style.top = '8px';
+    collapseBtn.style.right = '8px';
+    collapseBtn.style.width = '22px';
+    collapseBtn.style.height = '22px';
     collapseBtn.style.padding = '0';
-    collapseBtn.style.display = 'flex';
+    collapseBtn.style.display = 'inline-flex';
     collapseBtn.style.alignItems = 'center';
     collapseBtn.style.justifyContent = 'center';
-    
+    collapseBtn.style.border = '1px solid rgba(148, 163, 184, 0.5)';
+    collapseBtn.style.borderRadius = '999px';
+    collapseBtn.style.background = isCollapsed
+      ? 'linear-gradient(180deg, #fef3c7, #fde68a)'
+      : 'rgba(255, 255, 255, 0.92)';
+    collapseBtn.style.color = isCollapsed ? '#92400e' : '#475569';
+    collapseBtn.style.cursor = 'pointer';
+    collapseBtn.style.boxShadow = '0 1px 2px rgba(15, 23, 42, 0.1)';
+    collapseBtn.style.zIndex = '5';
+
     collapseBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (onToggleCollapse) {
         onToggleCollapse(familyNode.id);
       }
     });
-    
+
     familyDiv.appendChild(collapseBtn);
   }
-  
-  // Click handler
+
+  // Click handler — tránh nuốt click khi bấm vào nút collapse / bên trong nó
   if (onClick) {
     familyDiv.addEventListener('click', (e) => {
-      if (e.target !== collapseBtn) {
-        onClick(familyNode);
+      if (collapseBtn && (e.target === collapseBtn || collapseBtn.contains(e.target))) {
+        return;
       }
+      onClick(familyNode);
     });
   }
   
@@ -146,49 +154,90 @@ function renderFamilyNode(familyNode, x, y, options = {}) {
 }
 
 /**
- * Create spouse half (left or right)
- * @param {string} name 
- * @param {string} gender 
- * @param {string} personId 
- * @param {string} side - 'left' or 'right'
- * @param {string} backgroundColor 
- * @returns {HTMLElement}
+ * Suy luận class giới từ trường gender. Hỗ trợ 'M'/'F', 'Nam'/'Nữ', 'male'/'female'.
+ * Trả '' nếu không rõ — để CSS giữ nền trung tính, không gượng ép màu hồng/xanh.
  */
-function createSpouseHalf(name, gender, personId, side, backgroundColor) {
+function inferGenderClass(gender) {
+  const g = String(gender || '').trim().toLowerCase();
+  if (!g) return '';
+  if (g === 'm' || g === 'male' || g.startsWith('nam') || g === '♂') return 'male';
+  if (g === 'f' || g === 'female' || g.startsWith('nữ') || g.startsWith('nu') || g === '♀') return 'female';
+  return '';
+}
+
+/**
+ * Tách tên và hậu tố quan hệ dạng "Tên (Dì)", "Tên (Cô)"…
+ * Giúp typography phân cấp rõ: tên đậm 13px, kinship nhỏ nghiêng 10.5px màu xám.
+ */
+function splitNameAndKinship(rawName) {
+  const full = String(rawName || '').trim();
+  const m = full.match(/^(.*?)\s*\(([^()]+)\)\s*$/);
+  if (m && m[1].trim()) {
+    return { name: m[1].trim(), kinship: m[2].trim() };
+  }
+  return { name: full || 'Unknown', kinship: '' };
+}
+
+function createSpouseHalf(name, gender, personId, side) {
   const halfDiv = document.createElement('div');
-  halfDiv.style.flex = '1';
-  halfDiv.style.padding = '12px 8px';
-  halfDiv.style.backgroundColor = backgroundColor;
-  halfDiv.style.borderRight = side === 'left' ? '1px solid #ddd' : 'none';
+  halfDiv.className = 'family-spouse-half';
+  const genderClass = inferGenderClass(gender);
+  if (genderClass) halfDiv.classList.add(genderClass);
+  halfDiv.dataset.side = side;
+  if (personId) halfDiv.setAttribute('data-person-id', personId);
+
+  // Inline fallback đảm bảo 2 nửa luôn chia đều theo chiều ngang, nội dung
+  // căn giữa và không tràn khỏi card khi HTML/CSS chưa đồng bộ.
+  halfDiv.style.flex = '1 1 0';
+  halfDiv.style.minWidth = '0';
+  halfDiv.style.padding = '14px 10px 12px';
   halfDiv.style.display = 'flex';
   halfDiv.style.flexDirection = 'column';
   halfDiv.style.alignItems = 'center';
   halfDiv.style.justifyContent = 'center';
   halfDiv.style.textAlign = 'center';
-  halfDiv.style.minHeight = '100px';
-  
-  // Nếu side là 'full', không cần borderRight
-  if (side === 'full') {
-    halfDiv.style.borderRight = 'none';
-  }
-  
-  // Name
+  halfDiv.style.gap = '2px';
+  halfDiv.style.position = 'relative';
+  halfDiv.style.boxSizing = 'border-box';
+
+  const { name: displayName, kinship } = splitNameAndKinship(name);
+
   const nameDiv = document.createElement('div');
+  nameDiv.className = 'family-spouse-name';
+  nameDiv.textContent = displayName;
+  nameDiv.title = displayName;
   nameDiv.style.fontWeight = '600';
   nameDiv.style.fontSize = '13px';
-  nameDiv.style.color = '#333';
-  nameDiv.style.marginBottom = '4px';
+  nameDiv.style.lineHeight = '1.3';
+  nameDiv.style.color = '#0f172a';
+  nameDiv.style.maxWidth = '100%';
   nameDiv.style.wordBreak = 'break-word';
-  nameDiv.textContent = name;
+  nameDiv.style.overflowWrap = 'break-word';
+  // Giới hạn tên tối đa 2 dòng để card không cao bất thường với tên rất dài.
+  nameDiv.style.display = '-webkit-box';
+  nameDiv.style.webkitLineClamp = '2';
+  nameDiv.style.webkitBoxOrient = 'vertical';
+  nameDiv.style.overflow = 'hidden';
   halfDiv.appendChild(nameDiv);
-  
-  // Gender indicator - REMOVED per user request
-  
-  // Person ID attribute
-  if (personId) {
-    halfDiv.setAttribute('data-person-id', personId);
+
+  if (kinship) {
+    const kinshipDiv = document.createElement('div');
+    kinshipDiv.className = 'family-spouse-kinship';
+    kinshipDiv.textContent = kinship;
+    kinshipDiv.title = kinship;
+    kinshipDiv.style.fontSize = '10.5px';
+    kinshipDiv.style.fontWeight = '500';
+    kinshipDiv.style.color = '#64748b';
+    kinshipDiv.style.fontStyle = 'italic';
+    kinshipDiv.style.letterSpacing = '0.02em';
+    kinshipDiv.style.marginTop = '2px';
+    kinshipDiv.style.maxWidth = '100%';
+    kinshipDiv.style.whiteSpace = 'nowrap';
+    kinshipDiv.style.overflow = 'hidden';
+    kinshipDiv.style.textOverflow = 'ellipsis';
+    halfDiv.appendChild(kinshipDiv);
   }
-  
+
   return halfDiv;
 }
 
@@ -217,20 +266,27 @@ function createFamilyBadge(familyNode) {
   }
   
   const badgeDiv = document.createElement('div');
+  badgeDiv.className = 'family-badge';
+  badgeDiv.textContent = badges.join(' • ');
+  // Inline fallback: pill trắng, nổi ở đỉnh giữa card, không đè nội dung bên dưới
   badgeDiv.style.position = 'absolute';
-  badgeDiv.style.top = '-12px';
+  badgeDiv.style.top = '-11px';
   badgeDiv.style.left = '50%';
   badgeDiv.style.transform = 'translateX(-50%)';
-  badgeDiv.style.backgroundColor = '#1976d2';
-  badgeDiv.style.color = '#fff';
-  badgeDiv.style.padding = '2px 8px';
-  badgeDiv.style.borderRadius = '10px';
+  badgeDiv.style.background = '#ffffff';
+  badgeDiv.style.color = '#1e3a8a';
+  badgeDiv.style.border = '1px solid rgba(30, 58, 138, 0.22)';
+  badgeDiv.style.padding = '3px 10px';
+  badgeDiv.style.borderRadius = '999px';
   badgeDiv.style.fontSize = '10px';
-  badgeDiv.style.fontWeight = '600';
+  badgeDiv.style.fontWeight = '700';
+  badgeDiv.style.letterSpacing = '0.03em';
   badgeDiv.style.whiteSpace = 'nowrap';
-  badgeDiv.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-  badgeDiv.textContent = badges.join(' • ');
-  
+  badgeDiv.style.boxShadow = '0 2px 6px rgba(15, 23, 42, 0.08)';
+  badgeDiv.style.zIndex = '4';
+  badgeDiv.style.maxWidth = 'calc(100% - 20px)';
+  badgeDiv.style.overflow = 'hidden';
+  badgeDiv.style.textOverflow = 'ellipsis';
   return badgeDiv;
 }
 
@@ -241,5 +297,10 @@ if (typeof module !== 'undefined' && module.exports) {
     createSpouseHalf,
     createFamilyBadge
   };
+}
+
+/** Trình duyệt: đảm bảo renderer có trên window (family-tree-family-ui kiểm tra an toàn). */
+if (typeof window !== 'undefined') {
+  window.renderFamilyNode = renderFamilyNode;
 }
 

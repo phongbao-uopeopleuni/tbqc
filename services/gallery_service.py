@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 
 from db import get_db_connection
 from extensions import limiter
-from utils.validation import validate_filename, validate_person_id
+from utils.validation import validate_filename, validate_person_id, secure_compare
 from services.members_service import get_members_password
 from services.activities_service import is_admin_user
 
@@ -195,14 +195,18 @@ def upload_grave_image():
         except ValueError as e:
             return (jsonify({'success': False, 'error': f'Invalid person_id format: {str(e)}'}), 400)
         allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-        if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
-            return (jsonify({'success': False, 'error': 'Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP'}), 400)
-        file.seek(0, os.SEEK_END)
-        file_size = file.tell()
-        file.seek(0)
         max_size = 10 * 1024 * 1024
-        if file_size > max_size:
-            return (jsonify({'success': False, 'error': 'File quá lớn. Kích thước tối đa: 10MB'}), 400)
+        from utils.image_safety import validate_image_payload
+        _v = validate_image_payload(file, allowed_extensions, max_size=max_size)
+        if not _v.ok:
+            # Giữ text cho 2 trường hợp legacy (FE đang so khớp để show icon).
+            if _v.size and _v.size > max_size:
+                return (jsonify({'success': False, 'error': 'File quá lớn. Kích thước tối đa: 10MB'}), 400)
+            err_low = (_v.error or '').lower()
+            if 'nội dung' in err_low or 'ảnh hợp lệ' in err_low:
+                return (jsonify({'success': False, 'error': 'Nội dung file không phải ảnh hợp lệ'}), 400)
+            return (jsonify({'success': False, 'error': 'Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP'}), 400)
+        file_size = _v.size
         connection = get_db_connection()
         if not connection:
             logger.error('Không thể kết nối database trong upload_grave_image()')
@@ -453,7 +457,16 @@ def upload_image():
     if file.filename == '':
         return (jsonify({'success': False, 'error': 'Không có file được chọn'}), 400)
     allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-    if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+    # Validate cả content (magic bytes + Pillow verify) — chống upload .jpg
+    # chứa HTML/SVG dẫn tới stored XSS khi kết hợp MIME-sniffing.
+    from utils.image_safety import validate_image_payload
+    _v = validate_image_payload(file, allowed_extensions, max_size=10 * 1024 * 1024)
+    if not _v.ok:
+        err_low = (_v.error or '').lower()
+        if _v.size and _v.size > 10 * 1024 * 1024:
+            return (jsonify({'success': False, 'error': 'File quá lớn. Kích thước tối đa: 10MB'}), 400)
+        if 'nội dung' in err_low or 'ảnh hợp lệ' in err_low:
+            return (jsonify({'success': False, 'error': 'Nội dung file không phải ảnh hợp lệ'}), 400)
         return (jsonify({'success': False, 'error': 'Định dạng file không hợp lệ. Chỉ chấp nhận: PNG, JPG, JPEG, GIF, WEBP'}), 400)
     try:
         from datetime import datetime

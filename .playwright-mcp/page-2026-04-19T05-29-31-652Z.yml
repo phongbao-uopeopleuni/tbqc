@@ -1,0 +1,915 @@
+- generic [active] [ref=e1]:
+  - link "Đi tới nội dung chính" [ref=e2] [cursor=pointer]:
+    - /url: "#genealogy-content"
+  - navigation "Điều hướng chính" [ref=e3]:
+    - button "Mở hoặc đóng menu" [ref=e4] [cursor=pointer]: ☰
+    - link "Gia Phả TBQC" [ref=e6] [cursor=pointer]:
+      - /url: /
+    - list [ref=e7]:
+      - listitem [ref=e8]:
+        - link "Trang chủ" [ref=e9] [cursor=pointer]:
+          - /url: /
+      - listitem [ref=e10]:
+        - link "Gia phả" [ref=e11] [cursor=pointer]:
+          - /url: /genealogy
+      - listitem [ref=e12]:
+        - link "Thành viên" [ref=e13] [cursor=pointer]:
+          - /url: /members
+      - listitem [ref=e14]:
+        - link "Liên hệ" [ref=e15] [cursor=pointer]:
+          - /url: /contact
+      - listitem [ref=e16]:
+        - link "Admin" [ref=e17] [cursor=pointer]:
+          - /url: /admin/login
+  - main "Cây gia phả và tra cứu" [ref=e27]:
+    - generic [ref=e28]:
+      - heading "Cây Gia Phả" [level=1] [ref=e30]
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: "Hiển thị đến đời:"
+              - combobox "Hiển thị đến đời:" [ref=e38]:
+                - option "Đến đời 1"
+                - option "Đến đời 2"
+                - option "Đến đời 3"
+                - option "Đến đời 4"
+                - option "Đến đời 5" [selected]
+                - option "Đến đời 6"
+                - option "Đến đời 7"
+                - option "Đến đời 8"
+            - textbox "Vui lòng nhập tên cần tìm kiếm" [ref=e40]
+            - button "Tìm kiếm" [ref=e41] [cursor=pointer]
+            - button "🔄 Đồng bộ" [ref=e42] [cursor=pointer]
+            - button "📝 Cập nhật thông tin" [ref=e43] [cursor=pointer]
+            - button "📄 Xuất PDF" [ref=e44] [cursor=pointer]
+          - toolbar "Thu phóng và toàn màn hình cây gia phả" [ref=e47]:
+            - button "Thu nhỏ" [ref=e48] [cursor=pointer]
+            - button "Đặt lại" [ref=e49] [cursor=pointer]
+            - button "Vừa khung" [ref=e50] [cursor=pointer]
+            - button "Phóng to" [ref=e51] [cursor=pointer]
+            - button "Toàn màn hình" [ref=e52] [cursor=pointer]
+          - generic [ref=e55]:
+            - img
+            - generic:
+              - generic: "Nhánh: TBQC Miên Sủng"
+            - generic:
+              - generic: "Nhánh: Duy Xuyên QC - Miên Tiệp"
+            - generic:
+              - generic: "Nhánh: Phú Hậu Công Chúa - NP Phương Trinh"
+            - generic:
+              - generic: "Nhánh: Mỹ Thuận Công Chúa - NP Nhàn Tuệ"
+            - generic:
+              - generic: "Nhánh: Lâm Thạnh Công Chúa - NP Hòa Trinh"
+            - generic:
+              - generic: "Nhánh: Kỳ Ngoại Hầu Hường Phiêu"
+            - generic:
+              - generic: "Nhánh: Công Nữ Thị Giáp"
+            - generic:
+              - generic: "Nhánh: Công Nữ Thị Lệ"
+            - generic:
+              - generic: "Nhánh: Hường Chiêm"
+            - generic:
+              - generic: "Nhánh: Hường Linh"
+            - generic:
+              - generic: "Nhánh: CTN Thị Cư"
+            - generic:
+              - generic: "Nhánh: CTN Thị Hồ"
+            - generic:
+              - generic: "Nhánh: CTN Thị Liên"
+            - generic:
+              - generic: "Nhánh: Ưng Dương"
+            - generic:
+              - generic: "Nhánh: Ưng Lương Thái Thường Tự Khanh"
+            - generic:
+              - generic: "Nhánh: Ưng Lưu"
+            - generic:
+              - generic: "Nhánh: Ưng Phất"
+            - generic:
+              - generic: "Nhánh: Ưng Thùy"
+            - generic:
+              - generic: "Nhánh: Ưng Thương"
+            - generic:
+              - generic: "Nhánh: Cao Hữu Trinh"
+            - generic:
+              - generic: "Nhánh: Cao Hữu Vinh"
+            - generic:
+              - generic: "Nhánh: Cao Thị Nên"
+            - generic:
+              - generic: "Nhánh: Đồng Sỹ Cự"
+            - generic:
+              - generic: "Nhánh: Đồng Sỹ Dương"
+            - generic:
+              - generic: "Nhánh: Đồng thị Diệu Hương"
+            - generic:
+              - generic: "Nhánh: Đồng thị Lệ Phương (bà Phán Nhơn)"
+            - generic:
+              - generic: "Nhánh: Bửu Cầu"
+            - generic:
+              - generic: "Nhánh: Bửu Châu"
+            - generic:
+              - generic: "Nhánh: Bửu Cường"
+            - generic:
+              - generic: "Nhánh: Bửu Du (Hùng)"
+            - generic:
+              - generic: "Nhánh: Bửu Đồng"
+            - generic:
+              - generic: "Nhánh: Bửu Túc"
+            - generic:
+              - generic: "Nhánh: CTTN Lệ Dung"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Ngoạn"
+            - generic:
+              - generic: "Nhánh: Nguyễn Phước Bửu Bang"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Cừ (Tâm)"
+            - generic:
+              - generic: "Nhánh: Bửu Lộc"
+            - generic:
+              - generic: "Nhánh: CTT Tảo Thương"
+            - generic:
+              - generic: "Nhánh: CTTN Bạch Yến (Mừng)"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Trân"
+            - generic:
+              - generic: "Nhánh: Bửu Chuyện"
+            - generic:
+              - generic: "Nhánh: Bửu Duật"
+            - generic:
+              - generic: "Nhánh: Bửu Nhơn"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Đại (Mai)"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Lý (Xuân)"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Tuyên (Huệ)"
+            - generic:
+              - generic: "Nhánh: Bửu Đôn"
+            - generic:
+              - generic: "Nhánh: Bửu Sách"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Hường"
+            - generic:
+              - generic: "Nhánh: CTTN Diệu Chương"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Quán"
+            - generic:
+              - generic: "Nhánh: Bửu Mạnh"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Côi"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Tảo thương"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Trinh"
+            - generic:
+              - generic: "Nhánh: Bửu Diệp"
+            - generic:
+              - generic: "Nhánh: Bửu Tuất"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Châu"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Kỳ"
+            - generic:
+              - generic: "Nhánh: CTN Thị Chắc (Bà Tha)"
+            - generic:
+              - generic: "Nhánh: CTN Thị Du (Bà Thông Cam)"
+            - generic:
+              - generic: "Nhánh: CTN Thị Hạnh (Bà Cửu Liên)"
+            - generic:
+              - generic: "Nhánh: CTN Thị Khuê (Quýt)"
+            - generic:
+              - generic: "Nhánh: CTN Thị Lựu (Bà Khóa Tiềm)"
+            - generic:
+              - generic: "Nhánh: CTN Thị Quỳnh"
+            - generic:
+              - generic: "Nhánh: Ưng Đà (Di)"
+            - generic:
+              - generic: "Nhánh: Trần Thị Gái"
+            - generic:
+              - generic: "Nhánh: Trần Thị Kim Loan"
+            - generic:
+              - generic: "Nhánh: Trần Thị Kim Thái"
+            - generic:
+              - generic: "Nhánh: Trần Thị Liễu"
+            - generic:
+              - generic: "Nhánh: Trần Văn Dương"
+            - generic:
+              - generic: "Nhánh: Trần Văn Tâm"
+            - generic:
+              - generic: "Nhánh: Trần Văn Thọ"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Hường"
+            - generic:
+              - generic: "Nhánh: Bửu Vĩ (Sướng)"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Nhạn (Cô Tư)"
+            - generic:
+              - generic: "Nhánh: Bửu Lập (Trọng)"
+            - generic:
+              - generic: "Nhánh: Bửu Lễ (Chú Tám)"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Lục (Lan)"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Nhồng (Cô Năm)"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Quýnh (Cô Sáu)"
+            - generic:
+              - generic: "Nhánh: CTN Thị Oanh"
+            - generic:
+              - generic: "Nhánh: Ưng Lợi"
+            - generic:
+              - generic: "Nhánh: Ưng Lê"
+            - generic:
+              - generic: "Nhánh: Hữu Danh Vô Vị"
+            - generic:
+              - generic: "Nhánh: Ưng Lịch"
+            - generic:
+              - generic: "Nhánh: Ưng Hoán"
+            - generic:
+              - generic: "Nhánh: CTN Thị Bích (Chót)"
+            - generic:
+              - generic: "Nhánh: CTN Thị Trác"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Đẩu (tự Giao)"
+            - generic:
+              - generic: "Nhánh: Bửu Hòa (Dống)"
+            - generic:
+              - generic: "Nhánh: Bửu Thông"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Uyển"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Bình(Hiệp)"
+            - generic:
+              - generic: "Nhánh: Bửu Củng (Công)"
+            - generic:
+              - generic: "Nhánh: Bửu Bé"
+            - generic:
+              - generic: "Nhánh: Bửu Khôi"
+            - generic:
+              - generic: "Nhánh: Bửu Phong"
+            - generic:
+              - generic: "Nhánh: Bửu Tường"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Đam"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Giàu"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Kim"
+            - generic:
+              - generic: "Nhánh: CTTN Thị Lan"
+            - generic:
+              - generic: "Nhánh: Đặng Thị Thu Thủy (Trà)"
+            - generic:
+              - generic: "Nhánh: Đặng Thị Yến"
+            - generic [ref=e56] [cursor=pointer]:
+              - generic [ref=e57]: Đời 1
+              - button "▼" [ref=e58]
+              - generic [ref=e61]: Vua Minh Mạng
+            - generic [ref=e62] [cursor=pointer]:
+              - generic [ref=e63]: Đời 2
+              - button "▼" [ref=e64]
+              - generic [ref=e67]: TBQC Miên Sủng
+            - generic [ref=e68] [cursor=pointer]:
+              - generic [ref=e69]: Đời 3
+              - button "▼" [ref=e70]
+              - generic [ref=e73]: Kỳ Ngoại Hầu Hường Phiêu
+            - generic [ref=e74] [cursor=pointer]:
+              - generic [ref=e75]: Đời 4
+              - generic [ref=e78]: CTN Thị Cư
+            - generic [ref=e79] [cursor=pointer]:
+              - generic [ref=e80]: Đời 4
+              - button "▼" [ref=e81]
+              - generic [ref=e82]:
+                - generic [ref=e84]: Unknown
+                - generic [ref=e86]: CTN Thị Hồ
+            - generic [ref=e87] [cursor=pointer]:
+              - generic [ref=e88]: Đời 5
+              - button "▼" [ref=e89]
+              - generic [ref=e92]: Cao Hữu Trinh
+            - generic [ref=e93] [cursor=pointer]:
+              - generic [ref=e94]: Đời 5
+              - button "▼" [ref=e95]
+              - generic [ref=e98]: Cao Hữu Vinh
+            - generic [ref=e99] [cursor=pointer]:
+              - generic [ref=e100]: Đời 5
+              - generic [ref=e103]: Cao Thị Nên
+            - generic [ref=e104] [cursor=pointer]:
+              - generic [ref=e105]: Đời 4
+              - button "▼" [ref=e106]
+              - generic [ref=e107]:
+                - generic [ref=e109]: Unknown
+                - generic [ref=e111]: CTN Thị Liên
+            - generic [ref=e112] [cursor=pointer]:
+              - generic [ref=e113]: Đời 5
+              - button "▼" [ref=e114]
+              - generic [ref=e117]: Đồng Sỹ Cự
+            - generic [ref=e118] [cursor=pointer]:
+              - generic [ref=e119]: Đời 5
+              - button "▼" [ref=e120]
+              - generic [ref=e123]: Đồng Sỹ Dương
+            - generic [ref=e124] [cursor=pointer]:
+              - generic [ref=e125]: Đời 5
+              - generic [ref=e128]: Đồng thị Diệu Hương
+            - generic [ref=e129] [cursor=pointer]:
+              - generic [ref=e130]: Đời 5
+              - generic [ref=e133]: Đồng thị Lệ Phương (bà Phán Nhơn)
+            - generic [ref=e134] [cursor=pointer]:
+              - generic [ref=e135]: Đời 4
+              - button "▼" [ref=e136]
+              - generic [ref=e139]: Ưng Dương
+            - generic [ref=e140] [cursor=pointer]:
+              - generic [ref=e141]: Đời 5
+              - generic [ref=e144]: Bửu Gia
+            - generic [ref=e145] [cursor=pointer]:
+              - generic [ref=e146]: Đời 4
+              - button "▼" [ref=e147]
+              - generic [ref=e150]: Ưng Lương Thái Thường Tự Khanh
+            - generic [ref=e151] [cursor=pointer]:
+              - generic [ref=e152]: Đời 5
+              - button "▼" [ref=e153]
+              - generic [ref=e156]: Bửu Cầu
+            - generic [ref=e157] [cursor=pointer]:
+              - generic [ref=e158]: Đời 5
+              - button "▼" [ref=e159]
+              - generic [ref=e162]: Bửu Châu
+            - generic [ref=e163] [cursor=pointer]:
+              - generic [ref=e164]: Đời 5
+              - generic [ref=e167]: Bửu Cường
+            - generic [ref=e168] [cursor=pointer]:
+              - generic [ref=e169]: Đời 5
+              - generic [ref=e172]: Bửu Du (Hùng)
+            - generic [ref=e173] [cursor=pointer]:
+              - generic [ref=e174]: Đời 5
+              - generic [ref=e177]: Bửu Đồng
+            - generic [ref=e178] [cursor=pointer]:
+              - generic [ref=e179]: Đời 5
+              - generic [ref=e182]: Bửu Túc
+            - generic [ref=e183] [cursor=pointer]:
+              - generic [ref=e184]: Đời 5
+              - button "▼" [ref=e185]
+              - generic [ref=e186]:
+                - generic [ref=e188]: Unknown
+                - generic [ref=e190]: CTTN Lệ Dung
+            - generic [ref=e191] [cursor=pointer]:
+              - generic [ref=e192]: Đời 5
+              - button "▼" [ref=e193]
+              - generic [ref=e194]:
+                - generic [ref=e196]: Unknown
+                - generic [ref=e198]: CTTN Thị Ngoạn
+            - generic [ref=e199] [cursor=pointer]:
+              - generic [ref=e200]: Đời 5
+              - button "▼" [ref=e201]
+              - generic [ref=e204]: Nguyễn Phước Bửu Bang
+            - generic [ref=e205] [cursor=pointer]:
+              - generic [ref=e206]: Đời 5
+              - button "▼" [ref=e207]
+              - generic [ref=e208]:
+                - generic [ref=e210]: Unknown
+                - generic [ref=e212]: CTTN Thị Cừ (Tâm)
+            - generic [ref=e213] [cursor=pointer]:
+              - generic [ref=e214]: Đời 5
+              - button "▼" [ref=e215]
+              - generic [ref=e218]: Bửu Lộc
+            - generic [ref=e219] [cursor=pointer]:
+              - generic [ref=e220]: Đời 5
+              - generic [ref=e223]: CTT Tảo Thương
+            - generic [ref=e224] [cursor=pointer]:
+              - generic [ref=e225]: Đời 5
+              - button "▼" [ref=e226]
+              - generic [ref=e227]:
+                - generic [ref=e229]: Unknown
+                - generic [ref=e231]: CTTN Bạch Yến (Mừng)
+            - generic [ref=e232] [cursor=pointer]:
+              - generic [ref=e233]: Đời 5
+              - generic [ref=e236]: CTTN Thị Trân
+            - generic [ref=e237] [cursor=pointer]:
+              - generic [ref=e238]: Đời 4
+              - button "▼" [ref=e239]
+              - generic [ref=e242]: Ưng Lưu
+            - generic [ref=e243] [cursor=pointer]:
+              - generic [ref=e244]: Đời 5
+              - generic [ref=e247]: Bửu Chuyện
+            - generic [ref=e248] [cursor=pointer]:
+              - generic [ref=e249]: Đời 5
+              - generic [ref=e252]: Bửu Duật
+            - generic [ref=e253] [cursor=pointer]:
+              - generic [ref=e254]: Đời 5
+              - button "▼" [ref=e255]
+              - generic [ref=e258]: Bửu Nhơn
+            - generic [ref=e259] [cursor=pointer]:
+              - generic [ref=e260]: Đời 5
+              - button "▼" [ref=e261]
+              - generic [ref=e262]:
+                - generic [ref=e264]: Unknown
+                - generic [ref=e266]: CTTN Thị Đại (Mai)
+            - generic [ref=e267] [cursor=pointer]:
+              - generic [ref=e268]: Đời 5
+              - button "▼" [ref=e269]
+              - generic [ref=e270]:
+                - generic [ref=e272]: Unknown
+                - generic [ref=e274]: CTTN Thị Lý (Xuân)
+            - generic [ref=e275] [cursor=pointer]:
+              - generic [ref=e276]: Đời 5
+              - button "▼" [ref=e277]
+              - generic [ref=e278]:
+                - generic [ref=e280]: Unknown
+                - generic [ref=e282]: CTTN Thị Tuyên (Huệ)
+            - generic [ref=e283] [cursor=pointer]:
+              - generic [ref=e284]: Đời 4
+              - button "▼" [ref=e285]
+              - generic [ref=e288]: Ưng Phất
+            - generic [ref=e289] [cursor=pointer]:
+              - generic [ref=e290]: Đời 5
+              - button "▼" [ref=e291]
+              - generic [ref=e294]: Bửu Đôn
+            - generic [ref=e295] [cursor=pointer]:
+              - generic [ref=e296]: Đời 5
+              - button "▼" [ref=e297]
+              - generic [ref=e300]: Bửu Sách
+            - generic [ref=e301] [cursor=pointer]:
+              - generic [ref=e302]: Đời 5
+              - button "▼" [ref=e303]
+              - generic [ref=e304]:
+                - generic [ref=e306]: Unknown
+                - generic [ref=e308]: CTTN Thị Hường
+            - generic [ref=e309] [cursor=pointer]:
+              - generic [ref=e310]: Đời 5
+              - button "▼" [ref=e311]
+              - generic [ref=e312]:
+                - generic [ref=e314]: Unknown
+                - generic [ref=e316]: CTTN Diệu Chương
+            - generic [ref=e317] [cursor=pointer]:
+              - generic [ref=e318]: Đời 5
+              - generic [ref=e321]: CTTN Thị Quán
+            - generic [ref=e322] [cursor=pointer]:
+              - generic [ref=e323]: Đời 5
+              - button "▼" [ref=e324]
+              - generic [ref=e327]: Bửu Mạnh
+            - generic [ref=e328] [cursor=pointer]:
+              - generic [ref=e329]: Đời 5
+              - generic [ref=e332]: CTTN Thị Côi
+            - generic [ref=e333] [cursor=pointer]:
+              - generic [ref=e334]: Đời 5
+              - generic [ref=e337]: CTTN Thị Tảo thương
+            - generic [ref=e338] [cursor=pointer]:
+              - generic [ref=e339]: Đời 5
+              - button "▼" [ref=e340]
+              - generic [ref=e341]:
+                - generic [ref=e343]: Unknown
+                - generic [ref=e345]: CTTN Thị Trinh
+            - generic [ref=e346] [cursor=pointer]:
+              - generic [ref=e347]: Đời 4
+              - button "▼" [ref=e348]
+              - generic [ref=e351]: Ưng Thùy
+            - generic [ref=e352] [cursor=pointer]:
+              - generic [ref=e353]: Đời 5
+              - button "▼" [ref=e354]
+              - generic [ref=e357]: Bửu Diệp
+            - generic [ref=e358] [cursor=pointer]:
+              - generic [ref=e359]: Đời 5
+              - button "▼" [ref=e360]
+              - generic [ref=e363]: Bửu Tuất
+            - generic [ref=e364] [cursor=pointer]:
+              - generic [ref=e365]: Đời 5
+              - button "▼" [ref=e366]
+              - generic [ref=e367]:
+                - generic [ref=e369]: Unknown
+                - generic [ref=e371]: CTTN Thị Châu
+            - generic [ref=e372] [cursor=pointer]:
+              - generic [ref=e373]: Đời 5
+              - generic [ref=e376]: CTTN Thị Kỳ
+            - generic [ref=e377] [cursor=pointer]:
+              - generic [ref=e378]: Đời 4
+              - generic [ref=e381]: Ưng Thương
+            - generic [ref=e382] [cursor=pointer]:
+              - generic [ref=e383]: Đời 3
+              - button "▼" [ref=e384]
+              - generic [ref=e385]:
+                - generic [ref=e387]: Unknown
+                - generic [ref=e389]: Công Nữ Thị Giáp
+            - generic [ref=e390] [cursor=pointer]:
+              - generic [ref=e391]: Đời 4
+              - generic [ref=e394]: Lê Thị Sâm
+            - generic [ref=e395] [cursor=pointer]:
+              - generic [ref=e396]: Đời 3
+              - generic [ref=e399]: Công Nữ Thị Lệ
+            - generic [ref=e400] [cursor=pointer]:
+              - generic [ref=e401]: Đời 3
+              - button "▼" [ref=e402]
+              - generic [ref=e405]: Hường Chiêm
+            - generic [ref=e406] [cursor=pointer]:
+              - generic [ref=e407]: Đời 4
+              - generic [ref=e410]: CTN Thị Chắc (Bà Tha)
+            - generic [ref=e411] [cursor=pointer]:
+              - generic [ref=e412]: Đời 4
+              - generic [ref=e415]: CTN Thị Du (Bà Thông Cam)
+            - generic [ref=e416] [cursor=pointer]:
+              - generic [ref=e417]: Đời 4
+              - button "▼" [ref=e418]
+              - generic [ref=e419]:
+                - generic [ref=e421]: Unknown
+                - generic [ref=e423]: CTN Thị Hạnh (Bà Cửu Liên)
+            - generic [ref=e424] [cursor=pointer]:
+              - generic [ref=e425]: Đời 5
+              - generic [ref=e428]: Trần Thị Gái
+            - generic [ref=e429] [cursor=pointer]:
+              - generic [ref=e430]: Đời 5
+              - button "▼" [ref=e431]
+              - generic [ref=e432]:
+                - generic [ref=e434]: Unknown
+                - generic [ref=e436]: Trần Thị Kim Loan
+            - generic [ref=e437] [cursor=pointer]:
+              - generic [ref=e438]: Đời 5
+              - button "▼" [ref=e439]
+              - generic [ref=e440]:
+                - generic [ref=e442]: Unknown
+                - generic [ref=e444]: Trần Thị Kim Thái
+            - generic [ref=e445] [cursor=pointer]:
+              - generic [ref=e446]: Đời 5
+              - generic [ref=e449]: Trần Thị Liễu
+            - generic [ref=e450] [cursor=pointer]:
+              - generic [ref=e451]: Đời 5
+              - generic [ref=e454]: Trần Văn Dương
+            - generic [ref=e455] [cursor=pointer]:
+              - generic [ref=e456]: Đời 5
+              - button "▼" [ref=e457]
+              - generic [ref=e460]: Trần Văn Tâm
+            - generic [ref=e461] [cursor=pointer]:
+              - generic [ref=e462]: Đời 5
+              - generic [ref=e465]: Trần Văn Thọ
+            - generic [ref=e466] [cursor=pointer]:
+              - generic [ref=e467]: Đời 4
+              - button "▼" [ref=e468]
+              - generic [ref=e469]:
+                - generic [ref=e471]: Unknown
+                - generic [ref=e473]: CTN Thị Khuê (Quýt)
+            - generic [ref=e474] [cursor=pointer]:
+              - generic [ref=e475]: Đời 5
+              - button "▼" [ref=e476]
+              - generic [ref=e479]: Võ Văn Đồng
+            - generic [ref=e480] [cursor=pointer]:
+              - generic [ref=e481]: Đời 4
+              - generic [ref=e484]: CTN Thị Lựu (Bà Khóa Tiềm)
+            - generic [ref=e485] [cursor=pointer]:
+              - generic [ref=e486]: Đời 4
+              - generic [ref=e489]: CTN Thị Quỳnh
+            - generic [ref=e490] [cursor=pointer]:
+              - generic [ref=e491]: Đời 4
+              - button "▼" [ref=e492]
+              - generic [ref=e495]: Ưng Đà (Di)
+            - generic [ref=e496] [cursor=pointer]:
+              - generic [ref=e497]: Đời 5
+              - generic [ref=e500]: CTTN Thị Hường
+            - generic [ref=e501] [cursor=pointer]:
+              - generic [ref=e502]: Đời 5
+              - button "▼" [ref=e503]
+              - generic [ref=e506]: Bửu Vĩ (Sướng)
+            - generic [ref=e507] [cursor=pointer]:
+              - generic [ref=e508]: Đời 5
+              - button "▼" [ref=e509]
+              - generic [ref=e510]:
+                - generic [ref=e512]: Unknown
+                - generic [ref=e514]: CTTN Thị Nhạn (Cô Tư)
+            - generic [ref=e515] [cursor=pointer]:
+              - generic [ref=e516]: Đời 5
+              - button "▼" [ref=e517]
+              - generic [ref=e520]: Bửu Lập (Trọng)
+            - generic [ref=e521] [cursor=pointer]:
+              - generic [ref=e522]: Đời 5
+              - generic [ref=e525]: Bửu Lễ (Chú Tám)
+            - generic [ref=e526] [cursor=pointer]:
+              - generic [ref=e527]: Đời 5
+              - button "▼" [ref=e528]
+              - generic [ref=e529]:
+                - generic [ref=e531]: Unknown
+                - generic [ref=e533]: CTTN Thị Lục (Lan)
+            - generic [ref=e534] [cursor=pointer]:
+              - generic [ref=e535]: Đời 5
+              - generic [ref=e538]: CTTN Thị Nhồng (Cô Năm)
+            - generic [ref=e539] [cursor=pointer]:
+              - generic [ref=e540]: Đời 5
+              - generic [ref=e543]: CTTN Thị Quýnh (Cô Sáu)
+            - generic [ref=e544] [cursor=pointer]:
+              - generic [ref=e545]: Đời 3
+              - button "▼" [ref=e546]
+              - generic [ref=e549]: Hường Linh
+            - generic [ref=e550] [cursor=pointer]:
+              - generic [ref=e551]: Đời 4
+              - generic [ref=e554]: CTN Thị Oanh
+            - generic [ref=e555] [cursor=pointer]:
+              - generic [ref=e556]: Đời 4
+              - button "▼" [ref=e557]
+              - generic [ref=e560]: Ưng Lợi
+            - generic [ref=e561] [cursor=pointer]:
+              - generic [ref=e562]: Đời 5
+              - generic [ref=e565]: CTTN Thị Đẩu (tự Giao)
+            - generic [ref=e566] [cursor=pointer]:
+              - generic [ref=e567]: Đời 5
+              - generic [ref=e570]: Bửu Hòa (Dống)
+            - generic [ref=e571] [cursor=pointer]:
+              - generic [ref=e572]: Đời 5
+              - generic [ref=e575]: Bửu Thông
+            - generic [ref=e576] [cursor=pointer]:
+              - generic [ref=e577]: Đời 5
+              - generic [ref=e580]: CTTN Thị Uyển
+            - generic [ref=e581] [cursor=pointer]:
+              - generic [ref=e582]: Đời 5
+              - button "▼" [ref=e583]
+              - generic [ref=e584]:
+                - generic [ref=e586]: Unknown
+                - generic [ref=e588]: CTTN Thị Bình(Hiệp)
+            - generic [ref=e589] [cursor=pointer]:
+              - generic [ref=e590]: Đời 5
+              - button "▼" [ref=e591]
+              - generic [ref=e594]: Bửu Củng (Công)
+            - generic [ref=e595] [cursor=pointer]:
+              - generic [ref=e596]: Đời 4
+              - generic [ref=e599]: Ưng Lê
+            - generic [ref=e600] [cursor=pointer]:
+              - generic [ref=e601]: Đời 4
+              - generic [ref=e604]: Hữu Danh Vô Vị
+            - generic [ref=e605] [cursor=pointer]:
+              - generic [ref=e606]: Đời 4
+              - button "▼" [ref=e607]
+              - generic [ref=e610]: Ưng Lịch
+            - generic [ref=e611] [cursor=pointer]:
+              - generic [ref=e612]: Đời 5
+              - generic [ref=e615]: Bửu Bé
+            - generic [ref=e616] [cursor=pointer]:
+              - generic [ref=e617]: Đời 5
+              - button "▼" [ref=e618]
+              - generic [ref=e621]: Bửu Khôi
+            - generic [ref=e622] [cursor=pointer]:
+              - generic [ref=e623]: Đời 5
+              - generic [ref=e626]: Bửu Phong
+            - generic [ref=e627] [cursor=pointer]:
+              - generic [ref=e628]: Đời 5
+              - generic [ref=e631]: Bửu Tường
+            - generic [ref=e632] [cursor=pointer]:
+              - generic [ref=e633]: Đời 5
+              - generic [ref=e636]: CTTN Thị Đam
+            - generic [ref=e637] [cursor=pointer]:
+              - generic [ref=e638]: Đời 5
+              - button "▼" [ref=e639]
+              - generic [ref=e640]:
+                - generic [ref=e642]: Unknown
+                - generic [ref=e644]: CTTN Thị Giàu
+            - generic [ref=e645] [cursor=pointer]:
+              - generic [ref=e646]: Đời 5
+              - button "▼" [ref=e647]
+              - generic [ref=e648]:
+                - generic [ref=e650]: Unknown
+                - generic [ref=e652]: CTTN Thị Kim
+            - generic [ref=e653] [cursor=pointer]:
+              - generic [ref=e654]: Đời 5
+              - button "▼" [ref=e655]
+              - generic [ref=e656]:
+                - generic [ref=e658]: Unknown
+                - generic [ref=e660]: CTTN Thị Lan
+            - generic [ref=e661] [cursor=pointer]:
+              - generic [ref=e662]: Đời 4
+              - generic [ref=e665]: Ưng Hoán
+            - generic [ref=e666] [cursor=pointer]:
+              - generic [ref=e667]: Đời 4
+              - button "▼" [ref=e668]
+              - generic [ref=e669]:
+                - generic [ref=e671]: Unknown
+                - generic [ref=e673]: CTN Thị Bích (Chót)
+            - generic [ref=e674] [cursor=pointer]:
+              - generic [ref=e675]: Đời 5
+              - button "▼" [ref=e676]
+              - generic [ref=e677]:
+                - generic [ref=e679]: Unknown
+                - generic [ref=e681]: Đặng Thị Thu Thủy (Trà)
+            - generic [ref=e682] [cursor=pointer]:
+              - generic [ref=e683]: Đời 5
+              - button "▼" [ref=e684]
+              - generic [ref=e685]:
+                - generic [ref=e687]: Unknown
+                - generic [ref=e689]: Đặng Thị Yến
+            - generic [ref=e690] [cursor=pointer]:
+              - generic [ref=e691]: Đời 4
+              - generic [ref=e694]: CTN Thị Trác
+            - generic [ref=e695] [cursor=pointer]:
+              - generic [ref=e696]: Đời 2
+              - generic [ref=e699]: Duy Xuyên QC - Miên Tiệp
+            - generic [ref=e700] [cursor=pointer]:
+              - generic [ref=e701]: Đời 2
+              - generic [ref=e704]: Phú Hậu Công Chúa - NP Phương Trinh
+            - generic [ref=e705] [cursor=pointer]:
+              - generic [ref=e706]: Đời 2
+              - generic [ref=e709]: Mỹ Thuận Công Chúa - NP Nhàn Tuệ
+            - generic [ref=e710] [cursor=pointer]:
+              - generic [ref=e711]: Đời 2
+              - generic [ref=e714]: Lâm Thạnh Công Chúa - NP Hòa Trinh
+            - generic: Đời 1
+            - generic: Đời 2
+            - generic: Đời 3
+            - generic: Đời 4
+            - generic: Đời 5
+          - generic [ref=e716]:
+            - heading "Thông tin chi tiết" [level=3] [ref=e717]
+            - paragraph [ref=e719]: Chọn một người trong cây để xem thông tin
+        - region "Phả hệ theo nhánh" [ref=e720]:
+          - heading "Phả hệ theo nhánh" [level=2] [ref=e722]
+          - list [ref=e724]:
+            - listitem [ref=e725]:
+              - button "Vua Minh Mạng (1791 - 1841) — đời 1" [ref=e727] [cursor=pointer]:
+                - generic [ref=e728]: Vua Minh Mạng
+                - generic [ref=e729]: (1791 - 1841)
+                - generic [ref=e730]: — đời 1
+              - list [ref=e731]:
+                - listitem [ref=e732]:
+                  - generic [ref=e733]:
+                    - generic [ref=e735]: ├──
+                    - button "TBQC Miên Sủng (1831 - 1865) — đời 2" [ref=e736] [cursor=pointer]:
+                      - generic [ref=e737]: TBQC Miên Sủng
+                      - generic [ref=e738]: (1831 - 1865)
+                      - generic [ref=e739]: — đời 2
+                  - list [ref=e740]:
+                    - listitem [ref=e741]:
+                      - generic [ref=e742]:
+                        - generic [ref=e743]:
+                          - generic [ref=e744]: │
+                          - generic [ref=e745]: ├──
+                        - button "Kỳ Ngoại Hầu Hường Phiêu (1851 - 1904) — đời 3" [ref=e746] [cursor=pointer]:
+                          - generic [ref=e747]: Kỳ Ngoại Hầu Hường Phiêu
+                          - generic [ref=e748]: (1851 - 1904)
+                          - generic [ref=e749]: — đời 3
+                      - group [ref=e750]:
+                        - generic "Mở nhánh con (9)" [ref=e751] [cursor=pointer]
+                    - listitem [ref=e752]:
+                      - generic [ref=e753]:
+                        - generic [ref=e754]:
+                          - generic [ref=e755]: │
+                          - generic [ref=e756]: ├──
+                        - button "Công Nữ Thị Giáp (1854 - 1915) — đời 3" [ref=e757] [cursor=pointer]:
+                          - generic [ref=e758]: Công Nữ Thị Giáp
+                          - generic [ref=e759]: (1854 - 1915)
+                          - generic [ref=e760]: — đời 3
+                      - group [ref=e761]:
+                        - generic "Mở nhánh con (1)" [ref=e762] [cursor=pointer]
+                    - listitem [ref=e763]:
+                      - generic [ref=e764]:
+                        - generic [ref=e765]:
+                          - generic [ref=e766]: │
+                          - generic [ref=e767]: ├──
+                        - button "Công Nữ Thị Lệ — đời 3" [ref=e768] [cursor=pointer]:
+                          - generic [ref=e769]: Công Nữ Thị Lệ
+                          - generic [ref=e770]: — đời 3
+                    - listitem [ref=e771]:
+                      - generic [ref=e772]:
+                        - generic [ref=e773]:
+                          - generic [ref=e774]: │
+                          - generic [ref=e775]: ├──
+                        - button "Hường Chiêm (1864 - 1928) — đời 3" [ref=e776] [cursor=pointer]:
+                          - generic [ref=e777]: Hường Chiêm
+                          - generic [ref=e778]: (1864 - 1928)
+                          - generic [ref=e779]: — đời 3
+                      - group [ref=e780]:
+                        - generic "Mở nhánh con (7)" [ref=e781] [cursor=pointer]
+                    - listitem [ref=e782]:
+                      - generic [ref=e783]:
+                        - generic [ref=e784]:
+                          - generic [ref=e785]: │
+                          - generic [ref=e786]: └──
+                        - button "Hường Linh (1865 - 1945) — đời 3" [ref=e787] [cursor=pointer]:
+                          - generic [ref=e788]: Hường Linh
+                          - generic [ref=e789]: (1865 - 1945)
+                          - generic [ref=e790]: — đời 3
+                      - group [ref=e791]:
+                        - generic "Mở nhánh con (8)" [ref=e792] [cursor=pointer]
+                - listitem [ref=e793]:
+                  - generic [ref=e794]:
+                    - generic [ref=e796]: ├──
+                    - button "Duy Xuyên QC - Miên Tiệp (1832 - 1872) — đời 2" [ref=e797] [cursor=pointer]:
+                      - generic [ref=e798]: Duy Xuyên QC - Miên Tiệp
+                      - generic [ref=e799]: (1832 - 1872)
+                      - generic [ref=e800]: — đời 2
+                - listitem [ref=e801]:
+                  - generic [ref=e802]:
+                    - generic [ref=e804]: ├──
+                    - button "Phú Hậu Công Chúa - NP Phương Trinh (1834 - 1887) — đời 2" [ref=e805] [cursor=pointer]:
+                      - generic [ref=e806]: Phú Hậu Công Chúa - NP Phương Trinh
+                      - generic [ref=e807]: (1834 - 1887)
+                      - generic [ref=e808]: — đời 2
+                - listitem [ref=e809]:
+                  - generic [ref=e810]:
+                    - generic [ref=e812]: ├──
+                    - button "Mỹ Thuận Công Chúa - NP Nhàn Tuệ (1836 - 1863) — đời 2" [ref=e813] [cursor=pointer]:
+                      - generic [ref=e814]: Mỹ Thuận Công Chúa - NP Nhàn Tuệ
+                      - generic [ref=e815]: (1836 - 1863)
+                      - generic [ref=e816]: — đời 2
+                - listitem [ref=e817]:
+                  - generic [ref=e818]:
+                    - generic [ref=e820]: └──
+                    - button "Lâm Thạnh Công Chúa - NP Hòa Trinh (1837 - 1869) — đời 2" [ref=e821] [cursor=pointer]:
+                      - generic [ref=e822]: Lâm Thạnh Công Chúa - NP Hòa Trinh
+                      - generic [ref=e823]: (1837 - 1869)
+                      - generic [ref=e824]: — đời 2
+        - generic [ref=e826]:
+          - generic [ref=e827]:
+            - heading "📊 Thống kê theo thế hệ" [level=2] [ref=e828]
+            - paragraph [ref=e829]: Xem danh sách thành viên và số lượng con cháu theo từng thế hệ.
+          - generic [ref=e830]:
+            - generic [ref=e831]:
+              - button "Tổ tiên (Đời 0)" [ref=e832] [cursor=pointer]
+              - button "Thế hệ 1" [ref=e833] [cursor=pointer]
+              - button "Thế hệ 2" [ref=e834] [cursor=pointer]
+              - button "Thế hệ 3" [ref=e835] [cursor=pointer]
+              - button "Thế hệ 4" [ref=e836] [cursor=pointer]
+              - button "Thế hệ 5" [ref=e837] [cursor=pointer]
+              - button "Thế hệ 6" [ref=e838] [cursor=pointer]
+              - button "Thế hệ 7" [ref=e839] [cursor=pointer]
+              - button "Thế hệ 8" [ref=e840] [cursor=pointer]
+            - table [ref=e843]:
+              - rowgroup [ref=e844]:
+                - row "STT Tên Tổng số con cháu Số lượng dâu và rể" [ref=e845]:
+                  - columnheader "STT" [ref=e846]
+                  - columnheader "Tên" [ref=e847]
+                  - columnheader "Tổng số con cháu" [ref=e848]
+                  - columnheader "Số lượng dâu và rể" [ref=e849]
+              - rowgroup [ref=e850]:
+                - row "1 Vua Minh Mạng 819 2" [ref=e851]:
+                  - cell "1" [ref=e852]
+                  - cell "Vua Minh Mạng" [ref=e853]:
+                    - strong [ref=e854]: Vua Minh Mạng
+                  - cell "819" [ref=e855]
+                  - cell "2" [ref=e856]
+        - generic [ref=e858]:
+          - generic [ref=e859]:
+            - heading "Học vị và Học hàm" [level=3] [ref=e860]
+            - generic [ref=e861]:
+              - generic [ref=e862]:
+                - generic [ref=e863]: Cử nhân
+                - generic [ref=e864]: "11"
+              - generic [ref=e865]:
+                - generic [ref=e866]: Thạc sĩ
+                - generic [ref=e867]: "2"
+              - generic [ref=e868]:
+                - generic [ref=e869]: Tiến sĩ
+                - generic [ref=e870]: "5"
+              - generic [ref=e871]:
+                - generic [ref=e872]: Phó Giáo sư
+                - generic [ref=e873]: "0"
+              - generic [ref=e874]:
+                - generic [ref=e875]: Giáo sư
+                - generic [ref=e876]: "0"
+          - heading "Thống Kê Thành Viên" [level=2] [ref=e877]
+          - generic [ref=e878]:
+            - generic [ref=e879]:
+              - generic [ref=e880]:
+                - generic [ref=e881]: Tổng thành viên
+                - generic [ref=e882]: "1.186"
+              - generic [ref=e883]:
+                - generic [ref=e884]: Số Nam
+                - generic [ref=e885]: "586"
+              - generic [ref=e886]:
+                - generic [ref=e887]: Số Nữ
+                - generic [ref=e888]: "592"
+              - generic [ref=e889]:
+                - generic [ref=e890]: Không rõ / khác
+                - generic [ref=e891]: "8"
+            - generic [ref=e894]:
+              - heading "Thành viên theo Nhánh" [level=3] [ref=e895]
+              - paragraph [ref=e896]: "(ĐVT: người)"
+              - paragraph [ref=e899]: Dữ liệu được cập nhật mới nhất năm 2026.
+          - generic [ref=e900]:
+            - heading "Thống Kê Theo Đời" [level=3] [ref=e901]
+            - generic [ref=e902]:
+              - generic [ref=e903]:
+                - generic [ref=e904]: Đời 1
+                - generic [ref=e905]: "2"
+              - generic [ref=e906]:
+                - generic [ref=e907]: Đời 2
+                - generic [ref=e908]: "9"
+              - generic [ref=e909]:
+                - generic [ref=e910]: Đời 3
+                - generic [ref=e911]: "9"
+              - generic [ref=e912]:
+                - generic [ref=e913]: Đời 4
+                - generic [ref=e914]: "43"
+              - generic [ref=e915]:
+                - generic [ref=e916]: Đời 5
+                - generic [ref=e917]: "125"
+              - generic [ref=e918]:
+                - generic [ref=e919]: Đời 6
+                - generic [ref=e920]: "412"
+              - generic [ref=e921]:
+                - generic [ref=e922]: Đời 7
+                - generic [ref=e923]: "454"
+              - generic [ref=e924]:
+                - generic [ref=e925]: Đời 8
+                - generic [ref=e926]: "128"
+        - region "🪦 Tìm kiếm mộ phần" [ref=e927]:
+          - generic [ref=e929]:
+            - heading "🪦 Tìm kiếm mộ phần" [level=3] [ref=e930]
+            - paragraph [ref=e931]: Tìm kiếm thông tin mộ phần của những người đã mất. Hệ thống sẽ hiển thị vị trí trên bản đồ.
+            - generic [ref=e932]:
+              - generic [ref=e933]:
+                - generic [ref=e934]: "Tên hoặc ID (tìm kiếm thông minh):"
+                - textbox "Tên hoặc ID (tìm kiếm thông minh):" [ref=e935]:
+                  - /placeholder: "Ví dụ: Nguyễn Văn A hoặc P-1-1..."
+              - button "Tìm mộ phần" [ref=e936] [cursor=pointer]
+    - link "Z" [ref=e938] [cursor=pointer]:
+      - /url: https://zalo.me/g/ajmmkc064

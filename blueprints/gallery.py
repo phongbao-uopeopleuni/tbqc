@@ -12,6 +12,21 @@ from extensions import rate_limit
 gallery_bp = Blueprint('gallery', __name__)
 
 
+def _require_data_maintenance_auth():
+    """
+    Cổng auth dùng chung cho các route ghi dữ liệu/file (grave image,
+    grave location). Logic giống `blueprints/persons.py`:
+    - Chấp nhận session admin đã login, hoặc
+    - Header X-TBQC-Internal-Secret khớp INTERNAL_API_SECRET (constant-time).
+    - Dev: cho phép bypass bằng ALLOW_UNAUTHENTICATED_DATA_FIXES=1.
+    Không thay đổi logic service — chỉ chặn request chưa xác thực trước
+    khi rơi xuống tầng nghiệp vụ (đè grave_info / ghi file 10MB lên disk).
+    """
+    from utils.api_auth import authorize_data_maintenance_route
+
+    return authorize_data_maintenance_route()
+
+
 def _call_app(handler_name, *args, **kwargs):
     """Gọi handler từ services.gallery_service (late import tránh circular import)."""
     from services.gallery_service import (
@@ -64,11 +79,17 @@ def get_geoapify_api_key():
 
 @gallery_bp.route('/api/grave/update-location', methods=['POST'])
 def update_grave_location():
+    denied = _require_data_maintenance_auth()
+    if denied is not None:
+        return denied
     return _call_app('update_grave_location')
 
 
 @gallery_bp.route('/api/grave/upload-image', methods=['POST'])
 def upload_grave_image():
+    denied = _require_data_maintenance_auth()
+    if denied is not None:
+        return denied
     return _call_app('upload_grave_image')
 
 

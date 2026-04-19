@@ -17,6 +17,7 @@
           "renderDetail",
           "escapeHtml",
           "passesFilters",
+          "_destroyCurrentCy",
           "readFilters",
           "applySidebarFilter",
           "init"
@@ -97,6 +98,8 @@
         "extension": "js",
         "functions": [
           "renderFamilyNode",
+          "inferGenderClass",
+          "splitNameAndKinship",
           "createSpouseHalf",
           "createFamilyBadge"
         ],
@@ -111,7 +114,6 @@
         "kind": "module",
         "extension": "js",
         "functions": [
-          "getGenerationColor",
           "walk",
           "buildLevelDensityMap",
           "getAdaptiveHorizontalGap",
@@ -124,6 +126,8 @@
           "createLane",
           "renderFamilyBranchLanes",
           "getBranchColor",
+          "getGenealogyBranchMode",
+          "assignBranchKeysGen4Detail",
           "assignBranchKeys",
           "propagateBranch",
           "findFocusFamilyMatchesInTree",
@@ -131,10 +135,11 @@
           "pruneClone",
           "pruneFamilyTreeForFocus",
           "renderFamilyFocusTree",
+          "renderFamilyDefaultTree",
           "findMaxBounds",
           "adjustPositions",
           "countNodes",
-          "renderFamilyDefaultTree",
+          "_renderFamilyDefaultTreeImpl",
           "isValidSpouseName",
           "scoreRootCandidate",
           "buildNode",
@@ -146,6 +151,31 @@
           "shiftSubtree",
           "layoutFamilyTreeSubtree",
           "renderFamilyTreeNodes",
+          "genealogyUseSvgConnectors",
+          "createGenealogyConnectorSvg",
+          "orthoLinePathD",
+          "appendGenealogySvgPath",
+          "appendGenealogySvgDot",
+          "computeParentAnchorXForChild",
+          "partitionFamilyChildrenByParentAnchor",
+          "drawFamilyConnectorBundleSvgCore",
+          "drawFamilyConnectorBundleSvg",
+          "connectorSingleChildPathD",
+          "drawFamilyConnectorSvg",
+          "_familyChildCenterX",
+          "connectorMidYOffset",
+          "computeConnectorMidY",
+          "buildTreeNodeIndex",
+          "renderGenerationRowLabels",
+          "clearLineageHover",
+          "applyLineageHighlight",
+          "wireGenealogyLineageHover",
+          "drawFamilyConnectorBundle",
+          "appendVertical",
+          "appendHorizontal",
+          "appendJunction",
+          "drawFamilyConnectorBundleDivGroup",
+          "addJunction",
           "drawFamilyConnector"
         ],
         "exports": []
@@ -171,6 +201,21 @@
     },
     {
       "data": {
+        "id": "family-tree-panzoom.js",
+        "label": "family-tree-panzoom.js",
+        "path": "family-tree-panzoom.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "destroyTreePanzoom",
+          "initTreePanzoom",
+          "clearTreePanzoomSnapshot"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
         "id": "family-tree-ui.js",
         "label": "family-tree-ui.js",
         "path": "family-tree-ui.js",
@@ -179,6 +224,13 @@
         "functions": [
           "getGenerationColor",
           "notifyMultilevelGenealogy",
+          "applyPanzoomVisualPan",
+          "panzoomPanToVisualOffset",
+          "applyGenealogyDefaultView",
+          "tick",
+          "scheduleGenealogyTreeFitRetries",
+          "syncZoomToWindow",
+          "syncZoomFromPanzoom",
           "adjustParents",
           "renderNode",
           "findMaxBounds",
@@ -209,10 +261,13 @@
           "displayPersonInfo",
           "closeModal",
           "resetView",
+          "zoomAroundPointer",
+          "zoomAroundWrapperCenter",
           "zoomIn",
           "zoomOut",
           "resetZoom",
           "fitTreeToView",
+          "applyTreeMinZoomCentered",
           "applyZoom",
           "startPan",
           "onPanMove",
@@ -225,12 +280,78 @@
     },
     {
       "data": {
+        "id": "genealogy-grave-family-view.js",
+        "label": "genealogy-grave-family-view.js",
+        "path": "genealogy-grave-family-view.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "markActiveFamilyViewButton",
+          "getMindmapFocusPersonId",
+          "setFamilyViewMode",
+          "handleGraveSearchInput",
+          "selectGraveSuggestion",
+          "searchGrave",
+          "graveYearOnly",
+          "extractCoordinates",
+          "updateGraveGoogleDirectionsLink",
+          "displayGraveInfo",
+          "renderGraveMap",
+          "enableGraveLocationEdit",
+          "onGraveMapClick",
+          "onGraveMarkerDrag",
+          "searchGraveAddress",
+          "selectGraveAddress",
+          "getCurrentLocation",
+          "saveGraveLocation",
+          "cancelGraveLocationEdit",
+          "showGraveImageUpload",
+          "hideGraveImageUpload",
+          "uploadGraveImage",
+          "openGraveImageModal",
+          "showDeleteGraveImageConfirm",
+          "hideDeleteGraveImageConfirm",
+          "confirmDeleteGraveImage",
+          "handleAddressSearchEnter"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "genealogy-lineage-ui.js",
+        "label": "genealogy-lineage-ui.js",
+        "path": "genealogy-lineage-ui.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "handleLineageSearchInput",
+          "selectSuggestionFromSearch",
+          "searchLineage",
+          "displayLineageForPersonFromAPI",
+          "normalizeParentName",
+          "getGen1Parents",
+          "generatePersonCard",
+          "displayLineageChain",
+          "showDetailPanel",
+          "formatMarriages",
+          "formatSiblings",
+          "formatChildren",
+          "renderDetailPanel",
+          "closeDetailPanel"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
         "id": "genealogy-lineage.js",
         "label": "genealogy-lineage.js",
         "path": "genealogy-lineage.js",
         "kind": "module",
         "extension": "js",
         "functions": [
+          "_escapeHtmlGenealogy",
           "normalizeName",
           "normalizeForSearch",
           "simpleLevenshtein",
@@ -259,12 +380,166 @@
     },
     {
       "data": {
+        "id": "genealogy-member-stats.js",
+        "label": "genealogy-member-stats.js",
+        "path": "genealogy-member-stats.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "fetchJson",
+          "sortGenerationOptions",
+          "populateGenerationFilter",
+          "syncGenealogyTreeToGenFilter",
+          "loadMemberStats",
+          "escapeHtml",
+          "normalizeBranchKey",
+          "renderGenderCharts",
+          "renderDegreeRankChart",
+          "syncGenealogyTreeRootToWindow",
+          "buildNode",
+          "buildPersonTree",
+          "countDescendants",
+          "countDescendantsFromMap",
+          "extractSpouseId",
+          "getSpousesForPerson",
+          "traverseDescendants",
+          "countInLaws",
+          "traverse",
+          "groupByGeneration",
+          "resolveRootPersonIdForStats",
+          "loadGenerationStats",
+          "clearGenerationStatsCache",
+          "getCachedDescendantCount",
+          "getCachedInLawCount",
+          "renderGenerationTabs",
+          "switchTab",
+          "sanityCheckGenerationStats",
+          "createGenerationTable",
+          "selectPerson",
+          "updateInfoPanel",
+          "findPersonInTree",
+          "refreshTree",
+          "handleDeletePerson",
+          "openEditModal",
+          "openAddChildModal"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "genealogy-tree-controls.js",
+        "label": "genealogy-tree-controls.js",
+        "path": "genealogy-tree-controls.js",
+        "kind": "module",
+        "extension": "js",
+        "functions": [
+          "exitFullscreen",
+          "toggleFullscreen"
+        ],
+        "exports": []
+      }
+    },
+    {
+      "data": {
         "id": "index.js",
         "label": "index.js",
         "path": "index.js",
         "kind": "module",
         "extension": "js",
-        "functions": [],
+        "functions": [
+          "toggleMenu",
+          "closeTOC",
+          "openTOC",
+          "toggleTOC",
+          "initTOCOverlay",
+          "setActive",
+          "updateTOCActiveState",
+          "handleLineageSearchInput",
+          "selectSuggestion",
+          "displayLineageForPerson",
+          "searchLineage",
+          "selectSuggestionFromSearch",
+          "displayLineageForPersonFromAPI",
+          "normalizeParentName",
+          "getGen1Parents",
+          "generatePersonCard",
+          "displayLineageChain",
+          "formatTextWithLineBreaks",
+          "getSpouseDisplay",
+          "showDetailPanel",
+          "parseYear",
+          "renderDetailPanel",
+          "promptPasswordAndEdit",
+          "closePasswordModal",
+          "verifyPasswordAndEdit",
+          "promptPasswordAndDelete",
+          "closeDeleteModal",
+          "verifyPasswordAndDelete",
+          "enableEditMode",
+          "cancelEdit",
+          "openRequestModal",
+          "closeRequestModal",
+          "submitEditRequest",
+          "closeDetailPanel",
+          "savePersonData",
+          "syncPersonData",
+          "calculateHorizontalPositions",
+          "fetchJson",
+          "initGenealogyTree",
+          "loadTree",
+          "traverse",
+          "convertTreeToVisFormat",
+          "handleSearch",
+          "showPersonInfo",
+          "getThumbnail",
+          "truncateText",
+          "loadNewsFeed",
+          "renderEmptyState",
+          "renderErrorState",
+          "renderFeaturedPosts",
+          "renderHotNews",
+          "renderCategories",
+          "renderNptCouncilSidebar",
+          "loadExternalPosts",
+          "initTouchFriendly",
+          "padZero",
+          "updateCountdown",
+          "initCountdownTimer",
+          "renderAlbums",
+          "selectAlbum",
+          "closeGalleryView",
+          "showCreateAlbumModal",
+          "showUpdateAlbumModal",
+          "showDeleteAlbumConfirm",
+          "showPasswordModal",
+          "cancelAlbumAction",
+          "handlePasswordSubmit",
+          "showAlbumModal",
+          "closeAlbumModal",
+          "resetAlbumState",
+          "handleAlbumSubmit",
+          "deleteAlbum",
+          "loadGallery",
+          "renderGallery",
+          "openLightbox",
+          "showUploadImagesModal",
+          "closeUploadImagesModal",
+          "handleUploadImages",
+          "toggleScrollButton",
+          "initNavbarHandlers",
+          "initSuggestionHandlers",
+          "initGalleryHandlers",
+          "initAlbumHandlers",
+          "initGlobalActionHandlers",
+          "initImageErrorHandlers",
+          "updateProgress",
+          "createSlug",
+          "buildPostTOC",
+          "setupTOCLinks",
+          "setupActiveTracking",
+          "toggleMobileTOC"
+        ],
         "exports": []
       }
     },
@@ -366,6 +641,17 @@
     },
     {
       "data": {
+        "id": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "label": "_scripts_external_bundle.html",
+        "path": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
         "id": "templates/genealogy.html",
         "label": "genealogy.html",
         "path": "templates/genealogy.html",
@@ -402,6 +688,17 @@
         "id": "templates/members.html",
         "label": "members.html",
         "path": "templates/members.html",
+        "kind": "template",
+        "extension": "html",
+        "functions": [],
+        "exports": []
+      }
+    },
+    {
+      "data": {
+        "id": "templates/privacy.html",
+        "label": "privacy.html",
+        "path": "templates/privacy.html",
         "kind": "template",
         "extension": "html",
         "functions": [],
@@ -461,7 +758,7 @@
     {
       "data": {
         "id": "e_7",
-        "source": "templates/genealogy.html",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
         "target": "device-detection.js",
         "label": "loads"
       }
@@ -469,7 +766,7 @@
     {
       "data": {
         "id": "e_8",
-        "source": "templates/genealogy.html",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
         "target": "common.js",
         "label": "loads"
       }
@@ -477,62 +774,102 @@
     {
       "data": {
         "id": "e_9",
-        "source": "templates/genealogy.html",
-        "target": "family-tree-core.js",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "target": "family-tree-panzoom.js",
         "label": "loads"
       }
     },
     {
       "data": {
         "id": "e_10",
-        "source": "templates/genealogy.html",
-        "target": "family-tree-graph-builder.js",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "target": "family-tree-core.js",
         "label": "loads"
       }
     },
     {
       "data": {
         "id": "e_11",
-        "source": "templates/genealogy.html",
-        "target": "family-tree-family-renderer.js",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "target": "family-tree-graph-builder.js",
         "label": "loads"
       }
     },
     {
       "data": {
         "id": "e_12",
-        "source": "templates/genealogy.html",
-        "target": "family-tree-ui.js",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "target": "family-tree-family-renderer.js",
         "label": "loads"
       }
     },
     {
       "data": {
         "id": "e_13",
-        "source": "templates/genealogy.html",
-        "target": "family-tree-family-ui.js",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "target": "family-tree-ui.js",
         "label": "loads"
       }
     },
     {
       "data": {
         "id": "e_14",
-        "source": "templates/genealogy.html",
-        "target": "multilevel-genealogy.js",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "target": "family-tree-family-ui.js",
         "label": "loads"
       }
     },
     {
       "data": {
         "id": "e_15",
-        "source": "templates/genealogy.html",
-        "target": "genealogy-lineage.js",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "target": "multilevel-genealogy.js",
         "label": "loads"
       }
     },
     {
       "data": {
         "id": "e_16",
+        "source": "templates/genealogy/partials/_scripts_external_bundle.html",
+        "target": "genealogy-lineage.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_17",
+        "source": "templates/genealogy.html",
+        "target": "genealogy-tree-controls.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_18",
+        "source": "templates/genealogy.html",
+        "target": "genealogy-lineage-ui.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_19",
+        "source": "templates/genealogy.html",
+        "target": "genealogy-member-stats.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_20",
+        "source": "templates/genealogy.html",
+        "target": "genealogy-grave-family-view.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_21",
         "source": "templates/index.html",
         "target": "device-detection.js",
         "label": "loads"
@@ -540,7 +877,7 @@
     },
     {
       "data": {
-        "id": "e_17",
+        "id": "e_22",
         "source": "templates/index.html",
         "target": "genealogy-lineage.js",
         "label": "loads"
@@ -548,7 +885,7 @@
     },
     {
       "data": {
-        "id": "e_18",
+        "id": "e_23",
         "source": "templates/index.html",
         "target": "common.js",
         "label": "loads"
@@ -556,7 +893,7 @@
     },
     {
       "data": {
-        "id": "e_19",
+        "id": "e_24",
         "source": "templates/index.html",
         "target": "index.js",
         "label": "loads"
@@ -564,7 +901,7 @@
     },
     {
       "data": {
-        "id": "e_20",
+        "id": "e_25",
         "source": "templates/login.html",
         "target": "common.js",
         "label": "loads"
@@ -572,7 +909,7 @@
     },
     {
       "data": {
-        "id": "e_21",
+        "id": "e_26",
         "source": "templates/members.html",
         "target": "common.js",
         "label": "loads"
@@ -580,8 +917,24 @@
     },
     {
       "data": {
-        "id": "e_22",
+        "id": "e_27",
         "source": "templates/members.html",
+        "target": "device-detection.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_28",
+        "source": "templates/privacy.html",
+        "target": "common.js",
+        "label": "loads"
+      }
+    },
+    {
+      "data": {
+        "id": "e_29",
+        "source": "templates/privacy.html",
         "target": "device-detection.js",
         "label": "loads"
       }
@@ -589,8 +942,8 @@
   ],
   "meta": {
     "scannedRoot": "D:\\tbqc\\static\\js",
-    "generatedAt": "2026-04-12T12:09:14.798Z",
-    "fileCount": 12,
-    "templateEdgesMerged": 22
+    "generatedAt": "2026-04-19T15:23:59.272Z",
+    "fileCount": 17,
+    "templateEdgesMerged": 29
   }
 }

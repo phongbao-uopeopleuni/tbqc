@@ -45,6 +45,145 @@ function notifyMultilevelGenealogy() {
   }
 }
 
+/**
+ * Pan Panzoom theo "offset hiển thị" thật (pixel sau khi scale).
+ * `@panzoom/panzoom` canvas:true giữ transform-origin = 50% 50% và dùng công thức CSS:
+ *   transform: scale(s) translate(tx, ty)   với origin ở (W/2, H/2)
+ * Đặt điểm (0,0) của treeDiv xuất hiện ở toạ độ màn hình (visualPanX, visualPanY):
+ *   visualTopLeft = ((1-s)*W/2 + s*tx, (1-s)*H/2 + s*ty)
+ *   ⇒ tx = (visualPanX - (1-s)*W/2) / s   (tương đương (vw - W)/(2s) khi centering)
+ * Công thức này tránh việc cây rộng hàng chục ngàn px bị đẩy lệch khỏi khung.
+ */
+function applyPanzoomVisualPan(pz, scale, visualPanX, visualPanY) {
+  const safeScale = scale > 0 ? scale : 1;
+  const treeDiv =
+    document.querySelector('.tree') ||
+    (typeof window !== 'undefined' && window.familyTreeDiv) ||
+    null;
+  const W = treeDiv ? treeDiv.offsetWidth : 0;
+  const H = treeDiv ? treeDiv.offsetHeight : 0;
+  const tx = (visualPanX - (1 - safeScale) * W / 2) / safeScale;
+  const ty = (visualPanY - (1 - safeScale) * H / 2) / safeScale;
+  pz.zoom(safeScale, { animate: false });
+  pz.pan(tx, ty, { animate: false });
+}
+
+/** Chuyển từ pan nội bộ Panzoom (với origin 50% 50%) sang offset hiển thị của top-left (pre-scale → post-scale visual). */
+function panzoomPanToVisualOffset(panX, panY, scale, W, H) {
+  const safeScale = scale > 0 ? scale : 1;
+  return {
+    x: (1 - safeScale) * W / 2 + safeScale * panX,
+    y: (1 - safeScale) * H / 2 + safeScale * panY
+  };
+}
+
+/**
+ * Zoom/pan mặc định sau khi vẽ cây: **vừa đủ thấy toàn bộ cây trong khung** (fit), căn giữa.
+ * Đây là "nhỏ nhất hữu ích" — nhỏ hơn nữa (scale 0.004) sẽ khiến cây thành chấm không đọc được.
+ * Người dùng zoom to lên từ đây.
+ */
+function applyGenealogyDefaultView() {
+  const treeDiv =
+    document.querySelector(".tree") ||
+    (typeof window !== "undefined" && window.familyTreeDiv) ||
+    null;
+  const wrapper =
+    document.querySelector(".tree-container-wrapper") ||
+    document.getElementById("treeContainer");
+  if (!treeDiv || !wrapper) return;
+
+  const treeW = treeDiv.offsetWidth;
+  const treeH = treeDiv.offsetHeight;
+  const vw = wrapper.clientWidth;
+  const vh = wrapper.clientHeight;
+  if (treeW <= 0 || treeH <= 0 || vw <= 0 || vh <= 0) return;
+
+  const panzoomMin =
+    typeof window !== "undefined" && typeof window.treePanzoomMinScale === "number"
+      ? window.treePanzoomMinScale
+      : 0.004;
+
+  /* Chừa lề 10% để dễ kéo sát mép; không vượt quá 1 để không phóng to khi cây nhỏ */
+  const margin = 0.9;
+  let scale = Math.min((vw * margin) / treeW, (vh * margin) / treeH);
+  scale = Math.max(panzoomMin, Math.min(1, scale));
+
+  const sw = treeW * scale;
+  const sh = treeH * scale;
+  const panX = (vw - sw) / 2;
+  const panY = (vh - sh) / 2;
+
+  if (typeof window !== "undefined" && window.treePanzoomInstance) {
+    applyPanzoomVisualPan(window.treePanzoomInstance, scale, panX, panY);
+    syncZoomFromPanzoom();
+    return;
+  }
+
+  currentZoom = scale;
+  currentOffsetX = panX;
+  currentOffsetY = panY;
+  applyZoom();
+}
+
+/**
+ * Gọi applyGenealogyDefaultView (zoom tối thiểu + căn giữa) lặp lại cho đến khi khung cây có kích thước thật.
+ */
+function scheduleGenealogyTreeFitRetries() {
+  if (typeof window.applyGenealogyDefaultView !== "function") {
+    return;
+  }
+  var attempts = 0;
+  var maxAttempts = 45;
+  function tick() {
+    attempts++;
+    var content = document.getElementById("genealogy-content");
+    var visible = true;
+    if (content) {
+      var st = window.getComputedStyle(content);
+      visible = st.display !== "none" && st.visibility !== "hidden" && st.opacity !== "0";
+    }
+    var tree = document.querySelector("#treeContainer .tree");
+    var w = tree ? tree.offsetWidth : 0;
+    var h = tree ? tree.offsetHeight : 0;
+    if (visible && tree && w > 0 && h > 0) {
+      window.applyGenealogyDefaultView();
+      return;
+    }
+    if (attempts < maxAttempts) {
+      setTimeout(tick, 100);
+    } else {
+      window.applyGenealogyDefaultView();
+    }
+  }
+  setTimeout(tick, 0);
+}
+
+function syncZoomToWindow() {
+  if (typeof window !== "undefined") {
+    window.currentZoom = currentZoom;
+    window.currentOffsetX = currentOffsetX;
+    window.currentOffsetY = currentOffsetY;
+  }
+}
+
+function syncZoomFromPanzoom() {
+  if (typeof window === "undefined" || !window.treePanzoomInstance) return;
+  const pz = window.treePanzoomInstance;
+  currentZoom = pz.getScale();
+  const pan = pz.getPan();
+  const treeDiv =
+    document.querySelector('.tree') ||
+    (typeof window !== 'undefined' && window.familyTreeDiv) ||
+    null;
+  const W = treeDiv ? treeDiv.offsetWidth : 0;
+  const H = treeDiv ? treeDiv.offsetHeight : 0;
+  /* Quy đổi pan nội bộ Panzoom (origin 50% 50%) → offset hiển thị của top-left, để drag-to-pan / applyZoom đọc nhất quán. */
+  const visual = panzoomPanToVisualOffset(pan.x, pan.y, currentZoom, W, H);
+  currentOffsetX = visual.x;
+  currentOffsetY = visual.y;
+  syncZoomToWindow();
+}
+
 // Drag-to-pan state
 let isPanning = false;
 let panStartClientX = 0;
@@ -67,32 +206,50 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
     console.error('[Tree] treeContainer not found');
     return;
   }
+  if (typeof window.destroyTreePanzoom === "function") {
+    window.destroyTreePanzoom();
+  }
   container.innerHTML = "";
+
+  const personGraph =
+    graph != null ? graph : (typeof window !== 'undefined' ? window.graph : null);
   
-  // Check if family graph is available and use family renderer
-  const availableFamilyGraph = window.familyGraph || (typeof familyGraph !== 'undefined' ? familyGraph : null);
-  
-  if (availableFamilyGraph && typeof renderFamilyDefaultTree === 'function') {
+  // Phải dùng window.* — renderer chỉ export qua window, identifier global có thể không tồn tại.
+  const availableFamilyGraph =
+    (typeof window !== 'undefined' && window.familyGraph) ||
+    (typeof familyGraph !== 'undefined' ? familyGraph : null);
+  const renderFamily =
+    typeof window !== 'undefined' && typeof window.renderFamilyDefaultTree === 'function'
+      ? window.renderFamilyDefaultTree
+      : null;
+
+  if (availableFamilyGraph && renderFamily) {
     console.log('[Tree] Using family-node renderer, familyNodes:', availableFamilyGraph.familyNodes?.length || 0);
     try {
-      renderFamilyDefaultTree(availableFamilyGraph, maxGeneration);
-      notifyMultilevelGenealogy();
-      return;
+      const ok = renderFamily(availableFamilyGraph, maxGeneration);
+      if (ok) {
+        return;
+      }
+      console.log('[Tree] Family renderer declined — using person-node renderer');
     } catch (error) {
       console.error('[Tree] Error rendering family tree:', error);
-      // Fallback to person-node renderer
     }
+  } else {
+    console.log(
+      '[Tree] Skipping family-node renderer:',
+      !availableFamilyGraph ? 'no window.familyGraph' : 'no window.renderFamilyDefaultTree'
+    );
   }
+
+  console.log('[Tree] Using person-node renderer');
   
-  console.log('[Tree] Using person-node renderer (familyGraph not available or renderFamilyDefaultTree not found)');
-  
-  if (!graph || !personMap || personMap.size === 0) {
+  if (!personGraph || !personMap || personMap.size === 0) {
     container.innerHTML = '<div class="error">Chưa có dữ liệu</div>';
     return;
   }
   
   if (!founderId) {
-    container.innerHTML = '<div class="error">Không tìm thấy Vua Minh Mạng</div>';
+    container.innerHTML = '<div class="error">Không tìm thấy nút gốc cây (người gốc)</div>';
     return;
   }
 
@@ -199,10 +356,19 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   // Tăng chiều ngang để có scroll ngang
   treeDiv.style.width = Math.max(maxX, 3000) + "px";
   treeDiv.style.height = Math.max(maxY, 600) + "px";
-  treeDiv.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${currentZoom})`;
-  treeDiv.style.transformOrigin = "top left";
+  if (typeof Panzoom === "undefined") {
+    treeDiv.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${currentZoom})`;
+    treeDiv.style.transformOrigin = "top left";
+  } else {
+    treeDiv.style.transformOrigin = "top left";
+  }
 
   container.appendChild(treeDiv);
+  if (typeof window.initTreePanzoom === "function" && window.initTreePanzoom(treeDiv)) {
+    // Panzoom điều khiển transform
+  } else {
+    applyZoom();
+  }
   
   // Count nodes
   function countNodes(node) {
@@ -214,7 +380,7 @@ function renderDefaultTree(graph, maxGeneration = MAX_DEFAULT_GENERATION) {
   updateStats(countNodes(treeRoot), maxGeneration);
 
   requestAnimationFrame(function () {
-    if (typeof fitTreeToView === 'function') fitTreeToView();
+    if (typeof applyTreeMinZoomCentered === 'function') applyTreeMinZoomCentered();
   });
 
   notifyMultilevelGenealogy();
@@ -230,6 +396,9 @@ function renderFocusTree(targetId) {
   if (!container) {
     console.error('[Tree] treeContainer not found');
     return;
+  }
+  if (typeof window.destroyTreePanzoom === "function") {
+    window.destroyTreePanzoom();
   }
   container.innerHTML = "";
   
@@ -352,10 +521,26 @@ function renderFocusTree(targetId) {
   // Tăng chiều ngang để có scroll ngang
   treeDiv.style.width = Math.max(maxX, 3000) + "px";
   treeDiv.style.height = Math.max(maxY, 600) + "px";
-  treeDiv.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${currentZoom})`;
-  treeDiv.style.transformOrigin = "top left";
+  if (typeof Panzoom === "undefined") {
+    treeDiv.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${currentZoom})`;
+    treeDiv.style.transformOrigin = "top left";
+  } else {
+    treeDiv.style.transformOrigin = "top left";
+  }
 
   container.appendChild(treeDiv);
+  if (typeof window.initTreePanzoom === "function" && window.initTreePanzoom(treeDiv)) {
+    // Panzoom
+  } else {
+    applyZoom();
+  }
+  if (typeof window.scheduleGenealogyTreeFitRetries === 'function') {
+    window.scheduleGenealogyTreeFitRetries();
+  } else {
+    requestAnimationFrame(function () {
+      if (typeof applyTreeMinZoomCentered === 'function') applyTreeMinZoomCentered();
+    });
+  }
   
   // Count nodes
   function countNodes(node) {
@@ -530,6 +715,9 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
       } else if (motherNode) {
         parentStartX = motherNode.x + nodeWidth / 2;
         parentBottomY = motherNode.y + nodeHeight;
+      // TODO(tech-debt): nhánh dưới là dead-code (cha+mẹ cùng có đã khớp `if (fatherNode)` phía trên).
+      // Giữ nguyên để không đổi runtime; cần review & dọn khi refactor connector.
+      // eslint-disable-next-line no-dupe-else-if
       } else if (fatherNode && motherNode) {
         // Fallback (hiếm khi vào đây do ưu tiên cha/mẹ phía trên)
         const fatherCenterX = fatherNode.x + nodeWidth / 2;
@@ -553,7 +741,7 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
   if (verticalHeight > 0) {
     // Đường dọc từ cặp bố mẹ xuống đến điểm giữa của siblings - Cải thiện styling
     const connectorV = document.createElement("div");
-    connectorV.className = "connector vertical";
+    connectorV.className = "connector vertical connector-solid";
     connectorV.style.left = (parentStartX - 2) + "px";
     connectorV.style.top = verticalStartY + "px";
     connectorV.style.height = verticalHeight + "px";
@@ -568,7 +756,7 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     // Đường ngang từ đường dọc chính đến điểm giữa của siblings (nếu cần)
     if (Math.abs(parentStartX - siblingsMidX) > 5) {
       const connectorH1 = document.createElement("div");
-      connectorH1.className = "connector horizontal";
+      connectorH1.className = "connector horizontal connector-solid";
       connectorH1.style.left = Math.min(parentStartX, siblingsMidX) + "px";
       connectorH1.style.top = (firstChildTopY - 20) + "px";
       connectorH1.style.width = Math.abs(parentStartX - siblingsMidX) + "px";
@@ -585,7 +773,7 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
   // Đường ngang từ điểm giữa của siblings đến tất cả siblings - Cải thiện styling
   if (siblings.length > 1) {
     const connectorH = document.createElement("div");
-    connectorH.className = "connector horizontal";
+    connectorH.className = "connector horizontal connector-solid";
     connectorH.style.left = minSiblingX + "px";
     connectorH.style.top = (firstChildTopY - 20) + "px";
     connectorH.style.width = (maxSiblingX - minSiblingX) + "px";
@@ -605,7 +793,7 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
     
     // Đường dọc từ đường ngang xuống child
     const connectorV2 = document.createElement("div");
-    connectorV2.className = "connector vertical";
+    connectorV2.className = "connector vertical connector-solid";
     connectorV2.style.left = (childCenterX - 2) + "px";
     connectorV2.style.top = (childTopY - 20) + "px";
     connectorV2.style.height = "20px";
@@ -917,36 +1105,54 @@ function redistributeNodesByGeneration(levelPositions) {
  * (ví dụ Đến đời 3), thay vì luôn render full đến MAX_DEFAULT_GENERATION.
  */
 function resetToDefault() {
-  currentMode = 'default';
-  focusedPersonId = null;
   if (typeof window !== 'undefined') {
-    window.selectedPersonId = null;
+    window.__treePanzoomNoPreserveSnapshot = true;
   }
+  try {
+    currentMode = 'default';
+    focusedPersonId = null;
+    if (typeof window !== 'undefined') {
+      window.selectedPersonId = null;
+    }
 
-  const btnDefaultMode = document.getElementById("btnDefaultMode");
-  const btnFocusMode = document.getElementById("btnFocusMode");
-  const genealogyString = document.getElementById("genealogyString");
-  const searchName = document.getElementById("searchName");
-  const genFilter = document.getElementById("genFilter");
-  
-  if (btnDefaultMode) btnDefaultMode.style.display = "none";
-  if (btnFocusMode) btnFocusMode.style.display = "none";
-  if (genealogyString) genealogyString.style.display = "none";
-  if (searchName) searchName.value = "";
-  
-  // Lấy đời tối đa từ dropdown; fallback 3 (theo yêu cầu) rồi đến MAX_DEFAULT_GENERATION
-  let maxGen = 3;
-  if (genFilter && genFilter.value) {
-    const parsed = parseInt(genFilter.value, 10);
-    if (!Number.isNaN(parsed) && parsed > 0) {
-      maxGen = parsed;
+    const btnDefaultMode = document.getElementById("btnDefaultMode");
+    const btnFocusMode = document.getElementById("btnFocusMode");
+    const genealogyString = document.getElementById("genealogyString");
+    const searchName = document.getElementById("searchName");
+    const genFilter = document.getElementById("genFilter");
+    
+    if (btnDefaultMode) btnDefaultMode.style.display = "none";
+    if (btnFocusMode) btnFocusMode.style.display = "none";
+    if (genealogyString) genealogyString.style.display = "none";
+    if (searchName) searchName.value = "";
+    
+    // Lấy đời tối đa từ dropdown; fallback GENEALOGY_DEFAULT_DISPLAY_GENERATION (genealogy.html) rồi MAX_DEFAULT_GENERATION
+    const genDefault =
+      typeof window !== "undefined" &&
+      typeof window.GENEALOGY_DEFAULT_DISPLAY_GENERATION === "number" &&
+      window.GENEALOGY_DEFAULT_DISPLAY_GENERATION > 0
+        ? window.GENEALOGY_DEFAULT_DISPLAY_GENERATION
+        : 5;
+    let maxGen = genDefault;
+    if (genFilter && genFilter.value) {
+      const parsed = parseInt(genFilter.value, 10);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        maxGen = parsed;
+      }
+    }
+    if (!Number.isFinite(maxGen) || maxGen <= 0) {
+      maxGen = MAX_DEFAULT_GENERATION;
+    }
+    
+    renderDefaultTree(
+      graph != null ? graph : (typeof window !== 'undefined' ? window.graph : null),
+      maxGen
+    );
+  } finally {
+    if (typeof window !== 'undefined') {
+      window.__treePanzoomNoPreserveSnapshot = false;
     }
   }
-  if (!Number.isFinite(maxGen) || maxGen <= 0) {
-    maxGen = MAX_DEFAULT_GENERATION;
-  }
-  
-  renderDefaultTree(graph, maxGen);
 }
 
 function switchToDefaultMode() {
@@ -1080,40 +1286,56 @@ function updateStats(displayedCount, generation = null) {
   if (displayedPeople) displayedPeople.textContent = displayedCount;
 }
 
-function showPersonInfo(personId) {
+function showPersonInfo(personId, options) {
   const person = personMap.get(personId);
-  if (!person) return;
-  
+  if (!person) return Promise.resolve(false);
+
   const infoPanel = document.getElementById("infoPanel");
   const infoContent = document.getElementById("infoContent");
-  
+
   if (!infoPanel || !infoContent) {
     console.warn('[Tree] Info panel elements not found');
-    return;
+    return Promise.resolve(false);
   }
-  
-  // Hiển thị loading
-  infoContent.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--color-text-muted);">Đang tải thông tin...</div>';
+
+  const opts = options || {};
+  // Lưu context footer (action buttons…) để displayPersonInfo ghép vào cuối
+  window.__personInfoFooterHtml = typeof opts.footerHtml === 'string' ? opts.footerHtml : '';
+  window.__personInfoContextId = personId;
+
+  // Hiển thị loading (giữ lại footer để user thấy action sẵn)
+  const loadingHtml =
+    '<div style="padding: 20px; text-align: center; color: var(--color-text-muted);">Đang tải thông tin...</div>';
+  infoContent.innerHTML = loadingHtml + (window.__personInfoFooterHtml || '');
   infoPanel.style.display = "block";
-  
+
   // Gọi API để lấy thông tin chi tiết
-  fetch(`${API_BASE_URL}/person/${personId}`)
+  return fetch(`${API_BASE_URL}/person/${personId}`)
     .then(res => res.json())
     .then(data => {
-      displayPersonInfo(data);
+      displayPersonInfo(data, { footerHtml: window.__personInfoFooterHtml || '' });
+      return true;
     })
     .catch(err => {
       console.error(err);
-      infoContent.innerHTML = '<div style="padding: 20px; color: var(--color-error);">Không thể tải thông tin</div>';
+      infoContent.innerHTML =
+        '<div style="padding: 20px; color: var(--color-error);">Không thể tải thông tin</div>' +
+        (window.__personInfoFooterHtml || '');
+      return false;
     });
 }
 
-function displayPersonInfo(personData) {
+function displayPersonInfo(personData, options) {
   const infoContent = document.getElementById("infoContent");
   if (!infoContent) {
     console.warn('[Tree] infoContent not found');
     return;
   }
+  const renderOpts = options || {};
+  const footerHtml =
+    typeof renderOpts.footerHtml === 'string'
+      ? renderOpts.footerHtml
+      : (window.__personInfoFooterHtml || '');
   
   // Escape HTML để tránh XSS
   function escapeHtml(text) {
@@ -1433,7 +1655,8 @@ function displayPersonInfo(personData) {
     html += foldableSection("Thông tin liên hệ và học vấn", contactInner, false);
   }
   
-  infoContent.innerHTML = html || '<div style="padding: 20px; color: var(--color-text-muted);">Không có thông tin chi tiết</div>';
+  const rendered = html || '<div style="padding: 20px; color: var(--color-text-muted);">Không có thông tin chi tiết</div>';
+  infoContent.innerHTML = rendered + (footerHtml || '');
 }
 
 function closeModal() {
@@ -1451,17 +1674,104 @@ function resetView() {
 // ZOOM CONTROLS
 // ============================================
 
+/**
+ * Zoom cây Panzoom quanh **tâm khung nhìn** (tránh dùng `focal` của Panzoom — với cây cực rộng,
+ * pan pre-scale hàng trăm ngàn px kết hợp focal sẽ tạo NaN → mất render).
+ *
+ * Công thức (origin 50% 50%, canvas:true):
+ *   Để điểm element e cố định ở visual (fx, fy): tx' = (fx - W/2)*(1/s' - 1/s) + tx
+ *   (Không phụ thuộc e — áp cho mọi focal.)
+ */
+/**
+ * Zoom tới `newScale` sao cho điểm (clientX, clientY) trên màn hình cố định trong lúc phóng.
+ * Công thức (canvas:true, origin 50% 50%): tx' = (fx - W/2)*(1/s' - 1/s) + tx; tương tự cho ty.
+ */
+function zoomAroundPointer(newScale, clientX, clientY) {
+  if (typeof window === 'undefined' || !window.treePanzoomInstance) return false;
+  const pz = window.treePanzoomInstance;
+  const treeDiv =
+    document.querySelector('.tree') ||
+    (typeof window !== 'undefined' && window.familyTreeDiv) ||
+    null;
+  if (!treeDiv || !treeDiv.parentElement) return false;
+
+  const W = treeDiv.offsetWidth;
+  const H = treeDiv.offsetHeight;
+  const oldScale = pz.getScale();
+  const oldPan = pz.getPan();
+  if (!oldPan || typeof oldPan.x !== 'number' || typeof oldPan.y !== 'number') {
+    pz.zoom(newScale, { animate: false });
+    syncZoomFromPanzoom();
+    return true;
+  }
+
+  const parentRect = treeDiv.parentElement.getBoundingClientRect();
+  const fx = clientX - parentRect.left;
+  const fy = clientY - parentRect.top;
+
+  const invDiff = 1 / newScale - 1 / oldScale;
+  const tx = (fx - W / 2) * invDiff + oldPan.x;
+  const ty = (fy - H / 2) * invDiff + oldPan.y;
+
+  pz.zoom(newScale, { animate: false });
+  pz.pan(tx, ty, { animate: false });
+  syncZoomFromPanzoom();
+  return true;
+}
+
+/** Zoom cây quanh **tâm khung** (không cần biết vị trí chuột — dùng cho nút Phóng to / Thu nhỏ). */
+function zoomAroundWrapperCenter(newScale) {
+  const wrapper =
+    document.querySelector('.tree-container-wrapper') ||
+    document.getElementById('treeContainer');
+  if (!wrapper) return false;
+  const r = wrapper.getBoundingClientRect();
+  return zoomAroundPointer(newScale, r.left + r.width / 2, r.top + r.height / 2);
+}
+
 function zoomIn() {
+  if (typeof window !== 'undefined' && window.treePanzoomInstance) {
+    const pz = window.treePanzoomInstance;
+    const target = Math.min(pz.getScale() * 1.15, 2);
+    zoomAroundWrapperCenter(target);
+    return;
+  }
   currentZoom = Math.min(currentZoom + 0.1, 2);
   applyZoom();
 }
 
 function zoomOut() {
-  currentZoom = Math.max(currentZoom - 0.1, 0.5);
+  if (typeof window !== 'undefined' && window.treePanzoomInstance) {
+    const pz = window.treePanzoomInstance;
+    const zmin =
+      typeof window.treePanzoomMinScale === 'number' ? window.treePanzoomMinScale : 0.004;
+    zoomAroundWrapperCenter(Math.max(pz.getScale() / 1.15, zmin));
+    return;
+  }
+  const zmin =
+    typeof window !== 'undefined' && typeof window.treePanzoomMinScale === 'number'
+      ? window.treePanzoomMinScale
+      : 0.004;
+  currentZoom = Math.max(currentZoom - 0.1, zmin);
   applyZoom();
 }
 
 function resetZoom() {
+  if (typeof applyGenealogyDefaultView === 'function') {
+    applyGenealogyDefaultView();
+    return;
+  }
+  if (typeof applyTreeMinZoomCentered === 'function') {
+    applyTreeMinZoomCentered();
+    return;
+  }
+  if (typeof window !== 'undefined' && window.treePanzoomInstance) {
+    const pz = window.treePanzoomInstance;
+    pz.zoom(1, { animate: false });
+    pz.pan(0, 0, { animate: false });
+    syncZoomFromPanzoom();
+    return;
+  }
   currentZoom = 1;
   currentOffsetX = 0;
   currentOffsetY = 0;
@@ -1473,6 +1783,10 @@ function resetZoom() {
  * Chỉ thay đổi currentZoom và transform (view), không ảnh hưởng dữ liệu hay logic.
  */
 function fitTreeToView() {
+  if (typeof window !== 'undefined' && window.__skipNextTreeFit) {
+    window.__skipNextTreeFit = false;
+    return;
+  }
   const treeDiv = document.querySelector('.tree') || (typeof window !== 'undefined' && window.familyTreeDiv) || null;
   const wrapper = document.querySelector('.tree-container-wrapper') || document.getElementById('treeContainer');
   if (!treeDiv || !wrapper) return;
@@ -1483,16 +1797,84 @@ function fitTreeToView() {
   const vh = wrapper.clientHeight;
   if (treeW <= 0 || treeH <= 0 || vw <= 0 || vh <= 0) return;
 
-  let scale = Math.min(vw / treeW, vh / treeH) * 0.95;
-  scale = Math.max(0.2, Math.min(1, scale));
+  const panzoomMin =
+    typeof window !== 'undefined' && typeof window.treePanzoomMinScale === 'number'
+      ? window.treePanzoomMinScale
+      : 0.004;
+  /* Luôn fit bounding box vào khung; không ép scale=0.22 với cây cực rộng (đẩy viewport lệch, có thể chỉ thấy vùng trống). */
+  let scale = Math.min((vw * 0.92) / treeW, (vh * 0.92) / treeH);
+  scale = Math.max(panzoomMin, Math.min(1, scale));
+  const sw = treeW * scale;
+  const sh = treeH * scale;
+  const panX = (vw - sw) / 2;
+  const panY = (vh - sh) / 2;
+
+  if (typeof window !== 'undefined' && window.treePanzoomInstance) {
+    applyPanzoomVisualPan(window.treePanzoomInstance, scale, panX, panY);
+    syncZoomFromPanzoom();
+    return;
+  }
 
   currentZoom = scale;
-  currentOffsetX = 0;
-  currentOffsetY = 0;
+  currentOffsetX = panX;
+  currentOffsetY = panY;
+  applyZoom();
+}
+
+/**
+ * Chế độ xem mặc định: zoom tối thiểu và căn giữa khung — người dùng phóng to dần (scroll / nút).
+ * Khác với fitTreeToView (vừa toàn bộ cây trong khung).
+ */
+function applyTreeMinZoomCentered() {
+  if (typeof window !== 'undefined' && window.__skipNextTreeFit) {
+    window.__skipNextTreeFit = false;
+    return;
+  }
+  const treeDiv =
+    document.querySelector('.tree') ||
+    (typeof window !== 'undefined' && window.familyTreeDiv) ||
+    null;
+  const wrapper =
+    document.querySelector('.tree-container-wrapper') ||
+    document.getElementById('treeContainer');
+  if (!treeDiv || !wrapper) return;
+
+  const minScale =
+    typeof window !== 'undefined' && typeof window.treePanzoomMinScale === 'number'
+      ? window.treePanzoomMinScale
+      : 0.004;
+
+  const treeW = treeDiv.offsetWidth;
+  const treeH = treeDiv.offsetHeight;
+  const vw = wrapper.clientWidth;
+  const vh = wrapper.clientHeight;
+  if (treeW <= 0 || treeH <= 0 || vw <= 0 || vh <= 0) return;
+
+  if (typeof window !== 'undefined' && window.treePanzoomInstance) {
+    const sw = treeW * minScale;
+    const sh = treeH * minScale;
+    const panX = vw / 2 - sw / 2;
+    const panY = vh / 2 - sh / 2;
+    applyPanzoomVisualPan(window.treePanzoomInstance, minScale, panX, panY);
+    syncZoomFromPanzoom();
+    return;
+  }
+
+  const sw = treeW * minScale;
+  const sh = treeH * minScale;
+  currentZoom = Math.max(minScale, 0.004);
+  currentOffsetX = vw / 2 - sw / 2;
+  currentOffsetY = vh / 2 - sh / 2;
   applyZoom();
 }
 
 function applyZoom() {
+  if (typeof window !== 'undefined' && window.treePanzoomInstance) {
+    /* currentOffsetX/Y luôn là offset **hiển thị** (post-scale). Panzoom canvas:true nhận pan pre-scale ⇒ chia cho scale. */
+    applyPanzoomVisualPan(window.treePanzoomInstance, currentZoom, currentOffsetX, currentOffsetY);
+    syncZoomFromPanzoom();
+    return;
+  }
   // Try to find tree div (could be from person tree or family tree)
   let treeDiv = document.querySelector('.tree');
   if (!treeDiv && typeof window !== 'undefined' && window.familyTreeDiv) {
@@ -1502,6 +1884,7 @@ function applyZoom() {
     treeDiv.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${currentZoom})`;
     treeDiv.style.transformOrigin = "top left";
   }
+  syncZoomToWindow();
 }
 
 // ============================================
@@ -1556,8 +1939,15 @@ if (typeof window !== 'undefined') {
   window.zoomOut = zoomOut;
   window.resetZoom = resetZoom;
   window.fitTreeToView = fitTreeToView;
+  window.applyGenealogyDefaultView = applyGenealogyDefaultView;
+  window.applyTreeMinZoomCentered = applyTreeMinZoomCentered;
   window.applyZoom = applyZoom;
   window.showPersonInfo = showPersonInfo;
+  window.syncFamilyTreeZoomFromPanzoom = syncZoomFromPanzoom;
+  window.scheduleGenealogyTreeFitRetries = scheduleGenealogyTreeFitRetries;
+  window.createNodeElement = createNodeElement;
+  window.zoomAroundPointer = zoomAroundPointer;
+  window.zoomAroundWrapperCenter = zoomAroundWrapperCenter;
 }
 
 // ============================================
@@ -1600,12 +1990,22 @@ async function init() {
     
     // Setup UI
     setupSearch();
-    setupPanOnTreeContainer();
+    if (typeof Panzoom === 'undefined') {
+      setupPanOnTreeContainer();
+    }
     console.log('Đang render default tree...');
     resetToDefault(); // Render default mode (đời 1-5)
-    requestAnimationFrame(function () {
-      if (typeof fitTreeToView === 'function') fitTreeToView();
-    });
+    if (typeof window.scheduleGenealogyTreeFitRetries === 'function') {
+      window.scheduleGenealogyTreeFitRetries();
+    } else {
+      requestAnimationFrame(function () {
+        if (typeof window.applyGenealogyDefaultView === 'function') {
+          window.applyGenealogyDefaultView();
+        } else if (typeof window.fitTreeToView === 'function') {
+          window.fitTreeToView();
+        }
+      });
+    }
     console.log('Đã render xong');
     
     // Note: genFilter is now populated by genealogy.html's populateGenerationFilter()

@@ -46,7 +46,10 @@ if _h:
             except ValueError:
                 pass
         _db_cfg.set_config_override(_cfg)
-        print('OK: DB config override set (host=%s)' % _h)
+        # Mask hostname trong log để tránh rò thông tin hạ tầng ra stdout
+        # (Railway/Render forward stdout sang monitoring). Xem Bug #14.
+        from utils.host_redact import mask_host
+        print('OK: DB config override set (host=%s)' % mask_host(_h))
     except Exception as _e:
         print('WARNING: Could not set DB config override:', _e)
 
@@ -73,11 +76,57 @@ try:
     init_extensions(app)
 
     @app.after_request
-    def _add_hsts_header(response):
-        """HSTS: Railway chấm dứt TLS phía trước; ProxyFix (x_proto) giúp request.is_secure đúng với HTTPS."""
+    def _add_security_headers(response):
+        """Gắn header bảo mật HTTP (defense-in-depth, không đổi hành vi app).
+
+        Chỉ dùng `setdefault` để KHÔNG đè header route tự set (ví dụ route muốn
+        `X-Frame-Options: DENY` nghiêm hơn hay CSP custom cho trang admin).
+
+        - HSTS: chỉ khi request.is_secure — tránh "khóa" dev HTTP thuần.
+        - X-Content-Type-Options: chặn MIME sniffing (phòng upload .jpg chứa HTML).
+        - X-Frame-Options + CSP frame-ancestors: chặn clickjacking (trang này
+          không bao giờ cần được nhúng trong iframe của bên thứ 3).
+        - Referrer-Policy: hạn chế rò URL nội bộ (session/token trong query) sang
+          site khác khi user click link ngoài.
+        - Permissions-Policy: disable các feature trình duyệt không dùng
+          (camera/microphone/geolocation/FLoC/...).
+        - Cross-Origin-Resource-Policy: same-site — chặn site khác hotlink tài
+          nguyên (ảnh/đặc biệt là mồ).
+        """
         if request.is_secure:
-            response.headers['Strict-Transport-Security'] = 'max-age=31536000'
+            response.headers.setdefault(
+                'Strict-Transport-Security', 'max-age=31536000'
+            )
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        # CSP tối thiểu: chỉ ràng buộc frame-ancestors (tương đương XFO nhưng chuẩn
+        # hiện đại). KHÔNG set default-src / script-src vì site dùng nhiều CDN
+        # (Bootstrap, Font Awesome, Leaflet, Google Maps, Zalo, Facebook) — một
+        # CSP chặt sẽ vỡ UI. Mở rộng CSP trong batch tiếp theo nếu cần.
+        response.headers.setdefault(
+            'Content-Security-Policy', "frame-ancestors 'self'"
+        )
+        response.headers.setdefault(
+            'Referrer-Policy', 'strict-origin-when-cross-origin'
+        )
+        response.headers.setdefault(
+            'Permissions-Policy',
+            'camera=(), microphone=(), geolocation=(), '
+            'payment=(), usb=(), accelerometer=(), gyroscope=(), '
+            'magnetometer=(), interest-cohort=()',
+        )
+        # KHÔNG set Cross-Origin-Resource-Policy: ảnh/ogimage có thể được Facebook /
+        # Zalo crawler hay trình duyệt cross-origin nạp — `same-site` có thể làm vỡ
+        # preview mạng xã hội. Bỏ qua trong batch này.
         return response
+
+    # Sanitize str(e) rò qua JSON response ở production + errorhandler chung
+    # cho unhandled exception (bug #12).
+    try:
+        from utils.error_responses import register_error_hardening
+        register_error_hardening(app)
+    except Exception as _e:
+        print(f'WARNING: register_error_hardening skipped: {_e}')
 
     print('OK: Flask app da duoc khoi tao')
     print(f'   Static folder: {app.static_folder}')
@@ -213,8 +262,12 @@ from utils.validation import (
     secure_compare,
 )
 
-# Tài khoản cố định cổng Members: load từ env MEMBERS_FIXED_ACCOUNTS (format: user1:pass1,user2:pass2)
-# Chỉ lưu giá trị thật trong .env/tbqc_db.env trên máy local, không commit
+# Tài khoản cố định cổng Members: load từ env MEMBERS_FIXED_ACCOUNTS.
+# Mỗi mục cách nhau bằng dấu phẩy; giá trị mật khẩu chấp nhận 2 dạng:
+#   - user:plaintext_password          (tương thích ngược)
+#   - user:$2b$12$<bcrypt_hash>...     (khuyến nghị; tự phát hiện qua prefix $2a$/$2b$/$2y$)
+# Việc verify luôn đi qua `_verify_fixed_member_password` để dùng bcrypt.checkpw
+# hoặc secrets.compare_digest (constant-time), tránh timing attack.
 def _load_fixed_members_passwords():
     raw = os.environ.get('MEMBERS_FIXED_ACCOUNTS', '').strip()
     result = {}
@@ -224,12 +277,55 @@ def _load_fixed_members_passwords():
             u, p = part.split(':', 1)
             result[u.strip()] = p.strip()
     return result
+
+
+_BCRYPT_HASH_PREFIXES = ('$2a$', '$2b$', '$2y$')
+
+
+def _is_bcrypt_hash(value) -> bool:
+    """Phát hiện bcrypt hash qua prefix chuẩn (không phụ thuộc độ dài)."""
+    return isinstance(value, str) and value.startswith(_BCRYPT_HASH_PREFIXES)
+
+
+def _verify_fixed_member_password(stored: str, provided: str) -> bool:
+    """
+    Verify mật khẩu tài khoản cố định (cổng Members) một cách constant-time.
+
+    - `stored` là bcrypt hash ($2a/$2b/$2y) → dùng bcrypt.checkpw.
+    - `stored` là plaintext (tương thích ngược) → secrets.compare_digest.
+    - Đầu vào rỗng / lỗi bất kỳ → trả False (fail-closed, không raise ra ngoài).
+    """
+    if not stored or not provided:
+        return False
+    try:
+        if _is_bcrypt_hash(stored):
+            import bcrypt
+            return bcrypt.checkpw(
+                provided.encode('utf-8'),
+                stored.encode('utf-8'),
+            )
+        return secrets.compare_digest(
+            stored.encode('utf-8'),
+            provided.encode('utf-8'),
+        )
+    except Exception:
+        logger.exception('Members gate: error while verifying fixed account password')
+        return False
+
+
 FIXED_MEMBERS_PASSWORDS = _load_fixed_members_passwords()
+# Giữ nguyên shape cho tương thích ngược (một số code cũ có thể import).
+# Lưu ý: không dùng trực tiếp "password" ở đây để xác thực — mọi verify
+# đều phải đi qua _verify_fixed_member_password.
 MEMBERS_GATE_ACCOUNTS = [{'username': k, 'password': v} for k, v in FIXED_MEMBERS_PASSWORDS.items()]
 if FIXED_MEMBERS_PASSWORDS:
+    _fixed_hashed = sum(1 for v in FIXED_MEMBERS_PASSWORDS.values() if _is_bcrypt_hash(v))
+    _fixed_plain = len(FIXED_MEMBERS_PASSWORDS) - _fixed_hashed
     logger.info(
-        'Members gate: %d fixed account(s) from MEMBERS_FIXED_ACCOUNTS — chỉ cấu hình trên server; đổi định kỳ nếu nghi lộ.',
-        len(FIXED_MEMBERS_PASSWORDS),
+        'Members gate: %d fixed account(s) from MEMBERS_FIXED_ACCOUNTS '
+        '(bcrypt=%d, plaintext=%d). Khuyến nghị chuyển sang bcrypt hash '
+        'để tránh lộ plaintext qua env/log/backup.',
+        len(FIXED_MEMBERS_PASSWORDS), _fixed_hashed, _fixed_plain,
     )
 external_posts_cache = {'data': None, 'timestamp': None, 'cache_duration': timedelta(minutes=30)}
 
@@ -367,9 +463,10 @@ def validate_tbqc_gate(username: str, password: str) -> bool:
     password = (password or '').strip()
     if not username or not password:
         return False
-    # 1) So khớp 4 tài khoản cố định bằng dict (tránh lỗi so sánh)
+    # 1) So khớp 4 tài khoản cố định bằng dict — verify constant-time
+    #    (bcrypt.checkpw nếu env đã hash, secrets.compare_digest nếu plaintext).
     expected = FIXED_MEMBERS_PASSWORDS.get(username)
-    if expected is not None and expected == password:
+    if expected is not None and _verify_fixed_member_password(expected, password):
         logger.info(f'Members gate OK (fixed): {username}')
         return True
     # 2) Các user khác: DB
@@ -420,12 +517,48 @@ def sync_genealogy_from_members():
     cursor = None
     try:
         import requests
-        import urllib3
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         standard_db_url = 'https://www.phongtuybienquancong.info/api/members'
         logger.info(f'📡 Fetching data from: {standard_db_url}')
+
+        # TLS verification: mặc định BẬT (verify=True) — chặn MitM/DNS poisoning
+        # chèn dữ liệu giả rồi ghi thẳng vào persons/relationships/marriages.
+        #
+        # Override hợp pháp (opt-in):
+        #   - GENEALOGY_SYNC_CA_BUNDLE=/path/to/ca.pem → dùng CA bundle tùy chỉnh
+        #     (self-signed cert nội bộ, mirror, staging host). Vẫn VERIFY.
+        #   - GENEALOGY_SYNC_INSECURE_TLS=1           → TẮT verify (dev only).
+        #     BỊ CHẶN TRÊN PRODUCTION — dù set vẫn giữ verify=True để không ai
+        #     (kể cả admin) vô tình mở lỗ hổng trên môi trường thật.
+        ca_bundle = (os.environ.get('GENEALOGY_SYNC_CA_BUNDLE') or '').strip()
+        insecure_env = (os.environ.get('GENEALOGY_SYNC_INSECURE_TLS') or '').strip().lower()
+        allow_insecure = insecure_env in ('1', 'true', 'yes')
         try:
-            response = requests.get(standard_db_url, timeout=60, verify=False)
+            from config import is_production_env as _is_prod
+        except Exception:
+            _is_prod = lambda: False
+        if allow_insecure and _is_prod():
+            logger.error(
+                'GENEALOGY_SYNC_INSECURE_TLS được set trên production — BỎ QUA, '
+                'vẫn verify TLS đầy đủ để bảo vệ tính toàn vẹn dữ liệu.'
+            )
+            allow_insecure = False
+
+        if ca_bundle and os.path.exists(ca_bundle):
+            verify_arg = ca_bundle
+            logger.info('Sync TLS verify: dùng CA bundle tùy chỉnh %s', ca_bundle)
+        elif allow_insecure:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            logger.warning(
+                'GENEALOGY_SYNC_INSECURE_TLS=1 (dev only) — TLS verification TẮT '
+                'cho /api/genealogy/sync. KHÔNG dùng trên production.'
+            )
+            verify_arg = False
+        else:
+            verify_arg = True
+
+        try:
+            response = requests.get(standard_db_url, timeout=60, verify=verify_arg)
             response.raise_for_status()
             response_data = response.json()
             if isinstance(response_data, list):
@@ -438,6 +571,21 @@ def sync_genealogy_from_members():
                 logger.error(f'❌ Unexpected response format from {standard_db_url}: {type(response_data)}')
                 return (jsonify({'success': False, 'error': f'Dữ liệu từ database chuẩn không đúng định dạng. Expected array or {{success, data}}, got {type(response_data)}'}), 500)
             logger.info(f'📊 Đã fetch {len(members_data)} members từ database chuẩn')
+        except requests.exceptions.SSLError as e:
+            # TLS verify fail → dữ liệu KHÔNG đáng tin; hủy sync trước khi đụng DB.
+            logger.error(
+                '❌ TLS verification failed khi sync từ %s: %s. '
+                'Dữ liệu không được tin cậy, sync đã hủy.',
+                standard_db_url, e,
+            )
+            return (jsonify({
+                'success': False,
+                'error': (
+                    'Không thể xác minh chứng chỉ TLS của database chuẩn. '
+                    'Sync đã hủy để bảo vệ tính toàn vẹn dữ liệu. '
+                    'Nếu đang dùng CA nội bộ, cấu hình GENEALOGY_SYNC_CA_BUNDLE.'
+                ),
+            }), 502)
         except requests.exceptions.RequestException as e:
             logger.error(f'❌ Lỗi khi fetch dữ liệu từ database chuẩn: {e}')
             return (jsonify({'success': False, 'error': f'Không thể kết nối đến database chuẩn: {str(e)}'}), 500)
@@ -1382,6 +1530,86 @@ def api_admin_activity_logs():
         if connection.is_connected():
             cursor.close()
             connection.close()
+
+@app.route('/api/admin/reset-logs', methods=['POST'])
+@login_required
+def api_admin_reset_logs():
+    """
+    Reset toàn bộ "bản log" (activity_logs + page_views):
+      - Dump trước ra backups/logs-YYYYMMDD-HHMMSS.sql (có thể restore).
+      - TRUNCATE cả 2 bảng.
+      - Ghi 1 entry LOG_RESET vào activity_logs sau khi reset.
+
+    Yêu cầu:
+      - Đã login (Flask-Login).
+      - role == 'admin'.
+      - Body JSON: {"confirm": "RESET_ALL_LOGS"} — token confirmation để tránh POST
+        nhầm. CSRF vẫn được kiểm qua Flask-WTF như mọi endpoint POST khác.
+    """
+    if not current_user.is_authenticated:
+        return (jsonify({'success': False, 'error': 'Chưa đăng nhập.'}), 401)
+    if getattr(current_user, 'role', '') != 'admin':
+        return (jsonify({'success': False, 'error': 'Không có quyền truy cập.'}), 403)
+
+    try:
+        payload = request.get_json(silent=True) or {}
+    except Exception:
+        payload = {}
+    confirm_token = (payload.get('confirm') or '').strip()
+    if confirm_token != 'RESET_ALL_LOGS':
+        return (
+            jsonify({
+                'success': False,
+                'error': 'Thiếu xác nhận. Body JSON phải có {"confirm": "RESET_ALL_LOGS"}.',
+            }),
+            400,
+        )
+
+    try:
+        from services.log_reset import perform_log_reset
+    except Exception as import_err:
+        logger.error('Không import được services.log_reset: %s', import_err)
+        return (jsonify({'success': False, 'error': 'Service reset-logs không khả dụng.'}), 500)
+
+    result = perform_log_reset(
+        actor_user_id=getattr(current_user, 'id', None),
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+    )
+    if not result.get('success'):
+        return (jsonify(result), 500)
+    return jsonify(result)
+
+
+@app.route('/api/admin/code-graph/rescan', methods=['POST'])
+@login_required
+def api_admin_code_graph_rescan():
+    """
+    Chạy lại trình quét code-graph (scripts/code-graph/scan.mjs) để cập nhật
+    static/data/code-graph.json. Chỉ admin được gọi.
+
+    Response:
+      {
+        "success": true,
+        "duration_ms": 1234,
+        "stats": {"nodes": N, "edges": M, "size_bytes": K},
+        "out_file": "static/data/code-graph.json"
+      }
+    Hoặc khi fail: 500 với {success:false, error:"...", stdout_tail/stderr_tail}.
+    """
+    if not current_user.is_authenticated:
+        return (jsonify({'success': False, 'error': 'Chưa đăng nhập.'}), 401)
+    if getattr(current_user, 'role', '') != 'admin':
+        return (jsonify({'success': False, 'error': 'Không có quyền truy cập.'}), 403)
+    try:
+        from services.code_graph_scan import run_scan
+    except Exception as import_err:
+        logger.error('Không import được services.code_graph_scan: %s', import_err)
+        return (jsonify({'success': False, 'error': 'Service rescan không khả dụng.'}), 500)
+    result = run_scan()
+    status = 200 if result.get('success') else 500
+    return (jsonify(result), status)
+
 
 @app.route('/api/admin/backup', methods=['POST'])
 def create_backup_api():

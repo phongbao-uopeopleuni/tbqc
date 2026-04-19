@@ -1,14 +1,33 @@
-flask==3.0.0
-flask-cors==4.0.0
-mysql-connector-python==8.2.0
+# Web framework core
+# flask 3.0.3 kéo theo Werkzeug >=3.0.3 — vá CVE-2024-34069 (debugger RCE),
+# CVE-2024-49766 / CVE-2024-49767 (safe_join + multipart bypass).
+flask==3.0.3
+# Pin thêm Werkzeug để không bị môi trường khác kéo về bản cũ có CVE.
+Werkzeug>=3.0.3,<4.0
+
+# Flask-Cors 4.0.0 dính CVE-2024-6839 / CVE-2024-6221 / CVE-2024-1681
+# (path handling + cấu hình mặc định lỏng). 5.0.x vá hết, API tương thích ngược.
+flask-cors==5.0.1
+
+# mysql-connector-python 8.2.0 dính CVE-2024-21272 / CVE-2024-21275.
+# 8.4.0 là bản LTS cùng dòng 8.x, không đổi protocol mặc định.
+mysql-connector-python==8.4.0
+
 bcrypt==4.1.2
 flask-login==0.6.3
 gunicorn==23.0.0
 pytest==7.4.3
-requests==2.31.0
+
+# requests 2.31.0 dính CVE-2024-35195 (Session.rebuild_proxies bỏ qua verify)
+# và CVE-2024-47081 (rò rỉ credential qua .netrc). Bản 2.32.4 vá cả hai.
+requests==2.32.4
+
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
-Pillow>=10.1.0
+
+# Pillow < 10.3.0 có CVE-2024-28219 (PIL.ImageCms buffer overflow).
+Pillow>=10.3.0
+
 openai>=1.0.0
 anthropic>=0.18.0
 flask-wtf==1.2.1

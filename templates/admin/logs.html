@@ -3,9 +3,39 @@
 {% block title %}Log - Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}
 
 {% block content %}
-<div class="admin-card">
-  <h1>📋 Log</h1>
-  <p class="text-muted admin-desc">Ghi lại tất cả các thay đổi và hoạt động trong website</p>
+<div class="admin-card" style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--admin-space-4); flex-wrap: wrap;">
+  <div>
+    <h1>📋 Log</h1>
+    <p class="text-muted admin-desc">Ghi lại tất cả các thay đổi và hoạt động trong website</p>
+  </div>
+  <div style="flex-shrink: 0;">
+    <button class="btn btn-danger" id="btnOpenResetLogs" onclick="openResetLogsModal()" title="Xoá sạch activity_logs + page_views. Tự động backup trước.">
+      🗑️ Reset log
+    </button>
+  </div>
+</div>
+
+<!-- Modal xác nhận reset log -->
+<div id="resetLogsModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: var(--admin-card-bg, #fff); max-width: 520px; width: 90%; padding: var(--admin-space-6, 24px); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+    <h2 style="margin-top: 0; color: var(--admin-danger, #d32f2f);">⚠️ Xác nhận reset log</h2>
+    <div style="background: #fff3e0; border-left: 4px solid #f57c00; padding: 12px 16px; margin: 16px 0; border-radius: 4px; color: #5d4037;">
+      Thao tác này sẽ <strong>xoá toàn bộ</strong> dữ liệu trong hai bảng:
+      <ul style="margin: 8px 0 0 20px;">
+        <li><code>activity_logs</code> — lịch sử hành động (CREATE/UPDATE/DELETE/LOGIN)</li>
+        <li><code>page_views</code> — lượt xem trang</li>
+      </ul>
+      <p style="margin: 10px 0 0 0;">Hệ thống sẽ <strong>tự động tạo backup</strong> <code>backups/logs-YYYYMMDD-HHMMSS.sql</code> trước khi xoá để có thể khôi phục nếu cần.</p>
+    </div>
+    <p style="margin: 12px 0 6px 0;">Gõ chính xác <code style="background: #eee; padding: 2px 6px; border-radius: 4px;">RESET_ALL_LOGS</code> để tiếp tục:</p>
+    <input type="text" id="resetLogsConfirmInput" class="input" autocomplete="off" placeholder="RESET_ALL_LOGS" style="width: 100%; padding: 10px; border: 2px solid var(--admin-border, #ddd); border-radius: 6px; font-family: monospace; font-size: 15px;">
+    <div id="resetLogsError" style="color: var(--admin-danger, #d32f2f); margin-top: 8px; min-height: 20px; font-size: 13px;"></div>
+    <div id="resetLogsResult" style="margin-top: 12px; font-size: 13px;"></div>
+    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+      <button class="btn btn-secondary" onclick="closeResetLogsModal()">Huỷ</button>
+      <button class="btn btn-danger" id="btnConfirmResetLogs" onclick="confirmResetLogs()">Xoá log</button>
+    </div>
+  </div>
 </div>
 
 <div class="dashboard-grid log-stats-grid" id="logStatsGrid" style="margin-bottom: var(--admin-space-6);">
@@ -442,6 +472,105 @@
       console.error('loadLogStats', e);
     }
   }
+
+  // ============================================================
+  // Reset Logs — xoá toàn bộ activity_logs + page_views (có backup)
+  // ============================================================
+  function openResetLogsModal() {
+    const m = document.getElementById('resetLogsModal');
+    if (!m) return;
+    m.style.display = 'flex';
+    const input = document.getElementById('resetLogsConfirmInput');
+    if (input) { input.value = ''; input.focus(); }
+    const err = document.getElementById('resetLogsError');
+    if (err) err.textContent = '';
+    const res = document.getElementById('resetLogsResult');
+    if (res) res.textContent = '';
+    const btn = document.getElementById('btnConfirmResetLogs');
+    if (btn) btn.disabled = false;
+  }
+
+  function closeResetLogsModal() {
+    const m = document.getElementById('resetLogsModal');
+    if (m) m.style.display = 'none';
+  }
+
+  function _formatBytesShort(n) {
+    return formatBytes(n);
+  }
+
+  async function confirmResetLogs() {
+    const input = document.getElementById('resetLogsConfirmInput');
+    const errEl = document.getElementById('resetLogsError');
+    const resEl = document.getElementById('resetLogsResult');
+    const btn = document.getElementById('btnConfirmResetLogs');
+    const token = (input && input.value || '').trim();
+
+    if (token !== 'RESET_ALL_LOGS') {
+      if (errEl) errEl.textContent = 'Bạn phải gõ chính xác RESET_ALL_LOGS để xác nhận.';
+      return;
+    }
+    if (errEl) errEl.textContent = '';
+    if (resEl) resEl.innerHTML = '<span style="color: var(--admin-text-muted);">Đang xoá log, vui lòng đợi…</span>';
+    if (btn) btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/admin/reset-logs', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RESET_ALL_LOGS' }),
+      });
+
+      let data = null;
+      try { data = await res.json(); } catch (e) { data = null; }
+
+      if (!res.ok || !data || !data.success) {
+        const msg = (data && data.error) || `HTTP ${res.status}: ${res.statusText}`;
+        if (errEl) errEl.textContent = 'Lỗi: ' + msg;
+        if (resEl) resEl.innerHTML = '';
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      // Thành công — hiển thị tóm tắt + refresh số liệu
+      const rd = data.rows_deleted || {};
+      const rdLines = Object.keys(rd).map(k => `${k}: ${rd[k]}`).join(', ') || '—';
+      const backupTxt = data.backup_file
+        ? `<code>${data.backup_file}</code> (${_formatBytesShort(data.backup_size_bytes)})`
+        : 'không có';
+      if (resEl) {
+        resEl.innerHTML = `
+          <div style="background: #e8f5e9; border-left: 4px solid #43a047; padding: 10px 14px; border-radius: 4px; color: #1b5e20;">
+            <strong>✅ Đã reset log thành công.</strong><br>
+            Số dòng đã xoá: ${rdLines}<br>
+            Backup: ${backupTxt}
+          </div>`;
+      }
+
+      // Refresh stats + bảng logs
+      try { await loadLogStats(); } catch (e) { /* nuốt lỗi cosmetic */ }
+      try {
+        logsOffset = 0;
+        await loadActivityLogs(logsLimit, logsOffset, logsFilters);
+      } catch (e) { /* nuốt lỗi cosmetic */ }
+
+      // Đóng modal sau 1.5s để user kịp đọc thông báo
+      setTimeout(closeResetLogsModal, 1500);
+    } catch (err) {
+      if (errEl) errEl.textContent = 'Lỗi: ' + (err && err.message ? err.message : String(err));
+      if (resEl) resEl.innerHTML = '';
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  // ESC để đóng modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const m = document.getElementById('resetLogsModal');
+      if (m && m.style.display !== 'none') closeResetLogsModal();
+    }
+  });
 
   // Initialize activity logs on page load
   document.addEventListener('DOMContentLoaded', () => {

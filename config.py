@@ -1,4 +1,5 @@
 import os
+import secrets
 from pathlib import Path
 from datetime import timedelta
 
@@ -43,7 +44,15 @@ def load_env():
                 env_loaded = True
                 print("OK: Loaded .env (fallback) from", env_path)
     if env_loaded or os.environ.get("DB_HOST"):
-        print("OK: DB_HOST =", os.environ.get("DB_HOST", "(not set)"))
+        # Không in thẳng DB_HOST — Railway/Render forward stdout sang
+        # monitoring ngoài. Giữ vài ký tự đầu/cuối để dev vẫn nhận diện được
+        # môi trường (xem Bug #14 trong security audit).
+        from utils.host_redact import mask_host
+
+        print(
+            "OK: DB_HOST =",
+            mask_host(os.environ.get("DB_HOST", "(not set)")),
+        )
     elif env_path.exists():
         print("WARNING: .env exists but DB_HOST still not set - check file format")
     else:
@@ -62,6 +71,76 @@ def is_production_env() -> bool:
             and os.environ.get("COOKIE_DOMAIN") != ""
         )
     )
+
+
+def _resolve_secret_key_storage_path() -> Path:
+    """
+    Nơi lưu fallback secret key khi env `SECRET_KEY` không được set.
+
+    Ưu tiên:
+    1. RAILWAY_VOLUME_MOUNT_PATH (nếu đã mount volume trên Railway) → persistent qua restart/deploy.
+    2. <repo>/instance/secret_key — mặc định, được `.gitignore` để không bao giờ commit.
+    """
+    vol = (os.environ.get("RAILWAY_VOLUME_MOUNT_PATH") or "").strip()
+    if vol and Path(vol).exists():
+        base = Path(vol)
+    else:
+        base = Path(__file__).resolve().parent / "instance"
+    return base / "secret_key"
+
+
+def _load_or_create_persistent_secret_key() -> str:
+    """
+    Tạo hoặc đọc lại một secret key ngẫu nhiên (512-bit, hex) được lưu cục bộ
+    ngoài git/image docker. Mục tiêu:
+
+    - Không bao giờ dùng lại chuỗi cứng đã từng có trong repo (đã bị lộ).
+    - Vẫn giữ ổn định qua restart / giữa các gunicorn worker cùng instance
+      → không invalidate session đang login của admin (bảo toàn vận hành).
+    - Race-safe: nhiều worker boot song song dùng `O_EXCL` để tránh ghi đè.
+
+    Trường hợp filesystem read-only (không ghi được): trả về ephemeral random
+    key trong tiến trình hiện tại — session sẽ mất sau restart / khác worker,
+    nhưng vẫn an toàn hơn secret-leaked-in-git ở mức tuyệt đối.
+    """
+    path = _resolve_secret_key_storage_path()
+    try:
+        if path.exists():
+            try:
+                existing = path.read_text(encoding="utf-8").strip()
+            except Exception:
+                existing = ""
+            if len(existing) >= 32:
+                return existing
+        new_key = secrets.token_hex(64)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            fd = os.open(
+                str(path),
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    f.write(new_key)
+            except Exception:
+                try:
+                    os.close(fd)
+                except Exception:
+                    pass
+                raise
+        except FileExistsError:
+            existing = path.read_text(encoding="utf-8").strip()
+            if len(existing) >= 32:
+                return existing
+            path.write_text(new_key, encoding="utf-8")
+        try:
+            os.chmod(path, 0o600)
+        except Exception:
+            pass
+        return new_key
+    except Exception:
+        return secrets.token_hex(64)
 
 
 def is_flask_run_debug_enabled() -> bool:
@@ -92,22 +171,33 @@ class Config:
             else os.environ.get("FLASK_DEBUG", "False").lower() == "true"
         )
 
-        fallback_key = os.environ.get("SECRET_KEY")
-        if not fallback_key:
+        secret_key = os.environ.get("SECRET_KEY")
+        if not secret_key:
+            # KHÔNG dùng chuỗi cứng (đã/có thể đã lộ qua git).
+            # Sinh key ngẫu nhiên 512-bit, lưu trong `instance/secret_key`
+            # (đã `.gitignore`) để mọi worker trong cùng instance đọc lại.
+            storage_path = _resolve_secret_key_storage_path()
             print("=" * 80)
             if is_production:
                 print(
-                    "⚠️  WARNING: SECRET_KEY environment variable is MISSING in production!"
+                    "WARNING: SECRET_KEY env var is MISSING in production — "
+                    "generating a random persistent key."
                 )
+                print(f"WARNING: Key được lưu tại: {storage_path}")
                 print(
-                    "⚠️  Using an insecure temporary fallback. PLEASE SET SECRET_KEY IN YOUR HOSTING PANEL!"
+                    "WARNING: Hãy set SECRET_KEY trên hosting panel (Railway/Render) "
+                    "để quản lý tập trung và cùng giá trị giữa các environment."
                 )
             else:
-                print("DEBUG: Using insecure fallback SECRET_KEY for local development.")
+                print(
+                    "DEBUG: SECRET_KEY missing — generating a random persistent "
+                    "key for local dev (not committed to git)."
+                )
+                print(f"DEBUG: Stored at: {storage_path}")
             print("=" * 80)
-            fallback_key = "thuan_thien_cao_hoang_hau_tbqc_2024_fallback_key"
+            secret_key = _load_or_create_persistent_secret_key()
 
-        app.secret_key = fallback_key
+        app.secret_key = secret_key
         app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=24)
         cookie_domain = os.environ.get("COOKIE_DOMAIN") if is_production else None
         use_samesite_none = is_production

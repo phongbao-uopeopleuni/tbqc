@@ -1,0 +1,67 @@
+name: Lint JS
+
+on:
+  push:
+    paths:
+      - 'static/js/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'eslint.config.js'
+      - '.prettierrc.json'
+      - '.prettierignore'
+      - '.github/workflows/lint-js.yml'
+  pull_request:
+    paths:
+      - 'static/js/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'eslint.config.js'
+      - '.prettierrc.json'
+      - '.prettierignore'
+      - '.github/workflows/lint-js.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  eslint:
+    name: ESLint (strict - bug detection)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install devDependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run ESLint
+        run: npm run lint
+
+  prettier:
+    name: Prettier (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # continue-on-error=true ở job level: nếu Prettier phát hiện file chưa format,
+    # CI vẫn hiển thị dấu ✗ nhưng KHÔNG block merge (code hiện có là legacy chưa format).
+    # Khi team đã dọn xong, đổi thành continue-on-error: false để bắt buộc.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install devDependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Check formatting (informational only)
+        run: npm run format:check

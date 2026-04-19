@@ -14,10 +14,9 @@ Dùng sau khi thay đổi `genealogy.html`, `family-tree-ui.js`, `multilevel-gen
 - [ ] Đổi **Hiển thị đến đời** — cây và danh sách đa cấp khớp đời.
 - [ ] **Cập nhật thông tin** (nếu dùng) — không lỗi trắng màn hình.
 
-## 3. Chế độ xem (Danh sách / Sơ đồ / Mindmap)
+## 3. Chế độ xem (Danh sách / Mindmap)
 
-- [ ] **Danh sách** — section `#multilevelGenealogySection` **hiện**; danh sách có cấp (ul/li).
-- [ ] **Sơ đồ** — section danh sách đa cấp **ẩn**; cây vẫn bình thường.
+- [ ] **Danh sách** — section `#multilevelGenealogySection` **hiện**; danh sách có cấp (ul/li); cây trong khung vẫn bình thường.
 - [ ] **Mindmap** — cần người trọng tâm; sau khi chọn — mindmap; section đa cấp **ẩn**; quay lại **Danh sách** — đa cấp hiện lại.
 
 ## 4. Danh sách đa cấp (Multilevel)
@@ -51,6 +50,12 @@ Dùng sau khi thay đổi `genealogy.html`, `family-tree-ui.js`, `multilevel-gen
 
 - [ ] `GET /api/health` — trả `ok` khi có DB.
 - [ ] Trang **Thành viên** `/members` — không bị ảnh hưởng bởi thay đổi chỉ genealogy (nếu chỉ sửa JS/template gia phả).
+
+## 10. Nâng cấp có giai đoạn (rollout)
+
+- [ ] Đọc `docs/GENEALOGY_ROLLOUT.md` — sau mỗi giai đoạn chạy lại mục 1–9 tương ứng.
+- [ ] Tab **Tổ tiên (Đời 0)** (nếu có dữ liệu đời 0) — bảng tải khi click; tab **Thế hệ 1** vẫn mặc định mở.
+- [ ] **Phân màu nhánh** (tùy chọn, `localStorage.genealogy_branch_mode` / `window.GENEALOGY_BRANCH_MODE`) — `gen4-detail` vs `legacy`; đổi → refresh cây nếu có gọi `refreshTree`.
 
 ---
 

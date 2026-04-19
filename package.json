@@ -1,0 +1,20 @@
+{
+  "name": "tbqc-frontend-lint",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Dev-only tooling for linting/formatting static/js. Does NOT ship to runtime.",
+  "scripts": {
+    "lint": "eslint \"static/js/**/*.js\"",
+    "lint:fix": "eslint \"static/js/**/*.js\" --fix",
+    "format:check": "prettier --check \"static/js/**/*.js\"",
+    "format:write": "prettier --write \"static/js/**/*.js\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2"
+  }
+}

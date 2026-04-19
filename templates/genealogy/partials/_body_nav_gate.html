@@ -1,0 +1,31 @@
+  <a href="#genealogy-content" class="genealogy-skip-link">Đi tới nội dung chính</a>
+  <nav class="navbar" aria-label="Điều hướng chính">
+    <button type="button" class="navbar-toggle" onclick="toggleNavbar()" aria-label="Mở hoặc đóng menu">☰</button>
+    <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
+    <ul class="navbar-menu" id="navbarMenu">
+      <li><a href="/">Trang chủ</a></li>
+      <li><a href="/genealogy" class="active">Gia phả</a></li>
+      <li style="display: none;"><a href="/activities">Hoạt động</a></li>
+      <li><a href="/members">Thành viên</a></li>
+      <li><a href="/contact">Liên hệ</a></li>
+      <li><a href="/admin/login">Admin</a></li>
+    </ul>
+  </nav>
+
+  <!-- Passphrase Gate -->
+  <div id="genealogy-gate">
+    <div class="gate-container">
+      <h2>Xác thực truy cập</h2>
+      <form class="gate-form" id="gateForm" onsubmit="handleGateSubmit(event)">
+        <input type="password" id="gatePassphrase" placeholder="Nhập chuỗi mật khẩu" value="phutuybien2026" required autofocus>
+        <div class="remember-passphrase-container">
+          <input type="checkbox" id="rememberPassphrase">
+          <label for="rememberPassphrase">Lưu mật khẩu</label>
+        </div>
+        <button type="submit">Mở khóa</button>
+        <div class="gate-error" id="gateError">Chuỗi không đúng. Vui lòng nhập lại.</div>
+        <div class="gate-note" id="gateNote">Bạn có thể liên hệ nhóm Zalo BTS để được cung cấp thông tin.</div>
+      </form>
+    </div>
+  </div>
+

@@ -1,0 +1,131 @@
+- generic [active] [ref=e1]:
+  - link "Đi tới nội dung chính" [ref=e2] [cursor=pointer]:
+    - /url: "#genealogy-content"
+  - navigation "Điều hướng chính" [ref=e3]:
+    - button "Mở hoặc đóng menu" [ref=e4] [cursor=pointer]: ☰
+    - link "Gia Phả TBQC" [ref=e6] [cursor=pointer]:
+      - /url: /
+    - list [ref=e7]:
+      - listitem [ref=e8]:
+        - link "Trang chủ" [ref=e9] [cursor=pointer]:
+          - /url: /
+      - listitem [ref=e10]:
+        - link "Gia phả" [ref=e11] [cursor=pointer]:
+          - /url: /genealogy
+      - listitem [ref=e12]:
+        - link "Thành viên" [ref=e13] [cursor=pointer]:
+          - /url: /members
+      - listitem [ref=e14]:
+        - link "Liên hệ" [ref=e15] [cursor=pointer]:
+          - /url: /contact
+      - listitem [ref=e16]:
+        - link "Admin" [ref=e17] [cursor=pointer]:
+          - /url: /admin/login
+  - main "Cây gia phả và tra cứu" [ref=e18]:
+    - generic [ref=e19]:
+      - heading "Cây Gia Phả" [level=1] [ref=e21]
+      - generic [ref=e22]:
+        - generic [ref=e24]:
+          - generic [ref=e26]:
+            - generic [ref=e27]:
+              - generic [ref=e28]: "Hiển thị đến đời:"
+              - combobox "Hiển thị đến đời:" [ref=e29]
+            - textbox "Vui lòng nhập tên cần tìm kiếm" [ref=e31]
+            - button "Tìm kiếm" [ref=e32] [cursor=pointer]
+            - button "🔄 Đồng bộ" [ref=e33] [cursor=pointer]
+            - button "📝 Cập nhật thông tin" [ref=e34] [cursor=pointer]
+            - button "📄 Xuất PDF" [ref=e35] [cursor=pointer]
+          - toolbar "Thu phóng và toàn màn hình cây gia phả" [ref=e38]:
+            - button "Thu nhỏ" [ref=e39] [cursor=pointer]
+            - button "Đặt lại" [ref=e40] [cursor=pointer]
+            - button "Vừa khung" [ref=e41] [cursor=pointer]
+            - button "Phóng to" [ref=e42] [cursor=pointer]
+            - button "Toàn màn hình" [ref=e43] [cursor=pointer]
+          - generic [ref=e46]: Đang kết nối với API...
+          - generic [ref=e48]:
+            - heading "Thông tin chi tiết" [level=3] [ref=e49]
+            - paragraph [ref=e51]: Chọn một người trong cây để xem thông tin
+        - region "Phả hệ theo nhánh" [ref=e52]:
+          - heading "Phả hệ theo nhánh" [level=2] [ref=e54]
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - heading "📊 Thống kê theo thế hệ" [level=2] [ref=e59]
+            - paragraph [ref=e60]: Xem danh sách thành viên và số lượng con cháu theo từng thế hệ.
+          - generic [ref=e61]: Đang tải thống kê...
+        - generic [ref=e63]:
+          - generic [ref=e64]:
+            - heading "Học vị và Học hàm" [level=3] [ref=e65]
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - generic [ref=e68]: Cử nhân
+                - generic [ref=e69]: "0"
+              - generic [ref=e70]:
+                - generic [ref=e71]: Thạc sĩ
+                - generic [ref=e72]: "0"
+              - generic [ref=e73]:
+                - generic [ref=e74]: Tiến sĩ
+                - generic [ref=e75]: "0"
+              - generic [ref=e76]:
+                - generic [ref=e77]: Phó Giáo sư
+                - generic [ref=e78]: "0"
+              - generic [ref=e79]:
+                - generic [ref=e80]: Giáo sư
+                - generic [ref=e81]: "0"
+          - heading "Thống Kê Thành Viên" [level=2] [ref=e82]
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - generic [ref=e86]: Tổng thành viên
+                - generic [ref=e87]: –
+              - generic [ref=e88]:
+                - generic [ref=e89]: Số Nam
+                - generic [ref=e90]: –
+              - generic [ref=e91]:
+                - generic [ref=e92]: Số Nữ
+                - generic [ref=e93]: –
+              - generic [ref=e94]:
+                - generic [ref=e95]: Không rõ / khác
+                - generic [ref=e96]: –
+            - generic [ref=e99]:
+              - heading "Thành viên theo Nhánh" [level=3] [ref=e100]
+              - paragraph [ref=e101]: "(ĐVT: người)"
+              - paragraph [ref=e104]: Dữ liệu được cập nhật mới nhất năm 2026.
+          - generic [ref=e105]:
+            - heading "Thống Kê Theo Đời" [level=3] [ref=e106]
+            - generic [ref=e107]:
+              - generic [ref=e108]:
+                - generic [ref=e109]: Đời 1
+                - generic [ref=e110]: –
+              - generic [ref=e111]:
+                - generic [ref=e112]: Đời 2
+                - generic [ref=e113]: –
+              - generic [ref=e114]:
+                - generic [ref=e115]: Đời 3
+                - generic [ref=e116]: –
+              - generic [ref=e117]:
+                - generic [ref=e118]: Đời 4
+                - generic [ref=e119]: –
+              - generic [ref=e120]:
+                - generic [ref=e121]: Đời 5
+                - generic [ref=e122]: –
+              - generic [ref=e123]:
+                - generic [ref=e124]: Đời 6
+                - generic [ref=e125]: –
+              - generic [ref=e126]:
+                - generic [ref=e127]: Đời 7
+                - generic [ref=e128]: –
+              - generic [ref=e129]:
+                - generic [ref=e130]: Đời 8
+                - generic [ref=e131]: –
+        - region "🪦 Tìm kiếm mộ phần" [ref=e132]:
+          - generic [ref=e134]:
+            - heading "🪦 Tìm kiếm mộ phần" [level=3] [ref=e135]
+            - paragraph [ref=e136]: Tìm kiếm thông tin mộ phần của những người đã mất. Hệ thống sẽ hiển thị vị trí trên bản đồ.
+            - generic [ref=e137]:
+              - generic [ref=e138]:
+                - generic [ref=e139]: "Tên hoặc ID (tìm kiếm thông minh):"
+                - textbox "Tên hoặc ID (tìm kiếm thông minh):" [ref=e140]:
+                  - /placeholder: "Ví dụ: Nguyễn Văn A hoặc P-1-1..."
+              - button "Tìm mộ phần" [ref=e141] [cursor=pointer]
+    - link "Z" [ref=e143] [cursor=pointer]:
+      - /url: https://zalo.me/g/ajmmkc064

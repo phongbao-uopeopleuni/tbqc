@@ -5,6 +5,7 @@ from mysql.connector import Error
 # Tái sử dụng các module nội bộ từ gốc
 from auth import get_user_by_username, verify_password, User
 from extensions import rate_limit
+from utils.url_safety import safe_redirect_target
 try:
     from folder_py.db_config import get_db_connection
 except ImportError:
@@ -84,7 +85,10 @@ def api_login():
         except Error as e:
             print(f'Lỗi cập nhật last_login: {e}')
 
-    redirect_to = request.form.get('redirect', '') or request.args.get('next', '')
+    # Chống open redirect: chỉ chấp nhận URL cùng host.
+    # URL bẩn (vd: https://evil.com/fake) sẽ bị bỏ qua và rơi về default theo role.
+    raw_redirect = request.form.get('redirect', '') or request.args.get('next', '')
+    redirect_to = safe_redirect_target(raw_redirect, '')
     if not redirect_to:
         if user.role == 'admin':
             redirect_to = '/admin/users'

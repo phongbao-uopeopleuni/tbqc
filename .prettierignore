@@ -1,0 +1,13 @@
+node_modules/
+.venv/
+venv/
+dist/
+build/
+coverage/
+.pytest_cache/
+templates/
+static/css/
+static/images/
+static/js/vendor/
+**/*.min.js
+**/__pycache__/**

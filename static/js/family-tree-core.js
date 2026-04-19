@@ -4,7 +4,7 @@
  * 
  * Person: { id, name, generation, gender, ... }
  * Relation: { parentId, childId }
- * Graph: { personMap, parentMap, childrenMap, nameToIdMap, founderId }
+ * Graph: { personMap, parentMap, childrenMap, nameToIdMap, nameToIdsMap, founderId }
  */
 
 // ============================================
@@ -13,7 +13,7 @@
 
 // Use relative URLs for compatibility with both local and Railway
 const API_BASE_URL = '/api';
-const MAX_DEFAULT_GENERATION = 10; // Chỉ hiển thị đến đời 10 trong chế độ mặc định
+const MAX_DEFAULT_GENERATION = 8; // Chỉ hiển thị đến đời 8 trong chế độ mặc định
 const FOUNDER_NAME = "Vua Minh Mạng";
 
 // ============================================
@@ -26,7 +26,8 @@ let childrenMap = new Map(); // parentId -> [childId1, childId2, ...]
 let fmIdMap = new Map(); // fm_id -> [childIds] (NEW: group siblings by fm_id)
 let fmIdToPersonMap = new Map(); // personId -> fm_id (NEW)
 let marriagesMap = new Map(); // personId -> [marriages] (NEW)
-let nameToIdMap = new Map(); // name -> id (for search)
+let nameToIdMap = new Map(); // name -> id đầu tiên (tương thích cũ)
+let nameToIdsMap = new Map(); // name -> [person_id, ...] — mọi người trùng tên đã chuẩn hóa
 let founderId = null;
 let graph = null; // Graph object
 let familyGraph = null; // Family-node graph (NEW)
@@ -54,7 +55,9 @@ function fetchWithTimeout(url, timeout = 30000) {
  */
 async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
   const container = document.getElementById("treeContainer");
-  const statusEl = container?.querySelector('.tree-loading') || container;
+  // Chỉ cập nhật thông báo trên .tree-loading. Không fallback sang #treeContainer:
+  // gán textContent lên container sẽ xóa toàn bộ cây đã render (race với _retryLoadGenerationTabs / tải nền).
+  const statusEl = container?.querySelector('.tree-loading') ?? null;
   
   try {
     // Cập nhật loading message
@@ -145,6 +148,9 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
     if (treeData && treeData.person_id) {
       // Tree structure from /api/tree
       graph = convertTreeToGraph(treeData, membersDataMap);
+      if (typeof window !== 'undefined') {
+        window.graph = graph;
+      }
       
         // Build family-node graph if buildRenderGraph is available
         // Initialize marriagesDataMap in outer scope
@@ -199,21 +205,43 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
             console.warn('[Tree] Could not load marriages from /api/members:', err);
           }
           
-          // Merge với marriages từ tree data và personMap
+          // Merge với marriages từ tree data (marriage_pairs)
+          if (treeData && treeData.marriage_pairs && Array.isArray(treeData.marriage_pairs)) {
+            console.log('[Tree] Merging ' + treeData.marriage_pairs.length + ' marriage pairs from /api/tree');
+            treeData.marriage_pairs.forEach(pair => {
+              if (!Array.isArray(pair) || pair.length < 2) return;
+              const id1 = pair[0];
+              const id2 = pair[1];
+              
+              // Helper to add marriage
+              const addM = (pId, sId) => {
+                if (!marriagesDataMap.has(pId)) marriagesDataMap.set(pId, []);
+                const list = marriagesDataMap.get(pId);
+                if (!list.find(m => m.spouse_id === sId)) {
+                  list.push({ spouse_id: sId, status: 'Kết hôn' });
+                }
+              };
+              
+              addM(id1, id2);
+              addM(id2, id1);
+            });
+          }
+          
+          // Merge với marriages từ person data hiện có (nếu có)
           persons.forEach(person => {
             const personId = person.person_id || person.id;
-            // Ưu tiên marriages từ /api/members, sau đó từ tree data, cuối cùng từ personMap
-            if (!marriagesDataMap.has(personId)) {
-              if (person.marriages && person.marriages.length > 0) {
-                marriagesDataMap.set(personId, person.marriages);
-              } else {
-                const personFromMap = personMap.get(personId);
-                if (personFromMap && personFromMap.marriages && personFromMap.marriages.length > 0) {
-                  marriagesDataMap.set(personId, personFromMap.marriages);
+            if (person.marriages && person.marriages.length > 0) {
+              if (!marriagesDataMap.has(personId)) marriagesDataMap.set(personId, []);
+              const list = marriagesDataMap.get(personId);
+              person.marriages.forEach(m => {
+                const sId = m.spouse_id || m.id;
+                if (sId && !list.find(existing => (existing.spouse_id || existing.id) === sId)) {
+                  list.push(m);
                 }
-              }
+              });
             }
           });
+
           
           // Debug: Log marriages coverage
           if (window.DEBUG_TREE === 1 || window.DEBUG_FAMILY_TREE === 1) {
@@ -283,6 +311,7 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
     window.personMap = personMap;
     window.childrenMap = childrenMap;
     window.parentMap = parentMap;
+    window.nameToIdsMap = nameToIdsMap;
     // Ensure marriagesMap is set (should already be set above, but check as fallback)
     if (!window.marriagesMap) {
       window.marriagesMap = new Map();
@@ -322,6 +351,7 @@ function convertTreeToGraph(treeData, membersDataMap = new Map()) {
   fmIdMap = new Map(); // NEW: Group siblings by fm_id
   fmIdToPersonMap = new Map(); // NEW: Map personId -> fm_id
   nameToIdMap = new Map();
+  nameToIdsMap = new Map();
   marriagesMap = new Map(); // NEW: Map personId -> [marriages]
   founderId = null;
 
@@ -390,8 +420,17 @@ function convertTreeToGraph(treeData, membersDataMap = new Map()) {
     }
     
     const normalizedName = normalize(person.name);
-    if (!nameToIdMap.has(normalizedName)) {
-      nameToIdMap.set(normalizedName, person.id);
+    if (normalizedName) {
+      if (!nameToIdMap.has(normalizedName)) {
+        nameToIdMap.set(normalizedName, person.id);
+      }
+      if (!nameToIdsMap.has(normalizedName)) {
+        nameToIdsMap.set(normalizedName, []);
+      }
+      const idList = nameToIdsMap.get(normalizedName);
+      if (!idList.includes(person.id)) {
+        idList.push(person.id);
+      }
     }
     
     // Check if this is founder
@@ -462,6 +501,7 @@ function convertTreeToGraph(treeData, membersDataMap = new Map()) {
     fmIdToPersonMap, // NEW: Map personId -> fm_id
     marriagesMap, // NEW
     nameToIdMap,
+    nameToIdsMap,
     founderId
   };
 }
@@ -540,6 +580,7 @@ function buildGraph(persons, relations) {
   parentMap = new Map();
   childrenMap = new Map();
   nameToIdMap = new Map();
+  nameToIdsMap = new Map();
   founderId = null;
 
   // Build personMap và nameToIdMap (tối ưu với batch processing)
@@ -565,8 +606,17 @@ function buildGraph(persons, relations) {
     personMap.set(person.id, person);
     
     const normalizedName = normalize(p.full_name);
-    if (!nameToIdMap.has(normalizedName)) {
-      nameToIdMap.set(normalizedName, person.id);
+    if (normalizedName) {
+      if (!nameToIdMap.has(normalizedName)) {
+        nameToIdMap.set(normalizedName, person.id);
+      }
+      if (!nameToIdsMap.has(normalizedName)) {
+        nameToIdsMap.set(normalizedName, []);
+      }
+      const idList = nameToIdsMap.get(normalizedName);
+      if (!idList.includes(person.id)) {
+        idList.push(person.id);
+      }
     }
     
     // Tìm founder (chỉ check nếu chưa tìm thấy)
@@ -612,6 +662,7 @@ function buildGraph(persons, relations) {
     parentMap,
     childrenMap,
     nameToIdMap,
+    nameToIdsMap,
     founderId
   };
 }

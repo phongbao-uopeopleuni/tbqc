@@ -7,6 +7,18 @@ Routes cho trang quản trị
 
 from flask import render_template_string, render_template, request, jsonify, redirect, url_for, flash, session, make_response
 
+import bcrypt
+
+from extensions import rate_limit
+from utils.url_safety import safe_redirect_target
+
+# Hash "mồi" để cân bằng thời gian phản hồi giữa 2 nhánh:
+#   (a) username không tồn tại và (b) username đúng nhưng sai password.
+# Không có hash này, attacker đo thời gian có thể suy ra username tồn tại
+# (bcrypt.checkpw tốn ~100ms, còn nhánh "user not found" trả ngay).
+# Sinh ở import-time, cost=12 (giống hash_password mặc định của auth.py).
+_DUMMY_BCRYPT_HASH = bcrypt.hashpw(b'admin-login-timing-equalizer', bcrypt.gensalt(12))
+
 # Stats mặc định cho dashboard khi lỗi hoặc không có DB
 DASHBOARD_DEFAULT_STATS = {
     'total_people': 0, 'alive_count': 0, 'deceased_count': 0, 'max_generation': 0,
@@ -33,12 +45,27 @@ def register_admin_routes(app):
     COOKIE_REMEMBER_DAYS = 30
 
     @app.route('/admin/login', methods=['GET', 'POST'])
+    @rate_limit("15 per minute; 100 per hour")
     def admin_login():
-        """Trang đăng nhập admin"""
+        """Trang đăng nhập admin.
+
+        Bảo vệ brute-force / enumeration:
+        - rate_limit per-IP chặn bot dò password hàng loạt.
+        - Thông báo lỗi hợp nhất ("Sai tài khoản hoặc mật khẩu") cho cả 2
+          trường hợp username-not-found và wrong-password → không leak
+          sự tồn tại của tài khoản.
+        - Chạy bcrypt dummy khi user không tồn tại để cân bằng thời gian,
+          chặn side-channel dựa trên thời gian phản hồi.
+        - Server-side log (`log_login`) vẫn ghi chi tiết nhánh nào fail
+          để phục vụ audit, chỉ UI response là ẩn đi.
+        """
         try:
             next_url = str(request.args.get('next') or '')
             if request.method == 'POST' and request.form:
                 next_url = next_url or str(request.form.get('next') or '')
+            # Loại bỏ URL ngoài host trước khi nhúng vào form/redirect (chống open redirect).
+            # Tham số bẩn sẽ bị bỏ qua, login vẫn thành công và rơi về default theo role.
+            next_url = safe_redirect_target(next_url, '')
             remembered_username = str(request.cookies.get(COOKIE_REMEMBER_USERNAME) or '').strip()
         except Exception:
             next_url = ''
@@ -47,21 +74,30 @@ def register_admin_routes(app):
         if request.method == 'POST':
             username = request.form.get('username', '').strip()
             password = request.form.get('password', '')
-            
+
+            # Thông điệp đồng nhất để chặn username enumeration ở phía client.
+            generic_auth_error = 'Sai tài khoản hoặc mật khẩu'
+
             if not username or not password:
                 return render_template('admin/login.html',
                     error='Vui lòng nhập đầy đủ username và password', next=next_url, remembered_username=username or remembered_username)
-            
-            # Tìm user
+
             user_data = get_user_by_username(username)
             if not user_data:
+                # Dummy verify để cân bằng thời gian với nhánh password sai.
+                # Kết quả không dùng; chỉ tiêu tốn thời gian tương đương.
+                try:
+                    bcrypt.checkpw(password.encode('utf-8'), _DUMMY_BCRYPT_HASH)
+                except Exception:
+                    pass
+                log_login(success=False, username=username)
                 return render_template('admin/login.html',
-                    error='Không tồn tại tài khoản', next=next_url, remembered_username=remembered_username)
-            
-            # Xác thực mật khẩu
+                    error=generic_auth_error, next=next_url, remembered_username=remembered_username)
+
             if not verify_password(password, user_data['password_hash']):
+                log_login(success=False, username=username)
                 return render_template('admin/login.html',
-                    error='Sai mật khẩu', next=next_url, remembered_username=remembered_username)
+                    error=generic_auth_error, next=next_url, remembered_username=remembered_username)
             
             # Tạo user object và đăng nhập
             from auth import User
@@ -100,16 +136,30 @@ def register_admin_routes(app):
                         cursor.close()
                         connection.close()
             
-            # Redirect theo role
-            if next_url:
-                resp = redirect(next_url)
+            # Redirect theo role — `next_url` đã được validate an toàn ở trên.
+            # Double-check một lần nữa phòng trường hợp giá trị thay đổi giữa GET/POST.
+            safe_next = safe_redirect_target(next_url, '')
+            if safe_next:
+                resp = redirect(safe_next)
             elif user_data['role'] == 'admin':
                 resp = redirect(url_for('admin_dashboard'))
             else:
                 resp = redirect(url_for('main.index'))
-            # Ghi nhớ tài khoản: set hoặc xóa cookie
+            # Ghi nhớ tài khoản: set hoặc xóa cookie.
+            # Bug #15: bật `secure=True` khi request đang chạy trên HTTPS để cookie
+            # không bị gửi kèm trên kết nối HTTP (phòng downgrade + sniffing).
+            # `request.is_secure` đã tính tới ProxyFix (X-Forwarded-Proto) nên
+            # trên Railway/Render (HTTPS qua proxy) vẫn nhận đúng là secure.
+            # Local HTTP dev vẫn hoạt động vì `secure=False` lúc đó.
             if request.form.get('remember_username'):
-                resp.set_cookie(COOKIE_REMEMBER_USERNAME, username, max_age=COOKIE_REMEMBER_DAYS * 24 * 3600, httponly=True, samesite='Lax')
+                resp.set_cookie(
+                    COOKIE_REMEMBER_USERNAME,
+                    username,
+                    max_age=COOKIE_REMEMBER_DAYS * 24 * 3600,
+                    httponly=True,
+                    samesite='Lax',
+                    secure=request.is_secure,
+                )
             else:
                 resp.delete_cookie(COOKIE_REMEMBER_USERNAME)
             return resp
@@ -804,7 +854,16 @@ def register_admin_routes(app):
         table_name = request.args.get('table')
         if not table_name:
             return jsonify({'success': False, 'error': 'Table name required'}), 400
-        
+
+        # Bug #16: `table_name` đi thẳng vào f-string SQL ở dưới. `SHOW TABLES
+        # LIKE %s` chỉ cân bằng *tồn tại*, không chặn ký tự đặc biệt
+        # (backtick, LIKE wildcard `%`/`_`, khoảng trắng) — dễ mở đường SQLi
+        # hoặc làm lộ bảng ngoài danh sách khi refactor. Kiểm chặt identifier
+        # trước cho fail-closed (trả 400 không đụng DB).
+        from utils.sql_identifier import is_safe_sql_identifier
+        if not is_safe_sql_identifier(table_name):
+            return jsonify({'success': False, 'error': 'Invalid table name'}), 400
+
         connection = get_db_connection()
         if not connection:
             return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
@@ -1505,36 +1564,38 @@ def register_admin_routes(app):
         import subprocess
         import os
         from datetime import datetime
-        
+        from utils.mysql_auth import mysqldump_credentials
+
         try:
-            # Lấy thông tin database từ environment
             db_host = os.getenv('DB_HOST', 'localhost')
             db_user = os.getenv('DB_USER', 'root')
             db_password = os.getenv('DB_PASSWORD', '')
             db_name = os.getenv('DB_NAME', 'railway')
-            
-            # Tạo tên file backup
+            db_port_raw = os.getenv('DB_PORT')
+            db_port = int(db_port_raw) if db_port_raw and db_port_raw.isdigit() else None
+
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_filename = f'tbqc_backup_{timestamp}.sql'
             backup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups', backup_filename)
-            
-            # Tạo thư mục backups nếu chưa có
+
             os.makedirs(os.path.dirname(backup_path), exist_ok=True)
-            
-            # Tạo backup bằng mysqldump
-            cmd = [
-                'mysqldump',
-                f'--host={db_host}',
-                f'--user={db_user}',
-                f'--password={db_password}',
-                '--single-transaction',
-                '--routines',
-                '--triggers',
-                db_name
-            ]
-            
-            with open(backup_path, 'w', encoding='utf-8') as f:
-                result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True)
+
+            # Password đi qua file --defaults-extra-file (perm 0600, xóa sau run)
+            # thay vì command-line (cũ: `-p<pw>` / `-password=<pw>`) — chặn
+            # lộ qua `ps auxww`, Windows task manager, audit log của OS.
+            with mysqldump_credentials(db_host, db_port, db_user, db_password) as defaults_file:
+                # --defaults-extra-file PHẢI là arg đầu (sau tên binary) để mysqldump
+                # đọc trước các tuỳ chọn khác.
+                cmd = [
+                    'mysqldump',
+                    f'--defaults-extra-file={defaults_file}',
+                    '--single-transaction',
+                    '--routines',
+                    '--triggers',
+                    db_name,
+                ]
+                with open(backup_path, 'w', encoding='utf-8') as f:
+                    result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True)
             
             if result.returncode != 0:
                 return jsonify({
@@ -1560,14 +1621,28 @@ def register_admin_routes(app):
     @app.route('/admin/api/backup/download/<filename>', methods=['GET'])
     @permission_required('canViewDashboard')
     def download_backup_admin(filename):
-        """API: Download file backup"""
+        """API: Download file backup.
+
+        Chống path traversal qua helper `resolve_safe_backup_path` (allowlist
+        regex + secure_filename + realpath/commonpath check). Mọi input không
+        phải `tbqc_backup_YYYYMMDD_HHMMSS.sql` → 400, không đụng filesystem.
+        """
         import os
         from flask import send_file
-        
-        backup_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backups', filename)
-        
-        if not os.path.exists(backup_path):
+        from utils.backup_safety import resolve_safe_backup_path
+
+        backups_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'backups'
+        )
+        candidate = resolve_safe_backup_path(filename, backups_dir)
+        if candidate is None:
+            return jsonify({'error': 'Tên file backup không hợp lệ'}), 400
+        if not os.path.isfile(candidate):
             return jsonify({'error': 'File backup không tồn tại'}), 404
-        
-        return send_file(backup_path, as_attachment=True, download_name=filename)
+
+        return send_file(
+            candidate,
+            as_attachment=True,
+            download_name=os.path.basename(candidate),
+        )
 

@@ -164,41 +164,46 @@ def create_backup(backup_dir=None):
             use_mysqldump = False
         
         if use_mysqldump:
-            # Build mysqldump command
-            cmd_parts = [
-                'mysqldump',
-                f'-h{config["host"]}',
-            ]
-            
-            # Thêm port nếu có
-            if 'port' in config:
-                cmd_parts.append(f'-P{config["port"]}')
-            
-            cmd_parts.extend([
-                f'-u{config["user"]}',
-                f'-p{config["password"]}',
-                '--single-transaction',
-                '--routines',
-                '--triggers',
-                '--events',
-                '--add-drop-table',
-                '--default-character-set=utf8mb4',
-                config['database']
-            ])
-            
-            logger.info("Đang tạo backup bằng mysqldump...")
-            
-            if is_windows:
-                cmd_str = ' '.join(cmd_parts) + f' > "{backup_file}"'
-                result = subprocess.run(
-                    cmd_str,
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    encoding='utf-8',
-                    errors='ignore'
-                )
-            else:
+            # Password đưa qua file --defaults-extra-file (perm 0600, xóa sau run),
+            # tuyệt đối không nhúng vào command-line hay shell string (bug #11).
+            # Bỏ shell=True trên Windows: redirect stdout qua Python file handle
+            # an toàn hơn và không còn nguy cơ shell-injection nếu password /
+            # dbname có ký tự đặc biệt.
+            try:
+                from utils.mysql_auth import mysqldump_credentials
+            except ImportError:
+                # Script có thể được gọi độc lập (khỏi Flask) — fallback vào
+                # local sys.path để tìm utils/.
+                import sys as _sys
+                _root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+                if _root not in _sys.path:
+                    _sys.path.insert(0, _root)
+                from utils.mysql_auth import mysqldump_credentials
+
+            port_val = None
+            if 'port' in config and config['port']:
+                try:
+                    port_val = int(config['port'])
+                except (TypeError, ValueError):
+                    port_val = None
+
+            logger.info("Đang tạo backup bằng mysqldump (defaults-extra-file)...")
+
+            with mysqldump_credentials(
+                config['host'], port_val, config['user'], config['password']
+            ) as defaults_file:
+                cmd_parts = [
+                    'mysqldump',
+                    f'--defaults-extra-file={defaults_file}',
+                    '--single-transaction',
+                    '--routines',
+                    '--triggers',
+                    '--events',
+                    '--add-drop-table',
+                    '--default-character-set=utf8mb4',
+                    config['database'],
+                ]
+
                 with open(backup_file, 'w', encoding='utf-8') as f:
                     result = subprocess.run(
                         cmd_parts,

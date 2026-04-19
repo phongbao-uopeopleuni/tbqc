@@ -676,7 +676,7 @@ def search_persons():
     try:
         generation_param = request.args.get('generation')
         if generation_param:
-            generation_level = validate_integer(generation_param, min_val=1, max_val=50, default=None)
+            generation_level = validate_integer(generation_param, min_val=0, max_val=50, default=None)
         else:
             generation_level = None
     except (ValueError, TypeError):
@@ -843,12 +843,14 @@ def get_or_create_location(cursor, location_name, location_type):
     return cursor.lastrowid
 
 def get_or_create_generation(cursor, generation_number):
-    """Lấy hoặc tạo generation"""
-    if not generation_number:
+    """Lấy hoặc tạo generation (generation_number có thể là 0 — tổ tiên)."""
+    if generation_number is None:
+        return None
+    if isinstance(generation_number, str) and not generation_number.strip():
         return None
     try:
         gen_num = int(generation_number)
-    except:
+    except (TypeError, ValueError):
         return None
     cursor.execute('SELECT generation_id FROM generations WHERE generation_number = %s', (gen_num,))
     result = cursor.fetchone()
@@ -1463,7 +1465,7 @@ def create_person():
                 return (jsonify({'success': False, 'error': f'person_id {person_id} đã tồn tại'}), 400)
         else:
             generation_num = data.get('generation_number')
-            if generation_num:
+            if generation_num is not None and str(generation_num).strip() != '':
                 cursor.execute("\n                    SELECT MAX(CAST(SUBSTRING_INDEX(person_id, '-', -1) AS UNSIGNED)) as max_num\n                    FROM persons \n                    WHERE person_id LIKE %s\n                ", (f'P-{generation_num}-%',))
                 result = cursor.fetchone()
                 next_num = (result['max_num'] or 0) + 1
@@ -1492,9 +1494,11 @@ def create_person():
                 status = str(status)[:50]
             insert_fields.append('status')
             insert_values.append(status)
-        if 'generation_level' in columns and data.get('generation_number'):
-            insert_fields.append('generation_level')
-            insert_values.append(data.get('generation_number'))
+        if 'generation_level' in columns and 'generation_number' in data:
+            gn = data['generation_number']
+            if gn is not None and (not isinstance(gn, str) or gn.strip() != ''):
+                insert_fields.append('generation_level')
+                insert_values.append(gn)
         if 'father_mother_id' in columns:
             insert_fields.append('father_mother_id')
             insert_values.append(data.get('fm_id'))
@@ -1688,9 +1692,11 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
         csv_id = str(data.get('csv_id') or '').strip()
         update_fields.append('csv_id = %s')
         update_values.append(csv_id if csv_id else None)
-    if 'generation_level' in columns and data.get('generation_number'):
-        update_fields.append('generation_level = %s')
-        update_values.append(data.get('generation_number'))
+    if 'generation_level' in columns and 'generation_number' in data:
+        gn = data['generation_number']
+        if gn is not None and (not isinstance(gn, str) or gn.strip() != ''):
+            update_fields.append('generation_level = %s')
+            update_values.append(gn)
     # Nhánh: nếu persons có cột branch_name thì lưu thẳng, không phụ thuộc bảng branches
     branch_code_to_name = {
         '0': 'Tổ tiên',
@@ -1845,16 +1851,18 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
         elif 'personal_image' in columns:
             update_fields.append('personal_image = %s')
             update_values.append(image_url)
-    if 'generation_id' in columns and data.get('generation_number'):
-        cursor.execute('SELECT generation_id FROM generations WHERE generation_number = %s', (data['generation_number'],))
-        gen = cursor.fetchone()
-        if gen:
-            generation_id = gen['generation_id']
-        else:
-            cursor.execute('INSERT INTO generations (generation_number) VALUES (%s)', (data['generation_number'],))
-            generation_id = cursor.lastrowid
-        update_fields.append('generation_id = %s')
-        update_values.append(generation_id)
+    if 'generation_id' in columns and 'generation_number' in data:
+        gn = data['generation_number']
+        if gn is not None and (not isinstance(gn, str) or gn.strip() != ''):
+            cursor.execute('SELECT generation_id FROM generations WHERE generation_number = %s', (gn,))
+            gen = cursor.fetchone()
+            if gen:
+                generation_id = gen['generation_id']
+            else:
+                cursor.execute('INSERT INTO generations (generation_number) VALUES (%s)', (gn,))
+                generation_id = cursor.lastrowid
+            update_fields.append('generation_id = %s')
+            update_values.append(generation_id)
     if 'father_mother_id' in columns:
         update_fields.append('father_mother_id = %s')
         update_values.append(data.get('fm_id'))

@@ -8,6 +8,7 @@
  * - Tìm người theo tên và đời
  * - Xây dựng chuỗi tổ tiên từ người hiện tại lên đến Vua Minh Mạng
  * - Xử lý các trường hợp đặc biệt (trùng tên, thiếu dữ liệu, đời không liên tục)
+ * - Trùng tên cha: ưu tiên father_id / parentMap–childrenMap (ID); sau đó lọc theo tên mẹ
  */
 
 // ============================================
@@ -422,6 +423,41 @@ function findFather(person) {
     return null;
   }
   
+  // BƯỚC 2.5: Trùng tên cha — ưu tiên quan hệ theo person_id (cây đã load parentMap/childrenMap)
+  // Chỉ một cha thật nằm trong parentMap(con); không phụ thuộc tên mẹ nếu đã khớp ID.
+  if (candidates.length > 1 && typeof window !== 'undefined' && person.person_id) {
+    const pm = window.parentMap;
+    if (pm && typeof pm.get === 'function') {
+      const parentIds = pm.get(person.person_id) || [];
+      const byParentGraph = candidates.filter((c) => parentIds.includes(c.person_id));
+      if (byParentGraph.length === 1) {
+        console.log(
+          `[Genealogy] Chọn cha theo parentMap (trùng tên): ${byParentGraph[0].full_name} (${byParentGraph[0].person_id})`
+        );
+        return byParentGraph[0];
+      }
+      if (byParentGraph.length > 0) {
+        candidates = byParentGraph;
+      }
+    }
+    const cm = window.childrenMap;
+    if (cm && typeof cm.get === 'function' && candidates.length > 1) {
+      const byChildGraph = candidates.filter((c) => {
+        const childIds = cm.get(c.person_id) || [];
+        return childIds.includes(person.person_id);
+      });
+      if (byChildGraph.length === 1) {
+        console.log(
+          `[Genealogy] Chọn cha theo childrenMap (trùng tên): ${byChildGraph[0].full_name} (${byChildGraph[0].person_id})`
+        );
+        return byChildGraph[0];
+      }
+      if (byChildGraph.length > 0) {
+        candidates = byChildGraph;
+      }
+    }
+  }
+  
   // BƯỚC 3: Lọc và sắp xếp candidates theo đời và tên mẹ (nếu có)
   const expectedGeneration = person.generation_number ? person.generation_number - 1 : null;
   
@@ -431,12 +467,19 @@ function findFather(person) {
     const normalizedMotherName = normalizeForSearch(person.mother_name);
     // Tìm các candidate có con với tên mẹ khớp
     filteredCandidates = candidates.filter(candidate => {
-      // Tìm tất cả con của candidate này có tên mẹ khớp
+      // Con của candidate (cùng cha theo ID) + cùng tên mẹ
       const children = allPersons.filter(p => {
-        if (!p.father_id || p.father_id !== candidate.person_id) return false;
         if (!p.mother_name) return false;
         const normalizedChildMother = normalizeForSearch(p.mother_name);
-        return normalizedChildMother === normalizedMotherName;
+        if (normalizedChildMother !== normalizedMotherName) return false;
+        if (p.father_id && p.father_id === candidate.person_id) return true;
+        // Con hiện tại chưa có father_id: vẫn khớp cặp cha–mẹ nếu tên cha trùng candidate
+        if (person.person_id && p.person_id === person.person_id) {
+          const fn = normalizeForSearch(person.father_name || '');
+          const cn = normalizeForSearch(candidate.full_name || '');
+          return fn && cn && (fn === cn || normalizeName(person.father_name) === normalizeName(candidate.full_name));
+        }
+        return false;
       });
       return children.length > 0;
     });

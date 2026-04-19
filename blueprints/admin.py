@@ -22,12 +22,22 @@ def api_sync_tbqc_accounts():
     try:
         from folder_py.db_config import get_db_connection
         from auth import hash_password
-        from app import FIXED_MEMBERS_PASSWORDS
-        # Tài khoản lấy từ env MEMBERS_FIXED_ACCOUNTS (chỉ lưu local)
-        accounts = [
-            {'username': u, 'password': p, 'full_name': f'Nhánh {i+1}', 'email': f'{u}@tbqc.local'}
-            for i, (u, p) in enumerate(FIXED_MEMBERS_PASSWORDS.items())
-        ]
+        from app import FIXED_MEMBERS_PASSWORDS, _is_bcrypt_hash
+        # Tài khoản lấy từ env MEMBERS_FIXED_ACCOUNTS (chỉ lưu local).
+        # Hỗ trợ cả plaintext (sẽ tự hash) và bcrypt hash (dùng trực tiếp,
+        # không thể và không cần reverse để re-hash).
+        accounts = []
+        for i, (u, p) in enumerate(FIXED_MEMBERS_PASSWORDS.items()):
+            entry = {
+                'username': u,
+                'full_name': f'Nhánh {i+1}',
+                'email': f'{u}@tbqc.local',
+            }
+            if _is_bcrypt_hash(p):
+                entry['password_hash'] = p
+            else:
+                entry['password'] = p
+            accounts.append(entry)
         if not accounts:
             return (jsonify({'success': False, 'error': 'Chưa cấu hình MEMBERS_FIXED_ACCOUNTS trong env'}), 400)
         connection = get_db_connection()
@@ -57,7 +67,7 @@ def api_sync_tbqc_accounts():
         connection.commit()
         for account in accounts:
             try:
-                password_hash = hash_password(account['password'])
+                password_hash = account.get('password_hash') or hash_password(account['password'])
                 cursor.execute('SELECT user_id, username, role FROM users WHERE username = %s', (account['username'],))
                 existing = cursor.fetchone()
                 if existing:

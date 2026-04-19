@@ -1,0 +1,150 @@
+  <!-- Floating Zalo Button -->
+  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  
+  <!-- Passphrase Gate Script - Xác thực qua API, passphrase chỉ lưu trên server (env) -->
+  <script>
+    const STORAGE_KEY = 'genealogy_unlocked';
+
+    async function verifyPassphrase(passphrase) {
+      const res = await fetch('/api/genealogy/verify-passphrase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passphrase }),
+        credentials: 'include'
+      });
+      const data = await res.json();
+      return data && data.success === true;
+    }
+    
+    // Check if already unlocked on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const isUnlocked = sessionStorage.getItem(STORAGE_KEY) === 'true';
+      
+      if (isUnlocked) {
+        unlockGenealogy();
+      } else {
+        showGate();
+      }
+    });
+    
+    function showGate() {
+      const gate = document.getElementById('genealogy-gate');
+      const content = document.getElementById('genealogy-content');
+      
+      if (gate) gate.style.display = 'flex';
+      if (content) {
+        content.style.display = 'none';
+        content.classList.remove('unlocked');
+      }
+    }
+    
+    function unlockGenealogy() {
+      const gate = document.getElementById('genealogy-gate');
+      const content = document.getElementById('genealogy-content');
+      
+      if (gate) gate.style.display = 'none';
+      if (content) {
+        content.style.display = 'block';
+        content.classList.add('unlocked');
+      }
+      
+      sessionStorage.setItem(STORAGE_KEY, 'true');
+
+      // Nếu lần đầu thống kê lỗi (cây chưa sẵn sàng khi còn cổng), thử lại sau khi mở khóa
+      if (!window._generationTabsLoadedOk && typeof window._retryLoadGenerationTabs === 'function') {
+        void window._retryLoadGenerationTabs();
+      }
+
+      // Đảm bảo cây hiển thị sau khi mở khóa (layout có kích thước thật; tránh fit một lần khi khung còn 0×0)
+      if (typeof window.scheduleGenealogyTreeFitRetries === 'function') {
+        window.scheduleGenealogyTreeFitRetries();
+      }
+      [200, 500, 900].forEach(function (ms) {
+        setTimeout(function () {
+          if (typeof window.scheduleGenealogyTreeFitRetries === 'function') {
+            window.scheduleGenealogyTreeFitRetries();
+          } else if (typeof window.applyGenealogyDefaultView === 'function') {
+            window.applyGenealogyDefaultView();
+          } else if (typeof window.fitTreeToView === 'function') {
+            window.fitTreeToView();
+          }
+        }, ms);
+      });
+    }
+    
+    async function handleGateSubmit(event) {
+      event.preventDefault();
+      
+      const input = document.getElementById('gatePassphrase');
+      const rememberCheckbox = document.getElementById('rememberPassphrase');
+      const errorDiv = document.getElementById('gateError');
+      const noteDiv = document.getElementById('gateNote');
+      
+      if (!input) return;
+      
+      const enteredPassphrase = input.value.trim();
+      const isValid = await verifyPassphrase(enteredPassphrase);
+      
+      if (isValid) {
+        // Correct passphrase
+        // Lưu mật khẩu nếu checkbox được tick
+        if (rememberCheckbox && rememberCheckbox.checked) {
+          try {
+            localStorage.setItem('genealogy_passphrase', enteredPassphrase);
+            localStorage.setItem('genealogy_remember', 'true');
+          } catch (e) {
+            console.warn('Cannot save to localStorage:', e);
+          }
+        } else {
+          // Xóa mật khẩu đã lưu nếu không tick
+          try {
+            localStorage.removeItem('genealogy_passphrase');
+            localStorage.removeItem('genealogy_remember');
+          } catch (e) {
+            console.warn('Cannot remove from localStorage:', e);
+          }
+        }
+        
+        unlockGenealogy();
+        if (errorDiv) errorDiv.classList.remove('show');
+        if (noteDiv) noteDiv.classList.remove('show');
+      } else {
+        // Incorrect passphrase
+        if (errorDiv) errorDiv.classList.add('show');
+        if (noteDiv) noteDiv.classList.add('show');
+        input.value = '';
+        input.focus();
+      }
+    }
+    
+    // Load mật khẩu đã lưu khi trang load
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        const savedPassphrase = localStorage.getItem('genealogy_passphrase');
+        const rememberSaved = localStorage.getItem('genealogy_remember');
+        
+        if (savedPassphrase && rememberSaved === 'true') {
+          const input = document.getElementById('gatePassphrase');
+          const rememberCheckbox = document.getElementById('rememberPassphrase');
+          
+          if (input) {
+            input.value = savedPassphrase;
+            if (rememberCheckbox) {
+              rememberCheckbox.checked = true;
+            }
+            
+            // Tự động submit nếu mật khẩu hợp lệ (xác thực qua API)
+            const isValid = await verifyPassphrase(savedPassphrase);
+            if (isValid) {
+              // Delay một chút để đảm bảo form đã render
+              setTimeout(() => {
+                handleGateSubmit(new Event('submit'));
+              }, 100);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Cannot load from localStorage:', e);
+      }
+    });
+  </script>

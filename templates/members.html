@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>Danh Sách Thành Viên - TBQC Gia Phả</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+  <title>Danh Sách Thành Viên - Tuy Biên Quận Công Gia Phả</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="/static/css/main.css">
   <style>
     * {
@@ -545,35 +548,37 @@
         min-width: 1500px;
       }
 
-      th, td {
+      th,
+      td {
         padding: 8px;
       }
     }
   </style>
 
-    <!-- Global CSRF Fetch Interceptor -->
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        var metaTag = document.querySelector('meta[name="csrf-token"]');
-        if (metaTag) {
-          var csrfToken = metaTag.getAttribute('content');
-          var originalFetch = window.fetch;
-          window.fetch = function(url, options) {
-            options = options || {};
-            if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
-              options.headers = options.headers || {};
-              // Set the token header as expected by flask_wtf.csrf
-              options.headers['X-CSRFToken'] = csrfToken;
-              if (options.body && !(options.body instanceof FormData) && !options.headers['Content-Type']) {
-                  options.headers['Content-Type'] = 'application/json';
-              }
+  <!-- Global CSRF Fetch Interceptor -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var metaTag = document.querySelector('meta[name="csrf-token"]');
+      if (metaTag) {
+        var csrfToken = metaTag.getAttribute('content');
+        var originalFetch = window.fetch;
+        window.fetch = function (url, options) {
+          options = options || {};
+          if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+            options.headers = options.headers || {};
+            // Set the token header as expected by flask_wtf.csrf
+            options.headers['X-CSRFToken'] = csrfToken;
+            if (options.body && !(options.body instanceof FormData) && !options.headers['Content-Type']) {
+              options.headers['Content-Type'] = 'application/json';
             }
-            return originalFetch(url, options);
-          };
-        }
-      });
-    </script>
+          }
+          return originalFetch(url, options);
+        };
+      }
+    });
+  </script>
 </head>
+
 <body>
   <!-- Navbar đồng bộ với Gia phả, không hiển thị Hoạt động -->
   <nav class="navbar">
@@ -601,7 +606,8 @@
           {% endif %}
         </div>
         {% if gate_username %}
-        <a href="/members/logout" class="btn" style="background: #757575; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px;">
+        <a href="/members/logout" class="btn"
+          style="background: #757575; color: white; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-size: 14px;">
           Đăng xuất (Members)
         </a>
         {% endif %}
@@ -611,19 +617,24 @@
     <div class="controls">
       <div class="controls-row controls-row-1">
         <div class="search-box">
-          <input type="text" id="membersSearch" placeholder="🔍 Tìm kiếm theo ID, tên, giới tính, trạng thái, đời, FM_ID, bố, mẹ, hôn phối, anh chị em, con cái..." 
-                 onkeypress="if(event.key==='Enter') filterMembers()">
+          <input type="text" id="membersSearch"
+            placeholder="🔍 Tìm kiếm theo ID, tên, giới tính, trạng thái, đời, FM_ID, bố, mẹ, hôn phối, anh chị em, con cái..."
+            onkeypress="if(event.key==='Enter') filterMembers()">
         </div>
         <button class="btn btn-search" onclick="filterMembers()">Tìm kiếm</button>
       </div>
       <div class="controls-row controls-row-2">
         <button class="btn btn-refresh" onclick="loadMembers()">🔄 Làm mới</button>
-        <a href="/members/export/excel" class="btn btn-export-excel" download title="Tải file Excel toàn bộ danh sách thành viên">📥 Xuất Excel</a>
-        <button class="btn btn-backup" onclick="checkAuthAndBackup()" id="btnBackup" title="Tạo backup database">💾 Backup</button>
+        <a href="/members/export/excel" class="btn btn-export-excel" download
+          title="Tải file Excel toàn bộ danh sách thành viên">📥 Xuất Excel</a>
+        <button class="btn btn-backup" onclick="checkAuthAndBackup()" id="btnBackup" title="Tạo backup database">💾
+          Backup</button>
         <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">➕ Thêm</button>
         <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">✏️ Cập nhật</button>
-        <button class="btn btn-branch-update" onclick="openBranchUploadModal()" id="btnUpdateBranch">Update Nhánh</button>
-        <button class="btn btn-sll-update" onclick="openSllUploadModal()" id="btnUpdateSll" title="Cập nhật nhiều thành viên từ Excel (cùng file Xuất Excel / Template_updatetbqc)">Update SLL</button>
+        <button class="btn btn-branch-update" onclick="openBranchUploadModal()" id="btnUpdateBranch">Update
+          Nhánh</button>
+        <button class="btn btn-sll-update" onclick="openSllUploadModal()" id="btnUpdateSll"
+          title="Cập nhật nhiều thành viên từ Excel (cùng file Xuất Excel / Template_updatetbqc)">Update SLL</button>
         <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">🗑️ Xóa</button>
       </div>
     </div>
@@ -687,11 +698,13 @@
         <div class="form-row">
           <div class="form-group">
             <label for="generation_number">Đời</label>
-            <input type="number" id="generation_number" name="generation_number" min="1">
+            <input type="number" id="generation_number" name="generation_number" min="0"
+              title="Đời 0: tổ tiên (Vua Gia Long, v.v.)">
           </div>
           <div class="form-group">
             <label for="birth_date_solar">Năm sinh</label>
-            <input type="text" id="birth_date_solar" name="birth_date_solar" placeholder="YYYY-MM-DD hoặc YYYY" pattern="^\d{4}(-\d{2}(-\d{2})?)?$">
+            <input type="text" id="birth_date_solar" name="birth_date_solar" placeholder="YYYY-MM-DD hoặc YYYY"
+              pattern="^\d{4}(-\d{2}(-\d{2})?)?$">
           </div>
         </div>
         <div class="form-row">
@@ -718,7 +731,8 @@
         <div class="form-row">
           <div class="form-group">
             <label for="death_date_solar">Năm mất</label>
-            <input type="text" id="death_date_solar" name="death_date_solar" placeholder="YYYY-MM-DD hoặc YYYY" pattern="^\d{4}(-\d{2}(-\d{2})?)?$">
+            <input type="text" id="death_date_solar" name="death_date_solar" placeholder="YYYY-MM-DD hoặc YYYY"
+              pattern="^\d{4}(-\d{2}(-\d{2})?)?$">
           </div>
           <div class="form-group">
             <label for="grave_info">Mộ phần</label>
@@ -737,22 +751,28 @@
         </div>
         <div class="form-group">
           <label for="children_info">Thông tin con</label>
-          <textarea id="children_info" name="children_info" rows="3" placeholder="Nhập tên các con, phân cách bằng dấu chấm phẩy (;)"></textarea>
+          <textarea id="children_info" name="children_info" rows="3"
+            placeholder="Nhập tên các con, phân cách bằng dấu chấm phẩy (;)"></textarea>
         </div>
         <div class="form-group">
           <label for="spouse_info">Hôn phối</label>
-          <textarea id="spouse_info" name="spouse_info" rows="3" placeholder="Nhập tên hôn phối, phân cách bằng dấu chấm phẩy (;)"></textarea>
+          <textarea id="spouse_info" name="spouse_info" rows="3"
+            placeholder="Nhập tên hôn phối, phân cách bằng dấu chấm phẩy (;)"></textarea>
         </div>
         <div class="form-group">
           <label for="siblings_info">Thông tin anh chị em</label>
-          <textarea id="siblings_info" name="siblings_info" rows="3" placeholder="Nhập tên anh chị em, phân cách bằng dấu chấm phẩy (;)"></textarea>
+          <textarea id="siblings_info" name="siblings_info" rows="3"
+            placeholder="Nhập tên anh chị em, phân cách bằng dấu chấm phẩy (;)"></textarea>
         </div>
         <div class="form-group">
           <label for="personal_image">Hình cá nhân</label>
-          <input type="file" id="personal_image" name="personal_image" accept="image/*" onchange="validateImageSize(this)">
-          <small style="color: #666; display: block; margin-top: 5px;">Chỉ chấp nhận file ảnh dưới 2MB (PNG, JPG, JPEG, GIF, WEBP)</small>
+          <input type="file" id="personal_image" name="personal_image" accept="image/*"
+            onchange="validateImageSize(this)">
+          <small style="color: #666; display: block; margin-top: 5px;">Chỉ chấp nhận file ảnh dưới 2MB (PNG, JPG, JPEG,
+            GIF, WEBP)</small>
           <div id="imagePreview" style="margin-top: 10px; display: none;">
-            <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #DAA520;">
+            <img id="previewImg" src="" alt="Preview"
+              style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 2px solid #DAA520;">
           </div>
         </div>
         <div class="form-group">
@@ -762,24 +782,28 @@
         <div class="form-row">
           <div class="form-group">
             <label for="academic_rank">Học hàm</label>
-            <select id="academic_rank" name="academic_rank" style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); background: white;">
+            <select id="academic_rank" name="academic_rank"
+              style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); background: white;">
               <option value="">-- Chọn học hàm --</option>
               <option value="Giáo sư">Giáo sư</option>
               <option value="Phó Giáo sư">Phó Giáo sư</option>
               <option value="Khác">Khác</option>
             </select>
-            <input type="text" id="academic_rank_other" name="academic_rank_other" placeholder="Nhập học hàm khác" style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); margin-top: var(--space-2); display: none;">
+            <input type="text" id="academic_rank_other" name="academic_rank_other" placeholder="Nhập học hàm khác"
+              style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); margin-top: var(--space-2); display: none;">
           </div>
           <div class="form-group">
             <label for="academic_degree">Học vị</label>
-            <select id="academic_degree" name="academic_degree" style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); background: white;">
+            <select id="academic_degree" name="academic_degree"
+              style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); background: white;">
               <option value="">-- Chọn học vị --</option>
               <option value="Cử nhân">Cử nhân</option>
               <option value="Thạc sĩ">Thạc sĩ</option>
               <option value="Tiến sĩ">Tiến sĩ</option>
               <option value="Khác">Khác</option>
             </select>
-            <input type="text" id="academic_degree_other" name="academic_degree_other" placeholder="Nhập học vị khác" style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); margin-top: var(--space-2); display: none;">
+            <input type="text" id="academic_degree_other" name="academic_degree_other" placeholder="Nhập học vị khác"
+              style="width: 100%; padding: var(--space-3); border: 1px solid #DAA520; border-radius: 6px; font-size: var(--font-size-base); margin-top: var(--space-2); display: none;">
           </div>
         </div>
         <div class="form-row">
@@ -844,7 +868,7 @@
 
   <script>
     // Password protection - Lấy từ server để tránh hardcode
-    const REQUIRED_PASSWORD = {{ members_password|tojson|safe if members_password else 'null' }};
+    const REQUIRED_PASSWORD = {{ members_password| tojson | safe if members_password else 'null' }};
     let isAuthenticated = false;
     let authenticatedPassword = ''; // Lưu password đã xác thực để gửi trong API requests
     let pendingAction = null; // Lưu hành động đang chờ xác thực
@@ -858,7 +882,7 @@
         authenticatedPassword = savedPassword;
       }
     }
-    
+
     // Get authenticated password for API requests
     function getAuthPassword() {
       return REQUIRED_PASSWORD && REQUIRED_PASSWORD !== 'null' ? REQUIRED_PASSWORD : '';
@@ -886,7 +910,7 @@
         alert('Vui lòng chọn đúng 1 thành viên để cập nhật');
         return;
       }
-      
+
       confirmAction(openUpdateModal);
     }
 
@@ -898,7 +922,7 @@
         alert('Vui lòng chọn ít nhất 1 thành viên để xóa');
         return;
       }
-      
+
       confirmAction(deleteSelected);
     }
 
@@ -933,15 +957,15 @@
     async function createBackup() {
       const backupBtn = document.getElementById('btnBackup');
       const originalText = backupBtn.textContent;
-      
+
       try {
         // Disable button và hiển thị loading
         backupBtn.disabled = true;
         backupBtn.textContent = '⏳ Đang backup...';
-        
+
         // Lấy password đã xác thực
         const authPassword = getAuthPassword();
-        
+
         const response = await fetch('/api/admin/backup', {
           method: 'POST',
           headers: {
@@ -952,7 +976,7 @@
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
           const fileSize = result.file_size ? (result.file_size / 1024 / 1024).toFixed(2) : 'N/A';
           let downloadOk = false;
@@ -990,14 +1014,14 @@
     async function loadMembers(forceRefresh = false) {
       const container = document.getElementById('membersTableContainer');
       container.innerHTML = '<div class="loading">Đang tải dữ liệu...</div>';
-      
+
       try {
         console.log('[Members] Fetching /api/members...');
         const membersUrl = forceRefresh ? `/api/members?t=${Date.now()}` : '/api/members';
         const response = await fetch(membersUrl, {
           credentials: 'include'  // Quan trọng: gửi session cookie
         });
-        
+
         if (!response.ok) {
           // Nếu là 403, có thể session đã hết hạn hoặc chưa đăng nhập
           if (response.status === 403) {
@@ -1007,14 +1031,14 @@
           }
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-        
+
         const result = await response.json();
         console.log('[Members] API response:', result);
         console.log('[Members] Response keys:', Object.keys(result));
         console.log('[Members] result.success:', result.success);
         console.log('[Members] result.data type:', typeof result.data);
         console.log('[Members] result.data length:', result.data ? result.data.length : 'null');
-        
+
         if (result.success && result.data && Array.isArray(result.data)) {
           allMembersData = result.data;
           filteredData = allMembersData;
@@ -1030,7 +1054,7 @@
         }
       } catch (error) {
         console.error('[Members] Error loading members:', error);
-        
+
         // Nếu là 403, hiển thị thông báo đặc biệt
         if (error.message && error.message.includes('403')) {
           container.innerHTML = `
@@ -1043,7 +1067,7 @@
           `;
           return;
         }
-        
+
         // Error handling khác
         container.innerHTML = `<div class="error">❌ Lỗi kết nối: ${error.message}<br><small>Vui lòng kiểm tra console để biết thêm chi tiết</small></div>`;
       }
@@ -1052,15 +1076,15 @@
     // Render members table
     function renderMembersTable(members) {
       const container = document.getElementById('membersTableContainer');
-      
+
       if (!members || members.length === 0) {
         container.innerHTML = '<div class="loading" style="padding: 60px; text-align: center; color: #666; font-size: 18px;">Không có dữ liệu thành viên</div>';
         updateStats(0);
         return;
       }
-      
+
       console.log(`[Members] Rendering ${members.length} members`);
-      
+
       let html = '<table>';
       html += '<thead><tr>';
       html += '<th class="checkbox-column"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>';
@@ -1079,7 +1103,7 @@
       html += '<th style="min-width: 300px;">Thông tin anh chị em</th>';
       html += '<th style="min-width: 300px;">Thông tin con cái</th>';
       html += '</tr></thead><tbody>';
-      
+
       members.forEach((member, index) => {
         // Ensure all new fields are available in member object
         member.personal_image_url = member.personal_image_url || '';
@@ -1088,7 +1112,7 @@
         member.academic_degree = member.academic_degree || '';
         member.phone = member.phone || '';
         member.email = member.email || '';
-        
+
         html += '<tr>';
         html += `<td class="checkbox-column"><input type="checkbox" class="row-checkbox" value="${member.person_id}" onchange="updateButtonStates()"></td>`;
         html += `<td style="text-align: center; font-weight: 600; color: #8B0000;">${escapeHtml(member.csv_id || member.person_id || '-')}</td>`;
@@ -1107,7 +1131,7 @@
         html += `<td style="max-width: 300px; word-wrap: break-word; line-height: 1.5;">${formatText(member.children || '')}</td>`;
         html += '</tr>';
       });
-      
+
       html += '</tbody></table>';
       container.innerHTML = html;
     }
@@ -1155,7 +1179,7 @@
       // Tách theo ; hoặc , hoặc các thẻ <br> có sẵn trong data
       const items = text.split(/[;,]|<br\s*\/?>/i).map(s => s.trim()).filter(s => s);
       if (items.length === 0) return '-';
-      
+
       // Escape từng mục để bảo mật, sau đó nối lại bằng <br> để xuống dòng
       return items.map(item => {
         const div = document.createElement('div');
@@ -1179,7 +1203,7 @@
     // Filter members
     function filterMembers() {
       const searchTerm = document.getElementById('membersSearch').value.toLowerCase().trim();
-      
+
       if (!searchTerm) {
         filteredData = allMembersData;
       } else {
@@ -1195,21 +1219,21 @@
           const spouses = (member.spouses || '').toLowerCase();
           const siblings = (member.siblings || '').toLowerCase();
           const children = (member.children || '').toLowerCase();
-          
+
           return csvId.includes(searchTerm) ||
-                 fullName.includes(searchTerm) || 
-                 gender.includes(searchTerm) ||
-                 status.includes(searchTerm) ||
-                 generation.includes(searchTerm) ||
-                 fmId.includes(searchTerm) ||
-                 father.includes(searchTerm) ||
-                 mother.includes(searchTerm) ||
-                 spouses.includes(searchTerm) ||
-                 siblings.includes(searchTerm) ||
-                 children.includes(searchTerm);
+            fullName.includes(searchTerm) ||
+            gender.includes(searchTerm) ||
+            status.includes(searchTerm) ||
+            generation.includes(searchTerm) ||
+            fmId.includes(searchTerm) ||
+            father.includes(searchTerm) ||
+            mother.includes(searchTerm) ||
+            spouses.includes(searchTerm) ||
+            siblings.includes(searchTerm) ||
+            children.includes(searchTerm);
         });
       }
-      
+
       renderMembersTable(filteredData);
       updateStats(filteredData.length);
     }
@@ -1251,7 +1275,7 @@
       // Update selectedMembers set
       selectedMembers.clear();
       checkboxes.forEach(cb => selectedMembers.add(cb.value));
-      
+
       // Không disable nút nữa - luôn cho phép click để yêu cầu mật khẩu hoặc thông báo
     }
 
@@ -1316,7 +1340,7 @@
 
       const personId = checkboxes[0].value;
       const member = allMembersData.find(m => m.person_id == personId);
-      
+
       if (!member) {
         alert('Không tìm thấy thông tin thành viên');
         return;
@@ -1351,7 +1375,7 @@
       document.getElementById('siblings_info').value = member.siblings || '';
       // Populate new fields
       document.getElementById('biography').value = member.biography || '';
-      
+
       // Xử lý Học hàm dropdown
       const academicRankSelect = document.getElementById('academic_rank');
       const academicRankOther = document.getElementById('academic_rank_other');
@@ -1369,7 +1393,7 @@
         academicRankOther.style.display = 'none';
         academicRankOther.value = '';
       }
-      
+
       // Xử lý Học vị dropdown
       const academicDegreeSelect = document.getElementById('academic_degree');
       const academicDegreeOther = document.getElementById('academic_degree_other');
@@ -1387,11 +1411,11 @@
         academicDegreeOther.style.display = 'none';
         academicDegreeOther.value = '';
       }
-      
+
       document.getElementById('phone').value = member.phone || '';
       document.getElementById('email').value = member.email || '';
       document.getElementById('occupation').value = member.occupation || '';
-      
+
       // Show existing image if available
       if (member.personal_image_url) {
         document.getElementById('previewImg').src = member.personal_image_url;
@@ -1399,10 +1423,10 @@
       } else {
         document.getElementById('imagePreview').style.display = 'none';
       }
-      
+
       // Reset file input
       document.getElementById('personal_image').value = '';
-      
+
       document.getElementById('memberModal').style.display = 'block';
     }
 
@@ -1411,7 +1435,7 @@
       document.getElementById('memberModal').style.display = 'none';
       document.getElementById('memberForm').reset();
       document.getElementById('imagePreview').style.display = 'none';
-      
+
       // Reset dropdown và ẩn input "Khác"
       const academicRankSelect = document.getElementById('academic_rank');
       const academicRankOther = document.getElementById('academic_rank_other');
@@ -1420,7 +1444,7 @@
         academicRankOther.value = '';
         academicRankOther.style.display = 'none';
       }
-      
+
       const academicDegreeSelect = document.getElementById('academic_degree');
       const academicDegreeOther = document.getElementById('academic_degree_other');
       if (academicDegreeSelect && academicDegreeOther) {
@@ -1565,10 +1589,10 @@
           document.getElementById('imagePreview').style.display = 'none';
           return false;
         }
-        
+
         // Show preview
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
           document.getElementById('previewImg').src = e.target.result;
           document.getElementById('imagePreview').style.display = 'block';
         };
@@ -1580,11 +1604,11 @@
     // Save member (add or update)
     async function saveMember(event) {
       event.preventDefault();
-      
+
       const formData = new FormData(event.target);
       const personId = formData.get('person_id');
       const isUpdate = personId && personId !== '';
-      
+
       // Xử lý giá trị học hàm và học vị từ dropdown/input "Khác"
       const academicRankSelect = document.getElementById('academic_rank');
       const academicRankOther = document.getElementById('academic_rank_other');
@@ -1593,7 +1617,7 @@
           formData.set('academic_rank', academicRankOther.value.trim());
         }
       }
-      
+
       const academicDegreeSelect = document.getElementById('academic_degree');
       const academicDegreeOther = document.getElementById('academic_degree_other');
       if (academicDegreeSelect && academicDegreeOther) {
@@ -1601,11 +1625,11 @@
           formData.set('academic_degree', academicDegreeOther.value.trim());
         }
       }
-      
+
       // Loại bỏ các field "other" khỏi formData (không cần gửi lên server)
       formData.delete('academic_rank_other');
       formData.delete('academic_degree_other');
-      
+
       // Validate image if exists
       const imageFile = formData.get('personal_image');
       if (imageFile && imageFile.size > 0) {
@@ -1616,17 +1640,17 @@
 
       // Lấy password đã xác thực
       const authPassword = getAuthPassword();
-      
+
       // Thêm password vào formData
       formData.append('password', authPassword);
-      
+
       try {
         const url = isUpdate ? `/api/persons/${personId}` : '/api/persons';
         const method = isUpdate ? 'PUT' : 'POST';
-        
+
         // If there's an image, use FormData, otherwise use JSON
         const hasImage = imageFile && imageFile.size > 0;
-        
+
         let response;
         if (hasImage) {
           // Use FormData for image upload
@@ -1640,7 +1664,7 @@
           for (let [key, value] of formData.entries()) {
             data[key] = value;
           }
-          
+
           response = await fetch(url, {
             method: method,
             headers: {
@@ -1651,7 +1675,7 @@
         }
 
         const result = await response.json();
-        
+
         if (response.ok && result.success) {
           alert(isUpdate ? 'Cập nhật thành công!' : 'Thêm thành công!');
           closeModal();
@@ -1662,7 +1686,7 @@
             alert('Mật khẩu hệ thống không đúng. Vui lòng kiểm tra lại cấu hình server.');
             return;
           }
-          
+
           // Hiển thị message từ server hoặc message mặc định
           const errorMsg = result.error || result.message || 'Không thể lưu dữ liệu';
           if (response.status === 404) {
@@ -1688,34 +1712,34 @@
       }
 
       const personIds = Array.from(checkboxes).map(cb => cb.value);
-      
+
       // Lấy password đã xác thực
       const authPassword = getAuthPassword();
-      
+
       try {
         const response = await fetch('/api/persons/batch', {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             person_ids: personIds,
             password: authPassword
           })
         });
 
         const result = await response.json();
-        
+
         if (result.success) {
           let message = `✅ Xóa thành công ${checkboxes.length} thành viên!`;
-          
+
           // Hiển thị thông tin backup nếu có
           if (result.backup_created) {
             message += `\n\n💾 Backup đã được tạo tự động:\nFile: ${result.backup_file}`;
           } else if (result.backup_warning) {
             message += `\n\n⚠️ Cảnh báo: ${result.backup_warning}`;
           }
-          
+
           alert(message);
           selectedMembers.clear();
           loadMembers();
@@ -1734,7 +1758,7 @@
 
 
     // Close password modal when clicking outside
-    window.onclick = function(event) {
+    window.onclick = function (event) {
       const modal = document.getElementById('memberModal');
       const branchModal = document.getElementById('branchUploadModal');
       const sllModal = document.getElementById('sllUploadModal');
@@ -1759,9 +1783,9 @@
       const academicRankOther = document.getElementById('academic_rank_other');
       const academicDegreeSelect = document.getElementById('academic_degree');
       const academicDegreeOther = document.getElementById('academic_degree_other');
-      
+
       if (academicRankSelect && academicRankOther) {
-        academicRankSelect.addEventListener('change', function() {
+        academicRankSelect.addEventListener('change', function () {
           if (this.value === 'Khác') {
             academicRankOther.style.display = 'block';
             academicRankOther.focus();
@@ -1771,9 +1795,9 @@
           }
         });
       }
-      
+
       if (academicDegreeSelect && academicDegreeOther) {
-        academicDegreeSelect.addEventListener('change', function() {
+        academicDegreeSelect.addEventListener('change', function () {
           if (this.value === 'Khác') {
             academicDegreeOther.style.display = 'block';
             academicDegreeOther.focus();
@@ -1784,7 +1808,7 @@
         });
       }
     }
-    
+
     // Cập nhật hàm submit để lấy giá trị từ input "Khác" nếu có
     function getAcademicRankValue() {
       const select = document.getElementById('academic_rank');
@@ -1794,7 +1818,7 @@
       }
       return select ? select.value : '';
     }
-    
+
     function getAcademicDegreeValue() {
       const select = document.getElementById('academic_degree');
       const other = document.getElementById('academic_degree_other');
@@ -1822,11 +1846,13 @@
       });
     }
   </script>
-  
+
   <script src="/static/js/common.js"></script>
   <script src="/static/js/device-detection.js"></script>
-  
+
   <!-- Floating Zalo Button -->
-  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button"
+    title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
 </body>
+
 </html>

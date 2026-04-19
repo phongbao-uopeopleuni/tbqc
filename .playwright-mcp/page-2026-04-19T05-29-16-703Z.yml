@@ -1,0 +1,31 @@
+- generic [ref=e1]:
+  - link "Đi tới nội dung chính" [ref=e2] [cursor=pointer]:
+    - /url: "#genealogy-content"
+  - navigation "Điều hướng chính" [ref=e3]:
+    - button "Mở hoặc đóng menu" [ref=e4] [cursor=pointer]: ☰
+    - link "Gia Phả TBQC" [ref=e6] [cursor=pointer]:
+      - /url: /
+    - list [ref=e7]:
+      - listitem [ref=e8]:
+        - link "Trang chủ" [ref=e9] [cursor=pointer]:
+          - /url: /
+      - listitem [ref=e10]:
+        - link "Gia phả" [ref=e11] [cursor=pointer]:
+          - /url: /genealogy
+      - listitem [ref=e12]:
+        - link "Thành viên" [ref=e13] [cursor=pointer]:
+          - /url: /members
+      - listitem [ref=e14]:
+        - link "Liên hệ" [ref=e15] [cursor=pointer]:
+          - /url: /contact
+      - listitem [ref=e16]:
+        - link "Admin" [ref=e17] [cursor=pointer]:
+          - /url: /admin/login
+  - generic [ref=e19]:
+    - heading "Xác thực truy cập" [level=2] [ref=e20]
+    - generic [ref=e21]:
+      - textbox "Nhập chuỗi mật khẩu" [active] [ref=e22]: phutuybien2026
+      - generic [ref=e23]:
+        - checkbox "Lưu mật khẩu" [ref=e24] [cursor=pointer]
+        - generic [ref=e25] [cursor=pointer]: Lưu mật khẩu
+      - button "Mở khóa" [ref=e26] [cursor=pointer]

@@ -35,6 +35,11 @@ id_rsa.pub
 *.config
 *_config
 
+# Flask instance folder — chứa secret_key fallback khi env SECRET_KEY chưa được set.
+# KHÔNG BAO GIỜ commit file này (session secret đang được dùng để ký cookie).
+instance/
+!instance/.gitkeep
+
 # Logs
 *.log
 
@@ -99,3 +104,10 @@ start_server.py
 
 # Node (code-graph scanner)
 scripts/code-graph/node_modules/
+
+# Node (JS lint/format tooling cho static/js)
+/node_modules/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
