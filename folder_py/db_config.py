@@ -267,15 +267,15 @@ def _init_db_pool():
         config = get_db_config()
         
         # Create connection pool
-        # pool_size: số lượng connections trong pool (2-10 tùy vào traffic)
+        # pool_size: số connections giữ sẵn — traffic thấp/Railway: 3 đủ cho 1 Gunicorn worker + ít thread
         # pool_reset_session: reset session state khi trả connection về pool
         _db_pool = mysql.connector.pooling.MySQLConnectionPool(
             pool_name="tbqc_pool",
-            pool_size=5,  # Có thể tăng lên 10 nếu traffic cao
+            pool_size=3,
             pool_reset_session=True,
             **config
         )
-        logger.info(f"Database connection pool initialized: pool_size=5")
+        logger.info("Database connection pool initialized: pool_size=3")
     except Error as e:
         logger.error(f"Failed to initialize connection pool: {e}")
         logger.warning("Falling back to single connection mode")
