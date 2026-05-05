@@ -68,7 +68,89 @@ def activities_page():
 @activities_bp.route('/activities/<int:activity_id>', strict_slashes=False)
 def activity_detail_page(activity_id):
     """Trang chi tiet bai viet."""
-    return render_template('activity_detail.html', activity_id=activity_id)
+    try:
+        from db import get_db_connection
+        from services.activities_service import ensure_activities_table
+    except ImportError:
+        return render_template(
+            'activity_detail.html',
+            activity_id=activity_id,
+            activity=None,
+            related_activities=[],
+            error='Loi cau hinh he thong',
+        ), 500
+
+    connection = get_db_connection()
+    if not connection:
+        return render_template(
+            'activity_detail.html',
+            activity_id=activity_id,
+            activity=None,
+            related_activities=[],
+            error='Khong the ket noi database',
+        ), 500
+
+    cursor = connection.cursor(dictionary=True)
+    try:
+        ensure_activities_table(cursor)
+        connection.commit()
+
+        cursor.execute('SELECT * FROM activities WHERE activity_id = %s', (activity_id,))
+        row = cursor.fetchone()
+        if not row:
+            return render_template(
+                'activity_detail.html',
+                activity_id=activity_id,
+                activity=None,
+                related_activities=[],
+            ), 404
+
+        # Public chi xem bai da xuat ban; admin/editor co the xem nhap.
+        if row.get('status') != 'published' and not _can_post():
+            return render_template(
+                'activity_detail.html',
+                activity_id=activity_id,
+                activity=None,
+                related_activities=[],
+            ), 404
+
+        cursor.execute(
+            '''
+            SELECT activity_id, title, summary, created_at
+            FROM activities
+            WHERE status = 'published' AND activity_id != %s
+            ORDER BY created_at DESC
+            LIMIT 3
+            ''',
+            (activity_id,),
+        )
+        related_rows = cursor.fetchall() or []
+
+        return render_template(
+            'activity_detail.html',
+            activity_id=activity_id,
+            activity=_activity_to_json(row),
+            related_activities=related_rows,
+        )
+    except Exception as e:
+        logger.error(f'activity_detail_page error: {e}', exc_info=True)
+        return render_template(
+            'activity_detail.html',
+            activity_id=activity_id,
+            activity=None,
+            related_activities=[],
+            error='Khong the tai bai viet luc nay',
+        ), 500
+    finally:
+        try:
+            cursor.close()
+        except Exception:
+            pass
+        try:
+            if getattr(connection, 'is_connected', lambda: False)():
+                connection.close()
+        except Exception:
+            pass
 
 
 @activities_bp.route('/editor', strict_slashes=False)
