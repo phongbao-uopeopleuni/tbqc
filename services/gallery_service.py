@@ -714,6 +714,14 @@ def verify_grave_image_delete_password(password):
     expected = _get_grave_image_delete_password()
     return expected and secure_compare(password or '', expected)
 
+def api_verify_album_password():
+    """API kiểm tra mật khẩu album trước khi bật thao tác quản lý ảnh."""
+    data = request.get_json() or {}
+    password = data.get('password')
+    if not password or not verify_album_password(password):
+        return (jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401)
+    return jsonify({'success': True})
+
 def api_get_albums():
     """
     API lấy danh sách tất cả albums.
@@ -916,6 +924,120 @@ def api_get_album_images(album_id):
     except Exception as e:
         logger.error(f'Error getting album images: {e}')
         return (jsonify({'success': False, 'error': f'Lỗi khi lấy danh sách ảnh: {str(e)}'}), 500)
+
+def _delete_album_image_file(filepath):
+    """
+    Xóa file ảnh album nếu đường dẫn nằm trong Railway Volume hoặc static/images.
+    Không raise nếu file đã mất để DB vẫn được dọn sạch bản ghi ảnh.
+    """
+    if not filepath:
+        return False
+    allowed_roots = []
+    volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+    if volume_mount_path:
+        allowed_roots.append(os.path.abspath(volume_mount_path))
+    allowed_roots.append(os.path.abspath(os.path.join(BASE_DIR, 'static', 'images')))
+
+    file_path = os.path.abspath(filepath)
+    if not any(file_path == root or file_path.startswith(root + os.sep) for root in allowed_roots):
+        logger.warning('Skip deleting album image outside allowed roots: %s', filepath)
+        return False
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        os.remove(file_path)
+        return True
+    return False
+
+def api_delete_album_images(album_id):
+    """
+    API xóa các ảnh được chọn trong album.
+    Yêu cầu mật khẩu album, nhận body: {password, image_ids: [..]}.
+    """
+    conn = None
+    cursor = None
+    try:
+        data = request.get_json() or {}
+        password = data.get('password')
+        if not password or not verify_album_password(password):
+            return (jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401)
+
+        raw_ids = data.get('image_ids') or []
+        if not isinstance(raw_ids, list):
+            return (jsonify({'success': False, 'error': 'Danh sách ảnh không hợp lệ'}), 400)
+        image_ids = []
+        for raw_id in raw_ids:
+            try:
+                image_id = int(raw_id)
+            except (TypeError, ValueError):
+                return (jsonify({'success': False, 'error': 'ID ảnh không hợp lệ'}), 400)
+            if image_id > 0 and image_id not in image_ids:
+                image_ids.append(image_id)
+
+        if not image_ids:
+            return (jsonify({'success': False, 'error': 'Vui lòng chọn ít nhất một ảnh'}), 400)
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        ensure_album_images_table(cursor)
+        cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
+        if not cursor.fetchone():
+            return (jsonify({'success': False, 'error': 'Album không tồn tại'}), 404)
+
+        placeholders = ','.join(['%s'] * len(image_ids))
+        cursor.execute(
+            f'''
+                SELECT image_id, filepath
+                FROM album_images
+                WHERE album_id = %s AND image_id IN ({placeholders})
+            ''',
+            tuple([album_id] + image_ids),
+        )
+        images = cursor.fetchall()
+        if not images:
+            return (jsonify({'success': False, 'error': 'Không tìm thấy ảnh cần xóa trong album'}), 404)
+
+        ids_to_delete = [image['image_id'] for image in images]
+        delete_placeholders = ','.join(['%s'] * len(ids_to_delete))
+        cursor.execute(
+            f'DELETE FROM album_images WHERE album_id = %s AND image_id IN ({delete_placeholders})',
+            tuple([album_id] + ids_to_delete),
+        )
+        deleted_count = cursor.rowcount
+        conn.commit()
+
+        deleted_files = 0
+        for image in images:
+            try:
+                if _delete_album_image_file(image.get('filepath')):
+                    deleted_files += 1
+            except Exception as e:
+                logger.warning('Could not delete album image file %s: %s', image.get('filepath'), e)
+
+        return jsonify({
+            'success': True,
+            'message': f'Đã xóa {deleted_count} ảnh khỏi album',
+            'deleted_count': deleted_count,
+            'deleted_files': deleted_files,
+        })
+    except Exception as e:
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        logger.error(f'Error deleting album images: {e}', exc_info=True)
+        return (jsonify({'success': False, 'error': f'Lỗi khi xóa ảnh: {str(e)}'}), 500)
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 def serve_image(filename):
     """

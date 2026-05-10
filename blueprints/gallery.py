@@ -41,11 +41,13 @@ def _call_app(handler_name, *args, **kwargs):
         serve_genealogy_js,
         serve_image_static,
         api_gallery_anh1,
+        api_verify_album_password,
         api_get_albums,
         api_create_album,
         api_update_album,
         api_delete_album,
         api_get_album_images,
+        api_delete_album_images,
         serve_image,
     )
     handlers = {
@@ -60,11 +62,13 @@ def _call_app(handler_name, *args, **kwargs):
         'serve_genealogy_js': serve_genealogy_js,
         'serve_image_static': serve_image_static,
         'api_gallery_anh1': api_gallery_anh1,
+        'api_verify_album_password': api_verify_album_password,
         'api_get_albums': api_get_albums,
         'api_create_album': api_create_album,
         'api_update_album': api_update_album,
         'api_delete_album': api_delete_album,
         'api_get_album_images': api_get_album_images,
+        'api_delete_album_images': api_delete_album_images,
         'serve_image': serve_image,
     }
     fn = handlers[handler_name]
@@ -134,6 +138,11 @@ def api_gallery_anh1():
     return _call_app('api_gallery_anh1')
 
 
+@gallery_bp.route('/api/albums/verify-password', methods=['POST'])
+def api_verify_album_password():
+    return _call_app('api_verify_album_password')
+
+
 @gallery_bp.route('/api/albums', methods=['GET'])
 @rate_limit("90 per minute")
 def api_get_albums():
@@ -158,6 +167,11 @@ def api_delete_album(album_id):
 @gallery_bp.route('/api/albums/<int:album_id>/images', methods=['GET'])
 def api_get_album_images(album_id):
     return _call_app('api_get_album_images', album_id)
+
+
+@gallery_bp.route('/api/albums/<int:album_id>/images', methods=['DELETE'])
+def api_delete_album_images(album_id):
+    return _call_app('api_delete_album_images', album_id)
 
 
 @gallery_bp.route('/images/<path:filename>')

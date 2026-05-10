@@ -336,6 +336,42 @@
       color: #666;
       font-size: var(--font-size-base);
     }
+
+    .gallery-view-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      margin-left: auto;
+    }
+
+    .gallery-selection-toolbar {
+      display: none;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      width: 100%;
+      padding: var(--space-3);
+      background: rgba(139, 0, 0, 0.08);
+      border: 1px solid rgba(139, 0, 0, 0.16);
+      border-radius: var(--radius-md);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    .gallery-selection-toolbar.active {
+      display: flex;
+    }
+
+    .btn-danger {
+      background: var(--color-error);
+      color: white;
+      border-color: var(--color-error);
+    }
+
+    .btn-danger:hover {
+      filter: brightness(0.95);
+    }
     
     .gallery-container {
       min-height: 300px;
@@ -364,6 +400,15 @@
       transform: translateY(-6px) scale(1.02);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
       z-index: 1;
+    }
+
+    .gallery-item.selection-mode {
+      cursor: pointer;
+    }
+
+    .gallery-item.selected-for-delete {
+      border: 3px solid var(--color-error);
+      box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.16);
     }
     
     .gallery-item img {
@@ -404,6 +449,17 @@
       border-radius: 12px;
       font-size: var(--font-size-xs);
       font-weight: 600;
+    }
+
+    .gallery-select-checkbox {
+      position: absolute;
+      top: var(--space-2);
+      left: var(--space-2);
+      z-index: 3;
+      width: 28px;
+      height: 28px;
+      accent-color: var(--color-error);
+      cursor: pointer;
     }
     
     .gallery-loading {
@@ -901,6 +957,21 @@
               <h3 id="selectedAlbumTitle">Ảnh trong album</h3>
               <p id="selectedAlbumInfo"></p>
             </div>
+            <div class="gallery-view-actions">
+              <button class="btn btn-secondary" onclick="showManageImagesAuth()" title="Nhập mật khẩu để chọn và xóa ảnh">
+                Quản lý ảnh
+              </button>
+              <button class="btn btn-secondary" onclick="showUploadImagesModal(selectedAlbumId)" title="Upload thêm ảnh vào album">
+                Upload ảnh
+              </button>
+            </div>
+            <div id="gallerySelectionToolbar" class="gallery-selection-toolbar">
+              <span id="selectedImagesCount">Đã chọn 0 ảnh</span>
+              <button class="btn btn-secondary" onclick="selectAllGalleryImages()">Chọn tất cả</button>
+              <button class="btn btn-secondary" onclick="clearImageSelection()">Bỏ chọn</button>
+              <button class="btn btn-danger" onclick="deleteSelectedImages()">Xóa ảnh đã chọn</button>
+              <button class="btn btn-secondary" onclick="exitImageSelectionMode()">Thoát quản lý</button>
+            </div>
           </div>
           <div id="galleryContainer" class="gallery-container">
             <!-- Ảnh sẽ được render ở đây -->
@@ -1115,7 +1186,9 @@
     let selectedAlbumId = null;
     let currentAlbumEditId = null;
     let authenticatedPassword = null;
-    let pendingAction = null; // 'create', 'update', 'delete'
+    let pendingAction = null; // 'create', 'update', 'delete', 'manageImages'
+    let isImageSelectionMode = false;
+    let selectedImageIds = new Set();
     
     async function loadAlbums() {
       const albumsListEl = document.getElementById('albumsList');
@@ -1226,6 +1299,7 @@
     
     function selectAlbum(albumId) {
       selectedAlbumId = albumId;
+      exitImageSelectionMode({ rerender: false });
       
       // Ẩn grid albums, hiện gallery view
       const albumsGridContainer = document.querySelector('.albums-grid-container');
@@ -1242,6 +1316,7 @@
     }
     
     function closeGalleryView() {
+      exitImageSelectionMode({ rerender: false });
       selectedAlbumId = null;
       
       // Hiện grid albums, ẩn gallery view
@@ -1335,19 +1410,39 @@
       
       try {
         authenticatedPassword = password;
-        closePasswordModal();
         
         if (pendingAction === 'create') {
+          closePasswordModal();
           showAlbumModal();
         } else if (pendingAction === 'update') {
+          closePasswordModal();
           showAlbumModal();
         } else if (pendingAction === 'delete') {
+          closePasswordModal();
           await deleteAlbum(currentAlbumEditId);
+        } else if (pendingAction === 'manageImages') {
+          await verifyAlbumPassword(password);
+          closePasswordModal();
+          enterImageSelectionMode();
         }
       } catch (error) {
-        errorEl.textContent = 'Mật khẩu không đúng';
+        authenticatedPassword = null;
+        errorEl.textContent = error.message || 'Mật khẩu không đúng';
         errorEl.style.display = 'block';
       }
+    }
+
+    async function verifyAlbumPassword(password) {
+      const response = await fetch('/api/albums/verify-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Mật khẩu không đúng');
+      }
+      return true;
     }
     
     function showAlbumModal() {
@@ -1369,6 +1464,9 @@
       pendingAction = null;
       currentAlbumEditId = null;
       authenticatedPassword = null;
+      isImageSelectionMode = false;
+      selectedImageIds = new Set();
+      updateSelectionToolbar();
     }
     
     async function handleAlbumSubmit() {
@@ -1514,6 +1612,7 @@
           
           if (data.success && data.images && data.images.length > 0) {
             galleryImages = data.images.map(img => ({
+              image_id: img.image_id,
               url: img.url,
               filename: img.filename
             }));
@@ -1553,6 +1652,7 @@
       }
       
       if (images.length === 0) {
+        updateSelectionToolbar();
         galleryContainer.innerHTML = `
           <div style="text-align: center; padding: var(--space-10); color: var(--color-text-muted);">
             <div style="font-size: 64px; margin-bottom: var(--space-4);">📷</div>
@@ -1566,7 +1666,16 @@
       const html = `
         <div class="gallery-grid">
           ${images.map((image, index) => `
-            <div class="gallery-item" onclick="openLightbox(${index})">
+            <div class="gallery-item ${isImageSelectionMode ? 'selection-mode' : ''} ${selectedImageIds.has(image.image_id) ? 'selected-for-delete' : ''}" onclick="handleGalleryItemClick(${index})">
+              ${isImageSelectionMode ? `
+                <input
+                  type="checkbox"
+                  class="gallery-select-checkbox"
+                  ${selectedImageIds.has(image.image_id) ? 'checked' : ''}
+                  onclick="event.stopPropagation(); toggleImageSelection(${image.image_id});"
+                  aria-label="Chọn ảnh ${index + 1}"
+                >
+              ` : ''}
               <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.filename)}" loading="lazy"
                    onerror="this.parentElement.style.display='none';">
               <div class="gallery-item-overlay">
@@ -1577,6 +1686,115 @@
         </div>
       `;
       galleryContainer.innerHTML = html;
+      updateSelectionToolbar();
+    }
+
+    function handleGalleryItemClick(index) {
+      const image = galleryImages[index];
+      if (!image) return;
+      if (isImageSelectionMode) {
+        toggleImageSelection(image.image_id);
+        return;
+      }
+      openLightbox(index);
+    }
+
+    function showManageImagesAuth() {
+      if (!selectedAlbumId) {
+        alert('Vui lòng chọn album trước.');
+        return;
+      }
+      if (!galleryImages || galleryImages.length === 0) {
+        alert('Album này chưa có ảnh để quản lý.');
+        return;
+      }
+      pendingAction = 'manageImages';
+      showPasswordModal();
+    }
+
+    function enterImageSelectionMode() {
+      isImageSelectionMode = true;
+      selectedImageIds = new Set();
+      pendingAction = null;
+      renderGallery(galleryImages);
+    }
+
+    function exitImageSelectionMode(options = {}) {
+      isImageSelectionMode = false;
+      selectedImageIds = new Set();
+      updateSelectionToolbar();
+      if (options.rerender !== false && galleryImages) {
+        renderGallery(galleryImages);
+      }
+    }
+
+    function toggleImageSelection(imageId) {
+      if (!imageId) return;
+      if (selectedImageIds.has(imageId)) {
+        selectedImageIds.delete(imageId);
+      } else {
+        selectedImageIds.add(imageId);
+      }
+      renderGallery(galleryImages);
+    }
+
+    function selectAllGalleryImages() {
+      selectedImageIds = new Set(galleryImages.map(image => image.image_id).filter(Boolean));
+      renderGallery(galleryImages);
+    }
+
+    function clearImageSelection() {
+      selectedImageIds = new Set();
+      renderGallery(galleryImages);
+    }
+
+    function updateSelectionToolbar() {
+      const toolbar = document.getElementById('gallerySelectionToolbar');
+      const countEl = document.getElementById('selectedImagesCount');
+      if (!toolbar || !countEl) return;
+      toolbar.classList.toggle('active', isImageSelectionMode);
+      countEl.textContent = `Đã chọn ${selectedImageIds.size} ảnh`;
+    }
+
+    async function deleteSelectedImages() {
+      if (!selectedAlbumId || !authenticatedPassword) {
+        alert('Phiên xác thực đã hết hạn. Vui lòng nhập lại mật khẩu.');
+        showManageImagesAuth();
+        return;
+      }
+      const imageIds = Array.from(selectedImageIds);
+      if (imageIds.length === 0) {
+        alert('Vui lòng chọn ít nhất một ảnh để xóa.');
+        return;
+      }
+      if (!confirm(`Bạn có chắc chắn muốn xóa ${imageIds.length} ảnh đã chọn khỏi album này?`)) {
+        return;
+      }
+      try {
+        const response = await fetch(`/api/albums/${selectedAlbumId}/images`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            password: authenticatedPassword,
+            image_ids: imageIds
+          })
+        });
+        const result = await response.json();
+        if (!result.success) {
+          alert(result.error || 'Không thể xóa ảnh. Vui lòng thử lại.');
+          return;
+        }
+        selectedImageIds = new Set();
+        await loadAlbums();
+        await loadGallery();
+        if (!galleryImages.length) {
+          exitImageSelectionMode({ rerender: false });
+        }
+        alert(result.message || 'Đã xóa ảnh thành công.');
+      } catch (error) {
+        console.error('Error deleting selected images:', error);
+        alert('Lỗi khi xóa ảnh. Vui lòng thử lại.');
+      }
     }
     
     function openLightbox(index) {
