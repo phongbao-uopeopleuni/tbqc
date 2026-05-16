@@ -16,6 +16,14 @@ ENV/
 *.swp
 *.swo
 
+# Test / debug artifacts
+.playwright-mcp/
+.pytest_cache/
+
+# Phase 2 cleanup: anh duplicate da quarantine (cho verify website on dinh)
+# Sau khi verify ~2 tuan, co the xoa folder nay hoac move khoi repo
+static/images/_duplicates_quarantine/
+
 # Environment & Config files with sensitive data
 .env
 .env.*
