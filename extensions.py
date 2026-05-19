@@ -95,7 +95,11 @@ def init_extensions(app):
             cache_config = {
                 "CACHE_TYPE": "simple",
                 "CACHE_DEFAULT_TIMEOUT": 300,
-                "CACHE_THRESHOLD": 1000,
+                # Hien tai chi dung ~1-3 keys ('api_members_data', ...). 50 du
+                # toi gioi han item count cua SimpleCache va giam RAM neu sau
+                # nay co them keys nho. KHONG anh huong hanh vi hien tai.
+                # Xem docs/RAM_OPTIMIZATION_ROLLBACK.md de revert.
+                "CACHE_THRESHOLD": 50,
             }
             cache.init_app(app, config=cache_config)
             print("OK: Flask-Caching da duoc khoi tao")
