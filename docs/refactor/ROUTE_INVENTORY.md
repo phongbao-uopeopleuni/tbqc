@@ -1,8 +1,11 @@
 # Route Inventory
 
 > Day du route runtime cua tbqc. Cot Risk Tier va Domain de input cho Phase 1/2/3.
-> Filled: Step 3, 2026-05-20. Total: 113 routes (15 app.py + 28 admin_routes + 6 main + 5 auth +
-> 7 activities + 8 family_tree + 12 persons + 8 members_portal + 19 gallery + 1 admin_bp + 4 marriage_api).
+> Filled: Step 3, 2026-05-20. Updated Step 6 (verify against app.url_map.iter_rules()).
+> Total: 114 routes (15 app.py + 28 admin_routes + 6 main + 5 auth + 7 activities + 8 family_tree +
+> 12 persons + 8 members_portal + 19 gallery + 1 admin_bp + 4 marriage_api + 1 page_views).
+> + 2 fallback routes via `app.add_url_rule()` o app.py:1898-1899 (CONFLICT — xem NOTES).
+> Runtime endpoint count: 117 (= 114 + 3 conflict duplicate endpoint).
 
 ## Format
 
@@ -36,11 +39,23 @@ P2 = health, static-ish, debug/internal, utility low-risk
 ## NOTES tong quat (phat hien o Step 3)
 
 ```
-[CONFLICT] /api/activities/can-post duoc dang ky 2 lan:
+[CONFLICT 1] /api/activities/can-post duoc dang ky 2 lan:
   - admin_routes.py:262  endpoint=api_activities_can_post
   - blueprints/activities.py:165  endpoint=activities.api_activities_can_post
   Blueprint dang ky SAU admin_routes => activities.api_activities_can_post wins cho routing.
   admin_routes endpoint ton tai nhung khong co the reach qua URL.
+
+[CONFLICT 2] /api/tree (GET) duoc dang ky 2 lan:
+  - blueprints/family_tree.py:66  endpoint=family_tree.get_tree
+  - app.py:1898  endpoint=api_tree (via app.add_url_rule, NOT @app.route)
+  app.py:1898 chay SAU register_blueprints => endpoint 'api_tree' wins cho routing.
+  Comment o app.py:1896: "Fallback API routes... dam bao luon ton tai (ke ca khi blueprint chua load)".
+  Intentional defensive code — KHONG xoa truoc khi xac dinh blueprint load failure mode.
+
+[CONFLICT 3] /api/generations (GET) duoc dang ky 2 lan:
+  - blueprints/family_tree.py:84  endpoint=family_tree.get_generations_api
+  - app.py:1899  endpoint=api_generations (via app.add_url_rule)
+  Same fallback pattern as /api/tree.
 
 [MISSING AUTH] blueprints/persons.py: delete_person, create_person,
   delete_persons_batch, update_person_members dung password_in_body (khong Flask-Login).
@@ -216,6 +231,24 @@ P2 = health, static-ish, debug/internal, utility low-risk
 |---|---|---|---|---|---|---|---|---|---|---|
 | /api/admin/sync-tbqc-accounts | POST | admin.api_sync_tbqc_accounts | api_sync_tbqc_accounts | blueprints/admin.py:16 | blueprint | admin_users | P0 | login_required | N | N |
 
+## 12. services/page_views.py (register pattern) — 1 route + 1 before_request hook
+
+Registered via `register_page_views(app)` called from app.py:180. Cung dat 1 `@app.before_request`
+hook tai L310 — chay cho MOI request, KHONG la route. Phase 3 phai preserve.
+
+| URL | Method | Endpoint | Handler | File:Line | Pattern | Domain | Risk | Auth | Audit | HasTest |
+|---|---|---|---|---|---|---|---|---|---|---|
+| /api/admin/log-stats | GET | api_admin_log_stats | api_admin_log_stats | services/page_views.py:316 | register | admin_logs | P1 | login_required+role_check | N | N |
+
+## 13. app.py add_url_rule fallback (2 routes — CONFLICT, see NOTES)
+
+Dang ky tai cuoi app.py (L1898-1899), SAU register_blueprints. Endpoint moi shadow blueprint endpoint.
+
+| URL | Method | Endpoint | Handler | File:Line | Pattern | Domain | Risk | Auth | Audit | HasTest |
+|---|---|---|---|---|---|---|---|---|---|---|
+| /api/tree | GET | api_tree | get_tree (app.py:788) | app.py:1898 | add_url_rule | family_tree | P1 | none | N | N |
+| /api/generations | GET | api_generations | get_generations_api (app.py) | app.py:1899 | add_url_rule | family_tree | P1 | none | N | N |
+
 ## 11. marriage_api.py (register pattern) — 4 routes
 
 | URL | Method | Endpoint | Handler | File:Line | Pattern | Domain | Risk | Auth | Audit | HasTest |
@@ -231,7 +264,8 @@ P2 = health, static-ish, debug/internal, utility low-risk
 
 | Source | Routes | P0 | P1 | P2 |
 |---|---|---|---|---|
-| app.py | 15 | 5 | 8 | 2 |
+| app.py (@app.route) | 15 | 5 | 8 | 2 |
+| app.py (add_url_rule fallback) | 2 | 0 | 2 | 0 |
 | admin_routes.py | 28 | 14 | 13 | 1 |
 | blueprints/main.py | 6 | 1 | 2 | 3 |
 | blueprints/auth.py | 5 | 2 | 1 | 2 |
@@ -242,7 +276,10 @@ P2 = health, static-ish, debug/internal, utility low-risk
 | blueprints/gallery.py | 19 | 8 | 4 | 7 |
 | blueprints/admin.py | 1 | 1 | 0 | 0 |
 | marriage_api.py | 4 | 3 | 1 | 0 |
-| **TOTAL** | **113** | **46** | **45** | **22** |
+| services/page_views.py | 1 | 0 | 1 | 0 |
+| **TOTAL (unique URL+method)** | **114** | **46** | **47** | **22** |
+| Conflict duplicates | +3 | | | |
+| **Runtime endpoint count** | **117** | | | |
 
 ## Domain groups (cho Phase 1/2 split)
 
@@ -253,7 +290,7 @@ admin_users       : /admin/users, /admin/api/users/*, /api/admin/users/*, /api/a
 admin_requests    : /admin/requests, /admin/api/requests/*/process
 admin_members     : /admin/api/members/*
 admin_data        : /admin/data-management, /admin/api/db-info, /admin/api/schema, /admin/api/table-stats, /admin/api/csv-data/*
-admin_logs        : /admin/logs, /api/admin/activity-logs, /api/admin/reset-logs
+admin_logs        : /admin/logs, /api/admin/activity-logs, /api/admin/reset-logs, /api/admin/log-stats
 admin_backup      : /api/admin/backup, /api/admin/backups, /api/admin/backup/<f>, /admin/api/backup, /admin/api/backup/download/<f>
 admin_activities  : /admin/activities, /api/activities/can-post (admin_routes instance)
 public            : /, /genealogy, /contact, /documents, /privacy

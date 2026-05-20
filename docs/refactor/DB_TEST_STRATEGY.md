@@ -6,11 +6,45 @@
 
 | Option | Status | Ghi chu |
 |---|---|---|
-| **A. Local MySQL 8.0 test DB rieng** | **PREFERRED** | Khac DB local dev (`tbqc_test` vs `tbqc_db`); seed schema; truncate giua test |
-| B. testcontainers[mysql] | acceptable | Tu dong tao container; chau tre boot ~5s; can Docker Desktop |
+| **A. Local MySQL 8.0 test DB rieng** | **BLOCKED** (xem ben duoi) | `mysql` CLI khong co tren PATH workstation hien tai |
+| B. testcontainers[mysql] | acceptable | Tu dong tao container; tre boot ~5s; can Docker Desktop |
 | C. Mock DB | KHONG dung cho mutation/audit | Chi cho pure helper / validation |
+| D. Skip mutation test | acceptable trong Phase 0b | Smoke + contract + golden HTML van chay; mat coverage mutation/audit |
 
-Khuyen nghi: **A**. Don gian, khong can Docker, hop voi dev workflow Windows.
+## BLOCK Phase 0b — mysql CLI khong co tren PATH
+
+Verify 2026-05-20 Step 6:
+```powershell
+mysql --version    # command not found (bash + PowerShell)
+where mysql         # empty
+```
+
+Option A goc khong chay duoc vi:
+```powershell
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS tbqc_test ..."   # FAIL
+mysql -u root -p tbqc_test < folder_sql/reset_schema_tbqc.sql       # FAIL
+```
+
+**User quyet dinh truoc khi vao Phase 0b** (1 trong 4):
+
+| Lua chon | Action item |
+|---|---|
+| **A1. Cai MySQL CLI** | Cai MySQL Server 8.0 -> them `C:\Program Files\MySQL\MySQL Server 8.0\bin` vao PATH -> `mysql --version` ok |
+| **A2. Dung mysqldump qua Python** | Skip CLI, dung `mysql.connector` truc tiep tao schema (cham hon nhung khong can install) |
+| **B. Docker testcontainers** | Cai Docker Desktop -> `pip install testcontainers[mysql]` -> conftest spin container |
+| **D. Skip mutation test** | Chap nhan gap mutation+audit, lam Phase 0b voi smoke+contract+golden only |
+
+Khuyen nghi: **A2** neu da co MySQL local nhung CLI khong tren PATH (don gian nhat).
+**B** neu chua co MySQL local (clean slate).
+
+## Verify MySQL local installed (Windows)
+
+```powershell
+Get-Service MySQL*                                  # Check Windows service
+Test-Path "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"  # Check binary
+```
+
+Neu Service co + binary co => Option A1 (chi can them PATH). Neu khong => Option B/D.
 
 ## Local MySQL test DB setup
 

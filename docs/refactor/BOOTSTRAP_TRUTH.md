@@ -24,6 +24,18 @@
 4. render.yaml chi la Render fallback, phai khop Procfile.
 5. Thu tu init trong app.py: `Config.init_app(app)` -> `init_extensions(app)` -> error hardening -> `init_login_manager(app)` -> `register_blueprints(app)` -> `register_admin_routes(app)` -> `register_marriage_routes(app)` -> `register_page_views(app)`. Khong doi thu tu.
 
+## Request hooks (Phase 3 phai preserve nguyen ven)
+
+Verified bang `grep -rn "@.*before_request\|@.*after_request" --include="*.py"`:
+
+| File:Line | Hook | Purpose |
+|---|---|---|
+| app.py:78 | `@app.after_request _add_security_headers` | Gan HSTS, X-Content-Type, X-Frame, CSP frame-ancestors, Referrer-Policy. Dung `setdefault` (KHONG de header route da set). |
+| services/page_views.py:310 | `@app.before_request _page_view_before_request` | Ghi page view vao bang `page_views` cho moi GET. Phai chay TRUOC mat ky route handler. |
+
+Error handlers (app.py): `@app.errorhandler(500)` L1904, `(404)` L1926, `(403)` L1966, `(429)` L1974.
+Khong dung error handler cap blueprint.
+
 ## Local dev env (tu pre-flight 2026-05-20)
 
 - Python: **3.13.5** (newer than Railway likely 3.11.x)

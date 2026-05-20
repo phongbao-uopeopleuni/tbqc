@@ -17,11 +17,15 @@ db.py
 folder_py/db_config.py
 folder_py/genealogy_tree.py
 blueprints/__init__.py
+services/page_views.py
 Procfile
 render.yaml
 instance/secret_key
 tests/conftest.py
 ```
+
+`services/page_views.py` frozen vi: register 1 route (`/api/admin/log-stats`) + 1 `@before_request`
+hook (chay moi request, ghi page view vao bang `page_views`). Doi vi tri file = restart loop.
 
 Quy tac: Phase 1+ co the **noi dung** cua file frozen (tach code ra module moi), nhung **vi tri** + **ten** file phai giu nguyen. File cu tro thanh facade re-export.
 

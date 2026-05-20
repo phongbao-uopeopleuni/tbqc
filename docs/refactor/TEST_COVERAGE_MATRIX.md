@@ -63,6 +63,12 @@ audit row assertion, template golden HTML, url_map snapshot.
 
 ---
 
+## Total: 114 unique routes + 3 conflict duplicates = 117 endpoint registrations
+
+```
+P0: 46 routes    P1: 47 routes    P2: 22 routes (gap accepted)
+```
+
 ## P0 matrix — 46 routes (theo source file)
 
 ### app.py (5 P0)
@@ -149,6 +155,7 @@ P1 read API can co JSON contract fixture de Phase 1/2 refactor khong break shape
 | Route | Domain | Smoke | Contract | Test File | Fixture priority |
 |---|---|---|---|---|---|
 | GET /api/health | infra | Y | Y | test_health_and_cache_security.py | **P0 — baseline ton tai** |
+| GET /api/admin/log-stats | admin_logs | gap | gap | (chua co) | P1 — admin read, auth gap test |
 | GET /api/persons | persons | Y | gap | test_api_routes.py | **P0** — public bulk |
 | GET /api/person/\<id\> | persons | Y | gap | test_api_routes.py | **P0** — public single |
 | GET /api/members | members_gate | Y | partial | test_api_routes.py | **P0** — gated |

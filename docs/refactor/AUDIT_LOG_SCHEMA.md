@@ -108,6 +108,13 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 `SELECT user_id FROM users` ma TRUNCATE da xoa user_id session. Direct INSERT voi
 `user_id=actor_user_id` da capture truoc khi truncate.
 
+**Scope LOG_RESET TRUNCATE** (services/log_reset.py:32):
+```python
+LOG_TABLES = ("activity_logs", "page_views")
+```
+RESET cung TRUNCATE bang `page_views` (chua page view tracking tu services/page_views.py).
+Phase 0b test mutation phai dam bao **ca 2 bang reset** truoc moi test scenario can clean state.
+
 ## Actions thuc te emit (12 distinct)
 
 ```
