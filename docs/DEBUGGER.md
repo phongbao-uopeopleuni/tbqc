@@ -1,42 +1,43 @@
-## Hướng dẫn cho Debugger (không commit mật khẩu)
+﻿## HÆ°á»›ng dáº«n cho Debugger (khÃ´ng commit máº­t kháº©u)
 
-Dự án này **không lưu** username/password/server thật trong Git. Tất cả thông tin nhạy cảm được nạp từ **biến môi trường** hoặc file local (ví dụ `.env`, `tbqc_db.env`) vốn đã được `.gitignore`.
+Dá»± Ã¡n nÃ y **khÃ´ng lÆ°u** username/password/server tháº­t trong Git. Táº¥t cáº£ thÃ´ng tin nháº¡y cáº£m Ä‘Æ°á»£c náº¡p tá»« **biáº¿n mÃ´i trÆ°á»ng** hoáº·c file local (vÃ­ dá»¥ `.env`, `tbqc_db.env`) vá»‘n Ä‘Ã£ Ä‘Æ°á»£c `.gitignore`.
 
-Mục tiêu của tài liệu này là giúp debugger đọc code và hiểu “secret đi vào hệ thống như thế nào” mà không cần thấy giá trị thật.
+Má»¥c tiÃªu cá»§a tÃ i liá»‡u nÃ y lÃ  giÃºp debugger Ä‘á»c code vÃ  hiá»ƒu â€œsecret Ä‘i vÃ o há»‡ thá»‘ng nhÆ° tháº¿ nÃ oâ€ mÃ  khÃ´ng cáº§n tháº¥y giÃ¡ trá»‹ tháº­t.
 
-### 1) Các nhóm cấu hình chính
+### 1) CÃ¡c nhÃ³m cáº¥u hÃ¬nh chÃ­nh
 
-- **Kết nối Database**
+- **Káº¿t ná»‘i Database**
   - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-  - Code lấy từ env (hoặc biến tương đương `MYSQL*` tùy nền tảng).
+  - Code láº¥y tá»« env (hoáº·c biáº¿n tÆ°Æ¡ng Ä‘Æ°Æ¡ng `MYSQL*` tÃ¹y ná»n táº£ng).
 
 - **Flask session/cookie**
-  - `SECRET_KEY` (bắt buộc trên production)
-  - `COOKIE_DOMAIN` (production, dùng chung cho domain và www)
+  - `SECRET_KEY` (báº¯t buá»™c trÃªn production)
+  - `COOKIE_DOMAIN` (production, dÃ¹ng chung cho domain vÃ  www)
 
-- **Auth/Password nội bộ**
+- **Auth/Password ná»™i bá»™**
   - `MEMBERS_PASSWORD`, `ADMIN_PASSWORD`, `BACKUP_PASSWORD`
-  - `ALBUM_PASSWORD` (tuỳ chọn)
-  - `GRAVE_IMAGE_DELETE_PASSWORD` (tuỳ chọn)
-  - `MEMBERS_FIXED_ACCOUNTS` (tuỳ chọn): danh sách user/pass cố định cho cổng Members
+  - `ALBUM_PASSWORD` (tuá»³ chá»n)
+  - `GRAVE_IMAGE_DELETE_PASSWORD` (tuá»³ chá»n)
+  - `MEMBERS_FIXED_ACCOUNTS` (tuá»³ chá»n): danh sÃ¡ch user/pass cá»‘ Ä‘á»‹nh cho cá»•ng Members
     - Format: `user1:pass1,user2:pass2`
 
-- **Passphrase mở trang Gia phả**
-  - `GENEALOGY_PASSPHRASES` (phân cách bằng dấu phẩy)
-    - Ví dụ: `phrase1,phrase2,phrase3`
+- **Passphrase má»Ÿ trang Gia pháº£**
+  - `GENEALOGY_PASSPHRASES` (phÃ¢n cÃ¡ch báº±ng dáº¥u pháº©y)
+    - VÃ­ dá»¥: `phrase1,phrase2,phrase3`
 
-### 2) Điểm vào (entrypoint)
+### 2) Äiá»ƒm vÃ o (entrypoint)
 
-- Chạy ứng dụng từ `app.py` (thư mục gốc repo). Blueprints được đăng ký từ đây.
+- Cháº¡y á»©ng dá»¥ng tá»« `app.py` (thÆ° má»¥c gá»‘c repo). Blueprints Ä‘Æ°á»£c Ä‘Äƒng kÃ½ tá»« Ä‘Ã¢y.
 
-### 3) Luồng bảo vệ trang Gia phả (passphrase)
+### 3) Luá»“ng báº£o vá»‡ trang Gia pháº£ (passphrase)
 
-- Frontend (`templates/genealogy.html`) gọi API:
-  - `POST /api/genealogy/verify-passphrase` với JSON `{ "passphrase": "..." }`
-- Backend (`blueprints/main.py`) kiểm tra passphrase dựa trên env `GENEALOGY_PASSPHRASES`.
+- Frontend (`templates/genealogy.html`) gá»i API:
+  - `POST /api/genealogy/verify-passphrase` vá»›i JSON `{ "passphrase": "..." }`
+- Backend (`blueprints/main.py`) kiá»ƒm tra passphrase dá»±a trÃªn env `GENEALOGY_PASSPHRASES`.
 
-### 4) Gợi ý cách set env khi debug
+### 4) Gá»£i Ã½ cÃ¡ch set env khi debug
 
-- Tạo file `.env` local dựa trên `.env.example` và điền giá trị thật.
-- Hoặc cấu hình “Environment variables” ngay trong IDE/debugger profile (khuyến nghị nếu không muốn tạo file).
+- Táº¡o file `.env` local dá»±a trÃªn `.env.example` vÃ  Ä‘iá»n giÃ¡ trá»‹ tháº­t.
+- Hoáº·c cáº¥u hÃ¬nh â€œEnvironment variablesâ€ ngay trong IDE/debugger profile (khuyáº¿n nghá»‹ náº¿u khÃ´ng muá»‘n táº¡o file).
+
 

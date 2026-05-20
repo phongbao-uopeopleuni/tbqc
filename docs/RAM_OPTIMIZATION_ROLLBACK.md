@@ -1,85 +1,85 @@
-# RAM Optimization — Rollback Guide
+﻿# RAM Optimization â€” Rollback Guide
 
-> **Ngày áp dụng:** 2026-05-20
-> **Lý do:** Railway RAM baseline ~500 MB, cost RAM = 96% tổng chi phí (~$4.24/$4.41 ngày). Operator đồng ý chỉ áp dụng 3 thay đổi an toàn.
-> **Trạng thái mục tiêu:** Drop RAM baseline xuống ~350 MB mà KHÔNG đụng logic/UX hiện tại.
-> **Cập nhật cuối:** 2026-05-20
+> **NgÃ y Ã¡p dá»¥ng:** 2026-05-20
+> **LÃ½ do:** Railway RAM baseline ~500 MB, cost RAM = 96% tá»•ng chi phÃ­ (~$4.24/$4.41 ngÃ y). Operator Ä‘á»“ng Ã½ chá»‰ Ã¡p dá»¥ng 3 thay Ä‘á»•i an toÃ n.
+> **Tráº¡ng thÃ¡i má»¥c tiÃªu:** Drop RAM baseline xuá»‘ng ~350 MB mÃ  KHÃ”NG Ä‘á»¥ng logic/UX hiá»‡n táº¡i.
+> **Cáº­p nháº­t cuá»‘i:** 2026-05-20
 
 ---
 
-## Tóm tắt 3 thay đổi đã apply
+## TÃ³m táº¯t 3 thay Ä‘á»•i Ä‘Ã£ apply
 
-| # | Thay đổi | File | Loại | Risk |
+| # | Thay Ä‘á»•i | File | Loáº¡i | Risk |
 |---|---|---|---|---|
-| 0.1 | `MALLOC_ARENA_MAX=2` env var | Railway dashboard | Env config | 🟢 Zero |
-| 0.2 | Xóa `openai`, `anthropic` | `requirements.txt` | Dependency | 🟢 Zero (đã verify không import) |
-| 2.8 | `CACHE_THRESHOLD 1000 → 50` | `extensions.py` | Config số | 🟢 Zero |
+| 0.1 | `MALLOC_ARENA_MAX=2` env var | Railway dashboard | Env config | ðŸŸ¢ Zero |
+| 0.2 | XÃ³a `openai`, `anthropic` | `requirements.txt` | Dependency | ðŸŸ¢ Zero (Ä‘Ã£ verify khÃ´ng import) |
+| 2.8 | `CACHE_THRESHOLD 1000 â†’ 50` | `extensions.py` | Config sá»‘ | ðŸŸ¢ Zero |
 
 **Expected drop:** ~100-150 MB baseline RAM.
 
 ---
 
-## 1. `MALLOC_ARENA_MAX=2` — Tuning glibc malloc
+## 1. `MALLOC_ARENA_MAX=2` â€” Tuning glibc malloc
 
-### Tại sao
-glibc malloc mặc định tạo `8 × số CPU` arenas để tránh contention giữa threads. Trên Railway (multi-core host), điều này tạo **8-32 arenas**, mỗi arena giữ một pool RAM riêng → fragmentation lớn. Python web app multi-thread (như Gunicorn `--threads 2`) chỉ cần **2 arenas**.
+### Táº¡i sao
+glibc malloc máº·c Ä‘á»‹nh táº¡o `8 Ã— sá»‘ CPU` arenas Ä‘á»ƒ trÃ¡nh contention giá»¯a threads. TrÃªn Railway (multi-core host), Ä‘iá»u nÃ y táº¡o **8-32 arenas**, má»—i arena giá»¯ má»™t pool RAM riÃªng â†’ fragmentation lá»›n. Python web app multi-thread (nhÆ° Gunicorn `--threads 2`) chá»‰ cáº§n **2 arenas**.
 
-Đây là tuning **chuẩn industry** (Instagram, dropbox, instagram engineering blog đều khuyến cáo). KHÔNG đụng code Python, chỉ là hint cho thư viện C của Linux.
+ÄÃ¢y lÃ  tuning **chuáº©n industry** (Instagram, dropbox, instagram engineering blog Ä‘á»u khuyáº¿n cÃ¡o). KHÃ”NG Ä‘á»¥ng code Python, chá»‰ lÃ  hint cho thÆ° viá»‡n C cá»§a Linux.
 
-### Cách áp dụng trên Railway
+### CÃ¡ch Ã¡p dá»¥ng trÃªn Railway
 
-1. Vào Railway Dashboard → Project **giapha** → Service web (tbqc-giapha hoặc tên service).
-2. Tab **Variables** → **+ New Variable**.
+1. VÃ o Railway Dashboard â†’ Project **giapha** â†’ Service web (tbqc-giapha hoáº·c tÃªn service).
+2. Tab **Variables** â†’ **+ New Variable**.
 3. Name: `MALLOC_ARENA_MAX`
 4. Value: `2`
-5. Save → Railway tự deploy lại.
+5. Save â†’ Railway tá»± deploy láº¡i.
 
-**Xác minh sau deploy:**
-- Vào tab **Metrics** → quan sát biểu đồ RAM trong 1-2 giờ.
-- Baseline RAM nên giảm 80-150 MB (từ ~500 MB xuống ~350-400 MB).
-- KHÔNG có lỗi mới trong logs.
+**XÃ¡c minh sau deploy:**
+- VÃ o tab **Metrics** â†’ quan sÃ¡t biá»ƒu Ä‘á»“ RAM trong 1-2 giá».
+- Baseline RAM nÃªn giáº£m 80-150 MB (tá»« ~500 MB xuá»‘ng ~350-400 MB).
+- KHÃ”NG cÃ³ lá»—i má»›i trong logs.
 
-### Rollback nếu có vấn đề
+### Rollback náº¿u cÃ³ váº¥n Ä‘á»
 
-**Triệu chứng cần rollback:**
-- Performance giảm rõ rệt (response time tăng > 2x).
-- App crash bất thường liên quan đến memory allocator.
-- (Cực hiếm — chưa từng ghi nhận case nào trong thực tế cho Python web)
+**Triá»‡u chá»©ng cáº§n rollback:**
+- Performance giáº£m rÃµ rá»‡t (response time tÄƒng > 2x).
+- App crash báº¥t thÆ°á»ng liÃªn quan Ä‘áº¿n memory allocator.
+- (Cá»±c hiáº¿m â€” chÆ°a tá»«ng ghi nháº­n case nÃ o trong thá»±c táº¿ cho Python web)
 
-**Cách rollback:**
-1. Railway Dashboard → Service → Variables.
-2. Xóa biến `MALLOC_ARENA_MAX` (hoặc đổi value về `0` để dùng default).
-3. Save → Railway redeploy → quay về hành vi cũ.
+**CÃ¡ch rollback:**
+1. Railway Dashboard â†’ Service â†’ Variables.
+2. XÃ³a biáº¿n `MALLOC_ARENA_MAX` (hoáº·c Ä‘á»•i value vá» `0` Ä‘á»ƒ dÃ¹ng default).
+3. Save â†’ Railway redeploy â†’ quay vá» hÃ nh vi cÅ©.
 
-**Thời gian rollback:** ~30 giây.
+**Thá»i gian rollback:** ~30 giÃ¢y.
 
 ---
 
-## 2. Xóa `openai` và `anthropic` khỏi `requirements.txt`
+## 2. XÃ³a `openai` vÃ  `anthropic` khá»i `requirements.txt`
 
-### Tại sao
-Verify lần 2 bằng `grep` toàn repo: **0 file `.py`** import `openai` hoặc `anthropic` (cả runtime, blueprints, services, utils, scripts). Đây là dead dependencies từ một thử nghiệm cũ.
+### Táº¡i sao
+Verify láº§n 2 báº±ng `grep` toÃ n repo: **0 file `.py`** import `openai` hoáº·c `anthropic` (cáº£ runtime, blueprints, services, utils, scripts). ÄÃ¢y lÃ  dead dependencies tá»« má»™t thá»­ nghiá»‡m cÅ©.
 
-Trên Railway:
-- Container nhỏ hơn (~50 MB ít disk).
-- Không có transitive import side-effect.
-- Build deploy nhanh hơn 10-15 giây.
+TrÃªn Railway:
+- Container nhá» hÆ¡n (~50 MB Ã­t disk).
+- KhÃ´ng cÃ³ transitive import side-effect.
+- Build deploy nhanh hÆ¡n 10-15 giÃ¢y.
 
-### Verification trước khi áp dụng (đã làm)
+### Verification trÆ°á»›c khi Ã¡p dá»¥ng (Ä‘Ã£ lÃ m)
 
 ```bash
-# Cả 2 grep đều ZERO matches:
+# Cáº£ 2 grep Ä‘á»u ZERO matches:
 grep -r "import openai" --include="*.py" D:\tbqc
 grep -r "import anthropic" --include="*.py" D:\tbqc
 grep -r "from openai" --include="*.py" D:\tbqc
 grep -r "from anthropic" --include="*.py" D:\tbqc
 ```
 
-Các match khác là trong:
-- Markdown docs (`AI_PROJECT_MEMORY.md`, `SRS.md`, `CLAUDE.md`, ...): chỉ là note, không phải code.
-- `skills/` folder: file định nghĩa skill cho Cursor/Claude editor, không phải runtime.
+CÃ¡c match khÃ¡c lÃ  trong:
+- Markdown docs (`AI_PROJECT_MEMORY.md`, `SRS.md`, `CLAUDE.md`, ...): chá»‰ lÃ  note, khÃ´ng pháº£i code.
+- `skills/` folder: file Ä‘á»‹nh nghÄ©a skill cho Cursor/Claude editor, khÃ´ng pháº£i runtime.
 
-### Thay đổi cụ thể
+### Thay Ä‘á»•i cá»¥ thá»ƒ
 
 ```diff
 # requirements.txt
@@ -88,38 +88,38 @@ Các match khác là trong:
   flask-wtf==1.2.1
 ```
 
-### Rollback nếu cần
+### Rollback náº¿u cáº§n
 
-**Triệu chứng cần rollback:**
-- Sau deploy, log có `ModuleNotFoundError: No module named 'openai'` hoặc `'anthropic'`.
-- (Cực kỳ ít khả năng — đã verify)
+**Triá»‡u chá»©ng cáº§n rollback:**
+- Sau deploy, log cÃ³ `ModuleNotFoundError: No module named 'openai'` hoáº·c `'anthropic'`.
+- (Cá»±c ká»³ Ã­t kháº£ nÄƒng â€” Ä‘Ã£ verify)
 
-**Cách rollback:**
-1. Mở `requirements.txt`.
-2. Thêm lại 2 dòng:
+**CÃ¡ch rollback:**
+1. Má»Ÿ `requirements.txt`.
+2. ThÃªm láº¡i 2 dÃ²ng:
    ```
    openai>=1.0.0
    anthropic>=0.18.0
    ```
-3. Commit + push → Railway redeploy.
+3. Commit + push â†’ Railway redeploy.
 
-**Thời gian rollback:** ~3-5 phút (bao gồm redeploy).
+**Thá»i gian rollback:** ~3-5 phÃºt (bao gá»“m redeploy).
 
 ---
 
-## 3. `CACHE_THRESHOLD 1000 → 50` trong `extensions.py`
+## 3. `CACHE_THRESHOLD 1000 â†’ 50` trong `extensions.py`
 
-### Tại sao
-Flask-Caching `SimpleCache` dùng dict in-memory. `CACHE_THRESHOLD` là số item tối đa, KHÔNG phải kích thước RAM. Hiện tại codebase chỉ dùng vài key (`api_members_data` là chính), nên 1000 là dư thừa.
+### Táº¡i sao
+Flask-Caching `SimpleCache` dÃ¹ng dict in-memory. `CACHE_THRESHOLD` lÃ  sá»‘ item tá»‘i Ä‘a, KHÃ”NG pháº£i kÃ­ch thÆ°á»›c RAM. Hiá»‡n táº¡i codebase chá»‰ dÃ¹ng vÃ i key (`api_members_data` lÃ  chÃ­nh), nÃªn 1000 lÃ  dÆ° thá»«a.
 
-Giảm xuống 50 là **bảo vệ trước**: nếu code tương lai thêm cache key nhỏ, không vô tình tích lũy lên 1000 items.
+Giáº£m xuá»‘ng 50 lÃ  **báº£o vá»‡ trÆ°á»›c**: náº¿u code tÆ°Æ¡ng lai thÃªm cache key nhá», khÃ´ng vÃ´ tÃ¬nh tÃ­ch lÅ©y lÃªn 1000 items.
 
-**KHÔNG ảnh hưởng:**
-- Cache `api_members_data` vẫn hoạt động bình thường.
-- Cache hit/miss logic không đổi.
-- TTL 300s không đổi.
+**KHÃ”NG áº£nh hÆ°á»Ÿng:**
+- Cache `api_members_data` váº«n hoáº¡t Ä‘á»™ng bÃ¬nh thÆ°á»ng.
+- Cache hit/miss logic khÃ´ng Ä‘á»•i.
+- TTL 300s khÃ´ng Ä‘á»•i.
 
-### Thay đổi cụ thể
+### Thay Ä‘á»•i cá»¥ thá»ƒ
 
 ```diff
 # extensions.py (function init_extensions)
@@ -131,86 +131,87 @@ Giảm xuống 50 là **bảo vệ trước**: nếu code tương lai thêm cach
   }
 ```
 
-### Rollback nếu cần
+### Rollback náº¿u cáº§n
 
-**Triệu chứng cần rollback:**
-- Log warning: "Cache eviction: too many items" (cực hiếm — sẽ cần > 50 keys).
-- Members page chậm bất thường (cache miss liên tục).
+**Triá»‡u chá»©ng cáº§n rollback:**
+- Log warning: "Cache eviction: too many items" (cá»±c hiáº¿m â€” sáº½ cáº§n > 50 keys).
+- Members page cháº­m báº¥t thÆ°á»ng (cache miss liÃªn tá»¥c).
 
-**Cách rollback:**
-1. Mở `D:\tbqc\extensions.py`, tìm `CACHE_THRESHOLD`.
-2. Đổi `50` về `1000`.
-3. Commit + push → Railway redeploy.
+**CÃ¡ch rollback:**
+1. Má»Ÿ `D:\tbqc\extensions.py`, tÃ¬m `CACHE_THRESHOLD`.
+2. Äá»•i `50` vá» `1000`.
+3. Commit + push â†’ Railway redeploy.
 
-**Thời gian rollback:** ~3-5 phút.
+**Thá»i gian rollback:** ~3-5 phÃºt.
 
 ---
 
-## Plan giám sát sau deploy
+## Plan giÃ¡m sÃ¡t sau deploy
 
-### 24h đầu
+### 24h Ä‘áº§u
 
-| Checkpoint | Mục tiêu | Hành động nếu fail |
+| Checkpoint | Má»¥c tiÃªu | HÃ nh Ä‘á»™ng náº¿u fail |
 |---|---|---|
-| Build success | Railway log "Build successful" | Đọc build log; thường do dependency typo |
-| Boot success | App log "Flask app da duoc khoi tao" | Đọc startup log; có thể do dependency thiếu |
+| Build success | Railway log "Build successful" | Äá»c build log; thÆ°á»ng do dependency typo |
+| Boot success | App log "Flask app da duoc khoi tao" | Äá»c startup log; cÃ³ thá»ƒ do dependency thiáº¿u |
 | `/api/health` HTTP 200 | `{"status": "ok"}` | Check DB connection |
-| Members page load | Không 5xx, render OK | Check `/api/members` log; xem có "ModuleNotFoundError" |
-| Admin login work | `/admin/login` → dashboard | Test password verify, session |
-| Activities page load | Render OK | RSS có thể không có ngay nếu cache cleared |
+| Members page load | KhÃ´ng 5xx, render OK | Check `/api/members` log; xem cÃ³ "ModuleNotFoundError" |
+| Admin login work | `/admin/login` â†’ dashboard | Test password verify, session |
+| Activities page load | Render OK | RSS cÃ³ thá»ƒ khÃ´ng cÃ³ ngay náº¿u cache cleared |
 
 ### 48h sau
 
-| Metric | Mục tiêu | So sánh |
+| Metric | Má»¥c tiÃªu | So sÃ¡nh |
 |---|---|---|
-| RAM baseline | ~350-400 MB | Trước: ~500 MB |
-| RAM spike đỉnh | < 600 MB | Trước: ~700 MB |
-| Memory cost / ngày | < $3.50 | Trước: ~$4.24 |
-| Response time p99 | Không tăng | Baseline cũ |
-| Error rate | Không tăng | Baseline cũ |
+| RAM baseline | ~350-400 MB | TrÆ°á»›c: ~500 MB |
+| RAM spike Ä‘á»‰nh | < 600 MB | TrÆ°á»›c: ~700 MB |
+| Memory cost / ngÃ y | < $3.50 | TrÆ°á»›c: ~$4.24 |
+| Response time p99 | KhÃ´ng tÄƒng | Baseline cÅ© |
+| Error rate | KhÃ´ng tÄƒng | Baseline cÅ© |
 
 ---
 
-## Rollback toàn bộ trong 1 phút (emergency)
+## Rollback toÃ n bá»™ trong 1 phÃºt (emergency)
 
-Nếu có vấn đề nghiêm trọng và cần rollback NGAY:
+Náº¿u cÃ³ váº¥n Ä‘á» nghiÃªm trá»ng vÃ  cáº§n rollback NGAY:
 
 ```powershell
-# 1. Xem commit hiện tại
+# 1. Xem commit hiá»‡n táº¡i
 git log --oneline -3
 
-# 2. Revert commit RAM optimization (giả sử commit là <hash>)
+# 2. Revert commit RAM optimization (giáº£ sá»­ commit lÃ  <hash>)
 git revert <hash>
 
 # 3. Push
 git push origin master
 
-# 4. Xóa MALLOC_ARENA_MAX trên Railway Dashboard
-# → Railway tự redeploy về state trước khi tối ưu
+# 4. XÃ³a MALLOC_ARENA_MAX trÃªn Railway Dashboard
+# â†’ Railway tá»± redeploy vá» state trÆ°á»›c khi tá»‘i Æ°u
 ```
 
-Tổng thời gian: ~3-5 phút (chủ yếu là build + deploy của Railway).
+Tá»•ng thá»i gian: ~3-5 phÃºt (chá»§ yáº¿u lÃ  build + deploy cá»§a Railway).
 
 ---
 
-## Câu hỏi thường gặp
+## CÃ¢u há»i thÆ°á»ng gáº·p
 
-### Q: Nếu rollback rồi mà RAM vẫn cao thì sao?
-A: Có thể có nguyên nhân khác (DB pool bloat, memory leak ở code mới). Đọc `MAINTENANCE.md §5` cho incident response procedure.
+### Q: Náº¿u rollback rá»“i mÃ  RAM váº«n cao thÃ¬ sao?
+A: CÃ³ thá»ƒ cÃ³ nguyÃªn nhÃ¢n khÃ¡c (DB pool bloat, memory leak á»Ÿ code má»›i). Äá»c `MAINTENANCE.md Â§5` cho incident response procedure.
 
-### Q: Tôi có thể test trên local trước khi deploy không?
+### Q: TÃ´i cÃ³ thá»ƒ test trÃªn local trÆ°á»›c khi deploy khÃ´ng?
 A: 
-- **MALLOC_ARENA_MAX**: Local Windows không có glibc, không test được trên Windows.
-- **requirements.txt change**: `pip install -r requirements.txt` local rồi `pytest` để verify.
+- **MALLOC_ARENA_MAX**: Local Windows khÃ´ng cÃ³ glibc, khÃ´ng test Ä‘Æ°á»£c trÃªn Windows.
+- **requirements.txt change**: `pip install -r requirements.txt` local rá»“i `pytest` Ä‘á»ƒ verify.
 - **CACHE_THRESHOLD**: `python app.py` local, request `/api/members`, xem log.
 
-### Q: Khi nào nên làm tiếp Phase 1 (lazy imports)?
-A: Chỉ khi sau 48h Phase 0, RAM baseline vẫn > 450 MB. Phase 1 đụng `app.py` nên rủi ro cao hơn.
+### Q: Khi nÃ o nÃªn lÃ m tiáº¿p Phase 1 (lazy imports)?
+A: Chá»‰ khi sau 48h Phase 0, RAM baseline váº«n > 450 MB. Phase 1 Ä‘á»¥ng `app.py` nÃªn rá»§i ro cao hÆ¡n.
 
 ---
 
-## Liên quan
+## LiÃªn quan
 
-- `AI_PROJECT_MEMORY.md §6, §7, §8` — issue history + decision log
-- `MAINTENANCE.md` — operational runbook
-- `CHANGELOG.md` — version history entry 2026-05-20
+- `AI_PROJECT_MEMORY.md Â§6, Â§7, Â§8` â€” issue history + decision log
+- `MAINTENANCE.md` â€” operational runbook
+- `CHANGELOG.md` â€” version history entry 2026-05-20
+

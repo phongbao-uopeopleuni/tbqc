@@ -1,63 +1,130 @@
-# Checklist kiểm thử — Trang Gia phả (`/genealogy`)
+﻿<<<<<<< ours
+# Checklist kiá»ƒm thá»­ â€” Trang Gia pháº£ (`/genealogy`)
 
-Dùng sau khi thay đổi `genealogy.html`, `family-tree-ui.js`, `multilevel-genealogy.js`, hoặc luồng API cây. Đánh dấu từng mục khi đã kiểm trên **desktop** và **mobile** (hoặc DevTools responsive).
+DÃ¹ng sau khi thay Ä‘á»•i `genealogy.html`, `family-tree-ui.js`, `multilevel-genealogy.js`, hoáº·c luá»“ng API cÃ¢y. ÄÃ¡nh dáº¥u tá»«ng má»¥c khi Ä‘Ã£ kiá»ƒm trÃªn **desktop** vÃ  **mobile** (hoáº·c DevTools responsive).
 
-## 1. Tải trang & cổng
+## 1. Táº£i trang & cá»•ng
 
-- [ ] Mở `/genealogy` — không lỗi console nghiêm trọng.
-- [ ] Nếu bật cổng passphrase: nhập đúng → vào nội dung; sai → thông báo lỗi.
+- [ ] Má»Ÿ `/genealogy` â€” khÃ´ng lá»—i console nghiÃªm trá»ng.
+- [ ] Náº¿u báº­t cá»•ng passphrase: nháº­p Ä‘Ãºng â†’ vÃ o ná»™i dung; sai â†’ thÃ´ng bÃ¡o lá»—i.
 
-## 2. Cây & đồng bộ
+## 2. CÃ¢y & Ä‘á»“ng bá»™
 
-- [ ] Cây hiển thị sau khi tải (loading → nội dung).
-- [ ] **Đồng bộ** — cây làm mới; **danh sách đa cấp** cùng cập nhật.
-- [ ] Đổi **Hiển thị đến đời** — cây và danh sách đa cấp khớp đời.
-- [ ] **Cập nhật thông tin** (nếu dùng) — không lỗi trắng màn hình.
+- [ ] CÃ¢y hiá»ƒn thá»‹ sau khi táº£i (loading â†’ ná»™i dung).
+- [ ] **Äá»“ng bá»™** â€” cÃ¢y lÃ m má»›i; **danh sÃ¡ch Ä‘a cáº¥p** cÃ¹ng cáº­p nháº­t.
+- [ ] Äá»•i **Hiá»ƒn thá»‹ Ä‘áº¿n Ä‘á»i** â€” cÃ¢y vÃ  danh sÃ¡ch Ä‘a cáº¥p khá»›p Ä‘á»i.
+- [ ] **Cáº­p nháº­t thÃ´ng tin** (náº¿u dÃ¹ng) â€” khÃ´ng lá»—i tráº¯ng mÃ n hÃ¬nh.
 
-## 3. Chế độ xem (Danh sách / Mindmap)
+## 3. Cháº¿ Ä‘á»™ xem (Danh sÃ¡ch / Mindmap)
 
-- [ ] **Danh sách** — section `#multilevelGenealogySection` **hiện**; danh sách có cấp (ul/li); cây trong khung vẫn bình thường.
-- [ ] **Mindmap** — cần người trọng tâm; sau khi chọn — mindmap; section đa cấp **ẩn**; quay lại **Danh sách** — đa cấp hiện lại.
+- [ ] **Danh sÃ¡ch** â€” section `#multilevelGenealogySection` **hiá»‡n**; danh sÃ¡ch cÃ³ cáº¥p (ul/li); cÃ¢y trong khung váº«n bÃ¬nh thÆ°á»ng.
+- [ ] **Mindmap** â€” cáº§n ngÆ°á»i trá»ng tÃ¢m; sau khi chá»n â€” mindmap; section Ä‘a cáº¥p **áº©n**; quay láº¡i **Danh sÃ¡ch** â€” Ä‘a cáº¥p hiá»‡n láº¡i.
 
-## 4. Danh sách đa cấp (Multilevel)
+## 4. Danh sÃ¡ch Ä‘a cáº¥p (Multilevel)
 
-- [ ] Từ đời 3 trở xuống nhánh có thể mở/đóng (`<details>`).
-- [ ] Bấm tên (hoặc Enter/Space khi focus) — **Thông tin chi tiết** tải đầy đủ (API), cây highlight nếu có `setSelectedPerson`.
-- [ ] Dòng family (nếu có spouse id) — có thể bấm và mở chi tiết.
+- [ ] Tá»« Ä‘á»i 3 trá»Ÿ xuá»‘ng nhÃ¡nh cÃ³ thá»ƒ má»Ÿ/Ä‘Ã³ng (`<details>`).
+- [ ] Báº¥m tÃªn (hoáº·c Enter/Space khi focus) â€” **ThÃ´ng tin chi tiáº¿t** táº£i Ä‘áº§y Ä‘á»§ (API), cÃ¢y highlight náº¿u cÃ³ `setSelectedPerson`.
+- [ ] DÃ²ng family (náº¿u cÃ³ spouse id) â€” cÃ³ thá»ƒ báº¥m vÃ  má»Ÿ chi tiáº¿t.
 
-## 5. Panel “Thông tin chi tiết”
+## 5. Panel â€œThÃ´ng tin chi tiáº¿tâ€
 
-- [ ] Chọn người trên cây — panel chi tiết đúng (tên, đời, …).
-- [ ] **Desktop** — panel chiều cao hợp lý + cuộn trong panel khi nội dung dài.
-- [ ] **Mobile (≤768px)** — panel không chiếm gần hết màn hình; nội dung cuộn trong **`.tree-info-content`**.
-- [ ] **Mobile** — các mục dài (Tiểu sử, Con, Hôn phối, …) dạng **accordion** (thu gọn).
+- [ ] Chá»n ngÆ°á»i trÃªn cÃ¢y â€” panel chi tiáº¿t Ä‘Ãºng (tÃªn, Ä‘á»i, â€¦).
+- [ ] **Desktop** â€” panel chiá»u cao há»£p lÃ½ + cuá»™n trong panel khi ná»™i dung dÃ i.
+- [ ] **Mobile (â‰¤768px)** â€” panel khÃ´ng chiáº¿m gáº§n háº¿t mÃ n hÃ¬nh; ná»™i dung cuá»™n trong **`.tree-info-content`**.
+- [ ] **Mobile** â€” cÃ¡c má»¥c dÃ i (Tiá»ƒu sá»­, Con, HÃ´n phá»‘i, â€¦) dáº¡ng **accordion** (thu gá»n).
 
-## 6. Tìm kiếm & focus
+## 6. TÃ¬m kiáº¿m & focus
 
-- [ ] Tìm theo tên — kết quả; chọn một người — cây focus / highlight (theo logic hiện tại).
-- [ ] Không lỗi khi không có kết quả.
+- [ ] TÃ¬m theo tÃªn â€” káº¿t quáº£; chá»n má»™t ngÆ°á»i â€” cÃ¢y focus / highlight (theo logic hiá»‡n táº¡i).
+- [ ] KhÃ´ng lá»—i khi khÃ´ng cÃ³ káº¿t quáº£.
 
-## 7. Toàn màn hình & PDF
+## 7. ToÃ n mÃ n hÃ¬nh & PDF
 
-- [ ] **Toàn màn hình** cây — panel chi tiết ẩn (theo CSS); `Esc` thoát nếu có gợi ý.
-- [ ] **Xuất PDF** (nếu dùng) — không crash; file tải về.
+- [ ] **ToÃ n mÃ n hÃ¬nh** cÃ¢y â€” panel chi tiáº¿t áº©n (theo CSS); `Esc` thoÃ¡t náº¿u cÃ³ gá»£i Ã½.
+- [ ] **Xuáº¥t PDF** (náº¿u dÃ¹ng) â€” khÃ´ng crash; file táº£i vá».
 
-## 8. Tách biệt mộ phần
+## 8. TÃ¡ch biá»‡t má»™ pháº§n
 
-- [ ] Tìm mộ phần / bản đồ — hoạt động độc lập; không phụ thuộc chế độ danh sách đa cấp.
+- [ ] TÃ¬m má»™ pháº§n / báº£n Ä‘á»“ â€” hoáº¡t Ä‘á»™ng Ä‘á»™c láº­p; khÃ´ng phá»¥ thuá»™c cháº¿ Ä‘á»™ danh sÃ¡ch Ä‘a cáº¥p.
 
 ## 9. Regression nhanh
 
-- [ ] `GET /api/health` — trả `ok` khi có DB.
-- [ ] Trang **Thành viên** `/members` — không bị ảnh hưởng bởi thay đổi chỉ genealogy (nếu chỉ sửa JS/template gia phả).
+- [ ] `GET /api/health` â€” tráº£ `ok` khi cÃ³ DB.
+- [ ] Trang **ThÃ nh viÃªn** `/members` â€” khÃ´ng bá»‹ áº£nh hÆ°á»Ÿng bá»Ÿi thay Ä‘á»•i chá»‰ genealogy (náº¿u chá»‰ sá»­a JS/template gia pháº£).
 
-## 10. Nâng cấp có giai đoạn (rollout)
+## 10. NÃ¢ng cáº¥p cÃ³ giai Ä‘oáº¡n (rollout)
 
-- [ ] Đọc `docs/GENEALOGY_ROLLOUT.md` — sau mỗi giai đoạn chạy lại mục 1–9 tương ứng.
-- [ ] Tab **Tổ tiên (Đời 0)** (nếu có dữ liệu đời 0) — bảng tải khi click; tab **Thế hệ 1** vẫn mặc định mở.
-- [ ] **Phân màu nhánh** (tùy chọn, `localStorage.genealogy_branch_mode` / `window.GENEALOGY_BRANCH_MODE`) — `gen4-detail` vs `legacy`; đổi → refresh cây nếu có gọi `refreshTree`.
+- [ ] Äá»c `GENEALOGY_ROLLOUT.md` â€” sau má»—i giai Ä‘oáº¡n cháº¡y láº¡i má»¥c 1â€“9 tÆ°Æ¡ng á»©ng.
+- [ ] Tab **Tá»• tiÃªn (Äá»i 0)** (náº¿u cÃ³ dá»¯ liá»‡u Ä‘á»i 0) â€” báº£ng táº£i khi click; tab **Tháº¿ há»‡ 1** váº«n máº·c Ä‘á»‹nh má»Ÿ.
+- [ ] **PhÃ¢n mÃ u nhÃ¡nh** (tÃ¹y chá»n, `localStorage.genealogy_branch_mode` / `window.GENEALOGY_BRANCH_MODE`) â€” `gen4-detail` vs `legacy`; Ä‘á»•i â†’ refresh cÃ¢y náº¿u cÃ³ gá»i `refreshTree`.
 
 ---
 
-**Ghi chú PR/commit (mẫu):**  
-*Nâng cấp trang Gia phả: danh sách đa cấp tách mộ phần, đồng bộ với cây; panel chi tiết responsive + accordion mobile; click danh sách mở chi tiết API.*
+**Ghi chÃº PR/commit (máº«u):**  
+*NÃ¢ng cáº¥p trang Gia pháº£: danh sÃ¡ch Ä‘a cáº¥p tÃ¡ch má»™ pháº§n, Ä‘á»“ng bá»™ vá»›i cÃ¢y; panel chi tiáº¿t responsive + accordion mobile; click danh sÃ¡ch má»Ÿ chi tiáº¿t API.*
+=======
+# Checklist kiá»ƒm thá»­ â€” Trang Gia pháº£ (`/genealogy`)
+
+DÃ¹ng sau khi thay Ä‘á»•i `genealogy.html`, `family-tree-ui.js`, `multilevel-genealogy.js`, hoáº·c luá»“ng API cÃ¢y. ÄÃ¡nh dáº¥u tá»«ng má»¥c khi Ä‘Ã£ kiá»ƒm trÃªn **desktop** vÃ  **mobile** (hoáº·c DevTools responsive).
+
+## 1. Táº£i trang & cá»•ng
+
+- [ ] Má»Ÿ `/genealogy` â€” khÃ´ng lá»—i console nghiÃªm trá»ng.
+- [ ] Náº¿u báº­t cá»•ng passphrase: nháº­p Ä‘Ãºng â†’ vÃ o ná»™i dung; sai â†’ thÃ´ng bÃ¡o lá»—i.
+
+## 2. CÃ¢y & Ä‘á»“ng bá»™
+
+- [ ] CÃ¢y hiá»ƒn thá»‹ sau khi táº£i (loading â†’ ná»™i dung).
+- [ ] **Äá»“ng bá»™** â€” cÃ¢y lÃ m má»›i; **danh sÃ¡ch Ä‘a cáº¥p** cÃ¹ng cáº­p nháº­t.
+- [ ] Äá»•i **Hiá»ƒn thá»‹ Ä‘áº¿n Ä‘á»i** â€” cÃ¢y vÃ  danh sÃ¡ch Ä‘a cáº¥p khá»›p Ä‘á»i.
+- [ ] **Cáº­p nháº­t thÃ´ng tin** (náº¿u dÃ¹ng) â€” khÃ´ng lá»—i tráº¯ng mÃ n hÃ¬nh.
+
+## 3. Cháº¿ Ä‘á»™ xem (Danh sÃ¡ch / Mindmap)
+
+- [ ] **Danh sÃ¡ch** â€” section `#multilevelGenealogySection` **hiá»‡n**; danh sÃ¡ch cÃ³ cáº¥p (ul/li); cÃ¢y trong khung váº«n bÃ¬nh thÆ°á»ng.
+- [ ] **Mindmap** â€” cáº§n ngÆ°á»i trá»ng tÃ¢m; sau khi chá»n â€” mindmap; section Ä‘a cáº¥p **áº©n**; quay láº¡i **Danh sÃ¡ch** â€” Ä‘a cáº¥p hiá»‡n láº¡i.
+
+## 4. Danh sÃ¡ch Ä‘a cáº¥p (Multilevel)
+
+- [ ] Tá»« Ä‘á»i 3 trá»Ÿ xuá»‘ng nhÃ¡nh cÃ³ thá»ƒ má»Ÿ/Ä‘Ã³ng (`<details>`).
+- [ ] Báº¥m tÃªn (hoáº·c Enter/Space khi focus) â€” **ThÃ´ng tin chi tiáº¿t** táº£i Ä‘áº§y Ä‘á»§ (API), cÃ¢y highlight náº¿u cÃ³ `setSelectedPerson`.
+- [ ] DÃ²ng family (náº¿u cÃ³ spouse id) â€” cÃ³ thá»ƒ báº¥m vÃ  má»Ÿ chi tiáº¿t.
+
+## 5. Panel â€œThÃ´ng tin chi tiáº¿tâ€
+
+- [ ] Chá»n ngÆ°á»i trÃªn cÃ¢y â€” panel chi tiáº¿t Ä‘Ãºng (tÃªn, Ä‘á»i, â€¦).
+- [ ] **Desktop** â€” panel chiá»u cao há»£p lÃ½ + cuá»™n trong panel khi ná»™i dung dÃ i.
+- [ ] **Mobile (â‰¤768px)** â€” panel khÃ´ng chiáº¿m gáº§n háº¿t mÃ n hÃ¬nh; ná»™i dung cuá»™n trong **`.tree-info-content`**.
+- [ ] **Mobile** â€” cÃ¡c má»¥c dÃ i (Tiá»ƒu sá»­, Con, HÃ´n phá»‘i, â€¦) dáº¡ng **accordion** (thu gá»n).
+
+## 6. TÃ¬m kiáº¿m & focus
+
+- [ ] TÃ¬m theo tÃªn â€” káº¿t quáº£; chá»n má»™t ngÆ°á»i â€” cÃ¢y focus / highlight (theo logic hiá»‡n táº¡i).
+- [ ] KhÃ´ng lá»—i khi khÃ´ng cÃ³ káº¿t quáº£.
+
+## 7. ToÃ n mÃ n hÃ¬nh & PDF
+
+- [ ] **ToÃ n mÃ n hÃ¬nh** cÃ¢y â€” panel chi tiáº¿t áº©n (theo CSS); `Esc` thoÃ¡t náº¿u cÃ³ gá»£i Ã½.
+- [ ] **Xuáº¥t PDF** (náº¿u dÃ¹ng) â€” khÃ´ng crash; file táº£i vá».
+
+## 8. TÃ¡ch biá»‡t má»™ pháº§n
+
+- [ ] TÃ¬m má»™ pháº§n / báº£n Ä‘á»“ â€” hoáº¡t Ä‘á»™ng Ä‘á»™c láº­p; khÃ´ng phá»¥ thuá»™c cháº¿ Ä‘á»™ danh sÃ¡ch Ä‘a cáº¥p.
+
+## 9. Regression nhanh
+
+- [ ] `GET /api/health` â€” tráº£ `ok` khi cÃ³ DB.
+- [ ] Trang **ThÃ nh viÃªn** `/members` â€” khÃ´ng bá»‹ áº£nh hÆ°á»Ÿng bá»Ÿi thay Ä‘á»•i chá»‰ genealogy (náº¿u chá»‰ sá»­a JS/template gia pháº£).
+
+## 10. NÃ¢ng cáº¥p cÃ³ giai Ä‘oáº¡n (rollout)
+
+- [ ] Äá»c `GENEALOGY_ROLLOUT.md` â€” sau má»—i giai Ä‘oáº¡n cháº¡y láº¡i má»¥c 1â€“9 tÆ°Æ¡ng á»©ng.
+- [ ] Tab **Tá»• tiÃªn (Äá»i 0)** (náº¿u cÃ³ dá»¯ liá»‡u Ä‘á»i 0) â€” báº£ng táº£i khi click; tab **Tháº¿ há»‡ 1** váº«n máº·c Ä‘á»‹nh má»Ÿ.
+- [ ] **PhÃ¢n mÃ u nhÃ¡nh** (tÃ¹y chá»n, `localStorage.genealogy_branch_mode` / `window.GENEALOGY_BRANCH_MODE`) â€” `gen4-detail` vs `legacy`; Ä‘á»•i â†’ refresh cÃ¢y náº¿u cÃ³ gá»i `refreshTree`.
+
+---
+
+**Ghi chÃº PR/commit (máº«u):**  
+*NÃ¢ng cáº¥p trang Gia pháº£: danh sÃ¡ch Ä‘a cáº¥p tÃ¡ch má»™ pháº§n, Ä‘á»“ng bá»™ vá»›i cÃ¢y; panel chi tiáº¿t responsive + accordion mobile; click danh sÃ¡ch má»Ÿ chi tiáº¿t API.*
+>>>>>>> theirs
+

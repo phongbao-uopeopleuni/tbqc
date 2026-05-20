@@ -1,43 +1,90 @@
-# Nâng cấp có giai đoạn — Cây gia phả (`/genealogy`)
+﻿<<<<<<< ours
+# NÃ¢ng cáº¥p cÃ³ giai Ä‘oáº¡n â€” CÃ¢y gia pháº£ (`/genealogy`)
 
-Phạm vi: **chỉ** trang Gia phả và static JS liên quan (`genealogy.html`, `family-tree-*.js`, `genealogy-lineage.js`, …). Không đổi auth, members, admin trừ khi có mục riêng.
+Pháº¡m vi: **chá»‰** trang Gia pháº£ vÃ  static JS liÃªn quan (`genealogy.html`, `family-tree-*.js`, `genealogy-lineage.js`, â€¦). KhÃ´ng Ä‘á»•i auth, members, admin trá»« khi cÃ³ má»¥c riÃªng.
 
-| Giai đoạn | Nội dung | Gỡ / cờ |
+| Giai Ä‘oáº¡n | Ná»™i dung | Gá»¡ / cá» |
 |------------|----------|---------|
-| **0** | Baseline + checklist regression | `docs/GENEALOGY_QA_CHECKLIST.md` |
-| **1** | Logic an toàn: cache thống kê, bucket đời 0 vs chưa gán, tab Thế hệ 0 | Không cờ |
-| **2** | Phân nhánh màu theo đời 4+ (tùy chọn) | `localStorage.genealogy_branch_mode` hoặc `window.GENEALOGY_BRANCH_MODE` = `legacy` (mặc định) \| `gen4-detail` (không còn dropdown trên trang; đặt bằng console hoặc script) |
-| **3** | Debounce đổi filter đời (giảm gọi API lặp) | Luôn bật (chỉ genealogy) |
-| **4** | (Một phần) `nameToIdsMap` — mọi `person_id` trùng tên chuẩn hóa (phục vụ tìm kiếm / debug sau này) | `window.nameToIdsMap` sau `loadTreeData` |
-| **5** | (Dự phòng) Layout D3 / API DB riêng | Chưa triển khai |
+| **0** | Baseline + checklist regression | `GENEALOGY_QA_CHECKLIST.md` |
+| **1** | Logic an toÃ n: cache thá»‘ng kÃª, bucket Ä‘á»i 0 vs chÆ°a gÃ¡n, tab Tháº¿ há»‡ 0 | KhÃ´ng cá» |
+| **2** | PhÃ¢n nhÃ¡nh mÃ u theo Ä‘á»i 4+ (tÃ¹y chá»n) | `localStorage.genealogy_branch_mode` hoáº·c `window.GENEALOGY_BRANCH_MODE` = `legacy` (máº·c Ä‘á»‹nh) \| `gen4-detail` (khÃ´ng cÃ²n dropdown trÃªn trang; Ä‘áº·t báº±ng console hoáº·c script) |
+| **3** | Debounce Ä‘á»•i filter Ä‘á»i (giáº£m gá»i API láº·p) | LuÃ´n báº­t (chá»‰ genealogy) |
+| **4** | (Má»™t pháº§n) `nameToIdsMap` â€” má»i `person_id` trÃ¹ng tÃªn chuáº©n hÃ³a (phá»¥c vá»¥ tÃ¬m kiáº¿m / debug sau nÃ y) | `window.nameToIdsMap` sau `loadTreeData` |
+| **5** | (Dá»± phÃ²ng) Layout D3 / API DB riÃªng | ChÆ°a triá»ƒn khai |
 
-## Thư viện ngoài — Panzoom (khung cây)
+## ThÆ° viá»‡n ngoÃ i â€” Panzoom (khung cÃ¢y)
 
-- **[@panzoom/panzoom](https://github.com/timmywil/panzoom)** tải qua jsDelivr trong `genealogy.html`; `static/js/family-tree-panzoom.js` gắn vào `.tree` sau mỗi lần vẽ.
-- Hỗ trợ: zoom bằng lăn chuột trên vùng cây, pinch trên mobile, pan (kéo nền) mượt hơn; ô người / gia đình / connector dùng lớp `panzoom-exclude` để không bị kéo nhầm.
-- Nếu CDN lỗi và `typeof Panzoom === 'undefined'`, code quay về cách cũ: `transform` + kéo tay (`setupPanOnTreeContainer`).
+- **[@panzoom/panzoom](https://github.com/timmywil/panzoom)** táº£i qua jsDelivr trong `genealogy.html`; `static/js/family-tree-panzoom.js` gáº¯n vÃ o `.tree` sau má»—i láº§n váº½.
+- Há»— trá»£: zoom báº±ng lÄƒn chuá»™t trÃªn vÃ¹ng cÃ¢y, pinch trÃªn mobile, pan (kÃ©o ná»n) mÆ°á»£t hÆ¡n; Ã´ ngÆ°á»i / gia Ä‘Ã¬nh / connector dÃ¹ng lá»›p `panzoom-exclude` Ä‘á»ƒ khÃ´ng bá»‹ kÃ©o nháº§m.
+- Náº¿u CDN lá»—i vÃ  `typeof Panzoom === 'undefined'`, code quay vá» cÃ¡ch cÅ©: `transform` + kÃ©o tay (`setupPanOnTreeContainer`).
 
-## Kiểm thử sau mỗi giai đoạn
+## Kiá»ƒm thá»­ sau má»—i giai Ä‘oáº¡n
 
-Chạy checklist trong `GENEALOGY_QA_CHECKLIST.md` (desktop + mobile).
+Cháº¡y checklist trong `GENEALOGY_QA_CHECKLIST.md` (desktop + mobile).
 
-## Chế độ nhánh (Giai đoạn 2)
+## Cháº¿ Ä‘á»™ nhÃ¡nh (Giai Ä‘oáº¡n 2)
 
-- **`legacy`**: Giữ hành vi cũ (phân màu từ con của đời 2).
-- **`gen4-detail`**: Sau bước trên, tách thêm màu theo từng nhánh **đời 4** (con của nút gia đình đời 3).
+- **`legacy`**: Giá»¯ hÃ nh vi cÅ© (phÃ¢n mÃ u tá»« con cá»§a Ä‘á»i 2).
+- **`gen4-detail`**: Sau bÆ°á»›c trÃªn, tÃ¡ch thÃªm mÃ u theo tá»«ng nhÃ¡nh **Ä‘á»i 4** (con cá»§a nÃºt gia Ä‘Ã¬nh Ä‘á»i 3).
 
-Bật thử trong console trang Gia phả:
+Báº­t thá»­ trong console trang Gia pháº£:
 
 ```js
 localStorage.setItem('genealogy_branch_mode', 'gen4-detail');
 location.reload();
 ```
 
-Tắt:
+Táº¯t:
 
 ```js
 localStorage.removeItem('genealogy_branch_mode');
-// hoặc
+// hoáº·c
 localStorage.setItem('genealogy_branch_mode', 'legacy');
 location.reload();
 ```
+=======
+# NÃ¢ng cáº¥p cÃ³ giai Ä‘oáº¡n â€” CÃ¢y gia pháº£ (`/genealogy`)
+
+Pháº¡m vi: **chá»‰** trang Gia pháº£ vÃ  static JS liÃªn quan (`genealogy.html`, `family-tree-*.js`, `genealogy-lineage.js`, â€¦). KhÃ´ng Ä‘á»•i auth, members, admin trá»« khi cÃ³ má»¥c riÃªng.
+
+| Giai Ä‘oáº¡n | Ná»™i dung | Gá»¡ / cá» |
+|------------|----------|---------|
+| **0** | Baseline + checklist regression | `GENEALOGY_QA_CHECKLIST.md` |
+| **1** | Logic an toÃ n: cache thá»‘ng kÃª, bucket Ä‘á»i 0 vs chÆ°a gÃ¡n, tab Tháº¿ há»‡ 0 | KhÃ´ng cá» |
+| **2** | PhÃ¢n nhÃ¡nh mÃ u theo Ä‘á»i 4+ (tÃ¹y chá»n) | `localStorage.genealogy_branch_mode` hoáº·c `window.GENEALOGY_BRANCH_MODE` = `legacy` (máº·c Ä‘á»‹nh) \| `gen4-detail` (khÃ´ng cÃ²n dropdown trÃªn trang; Ä‘áº·t báº±ng console hoáº·c script) |
+| **3** | Debounce Ä‘á»•i filter Ä‘á»i (giáº£m gá»i API láº·p) | LuÃ´n báº­t (chá»‰ genealogy) |
+| **4** | (Má»™t pháº§n) `nameToIdsMap` â€” má»i `person_id` trÃ¹ng tÃªn chuáº©n hÃ³a (phá»¥c vá»¥ tÃ¬m kiáº¿m / debug sau nÃ y) | `window.nameToIdsMap` sau `loadTreeData` |
+| **5** | (Dá»± phÃ²ng) Layout D3 / API DB riÃªng | ChÆ°a triá»ƒn khai |
+
+## ThÆ° viá»‡n ngoÃ i â€” Panzoom (khung cÃ¢y)
+
+- **[@panzoom/panzoom](https://github.com/timmywil/panzoom)** táº£i qua jsDelivr trong `genealogy.html`; `static/js/family-tree-panzoom.js` gáº¯n vÃ o `.tree` sau má»—i láº§n váº½.
+- Há»— trá»£: zoom báº±ng lÄƒn chuá»™t trÃªn vÃ¹ng cÃ¢y, pinch trÃªn mobile, pan (kÃ©o ná»n) mÆ°á»£t hÆ¡n; Ã´ ngÆ°á»i / gia Ä‘Ã¬nh / connector dÃ¹ng lá»›p `panzoom-exclude` Ä‘á»ƒ khÃ´ng bá»‹ kÃ©o nháº§m.
+- Náº¿u CDN lá»—i vÃ  `typeof Panzoom === 'undefined'`, code quay vá» cÃ¡ch cÅ©: `transform` + kÃ©o tay (`setupPanOnTreeContainer`).
+
+## Kiá»ƒm thá»­ sau má»—i giai Ä‘oáº¡n
+
+Cháº¡y checklist trong `GENEALOGY_QA_CHECKLIST.md` (desktop + mobile).
+
+## Cháº¿ Ä‘á»™ nhÃ¡nh (Giai Ä‘oáº¡n 2)
+
+- **`legacy`**: Giá»¯ hÃ nh vi cÅ© (phÃ¢n mÃ u tá»« con cá»§a Ä‘á»i 2).
+- **`gen4-detail`**: Sau bÆ°á»›c trÃªn, tÃ¡ch thÃªm mÃ u theo tá»«ng nhÃ¡nh **Ä‘á»i 4** (con cá»§a nÃºt gia Ä‘Ã¬nh Ä‘á»i 3).
+
+Báº­t thá»­ trong console trang Gia pháº£:
+
+```js
+localStorage.setItem('genealogy_branch_mode', 'gen4-detail');
+location.reload();
+```
+
+Táº¯t:
+
+```js
+localStorage.removeItem('genealogy_branch_mode');
+// hoáº·c
+localStorage.setItem('genealogy_branch_mode', 'legacy');
+location.reload();
+```
+>>>>>>> theirs
+
