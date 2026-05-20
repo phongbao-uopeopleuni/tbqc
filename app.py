@@ -179,12 +179,9 @@ except Exception as e:
 
 try:
     from marriage_api import register_marriage_routes
-except ImportError:
-    try:
-        from folder_py.marriage_api import register_marriage_routes
-    except ImportError as e:
-        print(f'WARNING: Khong the import marriage_api: {e}')
-        register_marriage_routes = None
+except ImportError as e:
+    print(f'WARNING: Khong the import marriage_api: {e}')
+    register_marriage_routes = None
 if register_marriage_routes:
     try:
         register_marriage_routes(app)
