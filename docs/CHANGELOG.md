@@ -8,6 +8,10 @@
 
 ## [Unreleased]
 
+### Added
+- `admin/data-management`: phần Database Schema nâng cấp thành 4 tab — ERD, Class Diagram, Data Flow, Danh sách — render bằng Mermaid.js từ schema live (`/admin/api/schema`).
+- Zoom in/out/reset controls trên 3 tab diagram (mức 25%–400%).
+
 ### Removed
 - Bảng `facebook_tokens` (migration note `docs/refactor/migrations/2026-05-20_drop_facebook_tokens.md`) — dead table, 0 code reference; app đã dùng `FB_PAGE_ID`/`FB_ACCESS_TOKEN` env var.
 
