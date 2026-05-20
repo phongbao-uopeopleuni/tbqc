@@ -136,14 +136,7 @@ except Exception as e:
     import traceback
     traceback.print_exc()
     raise
-try:
-    from auth import init_login_manager
-except ImportError:
-    import sys
-    folder_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-    if folder_py not in sys.path:
-        sys.path.insert(0, folder_py)
-    from folder_py.auth import init_login_manager
+from auth import init_login_manager
 try:
     login_manager = init_login_manager(app)
 except Exception as e:
