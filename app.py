@@ -155,12 +155,9 @@ except Exception as e:
 # Rate limit: không exempt cả blueprint — dùng default_limits + @rate_limit trên từng route nặng (extensions.py).
 try:
     from admin_routes import register_admin_routes
-except ImportError:
-    try:
-        from folder_py.admin_routes import register_admin_routes
-    except ImportError as e:
-        print(f'WARNING: Khong the import admin_routes: {e}')
-        register_admin_routes = None
+except ImportError as e:
+    print(f'WARNING: Khong the import admin_routes: {e}')
+    register_admin_routes = None
 if register_admin_routes:
     try:
         register_admin_routes(app)
