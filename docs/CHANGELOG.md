@@ -12,6 +12,12 @@
 - `admin/data-management`: phần Database Schema nâng cấp thành 4 tab — ERD, Class Diagram, Data Flow, Danh sách — render bằng Mermaid.js từ schema live (`/admin/api/schema`).
 - Zoom in/out/reset controls trên 3 tab diagram (mức 25%–400%).
 
+### Fixed (Phase 0c — import normalization)
+- 5 nhóm `try/except ImportError` fallback đã xoá vì là dead code (file fallback không tồn tại) hoặc redundant (sys.path hack import cùng file):
+  - Group 1: `audit_log.py`, `admin_routes.py`, `auth.py`, `marriage_api.py`, `db.py`, `blueprints/auth.py` — canonical `folder_py.db_config`.
+  - Group 2-5: `app.py` — `auth`, `admin_routes`, `marriage_api`, `genealogy_tree` fallbacks.
+- Bug ẩn `app.py:143` (`folder_py = os.path.join(..., '..')` join sai thư mục) đã loại bỏ cùng dead fallback.
+
 ### Removed
 - Bảng `facebook_tokens` (migration note `docs/refactor/migrations/2026-05-20_drop_facebook_tokens.md`) — dead table, 0 code reference; app đã dùng `FB_PAGE_ID`/`FB_ACCESS_TOKEN` env var.
 

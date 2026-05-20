@@ -12,13 +12,69 @@
 |---|---|---|---|
 | 0a | Inventory + Truth Snapshot | ✅ Done | `docs/phase-0a-skeleton` |
 | 0b | Baseline Tests + Snapshots | ✅ Done | `docs/phase-0a-skeleton` |
-| 0c | Fix-only Stabilization | ⏳ Pending | — |
+| 0c | Fix-only Stabilization | ✅ Done | `docs/phase-0a-skeleton` |
 | 0d | Observability & Performance Gates | ⏳ Pending | — |
 | 1 | Admin Vertical Slices | ⏳ Pending | — |
 | 2 | Service Refactor | ⏳ Pending | — |
 | 3 | App Bootstrap Shrink | ⏳ Pending | — |
 | 4 | JS Refactor | ⏳ Pending | — |
 | 5 | Gallery + Members High-risk | ⏳ Pending | — |
+
+---
+
+## Phase 0c — Fix-only Stabilization ✅
+
+**Ngày hoàn thành:** 2026-05-21
+**Branch:** `docs/phase-0a-skeleton`
+**Exit gate:** PASS — `pytest` 259 passed, 3 skipped (105.39s).
+
+### Commits
+
+| Loại | SHA | Mô tả |
+|---|---|---|
+| `[fix]` | `f6f496a` | Group 1: normalize `folder_py.db_config` imports (6 files) |
+| `[fix]` | `f089835` | Group 2: drop dead `folder_py.auth` fallback in app.py |
+| `[fix]` | `6e0e9a0` | Group 3: drop dead `folder_py.admin_routes` inner fallback |
+| `[fix]` | `b57f662` | Group 4: drop dead `folder_py.marriage_api` inner fallback |
+| `[fix]` | `5688a7e` | Group 5: drop dead `sys.path` genealogy_tree fallback |
+
+### Scope per group
+
+| Group | Files | Pattern removed |
+|---|---|---|
+| 1 | `audit_log.py`, `admin_routes.py`, `auth.py`, `marriage_api.py`, `db.py`, `blueprints/auth.py` | `try: from folder_py.db_config` + `except ImportError: from db_config` (root file doesn't exist) and `sys.path` hacks importing same file |
+| 2 | `app.py` L139-146 | `except ImportError: from folder_py.auth` — folder_py/auth.py doesn't exist |
+| 3 | `app.py` L163-170 | Inner `try: from folder_py.admin_routes` — folder_py/admin_routes.py doesn't exist (outer try/except graceful degradation preserved) |
+| 4 | `app.py` L190-197 | Inner `try: from folder_py.marriage_api` — folder_py/marriage_api.py doesn't exist (outer kept) |
+| 5 | `app.py` L487-501 | Inner `sys.path.insert + from genealogy_tree` — redundant, imports same file as outer canonical |
+
+### Orphan cleanup in Group 1
+
+- `audit_log.py`: removed `DB_CONFIG` dict + `db_port` parser block, `os` import, `mysql.connector` top-level import (only `Error` used) — all became dead after fallback removal.
+- `db.py`: removed `_get_db_config_impl`/`_get_db_connection_impl` local fallbacks + `os` import.
+
+### Gate evidence
+
+| Gate | File / Command | Kết quả |
+|---|---|---|
+| pytest full | `pytest -x` | 259 passed, 3 skipped |
+| URL map contract | `tests/test_url_map_contract.py` | PASS (113 routes, 0 conflict) |
+| Bootstrap snapshot | `tests/test_bootstrap_snapshot.py` | PASS |
+| Admin golden HTML | `tests/test_admin_page_golden.py` | PASS (7 trang) |
+| App import smoke | `python -c "import app"` | OK, 117 url_map rules |
+| Import audit | `rg "except ImportError\|from folder_py\|sys.path" app.py admin_routes.py audit_log.py marriage_api.py db.py auth.py blueprints/auth.py blueprints/admin.py` | Chỉ còn out-of-scope (utils/audit_log fallback) hoặc graceful degradation cố ý giữ |
+
+### Risk đã đóng trong Phase 0c
+
+| Risk ID | Mô tả | Evidence |
+|---|---|---|
+| R1 | Dual-path import fallback che giấu lỗi | 5 nhóm fallback removed; remaining patterns documented |
+
+### Rollback
+
+```bash
+git revert 5688a7e b57f662 6e0e9a0 f089835 f6f496a
+```
 
 ---
 
