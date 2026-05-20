@@ -6,146 +6,145 @@
 
 | Option | Status | Ghi chu |
 |---|---|---|
-| **A. Local MySQL 8.0 test DB rieng** | **BLOCKED** (xem ben duoi) | `mysql` CLI khong co tren PATH workstation hien tai |
-| B. testcontainers[mysql] | acceptable | Tu dong tao container; tre boot ~5s; can Docker Desktop |
-| C. Mock DB | KHONG dung cho mutation/audit | Chi cho pure helper / validation |
-| D. Skip mutation test | acceptable trong Phase 0b | Smoke + contract + golden HTML van chay; mat coverage mutation/audit |
+| A1. Local MySQL CLI + local DB | fallback only | Nhanh cho may ca nhan, nhung phu thuoc moi truong local |
+| A2. `mysql.connector` truc tiep + local DB | fallback only | Khong can CLI, nhung van phu thuoc local DB |
+| **B. Docker `testcontainers[mysql]`** | **CANONICAL** | Reproducible hon, phu hop CI/team, giam drift moi truong |
+| D. Skip mutation test | KHONG chon | Mat mutation/audit coverage, khong dat muc tieu refactor safety |
 
-## BLOCK Phase 0b — mysql CLI khong co tren PATH
+## Why B is canonical now
 
-Verify 2026-05-20 Step 6:
-```powershell
-mysql --version    # command not found (bash + PowerShell)
-where mysql         # empty
+- Production hien tai chay tren Railway, vi vay local test strategy nen giam phu thuoc vao may ca nhan.
+- Workstation hien tai co XAMPP MariaDB 10.4, khong phai MySQL 8.x. Day la drift moi truong, khong nen dung lam chuan.
+- `testcontainers` cho phep moi may va CI khoi tao cung mot image `mysql:8.4`.
+- Khong can PATH local, khong can service MySQL local, khong can cleanup thu cong.
+- De rollback/verify hon khi refactor cham mutation, audit, backup, page_views.
+
+## Preconditions
+
+Can co:
+
+```text
+Docker Desktop dang chay
+Python 3.11+
+requirements-dev.txt da duoc install
 ```
 
-Option A goc khong chay duoc vi:
+Verify nhanh:
+
 ```powershell
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS tbqc_test ..."   # FAIL
-mysql -u root -p tbqc_test < folder_sql/reset_schema_tbqc.sql       # FAIL
+docker version
+docker ps
+python -c "from testcontainers.mysql import MySqlContainer; print('ok')"
 ```
 
-**User quyet dinh truoc khi vao Phase 0b** (1 trong 4):
+## Canonical implementation
 
-| Lua chon | Action item |
-|---|---|
-| **A1. Cai MySQL CLI** | Cai MySQL Server 8.0 -> them `C:\Program Files\MySQL\MySQL Server 8.0\bin` vao PATH -> `mysql --version` ok |
-| **A2. Dung mysqldump qua Python** | Skip CLI, dung `mysql.connector` truc tiep tao schema (cham hon nhung khong can install) |
-| **B. Docker testcontainers** | Cai Docker Desktop -> `pip install testcontainers[mysql]` -> conftest spin container |
-| **D. Skip mutation test** | Chap nhan gap mutation+audit, lam Phase 0b voi smoke+contract+golden only |
+Repo nay dung:
 
-Khuyen nghi: **A2** neu da co MySQL local nhung CLI khong tren PATH (don gian nhat).
-**B** neu chua co MySQL local (clean slate).
+- image: `mysql:8.4`
+- fixture session: `test_db_env`
+- Flask fixture rieng cho DB-backed tests: `db_backed_flask_app`
+- client rieng: `db_client`
+- cursor assert state: `test_db_cursor`
 
-## Verify MySQL local installed (Windows)
+Bootstrap SQL files:
 
-```powershell
-Get-Service MySQL*                                  # Check Windows service
-Test-Path "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe"  # Check binary
+```text
+folder_sql/reset_schema_tbqc.sql
+folder_sql/create_users_table.sql
+folder_sql/create_activity_logs_table.sql
+folder_sql/create_edit_requests_table.sql
 ```
 
-Neu Service co + binary co => Option A1 (chi can them PATH). Neu khong => Option B/D.
+## How container-backed tests work
 
-## Local MySQL test DB setup
+1. `test_db_env` start MySQL container.
+2. Fixture set `TBQC_TEST_DB_*` env vars.
+3. Fixture mirror env nay vao `DB_*` va `folder_py.db_config.set_config_override(...)`.
+4. Fixture import SQL schema vao database test trong container.
+5. `db_backed_flask_app` reload `app` sau khi env DB test da san sang.
+6. `test_db_cursor` cleanup bang `TRUNCATE` sau moi test mutation.
+
+## Required packages
+
+File [requirements-dev.txt](/D:/tbqc/requirements-dev.txt) la canonical cho dev/test:
+
+```text
+-r requirements.txt
+pytest-xdist>=3.6,<4
+testcontainers[mysql]>=4.8,<5
+```
+
+## Canonical commands
 
 ```powershell
-# Truoc khi chay test mutation P0
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS tbqc_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p tbqc_test < folder_sql/reset_schema_tbqc.sql
-mysql -u root -p tbqc_test < folder_sql/create_users_table.sql
-mysql -u root -p tbqc_test < folder_sql/create_activity_logs_table.sql
-mysql -u root -p tbqc_test < folder_sql/create_edit_requests_table.sql
-
-# Env cho pytest
-$env:TBQC_TEST_DB_HOST = "127.0.0.1"
-$env:TBQC_TEST_DB_PORT = "3306"
-$env:TBQC_TEST_DB_USER = "tbqc_test"
-$env:TBQC_TEST_DB_PASSWORD = "<test-password>"
-$env:TBQC_TEST_DB_NAME = "tbqc_test"
-
+pip install -r requirements-dev.txt
+docker version
 pytest -x tests/
+pytest -x -m db_integration
 ```
 
-**Verify**: `pytest -x tests/test_mysql_auth.py` pass tren tbqc_test moi xem la setup OK.
+Neu can chi chay mot file DB test:
 
-## Conftest pattern (mo rong tests/conftest.py)
-
-```python
-import os, pytest
-
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-
-@pytest.fixture(autouse=True)
-def _reset_db_side_channels():
-    """Reset cross-process state truoc moi test."""
-    resolved = os.path.join(ROOT, ".db_resolved.json")
-    if os.path.exists(resolved):
-        os.remove(resolved)
-    try:
-        import folder_py.db_config as cfg
-        cfg._db_pool = None
-        cfg._config_override = None
-    except Exception:
-        pass
-    yield
-
-
-@pytest.fixture
-def test_db_cursor(flask_app):
-    """Cursor de assert state truoc/sau mutation."""
-    import mysql.connector
-    conn = mysql.connector.connect(
-        host=os.environ["TBQC_TEST_DB_HOST"],
-        port=int(os.environ.get("TBQC_TEST_DB_PORT", 3306)),
-        user=os.environ["TBQC_TEST_DB_USER"],
-        password=os.environ["TBQC_TEST_DB_PASSWORD"],
-        database=os.environ["TBQC_TEST_DB_NAME"],
-    )
-    cur = conn.cursor()
-    yield cur
-    # Truncate sau moi test mutation (reverse FK order)
-    for tbl in [
-        "activity_logs", "edit_requests", "marriages",
-        "relationships", "persons", "users",
-    ]:
-        try:
-            cur.execute(f"TRUNCATE TABLE {tbl}")
-        except Exception:
-            pass
-    conn.commit()
-    cur.close()
-    conn.close()
+```powershell
+pytest -x tests/test_audit_emits.py -m db_integration
 ```
 
-## Pytest parallel rule
+## Conftest contract
 
-- `pytest -n 1` (default `--maxprocesses=1`) cho test mutation/audit.
-- `pytest-xdist` parallel CHI cho pure helper / validation test (co marker `@pytest.mark.pure`).
-- KHONG parallel test cham DB chung — race condition trong `tbqc_test`.
+`tests/conftest.py` hien co cac fixture chuan cho strategy B:
 
-## Mock DB scope (Option C)
+- `_reset_db_side_channels_fixture`
+- `test_db_env`
+- `db_backed_flask_app`
+- `db_client`
+- `test_db_cursor`
 
-Chi cho:
-- `utils/validation.py` — pure helper
-- `utils/sql_identifier.py` — pure
-- `utils/host_redact.py` — pure
-- `utils/url_safety.py` — pure
-- `services/code_graph_scan.py` — file system + AST, khong DB
+Nguyen tac:
 
-Mutation/integration KHONG mock — fail-silent risk (R7) khong bat duoc.
+- Khong doi `flask_app` cu de tranh vo test hien co.
+- DB-backed tests phai opt-in bang fixture rieng.
+- Parallel DB tests bi cam; chi pure tests moi duoc marker `pure`.
 
-## Risk va mitigation
+## Parallel rule
+
+- DB-backed tests: `pytest -n 1` hoac default single-process
+- Pure tests: co the chay `pytest -m pure -n auto`
+- Khong chay song song nhung test cung dung `test_db_env`
+
+## Audit integrity gate
+
+Mutation/audit tests chi duoc xem la hop le khi:
+
+- `activity_logs` ton tai trong schema test
+- Sau moi mutation P0, row count tang dung theo action mong doi
+- Neu audit fail-silent, test FAIL, khong skip
+
+## Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
-| R7 audit fail-silent | Test assert `SELECT COUNT(*) FROM activity_logs` tang dung |
-| R8 `.db_resolved.json` leak | Autouse fixture xoa file truoc moi test |
-| R10 pool global flaky | Autouse fixture reset `_db_pool = None` |
+| Docker chua chay | Verify `docker version` truoc Phase 0b |
+| Image drift | Pin `mysql:8.4` |
+| `.db_resolved.json` leak | Autouse fixture xoa file truoc moi test |
+| Pool global flaky | Reset `_db_pool` va `_config_override` truoc moi test |
+| App import som hon DB env | Dung `db_backed_flask_app`, khong reuse `flask_app` cho DB-backed tests |
 
-## TODO Step 5 (Phase 0b)
+## Fallback policy
 
-- [ ] Verify MySQL 8.0 da install local (check Services hoac `Get-Service MySQL*` PowerShell)
-- [ ] Tao `tbqc_test` database
-- [ ] Tao user `tbqc_test` voi password rieng
-- [ ] Update `tests/conftest.py` voi 2 fixture moi
-- [ ] Smoke: chay 1 test mutation (vd `test_admin_login_hardening`) trong DB that
+Chi fallback khi Docker bi block thuc su:
+
+1. `A2` truoc
+2. `A1` sau
+3. `D` chi khi user chap nhan mat mutation/audit coverage
+
+Fallback khong duoc doi quietly. Phai ghi vao `docs/refactor/DB_TEST_STRATEGY.md` va `CHANGELOG_REFACTOR.md`.
+
+## Exit gate truoc khi vao Phase 0b mutation/audit
+
+- [ ] Docker Desktop verified
+- [ ] `pip install -r requirements-dev.txt` xong
+- [ ] `test_db_env` khoi dong duoc `mysql:8.4`
+- [ ] Bootstrap SQL import pass
+- [ ] Co it nhat 1 DB-backed smoke test chay pass
+- [ ] Team dong y B la canonical strategy
