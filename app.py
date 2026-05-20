@@ -473,19 +473,14 @@ def validate_tbqc_gate(username: str, password: str) -> bool:
 
 try:
     from folder_py.genealogy_tree import build_tree, build_ancestors_chain, build_descendants, build_children_map, build_parent_map, load_persons_data
-except ImportError:
-    try:
-        import sys
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'folder_py'))
-        from genealogy_tree import build_tree, build_ancestors_chain, build_descendants, build_children_map, build_parent_map, load_persons_data
-    except ImportError as e:
-        logger.warning(f'Cannot import genealogy_tree: {e}')
-        build_tree = None
-        build_ancestors_chain = None
-        build_descendants = None
-        build_children_map = None
-        build_parent_map = None
-        load_persons_data = None
+except ImportError as e:
+    logger.warning(f'Cannot import genealogy_tree: {e}')
+    build_tree = None
+    build_ancestors_chain = None
+    build_descendants = None
+    build_children_map = None
+    build_parent_map = None
+    load_persons_data = None
 
 def sync_genealogy_from_members():
     """
