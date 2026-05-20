@@ -19,7 +19,7 @@
 
 **Repository:** `https://github.com/phongbao-uopeopleuni/tbqc.git` (confirmed from `git remote`).
 
-**Production URL:** Not hardcoded in README (by design). `render.yaml` comments reference cookie domain pattern `.phongtuybienquancong.info` â€” **verify live URL on Render Dashboard / DNS**, do not assume without confirmation.
+**Production URL:** `https://www.phongtuybienquancong.info/` (Railway, verified 2026-05-20). Health: `https://www.phongtuybienquancong.info/api/health` → 200.
 
 ---
 
