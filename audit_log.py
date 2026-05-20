@@ -7,7 +7,8 @@ Ghi log các hoạt động quan trọng
 
 import json
 import os
-from datetime import datetime
+from datetime import date, datetime, time
+from decimal import Decimal
 from flask import request
 
 try:
@@ -53,6 +54,23 @@ except ImportError:
                 print(f"Lỗi kết nối database: {e}")
                 return None
 
+def _audit_json_default(value):
+    """Serialize common DB/runtime types for audit payloads."""
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, bytes):
+        return value.decode('utf-8', errors='replace')
+    raise TypeError(f'Object of type {type(value).__name__} is not JSON serializable')
+
+
+def _to_audit_json(data):
+    if not data:
+        return None
+    return json.dumps(data, ensure_ascii=False, default=_audit_json_default)
+
+
 def log_activity(action, target_type=None, target_id=None, before_data=None, after_data=None):
     """
     Ghi log hoạt động
@@ -77,8 +95,8 @@ def log_activity(action, target_type=None, target_id=None, before_data=None, aft
         # Không lưu mật khẩu / token vào activity_logs (bản sao đã redact)
         safe_before = redact_for_audit(before_data) if before_data else None
         safe_after = redact_for_audit(after_data) if after_data else None
-        before_json = json.dumps(safe_before, ensure_ascii=False) if safe_before else None
-        after_json = json.dumps(safe_after, ensure_ascii=False) if safe_after else None
+        before_json = _to_audit_json(safe_before)
+        after_json = _to_audit_json(safe_after)
         
         # Kiểm tra xem bảng activity_logs có tồn tại không
         cursor = connection.cursor()

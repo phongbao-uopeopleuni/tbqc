@@ -463,11 +463,16 @@ def register_admin_routes(app):
             
             # Ghi log activity sau khi create thành công
             try:
-                cursor.execute("SELECT user_id, username, role, full_name, email FROM users WHERE user_id = %s", (new_user_id,))
-                user_data = cursor.fetchone()
+                log_cursor = connection.cursor(dictionary=True)
+                log_cursor.execute(
+                    "SELECT user_id, username, role, full_name, email FROM users WHERE user_id = %s",
+                    (new_user_id,),
+                )
+                user_data = log_cursor.fetchone()
                 if user_data:
                     log_activity('CREATE_USER', target_type='User', target_id=new_user_id,
-                               after_data=dict(user_data))
+                               after_data=user_data)
+                log_cursor.close()
             except Exception as log_error:
                 logger.warning(f"Failed to log user create for {new_user_id}: {log_error}")
             
@@ -1645,4 +1650,3 @@ def register_admin_routes(app):
             as_attachment=True,
             download_name=os.path.basename(candidate),
         )
-
