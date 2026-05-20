@@ -15,9 +15,13 @@
 | Pattern | `@app.route` \| `register` \| `blueprint` |
 | Domain | Phase 1 domain group |
 | Risk | P0 \| P1 \| P2 |
-| Auth | `none` \| `login_required` \| `admin_required` \| `permission_required:X` \| `password_in_body` \| `internal_secret` \| `members_session+password` \| `token_optional` |
+| Auth | `none` \| `login_required` \| `admin_required` \| `permission_required:X` \| `password_in_body` \| `internal_secret` \| `members_session+password` \| `token_optional` \| `dual_state_gate` |
 | Audit | Y \| N |
 | HasTest | Y \| N \| partial |
+
+`dual_state_gate` = route co kiem tra session/role TRONG handler body. Anonymous user nhin
+thay gate page (khong leak data). Authenticated user nhin thay content thuc te. Pattern thiet ke,
+khong phai security bug. Vi du: `/members`, `/admin/activities`, `/admin/login`.
 
 ## Risk tier
 
@@ -41,9 +45,6 @@ P2 = health, static-ish, debug/internal, utility low-risk
 [MISSING AUTH] blueprints/persons.py: delete_person, create_person,
   delete_persons_batch, update_person_members dung password_in_body (khong Flask-Login).
   update_person, sync_person dung @login_required trong service layer.
-
-[NO AUTH] admin_routes.py:246 /admin/activities — khong co decorator, trang render HTML.
-  [RISK] co the truy cap ma khong dang nhap.
 
 [NO AUDIT] admin_routes.py: api_process_request (P0 mutation), api_reset_password (P0 mutation) — 
   khong co log_activity call. Gap can fill o Phase 0b audit tests.
@@ -83,7 +84,7 @@ P2 = health, static-ish, debug/internal, utility low-risk
 | /admin/login | GET,POST | admin_login | admin_login | admin_routes.py:47 | register | admin_auth | P0 | none | Y | Y |
 | /admin/logout | GET | admin_logout | admin_logout | admin_routes.py:169 | register | admin_auth | P0 | login_required | N | N |
 | /admin/dashboard | GET | admin_dashboard | admin_dashboard | admin_routes.py:176 | register | admin_dashboard | P1 | permission_required:canViewDashboard | N | N |
-| /admin/activities | GET | admin_activities_page | admin_activities_page | admin_routes.py:246 | register | admin_activities | P1 | none | N | N |
+| /admin/activities | GET | admin_activities_page | admin_activities_page | admin_routes.py:246 | register | admin_activities | P1 | dual_state_gate | N | N |
 | /api/activities/can-post | GET | api_activities_can_post | api_activities_can_post | admin_routes.py:262 | register | admin_activities | P2 | none | N | partial |
 | /admin/requests | GET | admin_requests | admin_requests | admin_routes.py:270 | register | admin_requests | P1 | permission_required:canViewDashboard | N | N |
 | /admin/api/requests/\<int:request_id\>/process | POST | api_process_request | api_process_request | admin_routes.py:303 | register | admin_requests | P0 | permission_required:canEditGenealogy | N | N |
@@ -176,7 +177,7 @@ P2 = health, static-ish, debug/internal, utility low-risk
 
 | URL | Method | Endpoint | Handler | File:Line | Pattern | Domain | Risk | Auth | Audit | HasTest |
 |---|---|---|---|---|---|---|---|---|---|---|
-| /members | GET | members_portal.members | members | blueprints/members_portal.py:24 | blueprint | members_gate | P1 | none | N | partial |
+| /members | GET | members_portal.members | members | blueprints/members_portal.py:24 | blueprint | members_gate | P1 | dual_state_gate | N | partial |
 | /members/verify | POST | members_portal.members_verify | members_verify | blueprints/members_portal.py:35 | blueprint | members_gate | P0 | none | N | Y |
 | /members/logout | GET,POST | members_portal.members_logout | members_logout | blueprints/members_portal.py:91 | blueprint | members_gate | P2 | none | N | N |
 | /api/members | GET | members_portal.get_members | get_members | blueprints/members_portal.py:101 | blueprint | members_gate | P1 | members_session | N | Y |
