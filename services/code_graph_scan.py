@@ -30,8 +30,9 @@ DEFAULT_TIMEOUT_SEC = 120
 _SCAN_DIR_REL = ("scripts", "code-graph")
 _SCAN_ENTRY = "scan.mjs"
 _OUT_FILE_REL = ("static", "data", "code-graph.json")
-# Root mà scanner sẽ quét (tương đối repo root). Khớp với npm script `scan:static`.
-_SCAN_ROOT_REL = "static/js"
+# Root mà scanner sẽ quét (tương đối repo root).
+# Scanner mới đọc toàn bộ phần mã nguồn/cấu hình liên quan thay vì chỉ static/js.
+_SCAN_ROOT_REL = "."
 
 
 def _project_root() -> Path:
@@ -75,7 +76,7 @@ def _read_graph_stats(out_file: Path) -> Dict[str, Any]:
 
 def run_scan(timeout_sec: int = DEFAULT_TIMEOUT_SEC) -> Dict[str, Any]:
     """
-    Thực thi `node scan.mjs --root static/js` trong `scripts/code-graph/`.
+    Thực thi `node scan.mjs --root .` trong `scripts/code-graph/`.
 
     Return dict:
       {

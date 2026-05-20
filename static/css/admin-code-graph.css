@@ -4,6 +4,15 @@
   margin-top: var(--admin-space-6);
 }
 
+.code-graph-header-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .code-graph-hint {
   font-size: var(--admin-font-size-sm);
   margin-bottom: var(--admin-space-4);
@@ -24,12 +33,20 @@
   border: 1px solid var(--admin-border);
   border-radius: var(--admin-radius);
   align-self: flex-start;
+  max-height: min(70vh, 760px);
+  overflow-y: auto;
 }
 
 .code-graph-sidebar-title {
   margin: 0 0 var(--admin-space-3) 0;
   font-size: var(--admin-font-size-base);
   font-weight: var(--admin-font-weight-semibold);
+}
+
+.code-graph-filter-block + .code-graph-filter-block {
+  margin-top: var(--admin-space-4);
+  padding-top: var(--admin-space-4);
+  border-top: 1px solid var(--admin-border);
 }
 
 .code-graph-check {
@@ -41,10 +58,64 @@
   cursor: pointer;
 }
 
+.code-graph-input,
+.code-graph-select {
+  width: 100%;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: #fff;
+  color: var(--admin-text);
+  padding: 9px 10px;
+  font-size: var(--admin-font-size-sm);
+}
+
+.code-graph-input:focus,
+.code-graph-select:focus {
+  outline: 2px solid rgba(30, 64, 175, 0.16);
+  border-color: #2563eb;
+}
+
+.code-graph-legend {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.code-graph-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--admin-font-size-sm);
+}
+
+.code-graph-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-block;
+  border: 1px solid rgba(15, 23, 42, 0.18);
+}
+
+.code-graph-dot.type-file { background: #f5d565; }
+.code-graph-dot.type-function { background: #60a5fa; }
+.code-graph-dot.type-route { background: #f97316; }
+.code-graph-dot.type-db { background: #a78bfa; }
+.code-graph-dot.risk-high { background: #ef4444; }
+.code-graph-dot.risk-medium { background: #f59e0b; }
+
 .code-graph-main {
   flex: 1;
   min-width: 0;
   min-height: 400px;
+}
+
+.code-graph-main-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--admin-space-3);
+  margin-bottom: var(--admin-space-3);
+  min-height: 22px;
 }
 
 .code-graph-cy {
@@ -67,6 +138,14 @@
   font-size: var(--admin-font-size-sm);
   overflow-y: auto;
   max-height: min(55vh, 520px);
+}
+
+.code-graph-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--admin-space-3);
+  margin-bottom: var(--admin-space-3);
 }
 
 .code-graph-detail code {
@@ -95,6 +174,62 @@
   font-weight: var(--admin-font-weight-semibold);
 }
 
+.code-graph-detail-title {
+  margin: 0 0 var(--admin-space-2) 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.code-graph-detail-desc {
+  margin: 0 0 var(--admin-space-3) 0;
+  line-height: 1.5;
+  color: var(--admin-text-muted);
+}
+
+.code-graph-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.code-graph-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 var(--admin-space-3) 0;
+}
+
+.code-graph-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #f8fafc;
+  color: #334155;
+}
+
+.code-graph-pill.risk-high {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.code-graph-pill.risk-medium {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
+.code-graph-pill.risk-low {
+  background: #ecfdf5;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.code-graph-ref-list,
 .code-graph-fn-list {
   margin: 0;
   padding-left: 1.1rem;
@@ -102,8 +237,122 @@
   overflow-y: auto;
 }
 
+.code-graph-ref-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.code-graph-ref-list li,
 .code-graph-fn-list li {
   margin-bottom: 4px;
+}
+
+.code-graph-ref-btn {
+  width: 100%;
+  text-align: left;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--admin-radius-sm);
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.code-graph-ref-btn:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.code-graph-section-card {
+  padding: 10px 12px;
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  background: #f8fafc;
+}
+
+.code-graph-section-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.code-graph-tooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: var(--admin-radius-sm);
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22);
+}
+
+.code-graph-modal[hidden],
+.code-graph-tooltip[hidden] {
+  display: none;
+}
+
+.code-graph-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.code-graph-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.code-graph-modal-dialog {
+  position: relative;
+  width: min(920px, calc(100vw - 32px));
+  max-height: min(80vh, 760px);
+  overflow-y: auto;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border);
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
+  padding: var(--admin-space-4);
+}
+
+.code-graph-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--admin-space-3);
+  margin-bottom: var(--admin-space-4);
+}
+
+.code-graph-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.code-graph-overview-card {
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius-sm);
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.code-graph-overview-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.code-graph-overview-card ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.code-graph-overview-card li {
+  margin-bottom: 6px;
 }
 
 @media (max-width: 1024px) {
@@ -120,5 +369,9 @@
   .code-graph-cy {
     min-height: 320px;
     height: 45vh;
+  }
+
+  .code-graph-overview-grid {
+    grid-template-columns: 1fr;
   }
 }

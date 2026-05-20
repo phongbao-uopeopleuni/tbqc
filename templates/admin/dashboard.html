@@ -90,9 +90,21 @@
 <div class="admin-card code-graph-section">
   <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--admin-space-4, 16px); flex-wrap: wrap;">
     <h2 style="margin: 0;">🔗 Knowledge Graph (mã nguồn)</h2>
-    <div style="flex-shrink: 0; display: flex; align-items: center; gap: 10px;">
+    <div class="code-graph-header-actions">
       <span id="code-graph-refresh-status" class="text-muted" style="font-size: 13px; min-height: 1em;"></span>
-      <button class="btn btn-secondary" id="btnRescanCodeGraph" type="button" onclick="rescanCodeGraph()" title="Quét lại static/js để cập nhật đồ thị.">
+      <button class="btn btn-secondary" id="btnCodeGraphOverview" type="button">
+        📊 Project Overview
+      </button>
+      <button class="btn btn-secondary" id="btnCodeGraphExportMd" type="button">
+        📝 Export MD
+      </button>
+      <button class="btn btn-secondary" id="btnCodeGraphExportJson" type="button">
+        💾 Export JSON
+      </button>
+      <button class="btn btn-secondary" id="btnCodeGraphResetView" type="button">
+        🎯 Reset View
+      </button>
+      <button class="btn btn-secondary" id="btnRescanCodeGraph" type="button" onclick="rescanCodeGraph()" title="Quét lại mã nguồn để cập nhật đồ thị.">
         🔄 Cập nhật
       </button>
     </div>
@@ -100,23 +112,109 @@
   <p id="code-graph-hint" class="code-graph-hint text-muted"></p>
   <div class="code-graph-wrap">
     <aside class="code-graph-sidebar" aria-label="Bộ lọc loại tệp">
+      <div class="code-graph-filter-block">
+        <label class="code-graph-sidebar-title" for="cg-search">Tìm kiếm</label>
+        <input id="cg-search" class="code-graph-input" type="search" placeholder="file, function, route, auth, tree, backup..." autocomplete="off">
+      </div>
+
+      <div class="code-graph-filter-block">
+        <label class="code-graph-sidebar-title" for="cg-view-mode">View mode</label>
+        <select id="cg-view-mode" class="code-graph-select">
+          <option value="file_dependency">File Dependency View</option>
+          <option value="function_view">Function View</option>
+          <option value="api_flow">API Flow View</option>
+          <option value="security_review">Security Review View</option>
+          <option value="learning_view">Learning View</option>
+        </select>
+      </div>
+
+      <div class="code-graph-filter-block">
+        <label class="code-graph-sidebar-title" for="cg-node-type">Node type</label>
+        <select id="cg-node-type" class="code-graph-select">
+          <option value="">Tất cả</option>
+          <option value="file">File/module</option>
+          <option value="function">Function</option>
+          <option value="class">Class</option>
+          <option value="api_route">API route</option>
+          <option value="component">Component</option>
+          <option value="database">Database</option>
+          <option value="style">Style</option>
+          <option value="config">Config</option>
+          <option value="unknown">Unknown</option>
+        </select>
+      </div>
+
+      <div class="code-graph-filter-block">
+        <label class="code-graph-sidebar-title" for="cg-risk-level">Risk level</label>
+        <select id="cg-risk-level" class="code-graph-select">
+          <option value="">Tất cả</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+
+      <div class="code-graph-filter-block">
+        <h3 class="code-graph-sidebar-title">Filter nhanh</h3>
+        <label class="code-graph-check"><input type="checkbox" id="cg-filter-security"> Security-related</label>
+        <label class="code-graph-check"><input type="checkbox" id="cg-filter-db"> Database-related</label>
+        <label class="code-graph-check"><input type="checkbox" id="cg-filter-many-deps"> Has many dependencies</label>
+        <label class="code-graph-check"><input type="checkbox" id="cg-filter-orphan"> Orphan node</label>
+        <label class="code-graph-check"><input type="checkbox" id="cg-filter-entry"> Entry point</label>
+      </div>
+
+      <div class="code-graph-filter-block">
       <h3 class="code-graph-sidebar-title">Lọc theo loại</h3>
       <label class="code-graph-check"><input type="checkbox" id="cg-filter-js" checked> .js / .jsx / .mjs</label>
       <label class="code-graph-check"><input type="checkbox" id="cg-filter-css" checked> .css</label>
       <label class="code-graph-check"><input type="checkbox" id="cg-filter-html" checked> .html</label>
       <label class="code-graph-check"><input type="checkbox" id="cg-filter-other" checked> Khác</label>
+      </div>
+
+      <div class="code-graph-filter-block">
+        <h3 class="code-graph-sidebar-title">Legend</h3>
+        <div class="code-graph-legend">
+          <div class="code-graph-legend-item"><span class="code-graph-dot type-file"></span> File</div>
+          <div class="code-graph-legend-item"><span class="code-graph-dot type-function"></span> Function</div>
+          <div class="code-graph-legend-item"><span class="code-graph-dot type-route"></span> API route</div>
+          <div class="code-graph-legend-item"><span class="code-graph-dot type-db"></span> Database</div>
+          <div class="code-graph-legend-item"><span class="code-graph-dot risk-high"></span> High risk</div>
+          <div class="code-graph-legend-item"><span class="code-graph-dot risk-medium"></span> Medium risk</div>
+        </div>
+      </div>
     </aside>
     <div class="code-graph-main">
+      <div class="code-graph-main-toolbar">
+        <span id="code-graph-summary" class="text-muted">Đang tải dữ liệu graph…</span>
+      </div>
       <div id="cy" class="code-graph-cy" role="img" aria-label="Đồ thị phụ thuộc tệp"></div>
     </div>
     <aside class="code-graph-detail" id="code-graph-detail-panel" aria-live="polite">
-      <h3 class="code-graph-sidebar-title">Chi tiết</h3>
+      <div class="code-graph-detail-head">
+        <h3 class="code-graph-sidebar-title">Chi tiết</h3>
+        <button class="btn btn-secondary btn-sm" id="cg-trace-selected" type="button" disabled>
+          🔍 Trace Flow
+        </button>
+      </div>
       <div id="code-graph-detail">
         <p class="code-graph-detail-empty">Chọn một node trên đồ thị.</p>
       </div>
     </aside>
   </div>
 </div>
+
+<div id="code-graph-overview-modal" class="code-graph-modal" hidden>
+  <div class="code-graph-modal-backdrop" data-close-overview="true"></div>
+  <div class="code-graph-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="code-graph-overview-title">
+    <div class="code-graph-modal-head">
+      <h3 id="code-graph-overview-title" style="margin: 0;">Project Overview</h3>
+      <button class="btn btn-secondary btn-sm" id="btnCodeGraphOverviewClose" type="button">Đóng</button>
+    </div>
+    <div id="code-graph-overview-content" class="code-graph-overview-content"></div>
+  </div>
+</div>
+
+<div id="code-graph-tooltip" class="code-graph-tooltip" hidden></div>
 
 <script>
   async function loadDashboardStats() {
