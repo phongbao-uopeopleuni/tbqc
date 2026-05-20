@@ -3,7 +3,8 @@ services:
     name: tbqc-giapha
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: cd folder_py && python app.py
+    # Must match Procfile. Production is currently verified on Railway; this is the Render fallback.
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 --preload --max-requests 1000 --max-requests-jitter 50
     envVars:
       - key: SECRET_KEY
         generateValue: true
