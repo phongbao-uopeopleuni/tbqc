@@ -1,38 +1,44 @@
-﻿# TBQC Gia pháº£
+# TBQC Gia phả
 
-TÃ i liá»‡u nÃ y lÃ  nguá»“n documentation chÃ­nh thá»©c vÃ  duy nháº¥t cá»§a dá»± Ã¡n. CÃ¡c file Markdown cÅ© Ä‘Ã£ Ä‘Æ°á»£c há»£p nháº¥t vÃ o Ä‘Ã¢y Ä‘á»ƒ giáº£m phÃ¢n tÃ¡n thÃ´ng tin, dá»… báº£o trÃ¬ vÃ  dá»… bÃ n giao.
+Tài liệu vận hành chính thức của dự án. Đây là nguồn duy nhất cho thông tin về cách chạy, deploy, và bảo trì hệ thống.
 
-## 1. Má»¥c Ä‘Ã­ch há»‡ thá»‘ng
+---
 
-TBQC lÃ  á»©ng dá»¥ng web gia pháº£ viáº¿t báº±ng Flask + MySQL, phá»¥c vá»¥:
+## 1. Mục đích hệ thống
 
-- Tra cá»©u cÃ¢y gia pháº£ tÆ°Æ¡ng tÃ¡c.
-- Cá»•ng thÃ nh viÃªn vá»›i dá»¯ liá»‡u ná»™i bá»™ cÃ³ kiá»ƒm soÃ¡t truy cáº­p.
-- Khu quáº£n trá»‹ Ä‘á»ƒ quáº£n lÃ½ ngÆ°á»i, ná»™i dung, áº£nh, backup vÃ  cÃ¡c thao tÃ¡c váº­n hÃ nh.
-- CÃ¡c module hoáº¡t Ä‘á»™ng, tÃ i liá»‡u, thÆ° viá»‡n áº£nh vÃ  thÃ´ng tin má»™ pháº§n.
+TBQC là ứng dụng web gia phả viết bằng Flask + MySQL, phục vụ:
 
-Äá»‘i tÆ°á»£ng sá»­ dá»¥ng:
+- Tra cứu cây gia phả tương tác.
+- Cổng thành viên (`/members`) với dữ liệu nội bộ có kiểm soát truy cập.
+- Khu quản trị để quản lý người, nội dung, ảnh, backup và các thao tác vận hành.
+- Các module hoạt động, tài liệu, thư viện ảnh và thông tin mộ phần.
 
-- KhÃ¡ch truy cáº­p cÃ´ng khai.
-- ThÃ nh viÃªn Ä‘Ã£ Ä‘Æ°á»£c cáº¥p máº­t kháº©u/passphrase.
-- Quáº£n trá»‹ viÃªn váº­n hÃ nh há»‡ thá»‘ng.
+Đối tượng sử dụng:
 
-## 2. TÃ­nh nÄƒng chÃ­nh
+- Khách truy cập công khai.
+- Thành viên đã được cấp mật khẩu/passphrase.
+- Quản trị viên vận hành hệ thống.
 
-- CÃ¢y gia pháº£ nhiá»u cháº¿ Ä‘á»™ xem: tree, danh sÃ¡ch Ä‘a cáº¥p, mindmap.
-- TÃ¬m kiáº¿m vÃ  xem chi tiáº¿t thÃ nh viÃªn.
-- Cá»•ng `/members` vá»›i dá»¯ liá»‡u ná»™i bá»™ dÃ nh cho thÃ nh viÃªn.
-- Quáº£n trá»‹ CRUD dá»¯ liá»‡u, duyá»‡t chá»‰nh sá»­a, táº£i backup.
-- Gallery áº£nh, hoáº¡t Ä‘á»™ng/tin tá»©c, tÃ i liá»‡u, module má»™ pháº§n cÃ³ báº£n Ä‘á»“.
-- Health check Ä‘á»ƒ giÃ¡m sÃ¡t váº­n hÃ nh.
+---
+
+## 2. Tính năng chính
+
+- Cây gia phả nhiều chế độ xem: tree, danh sách đa cấp, mindmap.
+- Tìm kiếm và xem chi tiết thành viên.
+- Cổng `/members` với dữ liệu nội bộ dành cho thành viên.
+- Quản trị CRUD dữ liệu, duyệt chỉnh sửa, tải backup.
+- Gallery ảnh, hoạt động/tin tức, tài liệu, module mộ phần có bản đồ.
+- Health check để giám sát vận hành.
+
+---
 
 ## 3. Tech Stack
 
-| ThÃ nh pháº§n | CÃ´ng nghá»‡ |
+| Thành phần | Công nghệ |
 | --- | --- |
 | Backend | Python 3.11+, Flask |
 | WSGI | Gunicorn |
-| Database | MySQL vá»›i `mysql-connector-python` |
+| Database | MySQL với `mysql-connector-python` |
 | Auth | Flask-Login, bcrypt |
 | CSRF | Flask-WTF |
 | Cache | Flask-Caching (`simple`) |
@@ -40,45 +46,51 @@ TBQC lÃ  á»©ng dá»¥ng web gia pháº£ viáº¿t báº±ng Flask + MySQL
 | Frontend | Jinja2, HTML, CSS, vanilla JavaScript |
 | Test | pytest |
 | JS tooling | ESLint, Prettier |
-| Deploy | Render hoáº·c Railway |
+| Deploy | Railway (production), Render (fallback) |
 
-## 4. Cáº¥u trÃºc thÆ° má»¥c
+---
 
-| ÄÆ°á»ng dáº«n | Vai trÃ² |
+## 4. Cấu trúc thư mục
+
+| Đường dẫn | Vai trò |
 | --- | --- |
-| `app.py` | Entry point chÃ­nh cá»§a Flask app |
-| `start_server.py` | Helper cháº¡y local |
-| `blueprints/` | CÃ¡c route module theo domain |
+| `app.py` | Entry point chính của Flask app |
+| `start_server.py` | Helper chạy local |
+| `blueprints/` | Các route module theo domain |
 | `services/` | Business logic |
-| `utils/` | HÃ m tiá»‡n Ã­ch, validation, sanitize |
+| `utils/` | Hàm tiện ích, validation, sanitize |
 | `templates/` | Jinja templates |
 | `static/` | CSS, JS, images |
 | `tests/` | Test suite pytest |
-| `scripts/` | Script há»— trá»£ váº­n hÃ nh/kiá»ƒm tra |
-| `folder_py/db_config.py` | Káº¿t ná»‘i DB vÃ  pool |
-| `folder_sql/` | Schema vÃ  script SQL tham chiáº¿u |
-| `admin_routes.py` | Legacy admin routes lá»›n |
-| `admin_templates.py` | HTML/admin template ghÃ©p vá»›i legacy admin |
+| `scripts/` | Script hỗ trợ vận hành/kiểm tra |
+| `folder_py/db_config.py` | Kết nối DB và pool |
+| `folder_sql/` | Schema và script SQL tham chiếu (legacy) |
+| `admin_routes.py` | Legacy admin routes lớn (đang refactor) |
+| `admin_templates.py` | HTML admin template ghép với legacy admin |
 | `auth.py` | Login manager, user model, decorators |
 | `extensions.py` | Cache, limiter, CSRF |
-| `config.py` | Náº¡p cáº¥u hÃ¬nh vÃ  env |
+| `config.py` | Nạp cấu hình và env |
+| `docs/` | Tài liệu vận hành |
+| `docs/refactor/` | Artefacts và safety baseline cho refactor |
 
-LÆ°u Ã½ kiáº¿n trÃºc:
+**Lưu ý kiến trúc:**
 
-- `auth.py` á»Ÿ root lÃ  logic auth, khÃ¡c vá»›i `blueprints/auth.py` lÃ  HTTP routes.
-- `admin_routes.py` váº«n lÃ  khá»‘i legacy lá»›n; migration sang blueprint chÆ°a hoÃ n táº¥t.
-- Thá»© tá»± Ä‘Äƒng kÃ½ route quan trá»ng: `register_blueprints(app)` -> `register_admin_routes(app)` -> marriage routes -> route trá»±c tiáº¿p trong `app.py` -> `add_url_rule` cuá»‘i file. Route Ä‘Äƒng kÃ½ sau cÃ³ thá»ƒ ghi Ä‘Ã¨ route trÃ¹ng URL.
+- `auth.py` ở root là logic auth, khác với `blueprints/auth.py` là HTTP routes.
+- `admin_routes.py` vẫn là khối legacy lớn; migration sang blueprint chưa hoàn tất (xem `docs/Pre-refactor May 20, 2026.md`).
+- Thứ tự đăng ký route quan trọng: `register_blueprints(app)` → `register_admin_routes(app)` → marriage routes → route trực tiếp trong `app.py` → `add_url_rule` cuối file. Route đăng ký sau có thể ghi đè route trùng URL.
 
-## 5. Cháº¡y local
+---
 
-### YÃªu cáº§u
+## 5. Chạy local
+
+### Yêu cầu
 
 - Python 3.11+
-- MySQL cÃ³ schema tÆ°Æ¡ng thÃ­ch
+- MySQL có schema tương thích (xem `folder_sql/`)
 - Git
-- Node.js chá»‰ cáº§n khi cháº¡y lint/format JS
+- Node.js — chỉ cần khi chạy lint/format JS
 
-### CÃ i Ä‘áº·t
+### Cài đặt
 
 ```bash
 python -m venv .venv
@@ -88,35 +100,32 @@ PowerShell:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+npm install
 ```
 
 macOS/Linux:
 
 ```bash
 source .venv/bin/activate
-```
-
-CÃ i phá»¥ thuá»™c:
-
-```bash
 pip install -r requirements.txt
 npm install
 ```
 
-### Táº¡o `.env`
+### Tạo `.env`
 
-Sao chÃ©p tá»« `.env.example` sang `.env` á»Ÿ thÆ° má»¥c gá»‘c. KhÃ´ng commit file nÃ y.
+Sao chép từ `.env.example` sang `.env` ở thư mục gốc. Không commit file này.
 
-Biáº¿n tá»‘i thiá»ƒu:
+Biến tối thiểu:
 
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
 - `SECRET_KEY`
 
-Alias MySQL mÃ  má»™t sá»‘ host dÃ¹ng:
+Alias MySQL mà một số host dùng:
 
 - `MYSQLHOST`, `MYSQLPORT`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`
 
-Biáº¿n quan trá»ng khÃ¡c:
+Biến quan trọng khác:
 
 - `MEMBERS_PASSWORD`, `ADMIN_PASSWORD`, `BACKUP_PASSWORD`
 - `MEMBERS_FIXED_ACCOUNTS`
@@ -130,19 +139,19 @@ Biáº¿n quan trá»ng khÃ¡c:
 - `RAILWAY_VOLUME_MOUNT_PATH`
 - `BACKUP_DIR`
 
-### Cháº¡y app
+### Chạy app
 
 ```bash
 python app.py
 ```
 
-Hoáº·c:
+Hoặc:
 
 ```bash
 python start_server.py
 ```
 
-Máº·c Ä‘á»‹nh app dÃ¹ng `PORT` hoáº·c cá»•ng `5000`.
+Mặc định app dùng `PORT` hoặc cổng `5000`.
 
 Health check local:
 
@@ -150,16 +159,23 @@ Health check local:
 GET http://127.0.0.1:5000/api/health
 ```
 
-LÆ°u Ã½:
+Lưu ý: `app.py` dùng `use_reloader=False`, sau khi sửa code phải restart thủ công.
 
-- `app.py` dÃ¹ng `use_reloader=False`, sau khi sá»­a code pháº£i restart thá»§ cÃ´ng.
+---
 
-## 6. Cháº¡y test vÃ  lint
+## 6. Chạy test và lint
 
-Python:
+Python (full suite):
 
 ```bash
 pytest
+```
+
+Python (DB integration — cần Docker):
+
+```bash
+pip install -r requirements-dev.txt
+pytest -m db_integration
 ```
 
 JavaScript:
@@ -169,103 +185,105 @@ npm run lint
 npm run format:check
 ```
 
+---
+
 ## 7. Deploy production
 
-### Start command chuáº©n
+### Production truth
 
-`Procfile` lÃ  cáº¥u hÃ¬nh start Ä‘Ã¡ng tin cáº­y:
+**Railway + `Procfile`** là canonical runtime. Mọi thay đổi entrypoint phải cập nhật `Procfile` trước.
+
+Start command chuẩn (`Procfile`):
 
 ```text
 web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 --preload --max-requests 1000 --max-requests-jitter 50
 ```
 
+`render.yaml` là Render fallback — đã được align với `Procfile` (xem `docs/refactor/BOOTSTRAP_TRUTH.md`).
+
 ### Checklist deploy
 
-- XÃ¡c minh `.env` hoáº·c dashboard Ä‘Ã£ cÃ³ Ä‘á»§ biáº¿n mÃ´i trÆ°á»ng.
-- XÃ¡c minh `render.yaml` khÃ´ng mÃ¢u thuáº«n vá»›i `Procfile`.
-- Cháº¡y `pytest`.
-- Náº¿u sá»­a `static/js/**`, cháº¡y `npm run lint`.
-- Kiá»ƒm tra `GET /api/health`.
-- Smoke test trang chá»§, `/members`, `/genealogy`, `/admin/login`.
+- Xác minh `.env` hoặc Railway dashboard đã có đủ biến môi trường.
+- Chạy `pytest`.
+- Nếu sửa `static/js/**`, chạy `npm run lint`.
+- Kiểm tra `GET /api/health` trả 200.
+- Smoke test: trang chủ, `/members`, `/genealogy`, `/admin/login`.
 
-### Rá»§i ro Ä‘Ã£ biáº¿t
+### Rủi ro đã biết
 
-- `render.yaml` tá»«ng cÃ³ `startCommand` legacy trá» tá»›i `folder_py/app.py`, trong khi file nÃ y khÃ´ng tá»“n táº¡i. Náº¿u chá»‰nh deploy, pháº£i xÃ¡c nháº­n láº¡i dashboard Ä‘ang dÃ¹ng gÃ¬ trÆ°á»›c khi thay Ä‘á»•i.
-- Náº¿u khÃ´ng gáº¯n volume/persistent storage, dá»¯ liá»‡u áº£nh/backup trong filesystem container cÃ³ thá»ƒ máº¥t khi redeploy.
+- Nếu không gắn volume/persistent storage, dữ liệu ảnh/backup trong filesystem container có thể mất khi redeploy.
+- Session admin survive qua restart vì `--preload` + `instance/secret_key` persistent. Nếu file này bị xóa/thay đổi, toàn bộ session bị invalidate.
 
-## 8. Váº­n hÃ nh vÃ  báº£o trÃ¬
+---
+
+## 8. Vận hành và bảo trì
 
 ### Daily
 
-- Kiá»ƒm tra `GET /api/health` tráº£ vá» HTTP 200.
-- Xem log deploy/runtime, khÃ´ng cÃ³ lá»—i 5xx báº¥t thÆ°á»ng.
-- XÃ¡c minh DB váº«n káº¿t ná»‘i bÃ¬nh thÆ°á»ng.
+- Kiểm tra `GET /api/health` trả về HTTP 200.
+- Xem log deploy/runtime, không có lỗi 5xx bất thường.
+- Xác minh DB vẫn kết nối bình thường.
 
 ### Weekly
 
-- Kiá»ƒm tra RAM/CPU trÃªn dashboard hosting.
+- Kiểm tra RAM/CPU trên Railway dashboard.
 - Test nhanh Activities, Gallery, Members, Genealogy.
-- Kiá»ƒm tra GitHub Actions náº¿u cÃ³ thay Ä‘á»•i JS.
+- Kiểm tra GitHub Actions nếu có thay đổi JS.
 
 ### Monthly
 
-- Cháº¡y `pip list --outdated`.
-- RÃ  CVE cho Flask, Werkzeug, Gunicorn, mysql-connector-python.
-- XÃ¡c minh backup gáº§n nháº¥t cÃ³ thá»ƒ restore.
-- RÃ  log lá»—i vÃ  dung lÆ°á»£ng `static/images/`.
+- Chạy `pip list --outdated`.
+- Rà CVE cho Flask, Werkzeug, Gunicorn, mysql-connector-python.
+- Xác minh backup gần nhất có thể restore.
+- Rà log lỗi và dung lượng `static/images/`.
 
 ### Quarterly
 
 - Rotate `ADMIN_PASSWORD`, `BACKUP_PASSWORD`, `MEMBERS_PASSWORD`.
-- Kiá»ƒm tra láº¡i API key Geoapify/Facebook náº¿u dÃ¹ng.
-- Cháº¡y script kiá»ƒm tra secret:
+- Kiểm tra lại API key Geoapify/Facebook nếu dùng.
+- Chạy script kiểm tra secret:
 
 ```bash
 python scripts/verify_no_secret_files_tracked.py
 ```
 
-## 9. Backup vÃ  khÃ´i phá»¥c
+Chi tiết lịch bảo trì: `docs/MAINTENANCE.md`.
 
-Táº¡o backup:
+---
 
-```bash
-python scripts/backup_database.py
-```
+## 9. Backup và khôi phục
 
-Hoáº·c dump thá»§ cÃ´ng:
+Tạo backup qua UI Admin (`/admin` → Backup) hoặc dump thủ công:
 
 ```bash
-mysqldump -h %DB_HOST% -u %DB_USER% -p%DB_PASSWORD% %DB_NAME% > backup_YYYY-MM-DD.sql
+mysqldump -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME > backup_YYYY-MM-DD.sql
 ```
 
-Kiá»ƒm tra restore:
+Kiểm tra restore:
 
 ```bash
 mysql -h localhost -u dev_user -p dev_db < backup_YYYY-MM-DD.sql
 mysql -e "SELECT COUNT(*) FROM persons;" dev_db
 ```
 
-Retention khuyáº¿n nghá»‹:
+Retention khuyến nghị: daily 7 ngày, weekly 4 tuần, monthly 12 tháng.
 
-- Daily: 7 ngÃ y
-- Weekly: 4 tuáº§n
-- Monthly: 12 thÃ¡ng
-- Annual: lÆ°u dÃ i háº¡n
+Backup phải lưu ngoài container/volume runtime (Railway không đảm bảo persistence).
 
-Backup pháº£i lÆ°u ngoÃ i container/volume runtime.
+---
 
-## 10. Incident response vÃ  rollback
+## 10. Incident response và rollback
 
-### Khi cÃ³ sá»± cá»‘
+### Khi có sự cố
 
-1. Kiá»ƒm tra `GET /api/health`.
-2. Äá»c log startup/runtime.
-3. PhÃ¢n loáº¡i má»©c Ä‘á»™:
-   - P1: site down hoÃ n toÃ n, DB máº¥t, máº¥t dá»¯ liá»‡u
-   - P2: members/admin khÃ´ng dÃ¹ng Ä‘Æ°á»£c
-   - P3: má»™t module lá»—i cá»¥c bá»™
-   - P4: lá»—i nháº¹ hoáº·c cosmetic
-4. Náº¿u cáº§n, rollback ngay báº£n deploy gáº§n nháº¥t.
+1. Kiểm tra `GET /api/health`.
+2. Đọc log startup/runtime.
+3. Phân loại mức độ:
+   - **P1:** site down hoàn toàn, DB mất, mất dữ liệu.
+   - **P2:** members/admin không dùng được.
+   - **P3:** một module lỗi cục bộ.
+   - **P4:** lỗi nhẹ hoặc cosmetic.
+4. Nếu cần, rollback ngay bản deploy gần nhất.
 
 ### Rollback code
 
@@ -275,106 +293,82 @@ git revert <commit>
 git push origin master
 ```
 
-### RAM optimization hiá»‡n táº¡i
+Chi tiết rollback refactor: `docs/refactor/CHANGELOG_REFACTOR.md`.
 
-CÃ¡c thay Ä‘á»•i an toÃ n Ä‘Ã£ Ã¡p dá»¥ng Ä‘á»ƒ giáº£m RAM baseline:
+Chi tiết incident response: `docs/MAINTENANCE.md §5–6`.
 
-- Bá» `openai` vÃ  `anthropic` khá»i `requirements.txt` vÃ¬ khÃ´ng cÃ²n import trong runtime.
-- Giáº£m `CACHE_THRESHOLD` tá»« `1000` xuá»‘ng `50`.
-- Khuyáº¿n nghá»‹ set `MALLOC_ARENA_MAX=2` trÃªn Railway náº¿u deploy á»Ÿ Ä‘Ã³.
+---
 
-Rollback cÃ¡c thay Ä‘á»•i nÃ y:
+## 11. Bảo mật
 
-- ThÃªm láº¡i package Ä‘Ã£ bá» trong `requirements.txt` náº¿u xuáº¥t hiá»‡n `ModuleNotFoundError`.
-- Äá»•i `CACHE_THRESHOLD` vá» `1000` trong `extensions.py` náº¿u cÃ³ dáº¥u hiá»‡u cache eviction báº¥t thÆ°á»ng.
-- Gá»¡ biáº¿n mÃ´i trÆ°á»ng `MALLOC_ARENA_MAX` trÃªn dashboard náº¿u cáº§n quay láº¡i máº·c Ä‘á»‹nh.
+**Không** đưa vào Git, README, issue, commit hoặc ảnh chụp màn hình công khai:
 
-## 11. Báº£o máº­t
+- Password, token, `SECRET_KEY`, connection string đầy đủ.
+- Nội dung thật của `MEMBERS_FIXED_ACCOUNTS`, `GENEALOGY_PASSPHRASES`.
+- File `.env`, file backup DB, `instance/secret_key`.
 
-KhÃ´ng Ä‘Æ°a vÃ o Git, README, issue, commit hoáº·c áº£nh chá»¥p mÃ n hÃ¬nh:
+Cơ chế bảo mật đang có:
 
-- Password, token, `SECRET_KEY`, connection string Ä‘áº§y Ä‘á»§
-- Ná»™i dung tháº­t cá»§a `MEMBERS_FIXED_ACCOUNTS`
-- Ná»™i dung tháº­t cá»§a `GENEALOGY_PASSPHRASES`
-- File `.env`, file backup DB, `instance/secret_key`
+- Session signing qua `SECRET_KEY`.
+- CSRF với Flask-WTF.
+- Rate limiting với Flask-Limiter.
+- Hash password bằng bcrypt.
+- `hmac.compare_digest` cho các so sánh nhạy cảm.
+- Security headers trong `app.py`.
+- CORS allowlist từ env.
 
-CÆ¡ cháº¿ báº£o máº­t Ä‘ang cÃ³:
+Dependencies cần theo dõi CVE: `Werkzeug`, `Flask`, `gunicorn`, `mysql-connector-python`, `bcrypt`.
 
-- Session signing qua `SECRET_KEY`
-- CSRF vá»›i Flask-WTF
-- Rate limiting vá»›i Flask-Limiter
-- Hash password báº±ng bcrypt
-- `hmac.compare_digest` cho cÃ¡c so sÃ¡nh nháº¡y cáº£m
-- Security headers trong `app.py`
-- CORS allowlist tá»« env
+Chi tiết chính sách bảo mật: `docs/SECURITY.md`.
 
-Dependencies cáº§n theo dÃµi CVE:
+---
 
-- `Werkzeug`
-- `Flask`
-- `gunicorn`
-- `mysql-connector-python`
-- `bcrypt`
+## 12. Debug và kiểm tra thủ công
 
-## 12. Debug vÃ  kiá»ƒm thá»­ thá»§ cÃ´ng
+### Luồng kiểm tra passphrase gia phả
 
-### Luá»“ng kiá»ƒm tra passphrase gia pháº£
-
-- Frontend `templates/genealogy.html` gá»i `POST /api/genealogy/verify-passphrase`.
-- Backend kiá»ƒm tra dá»±a trÃªn `GENEALOGY_PASSPHRASES`.
+- Frontend `templates/genealogy.html` gọi `POST /api/genealogy/verify-passphrase`.
+- Backend kiểm tra dựa trên `GENEALOGY_PASSPHRASES`.
 
 ### Checklist regression cho `/genealogy`
 
-- Má»Ÿ `/genealogy` khÃ´ng cÃ³ lá»—i console nghiÃªm trá»ng.
-- Passphrase Ä‘Ãºng vÃ o Ä‘Æ°á»£c, sai bÃ¡o lá»—i.
-- CÃ¢y hiá»ƒn thá»‹ sau khi táº£i.
-- Danh sÃ¡ch Ä‘a cáº¥p Ä‘á»“ng bá»™ vá»›i cÃ¢y.
-- Chuyá»ƒn cháº¿ Ä‘á»™ Danh sÃ¡ch/Mindmap hoáº¡t Ä‘á»™ng bÃ¬nh thÆ°á»ng.
-- Click ngÆ°á»i trong danh sÃ¡ch hoáº·c cÃ¢y má»Ÿ Ä‘Æ°á»£c panel chi tiáº¿t.
-- Mobile panel khÃ´ng vá»¡ layout vÃ  ná»™i dung cuá»™n Ä‘Æ°á»£c.
-- TÃ¬m kiáº¿m khÃ´ng crash khi khÃ´ng cÃ³ káº¿t quáº£.
-- Fullscreen/PDF khÃ´ng gÃ¢y lá»—i.
-- `/members` khÃ´ng bá»‹ áº£nh hÆ°á»Ÿng khi chá»‰ sá»­a genealogy.
+- Mở `/genealogy` không có lỗi console nghiêm trọng.
+- Passphrase đúng vào được, sai báo lỗi.
+- Cây hiển thị sau khi tải.
+- Danh sách đa cấp đồng bộ với cây.
+- Chuyển chế độ Danh sách/Mindmap hoạt động bình thường.
+- Click người trong danh sách hoặc cây mở được panel chi tiết.
+- Mobile panel không vỡ layout và nội dung cuộn được.
+- Tìm kiếm không crash khi không có kết quả.
+- Fullscreen/PDF không gây lỗi.
+- `/members` không bị ảnh hưởng khi chỉ sửa genealogy.
 
-## 13. Known issues vÃ  technical debt
+---
 
-- `admin_routes.py` lÃ  khá»‘i legacy lá»›n, khÃ³ báº£o trÃ¬.
-- Má»™t sá»‘ route admin Ä‘Ã£ chuyá»ƒn sang blueprint, nhÆ°ng migration chÆ°a hoÃ n táº¥t.
-- Cáº§n giá»¯ cáº£nh giÃ¡c vá»›i route trÃ¹ng URL vÃ¬ thá»© tá»± Ä‘Äƒng kÃ½ route hiá»‡n cÃ³ thá»ƒ lÃ m handler Ä‘Äƒng kÃ½ sau tháº¯ng handler trÆ°á»›c.
-- Dá»± Ã¡n cÃ³ lá»‹ch sá»­ áº£nh trÃ¹ng láº·p trong `static/images/`; khi thao tÃ¡c cleanup áº£nh pháº£i kiá»ƒm tra ká»¹ 404.
+## 13. Known issues và technical debt
 
-## 14. Lá»‹ch sá»­ thay Ä‘á»•i ná»•i báº­t
+- `admin_routes.py` là khối legacy lớn, khó bảo trì. Đang refactor theo kế hoạch `docs/Pre-refactor May 20, 2026.md`.
+- Ba mặt phẳng admin route cùng tồn tại: `admin_routes.py`, `blueprints/admin.py`, route admin trong `app.py` — đây là technical debt cần xử lý trong Phase 1.
+- Import fallback `try: from folder_py.X except ImportError: from X` ở 5 nhóm file có thể che giấu lỗi khi move file (xem `docs/refactor/IMPORT_PATH_AUDIT.md`).
+- Cần giữ cảnh giác với route trùng URL vì thứ tự đăng ký route hiện có thể làm handler đăng ký sau thắng handler trước.
+- `folder_sql/add_*.sql` là migration one-shot, không chạy routine (đã mark trong `docs/refactor/LEGACY_INVENTORY.md`).
+- `audit_log.py` có fail-silent khi bảng `activity_logs` không tồn tại — đã có test bảo vệ trong `tests/test_audit_emits.py`.
 
-### 2026-05-20
+---
 
-- Tá»‘i Æ°u RAM Phase 0: giáº£m `CACHE_THRESHOLD`, bá» dead dependencies, chuáº©n bá»‹ `MALLOC_ARENA_MAX=2`.
+## 14. Quy ước cập nhật tài liệu
 
-### 2026-05-16
+- Tài liệu vận hành chung: cập nhật `docs/README.md` (file này).
+- Lịch sử thay đổi: cập nhật `docs/CHANGELOG.md` trước mỗi lần push lên `master`.
+- Tiến độ refactor: cập nhật `docs/refactor/CHANGELOG_REFACTOR.md` sau mỗi phase.
+- Không tạo thêm file Markdown mới cho maintenance/changelog/security nếu chưa thật sự cần.
+- Nếu thay đổi lớn về nghiệp vụ hoặc vận hành, thêm mục mới trực tiếp vào tài liệu này.
 
-- Dá»n debug artifacts, quarantine áº£nh trÃ¹ng, bá»• sung tÃ i liá»‡u váº­n hÃ nh vÃ  audit ná»™i bá»™.
+---
 
-### 2026-04-20
+## 15. File đặc biệt còn giữ lại
 
-- VÃ¡ nhÃ³m lá»—i báº£o máº­t lá»›n: auth bypass, gate genealogy, sanitize HTML, privacy vÃ  pagination dá»¯ liá»‡u.
-
-### 2026-04-14
-
-- Hardening thÃªm cho auth, genealogy, API tree vÃ  má»™t sá»‘ luá»“ng váº­n hÃ nh.
-
-### 2026-04-01
-
-- Refactor tÃ¡ch config, DB, services; thÃªm rate limiting; bá»• sung test API.
-
-## 15. Quy Æ°á»›c cáº­p nháº­t tÃ i liá»‡u
-
-Tá»« thá»i Ä‘iá»ƒm nÃ y:
-
-- Chá»‰ cáº­p nháº­t tÃ i liá»‡u táº¡i `docs/README.md`.
-- KhÃ´ng táº¡o thÃªm file Markdown má»›i cho maintenance, changelog, security, QA hoáº·c audit náº¿u chÆ°a tháº­t sá»± cáº§n.
-- Náº¿u thay Ä‘á»•i lá»›n vá» nghiá»‡p vá»¥ hoáº·c váº­n hÃ nh, thÃªm má»¥c má»›i trá»±c tiáº¿p vÃ o tÃ i liá»‡u nÃ y.
-
-## 16. File Ä‘áº·c biá»‡t cÃ²n giá»¯ láº¡i
-
-- `../CLAUDE.md`: hÆ°á»›ng dáº«n cho AI/editor khi lÃ m viá»‡c vá»›i repo. ÄÃ¢y khÃ´ng pháº£i tÃ i liá»‡u váº­n hÃ nh há»‡ thá»‘ng nhÆ°ng váº«n cáº§n cho quy trÃ¬nh phÃ¡t triá»ƒn cÃ³ há»— trá»£ AI.
-
-
+- `CLAUDE.md` — hướng dẫn cho AI/editor khi làm việc với repo. Không phải tài liệu vận hành hệ thống.
+- `docs/Pre-refactor May 20, 2026.md` — kế hoạch refactor toàn diện, phải đọc trước khi bắt đầu bất kỳ Phase nào.
+- `docs/refactor/` — artefacts pre-refactor (inventory, test strategy, frozen policy). Không xóa/move trong thời gian refactor.
+- `instance/secret_key` — file secret quan trọng, không commit, không thay đổi vị trí.
