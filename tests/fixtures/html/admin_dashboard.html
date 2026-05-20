@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta name="csrf-token" content="__CSRF_TOKEN__">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>Dashboard - Admin - Gia Phả Nguyễn Phước Tộc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="stylesheet" href="/static/css/admin.css">
+<link rel="stylesheet" href="/static/css/admin-code-graph.css">
+<!-- Global CSRF Fetch Interceptor -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+var metaTag = document.querySelector('meta[name="csrf-token"]');
+if (metaTag) {
+var csrfToken = metaTag.getAttribute('content');
+var originalFetch = window.fetch;
+window.fetch = function(url, options) {
+options = options || {};
+if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+options.headers = options.headers || {};
+// Set the token header as expected by flask_wtf.csrf
+options.headers['X-CSRFToken'] = csrfToken;
+if (options.body && !(options.body instanceof FormData) && !options.headers['Content-Type']) {
+options.headers['Content-Type'] = 'application/json';
+}
+}
+return originalFetch(url, options);
+};
+}
+});
+</script>
+</head>
+<body class="admin-body">
+<nav class="admin-navbar">
+<div class="admin-navbar-left">
+<ul class="admin-navbar-menu">
+<li><a href="/admin/dashboard" class="active">Dashboard</a></li>
+<li><a href="/admin/data-management" >Quản lý dữ liệu</a></li>
+<li><a href="/admin/logs" >Log</a></li>
+<li><a href="/admin/users" >Tài khoản</a></li>
+<li><a href="/admin/activities" >Hoạt động</a></li>
+<li><a href="/">Trang chủ</a></li>
+</ul>
+</div>
+<div class="admin-navbar-right">
+<div class="admin-user-info">
+<span class="username">admin.seed</span>
+<span>(Admin Seed)</span>
+<span class="role">admin</span>
+</div>
+<a href="/admin/logout" class="admin-logout-btn">Đăng xuất</a>
+</div>
+</nav>
+<div class="admin-container">
+<div class="admin-card">
+<h1>📊 Dashboard</h1>
+<p class="text-muted admin-desc">Tổng quan hệ thống và cấu trúc website</p>
+</div>
+<div class="dashboard-grid">
+<div class="stat-card">
+<div class="icon">👥</div>
+<div class="value" id="totalUsers">-</div>
+<div class="label">Tổng số người dùng</div>
+</div>
+<div class="stat-card">
+<div class="icon">📝</div>
+<div class="value" id="totalActivities">-</div>
+<div class="label">Tổng số hoạt động</div>
+</div>
+<div class="stat-card">
+<div class="icon">👨‍👩‍👧‍👦</div>
+<div class="value" id="totalMembers">-</div>
+<div class="label">Tổng số thành viên</div>
+</div>
+<div class="stat-card">
+<div class="icon">📋</div>
+<div class="value" id="totalLogs">-</div>
+<div class="label">Tổng số logs</div>
+</div>
+</div>
+<div class="website-structure">
+<h2>🌐 Cấu trúc Website</h2>
+<p class="tree-desc">Tất cả trang công khai và khu vực quản trị hiện đang hoạt động.</p>
+<div class="tree-structure">
+<div class="tree-item level-0">Công khai</div>
+<div class="tree-item level-1">├── Trang chủ (/)</div>
+<div class="tree-item level-1">├── Gia phả (/genealogy) <span class="gate-badge">Cổng passphrase</span></div>
+<div class="tree-item level-1">├── Thành viên (/members) <span class="gate-badge">Cổng đăng nhập</span></div>
+<div class="tree-item level-1">├── Đăng nhập thành viên (/login)</div>
+<div class="tree-item level-1">├── Hoạt động (/activities)</div>
+<div class="tree-item level-1">├── Biên tập nội dung (/editor) <span class="gate-badge">Cổng đăng nhập</span></div>
+<div class="tree-item level-1">├── Liên hệ (/contact)</div>
+<div class="tree-item level-1">├── Tài liệu (/documents)</div>
+<div class="tree-item level-1">└── Chính sách bảo mật (/privacy)</div>
+<div class="tree-item level-0 tree-section-spacer">Admin Panel (/admin/*)</div>
+<div class="tree-item level-1">├── Đăng nhập admin (/admin/login)</div>
+<div class="tree-item level-1">├── Dashboard (/admin/dashboard)</div>
+<div class="tree-item level-1">├── Quản lý dữ liệu (/admin/data-management)</div>
+<div class="tree-item level-1">├── Tài khoản (/admin/users)</div>
+<div class="tree-item level-1">├── Hoạt động (/admin/activities)</div>
+<div class="tree-item level-1">├── Log (/admin/logs)</div>
+<div class="tree-item level-1">├── Yêu cầu chỉnh sửa (/admin/requests)</div>
+<div class="tree-item level-1">└── Đăng xuất (/admin/logout)</div>
+</div>
+</div>
+<div class="website-structure">
+<h2>⚡ Thao tác nhanh</h2>
+<div class="quick-actions">
+<a href="/admin/users" class="quick-action-btn">👥 Tài khoản</a>
+<a href="/admin/data-management" class="quick-action-btn">📂 Quản lý dữ liệu</a>
+<a href="/admin/logs" class="quick-action-btn">📋 Log</a>
+<a href="/admin/requests" class="quick-action-btn">✏️ Yêu cầu chỉnh sửa</a>
+</div>
+</div>
+<div class="system-info">
+<h2>ℹ️ Thông tin hệ thống</h2>
+<div class="info-row">
+<span class="info-label">Database:</span>
+<span class="info-value" id="dbName">-</span>
+</div>
+<div class="info-row">
+<span class="info-label">Số bảng:</span>
+<span class="info-value" id="dbTables">-</span>
+</div>
+<div class="info-row">
+<span class="info-label">Server:</span>
+<span class="info-value" id="serverEnv">-</span>
+</div>
+</div>
+<div class="admin-card code-graph-section">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--admin-space-4, 16px); flex-wrap: wrap;">
+<h2 style="margin: 0;">🔗 Knowledge Graph (mã nguồn)</h2>
+<div class="code-graph-header-actions">
+<span id="code-graph-refresh-status" class="text-muted" style="font-size: 13px; min-height: 1em;"></span>
+<button class="btn btn-secondary" id="btnCodeGraphOverview" type="button">
+📊 Project Overview
+</button>
+<button class="btn btn-secondary" id="btnCodeGraphExportMd" type="button">
+📝 Export MD
+</button>
+<button class="btn btn-secondary" id="btnCodeGraphExportJson" type="button">
+💾 Export JSON
+</button>
+<button class="btn btn-secondary" id="btnCodeGraphResetView" type="button">
+🎯 Reset View
+</button>
+<button class="btn btn-secondary" id="btnRescanCodeGraph" type="button" onclick="rescanCodeGraph()" title="Quét lại mã nguồn để cập nhật đồ thị.">
+🔄 Cập nhật
+</button>
+</div>
+</div>
+<p id="code-graph-hint" class="code-graph-hint text-muted"></p>
+<div class="code-graph-wrap">
+<aside class="code-graph-sidebar" aria-label="Bộ lọc loại tệp">
+<div class="code-graph-filter-block">
+<label class="code-graph-sidebar-title" for="cg-search">Tìm kiếm</label>
+<input id="cg-search" class="code-graph-input" type="search" placeholder="file, function, route, auth, tree, backup..." autocomplete="off">
+</div>
+<div class="code-graph-filter-block">
+<label class="code-graph-sidebar-title" for="cg-view-mode">View mode</label>
+<select id="cg-view-mode" class="code-graph-select">
+<option value="file_dependency">File Dependency View</option>
+<option value="function_view">Function View</option>
+<option value="api_flow">API Flow View</option>
+<option value="security_review">Security Review View</option>
+<option value="learning_view">Learning View</option>
+</select>
+</div>
+<div class="code-graph-filter-block">
+<label class="code-graph-sidebar-title" for="cg-node-type">Node type</label>
+<select id="cg-node-type" class="code-graph-select">
+<option value="">Tất cả</option>
+<option value="file">File/module</option>
+<option value="function">Function</option>
+<option value="class">Class</option>
+<option value="api_route">API route</option>
+<option value="component">Component</option>
+<option value="database">Database</option>
+<option value="style">Style</option>
+<option value="config">Config</option>
+<option value="unknown">Unknown</option>
+</select>
+</div>
+<div class="code-graph-filter-block">
+<label class="code-graph-sidebar-title" for="cg-risk-level">Risk level</label>
+<select id="cg-risk-level" class="code-graph-select">
+<option value="">Tất cả</option>
+<option value="high">High</option>
+<option value="medium">Medium</option>
+<option value="low">Low</option>
+</select>
+</div>
+<div class="code-graph-filter-block">
+<h3 class="code-graph-sidebar-title">Filter nhanh</h3>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-security"> Security-related</label>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-db"> Database-related</label>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-many-deps"> Has many dependencies</label>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-orphan"> Orphan node</label>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-entry"> Entry point</label>
+</div>
+<div class="code-graph-filter-block">
+<h3 class="code-graph-sidebar-title">Lọc theo loại</h3>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-js" checked> .js / .jsx / .mjs</label>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-css" checked> .css</label>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-html" checked> .html</label>
+<label class="code-graph-check"><input type="checkbox" id="cg-filter-other" checked> Khác</label>
+</div>
+<div class="code-graph-filter-block">
+<h3 class="code-graph-sidebar-title">Legend</h3>
+<div class="code-graph-legend">
+<div class="code-graph-legend-item"><span class="code-graph-dot type-file"></span> File</div>
+<div class="code-graph-legend-item"><span class="code-graph-dot type-function"></span> Function</div>
+<div class="code-graph-legend-item"><span class="code-graph-dot type-route"></span> API route</div>
+<div class="code-graph-legend-item"><span class="code-graph-dot type-db"></span> Database</div>
+<div class="code-graph-legend-item"><span class="code-graph-dot risk-high"></span> High risk</div>
+<div class="code-graph-legend-item"><span class="code-graph-dot risk-medium"></span> Medium risk</div>
+</div>
+</div>
+</aside>
+<div class="code-graph-main">
+<div class="code-graph-main-toolbar">
+<span id="code-graph-summary" class="text-muted">Đang tải dữ liệu graph…</span>
+</div>
+<div id="cy" class="code-graph-cy" role="img" aria-label="Đồ thị phụ thuộc tệp"></div>
+</div>
+<aside class="code-graph-detail" id="code-graph-detail-panel" aria-live="polite">
+<div class="code-graph-detail-head">
+<h3 class="code-graph-sidebar-title">Chi tiết</h3>
+<button class="btn btn-secondary btn-sm" id="cg-trace-selected" type="button" disabled>
+🔍 Trace Flow
+</button>
+</div>
+<div id="code-graph-detail">
+<p class="code-graph-detail-empty">Chọn một node trên đồ thị.</p>
+</div>
+</aside>
+</div>
+</div>
+<div id="code-graph-overview-modal" class="code-graph-modal" hidden>
+<div class="code-graph-modal-backdrop" data-close-overview="true"></div>
+<div class="code-graph-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="code-graph-overview-title">
+<div class="code-graph-modal-head">
+<h3 id="code-graph-overview-title" style="margin: 0;">Project Overview</h3>
+<button class="btn btn-secondary btn-sm" id="btnCodeGraphOverviewClose" type="button">Đóng</button>
+</div>
+<div id="code-graph-overview-content" class="code-graph-overview-content"></div>
+</div>
+</div>
+<div id="code-graph-tooltip" class="code-graph-tooltip" hidden></div>
+<script>
+async function loadDashboardStats() {
+try {
+try {
+const usersRes = await fetch('/api/admin/users', { credentials: 'include' });
+if (usersRes.ok) {
+const users = await usersRes.json();
+document.getElementById('totalUsers').textContent = Array.isArray(users) ? users.length : '-';
+}
+} catch (e) { console.error('Error loading users:', e); }
+
+try {
+const activitiesRes = await fetch('/api/activities', { credentials: 'include' });
+if (activitiesRes.ok) {
+const data = await activitiesRes.json();
+const n = Array.isArray(data) ? data.length : (data && typeof data.count === 'number' ? data.count : null);
+if (n != null) document.getElementById('totalActivities').textContent = n;
+}
+if (document.getElementById('totalActivities').textContent === '-') {
+const tableRes = await fetch('/admin/api/table-stats?table=activities', { credentials: 'include' });
+if (tableRes.ok) {
+const tableData = await tableRes.json();
+if (tableData.success && typeof tableData.count === 'number')
+document.getElementById('totalActivities').textContent = tableData.count;
+}
+}
+} catch (e) { console.error('Error loading activities:', e); }
+
+try {
+const membersRes = await fetch('/api/members', { credentials: 'include' });
+if (membersRes.ok) {
+const result = await membersRes.json();
+if (result.success && Array.isArray(result.data))
+document.getElementById('totalMembers').textContent = result.data.length;
+}
+} catch (e) { console.error('Error loading members:', e); }
+
+try {
+const logsRes = await fetch('/api/admin/activity-logs?limit=1', { credentials: 'include' });
+if (logsRes.ok) {
+const result = await logsRes.json();
+if (result.success) document.getElementById('totalLogs').textContent = result.total || '-';
+}
+} catch (e) { console.error('Error loading logs:', e); }
+
+try {
+const dbInfoRes = await fetch('/admin/api/db-info', { credentials: 'include' });
+if (dbInfoRes.ok) {
+const dbInfo = await dbInfoRes.json();
+if (dbInfo.success) {
+document.getElementById('dbName').textContent = dbInfo.database || '-';
+document.getElementById('dbTables').textContent = dbInfo.tables_count || '-';
+}
+}
+} catch (e) { console.error('Error loading DB info:', e); }
+
+try {
+const healthRes = await fetch('/api/health', { credentials: 'include' });
+if (healthRes.ok) {
+const health = await healthRes.json();
+const host = health.db_config && health.db_config.host;
+document.getElementById('serverEnv').textContent = (host && host !== 'localhost' && host !== '127.0.0.1') ? host : 'Local';
+} else {
+document.getElementById('serverEnv').textContent = 'Local';
+}
+} catch (e) {
+document.getElementById('serverEnv').textContent = 'Local';
+}
+} catch (error) {
+console.error('Error loading dashboard stats:', error);
+}
+}
+document.addEventListener('DOMContentLoaded', loadDashboardStats);
+
+// ============================================================
+// Rescan Knowledge Graph — gọi /api/admin/code-graph/rescan rồi reload đồ thị
+// ============================================================
+async function rescanCodeGraph() {
+const btn = document.getElementById('btnRescanCodeGraph');
+const statusEl = document.getElementById('code-graph-refresh-status');
+if (!btn) return;
+
+btn.disabled = true;
+const originalLabel = btn.textContent;
+btn.textContent = '⏳ Đang quét…';
+if (statusEl) {
+statusEl.textContent = 'Đang chạy scanner (có thể mất vài giây)…';
+statusEl.style.color = '';
+}
+
+try {
+const res = await fetch('/api/admin/code-graph/rescan', {
+method: 'POST',
+credentials: 'include',
+headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+body: '{}',
+});
+
+let data = null;
+try { data = await res.json(); } catch (e) { data = null; }
+
+if (!res.ok || !data || !data.success) {
+const msg = (data && data.error) || `HTTP ${res.status}: ${res.statusText}`;
+if (statusEl) {
+statusEl.textContent = 'Lỗi: ' + msg;
+statusEl.style.color = 'var(--admin-danger, #d32f2f)';
+}
+// Log tail để dev có thể xem trong console
+if (data && (data.stdout_tail || data.stderr_tail)) {
+console.groupCollapsed('code-graph rescan failed');
+if (data.stdout_tail) console.log('stdout:\n' + data.stdout_tail);
+if (data.stderr_tail) console.log('stderr:\n' + data.stderr_tail);
+console.groupEnd();
+}
+return;
+}
+
+// Thành công — reload đồ thị bằng cache-bust
+if (typeof window.reloadCodeGraph === 'function') {
+try { await window.reloadCodeGraph(); } catch (e) { console.warn('reloadCodeGraph failed', e); }
+}
+
+const s = (data && data.stats) || {};
+const dur = (data && data.duration_ms) != null ? `${data.duration_ms}ms` : '';
+const nodes = (s.nodes != null) ? s.nodes : '?';
+const edges = (s.edges != null) ? s.edges : '?';
+if (statusEl) {
+statusEl.textContent = `✅ Đã cập nhật: ${nodes} nodes, ${edges} edges${dur ? ' (' + dur + ')' : ''}`;
+statusEl.style.color = 'var(--admin-success, #2e7d32)';
+}
+} catch (err) {
+if (statusEl) {
+statusEl.textContent = 'Lỗi: ' + (err && err.message ? err.message : String(err));
+statusEl.style.color = 'var(--admin-danger, #d32f2f)';
+}
+} finally {
+btn.disabled = false;
+btn.textContent = originalLabel;
+}
+}
+</script>
+</div>
+<script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js" crossorigin="anonymous"></script>
+<script src="/static/js/admin-code-graph.js"></script>
+</body>
+</html>

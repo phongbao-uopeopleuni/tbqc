@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta name="csrf-token" content="__CSRF_TOKEN__">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>Log - Admin - Gia Phả Nguyễn Phước Tộc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="stylesheet" href="/static/css/admin.css">
+<!-- Global CSRF Fetch Interceptor -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+var metaTag = document.querySelector('meta[name="csrf-token"]');
+if (metaTag) {
+var csrfToken = metaTag.getAttribute('content');
+var originalFetch = window.fetch;
+window.fetch = function(url, options) {
+options = options || {};
+if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+options.headers = options.headers || {};
+// Set the token header as expected by flask_wtf.csrf
+options.headers['X-CSRFToken'] = csrfToken;
+if (options.body && !(options.body instanceof FormData) && !options.headers['Content-Type']) {
+options.headers['Content-Type'] = 'application/json';
+}
+}
+return originalFetch(url, options);
+};
+}
+});
+</script>
+</head>
+<body class="admin-body">
+<nav class="admin-navbar">
+<div class="admin-navbar-left">
+<ul class="admin-navbar-menu">
+<li><a href="/admin/dashboard" >Dashboard</a></li>
+<li><a href="/admin/data-management" >Quản lý dữ liệu</a></li>
+<li><a href="/admin/logs" class="active">Log</a></li>
+<li><a href="/admin/users" >Tài khoản</a></li>
+<li><a href="/admin/activities" >Hoạt động</a></li>
+<li><a href="/">Trang chủ</a></li>
+</ul>
+</div>
+<div class="admin-navbar-right">
+<div class="admin-user-info">
+<span class="username">admin.seed</span>
+<span>(Admin Seed)</span>
+<span class="role">admin</span>
+</div>
+<a href="/admin/logout" class="admin-logout-btn">Đăng xuất</a>
+</div>
+</nav>
+<div class="admin-container">
+<div class="admin-card" style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--admin-space-4); flex-wrap: wrap;">
+<div>
+<h1>📋 Log</h1>
+<p class="text-muted admin-desc">Ghi lại tất cả các thay đổi và hoạt động trong website</p>
+</div>
+<div style="flex-shrink: 0;">
+<button class="btn btn-danger" id="btnOpenResetLogs" onclick="openResetLogsModal()" title="Xoá sạch activity_logs + page_views. Tự động backup trước.">
+🗑️ Reset log
+</button>
+</div>
+</div>
+<!-- Modal xác nhận reset log -->
+<div id="resetLogsModal" class="modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+<div style="background: var(--admin-card-bg, #fff); max-width: 520px; width: 90%; padding: var(--admin-space-6, 24px); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+<h2 style="margin-top: 0; color: var(--admin-danger, #d32f2f);">⚠️ Xác nhận reset log</h2>
+<div style="background: #fff3e0; border-left: 4px solid #f57c00; padding: 12px 16px; margin: 16px 0; border-radius: 4px; color: #5d4037;">
+Thao tác này sẽ <strong>xoá toàn bộ</strong> dữ liệu trong hai bảng:
+<ul style="margin: 8px 0 0 20px;">
+<li><code>activity_logs</code> — lịch sử hành động (CREATE/UPDATE/DELETE/LOGIN)</li>
+<li><code>page_views</code> — lượt xem trang</li>
+</ul>
+<p style="margin: 10px 0 0 0;">Hệ thống sẽ <strong>tự động tạo backup</strong>
+<code>backups/logs-YYYYMMDD-HHMMSS.sql</code> trước khi xoá để có thể khôi phục nếu cần.</p>
+</div>
+<p style="margin: 12px 0 6px 0;">Gõ chính xác <code style="background: #eee; padding: 2px 6px; border-radius: 4px;">RESET_ALL_LOGS</code> để tiếp tục:</p>
+<input type="text" id="resetLogsConfirmInput" class="input" autocomplete="off" placeholder="RESET_ALL_LOGS" style="width: 100%; padding: 10px; border: 2px solid var(--admin-border, #ddd); border-radius: 6px; font-family: monospace; font-size: 15px;">
+<div id="resetLogsError" style="color: var(--admin-danger, #d32f2f); margin-top: 8px; min-height: 20px; font-size: 13px;"></div>
+<div id="resetLogsResult" style="margin-top: 12px; font-size: 13px;"></div>
+<div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+<button class="btn btn-secondary" onclick="closeResetLogsModal()">Huỷ</button>
+<button class="btn btn-danger" id="btnConfirmResetLogs" onclick="confirmResetLogs()">Xoá log</button>
+</div>
+</div>
+</div>
+<div class="dashboard-grid log-stats-grid" id="logStatsGrid" style="margin-bottom: var(--admin-space-6);">
+<div class="stat-card">
+<div class="icon">👁️</div>
+<div class="value" id="statPvMonth">—</div>
+<div class="label">Lượt xem trang (tháng này)</div>
+</div>
+<div class="stat-card">
+<div class="icon">📅</div>
+<div class="value" id="statPvToday">—</div>
+<div class="label">Lượt xem hôm nay</div>
+</div>
+<div class="stat-card">
+<div class="icon">💾</div>
+<div class="value" id="statLogBytes">—</div>
+<div class="label">Dung lượng log trong DB (ước lượng)</div>
+</div>
+</div>
+<div class="filter-bar">
+<div>
+<label for="filterAction">Hành động:</label>
+<select id="filterAction" class="select">
+<option value="">Tất cả</option>
+<option value="LOGIN">LOGIN</option>
+<option value="LOGIN_FAILED">LOGIN_FAILED</option>
+<option value="CREATE_PERSON">CREATE_PERSON</option>
+<option value="UPDATE_PERSON">UPDATE_PERSON</option>
+<option value="UPDATE_USER_ROLE">UPDATE_USER_ROLE</option>
+<option value="UPDATE_SPOUSE">UPDATE_SPOUSE</option>
+<option value="DELETE_PERSON">DELETE_PERSON</option>
+</select>
+</div>
+<div>
+<label for="filterTargetType">Loại đối tượng:</label>
+<select id="filterTargetType" class="select">
+<option value="">Tất cả</option>
+<option value="Person">Person</option>
+<option value="User">User</option>
+<option value="Spouse">Spouse</option>
+<option value="Post">Post</option>
+</select>
+</div>
+<div>
+<label for="filterUserId">User ID:</label>
+<input type="number" id="filterUserId" class="input" placeholder="Tất cả">
+</div>
+<div>
+<button class="btn btn-primary" onclick="applyFilters()">Lọc</button>
+<button class="btn btn-secondary" onclick="clearFilters()">Xóa bộ lọc</button>
+</div>
+</div>
+<div class="admin-table-wrapper">
+<table class="admin-table">
+<thead>
+<tr>
+<th>Thời gian</th>
+<th>User</th>
+<th>Hành động</th>
+<th>Loại đối tượng</th>
+<th>ID đối tượng</th>
+<th>Thay đổi</th>
+<th>IP Address</th>
+<th class="hide-mobile">User Agent</th>
+</tr>
+</thead>
+<tbody id="activityLogsList">
+<tr>
+<td colspan="8" class="loading-cell"><div class="loading">Đang tải...</div></td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="pagination-controls">
+<div class="pagination-info" id="logsPaginationInfo">
+Đang tải...
+</div>
+<div class="pagination-buttons">
+<label for="logsPerPage">Số lượng mỗi trang:</label>
+<select id="logsPerPage" class="select" onchange="changeLogsPerPage()">
+<option value="10">10</option>
+<option value="25">25</option>
+<option value="50">50</option>
+<option value="100" selected>100</option>
+</select>
+<button id="prevPageBtn" class="btn btn-secondary" onclick="previousPage()" disabled>Trước</button>
+<button id="nextPageBtn" class="btn btn-secondary" onclick="nextPage()" disabled>Sau</button>
+</div>
+</div>
+<script>
+// Activity Logs Variables
+let logsOffset = 0;
+let logsLimit = 100;
+let logsTotal = 0;
+let logsFilters = {};
+
+// Load Activity Logs
+async function loadActivityLogs(limit = logsLimit, offset = logsOffset, filters = logsFilters) {
+const listEl = document.getElementById('activityLogsList');
+const paginationInfo = document.getElementById('logsPaginationInfo');
+const prevBtn = document.getElementById('prevPageBtn');
+const nextBtn = document.getElementById('nextPageBtn');
+
+try {
+// Build query string
+const params = new URLSearchParams({
+limit: limit.toString(),
+offset: offset.toString()
+});
+
+if (filters.action) params.append('action', filters.action);
+if (filters.target_type) params.append('target_type', filters.target_type);
+if (filters.user_id) params.append('user_id', filters.user_id.toString());
+
+listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6);"><div class="loading">Đang tải...</div></td></tr>';
+
+const result = await fetch(`/api/admin/activity-logs?${params.toString()}`, {
+credentials: 'include',
+headers: {
+'Accept': 'application/json',
+'Content-Type': 'application/json'
+}
+});
+
+// Xử lý các status codes khác nhau
+if (result.status === 401) {
+// Unauthorized - chưa đăng nhập hoặc session hết hạn
+const errorText = await result.text();
+let errorMsg = 'Chưa đăng nhập hoặc session đã hết hạn. Vui lòng đăng nhập lại.';
+try {
+const errorData = JSON.parse(errorText);
+errorMsg = errorData.error || errorMsg;
+} catch (e) {
+// Nếu không parse được JSON, dùng message mặc định
+}
+listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
+<div style="margin-bottom: 10px;"><strong>Lỗi 401: ${errorMsg}</strong></div>
+<a href="/admin/login" class="btn btn-primary" style="text-decoration: none; display: inline-block; padding: 8px 16px;">Đăng nhập lại</a>
+</td></tr>`;
+paginationInfo.textContent = 'Lỗi xác thực';
+prevBtn.disabled = true;
+nextBtn.disabled = true;
+return;
+}
+
+if (result.status === 403) {
+// Forbidden - không có quyền truy cập
+const errorText = await result.text();
+let errorMsg = 'Bạn không có quyền truy cập trang này.';
+try {
+const errorData = JSON.parse(errorText);
+errorMsg = errorData.error || errorMsg;
+} catch (e) {
+// Nếu không parse được JSON, dùng message mặc định
+}
+listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
+<div><strong>Lỗi 403: ${errorMsg}</strong></div>
+</td></tr>`;
+paginationInfo.textContent = 'Không có quyền truy cập';
+prevBtn.disabled = true;
+nextBtn.disabled = true;
+return;
+}
+
+if (result.status === 404) {
+// Not Found - bảng activity_logs không tồn tại
+const errorText = await result.text();
+let errorMsg = 'Bảng activity_logs không tồn tại trong database.';
+try {
+const errorData = JSON.parse(errorText);
+errorMsg = errorData.error || errorMsg;
+} catch (e) {
+// Nếu không parse được JSON, dùng message mặc định
+}
+listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
+<div><strong>Lỗi 404: ${errorMsg}</strong></div>
+<div style="margin-top: 10px; font-size: 14px; color: var(--admin-text-muted);">Vui lòng kiểm tra database hoặc liên hệ quản trị viên.</div>
+</td></tr>`;
+paginationInfo.textContent = 'Bảng không tồn tại';
+prevBtn.disabled = true;
+nextBtn.disabled = true;
+return;
+}
+
+if (!result.ok) {
+// Các lỗi khác
+const errorText = await result.text();
+let errorMsg = `HTTP ${result.status}: ${result.statusText}`;
+try {
+const errorData = JSON.parse(errorText);
+errorMsg = errorData.error || errorMsg;
+} catch (e) {
+// Nếu không parse được JSON, dùng status text
+}
+throw new Error(errorMsg);
+}
+
+// Parse JSON response
+let data;
+try {
+const responseText = await result.text();
+data = JSON.parse(responseText);
+} catch (parseError) {
+console.error('Error parsing JSON response:', parseError);
+throw new Error('Phản hồi từ server không hợp lệ. Vui lòng thử lại.');
+}
+
+if (!data.success) {
+throw new Error(data.error || 'Không thể tải logs');
+}
+
+logsTotal = data.total || 0;
+logsLimit = data.limit || 100;
+logsOffset = data.offset || 0;
+
+const logs = data.logs || [];
+
+if (logs.length === 0) {
+listEl.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6);">Chưa có log nào</td></tr>';
+paginationInfo.textContent = 'Không có log nào';
+prevBtn.disabled = true;
+nextBtn.disabled = true;
+return;
+}
+
+// Render logs
+listEl.innerHTML = logs.map(log => {
+const createdAt = log.created_at ? formatDateTime(log.created_at) : '-';
+const username = log.username || log.full_name || 'Khách';
+const action = log.action || '-';
+const targetType = log.target_type || '-';
+const targetId = log.target_id || '-';
+const ipAddress = log.ip_address || '-';
+const userAgent = log.user_agent || '-';
+
+const actionClass = `log-action-${action}`;
+const actionBadge = `<span class="log-action-badge ${actionClass}">${escapeHtml(action)}</span>`;
+
+// Format before/after data
+const diffHtml = formatLogDiff(log.before_data, log.after_data);
+
+return `
+<tr class="log-row">
+<td>${createdAt}</td>
+<td>${escapeHtml(username)}</td>
+<td>${actionBadge}</td>
+<td>${escapeHtml(targetType)}</td>
+<td>${escapeHtml(String(targetId))}</td>
+<td class="log-diff">${diffHtml}</td>
+<td>${escapeHtml(ipAddress)}</td>
+<td class="hide-mobile" style="font-size: var(--font-size-xs, 12px); max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(userAgent)}</td>
+</tr>
+`;
+}).join('');
+
+// Update pagination info
+const start = offset + 1;
+const end = Math.min(offset + limit, logsTotal);
+paginationInfo.textContent = `Hiển thị ${start}-${end} trong tổng ${logsTotal} logs`;
+
+// Update pagination buttons
+prevBtn.disabled = offset === 0;
+nextBtn.disabled = offset + limit >= logsTotal;
+
+} catch (err) {
+listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">Lỗi: ${err.message}</td></tr>`;
+paginationInfo.textContent = 'Lỗi khi tải logs';
+prevBtn.disabled = true;
+nextBtn.disabled = true;
+}
+}
+
+function formatDateTime(dateStr) {
+try {
+const date = new Date(dateStr);
+// Tự động sử dụng timezone của hệ thống laptop/browser
+// Format: HH:MM:SS DD/MM/YYYY
+const formatter = new Intl.DateTimeFormat('en-US', {
+// Không chỉ định timeZone để tự động dùng timezone của browser
+year: 'numeric',
+month: '2-digit',
+day: '2-digit',
+hour: '2-digit',
+minute: '2-digit',
+second: '2-digit',
+hour12: false
+});
+
+const parts = formatter.formatToParts(date);
+const hours = parts.find(p => p.type === 'hour').value;
+const minutes = parts.find(p => p.type === 'minute').value;
+const seconds = parts.find(p => p.type === 'second').value;
+const day = parts.find(p => p.type === 'day').value;
+const month = parts.find(p => p.type === 'month').value;
+const year = parts.find(p => p.type === 'year').value;
+
+return `${hours}:${minutes}:${seconds} ${day}/${month}/${year}`;
+} catch (e) {
+return dateStr;
+}
+}
+
+function formatLogDiff(beforeData, afterData) {
+if (!beforeData && !afterData) {
+return '<span style="color: var(--admin-text-muted);">Không có thay đổi</span>';
+}
+
+if (!beforeData && afterData) {
+return `<details>
+<summary>Tạo mới</summary>
+<pre>${escapeHtml(JSON.stringify(afterData, null, 2))}</pre>
+</details>`;
+}
+
+if (beforeData && !afterData) {
+return `<details>
+<summary>Xóa</summary>
+<pre>${escapeHtml(JSON.stringify(beforeData, null, 2))}</pre>
+</details>`;
+}
+
+// Both exist - show diff
+const beforeStr = JSON.stringify(beforeData, null, 2);
+const afterStr = JSON.stringify(afterData, null, 2);
+
+if (beforeStr === afterStr) {
+return '<span style="color: var(--admin-text-muted);">Không có thay đổi</span>';
+}
+
+return `<details>
+<summary>Xem thay đổi</summary>
+<div>
+<div style="margin-bottom: var(--space-2);">
+<strong style="color: var(--admin-danger);">Trước:</strong>
+<pre class="diff-removed">${escapeHtml(beforeStr)}</pre>
+</div>
+<div>
+<strong style="color: var(--admin-success);">Sau:</strong>
+<pre class="diff-added">${escapeHtml(afterStr)}</pre>
+</div>
+</div>
+</details>`;
+}
+
+function escapeHtml(text) {
+if (!text) return '-';
+const div = document.createElement('div');
+div.textContent = text;
+return div.innerHTML;
+}
+
+function applyFilters() {
+const action = document.getElementById('filterAction').value.trim();
+const targetType = document.getElementById('filterTargetType').value.trim();
+const userId = document.getElementById('filterUserId').value.trim();
+
+logsFilters = {};
+if (action) logsFilters.action = action;
+if (targetType) logsFilters.target_type = targetType;
+if (userId) logsFilters.user_id = parseInt(userId);
+
+logsOffset = 0;
+loadActivityLogs(logsLimit, logsOffset, logsFilters);
+}
+
+function clearFilters() {
+document.getElementById('filterAction').value = '';
+document.getElementById('filterTargetType').value = '';
+document.getElementById('filterUserId').value = '';
+logsFilters = {};
+logsOffset = 0;
+loadActivityLogs(logsLimit, logsOffset, logsFilters);
+}
+
+function changeLogsPerPage() {
+const perPage = parseInt(document.getElementById('logsPerPage').value);
+logsLimit = perPage;
+logsOffset = 0;
+loadActivityLogs(logsLimit, logsOffset, logsFilters);
+}
+
+function previousPage() {
+if (logsOffset > 0) {
+logsOffset = Math.max(0, logsOffset - logsLimit);
+loadActivityLogs(logsLimit, logsOffset, logsFilters);
+}
+}
+
+function nextPage() {
+if (logsOffset + logsLimit < logsTotal) {
+logsOffset += logsLimit;
+loadActivityLogs(logsLimit, logsOffset, logsFilters);
+}
+}
+
+function formatBytes(n) {
+if (n == null || n === '') return '—';
+const units = ['B', 'KB', 'MB', 'GB'];
+let i = 0;
+let v = Number(n);
+if (Number.isNaN(v)) return '—';
+while (v >= 1024 && i < units.length - 1) {
+v /= 1024;
+i++;
+}
+return (i === 0 ? v : v.toFixed(2)) + ' ' + units[i];
+}
+
+async function loadLogStats() {
+try {
+const res = await fetch('/api/admin/log-stats', { credentials: 'include', headers: { Accept: 'application/json' } });
+const data = await res.json();
+if (!data.success) {
+document.getElementById('statPvMonth').textContent = '—';
+document.getElementById('statPvToday').textContent = '—';
+document.getElementById('statLogBytes').textContent = data.error === 'no_db' ? 'Lỗi DB' : '—';
+return;
+}
+document.getElementById('statPvMonth').textContent = data.page_views_month != null ? String(data.page_views_month) : '0';
+document.getElementById('statPvToday').textContent = data.page_views_today != null ? String(data.page_views_today) : '0';
+let bytes = data.total_log_bytes;
+if (bytes == null) {
+let a = data.activity_logs_bytes;
+let p = data.page_views_bytes;
+if (a != null || p != null) bytes = (a || 0) + (p || 0);
+}
+document.getElementById('statLogBytes').textContent = formatBytes(bytes);
+} catch (e) {
+console.error('loadLogStats', e);
+}
+}
+
+// ============================================================
+// Reset Logs — xoá toàn bộ activity_logs + page_views (có backup)
+// ============================================================
+function openResetLogsModal() {
+const m = document.getElementById('resetLogsModal');
+if (!m) return;
+m.style.display = 'flex';
+const input = document.getElementById('resetLogsConfirmInput');
+if (input) { input.value = ''; input.focus(); }
+const err = document.getElementById('resetLogsError');
+if (err) err.textContent = '';
+const res = document.getElementById('resetLogsResult');
+if (res) res.textContent = '';
+const btn = document.getElementById('btnConfirmResetLogs');
+if (btn) btn.disabled = false;
+}
+
+function closeResetLogsModal() {
+const m = document.getElementById('resetLogsModal');
+if (m) m.style.display = 'none';
+}
+
+function _formatBytesShort(n) {
+return formatBytes(n);
+}
+
+async function confirmResetLogs() {
+const input = document.getElementById('resetLogsConfirmInput');
+const errEl = document.getElementById('resetLogsError');
+const resEl = document.getElementById('resetLogsResult');
+const btn = document.getElementById('btnConfirmResetLogs');
+const token = (input && input.value || '').trim();
+
+if (token !== 'RESET_ALL_LOGS') {
+if (errEl) errEl.textContent = 'Bạn phải gõ chính xác RESET_ALL_LOGS để xác nhận.';
+return;
+}
+if (errEl) errEl.textContent = '';
+if (resEl) resEl.innerHTML = '<span style="color: var(--admin-text-muted);">Đang xoá log, vui lòng đợi…</span>';
+if (btn) btn.disabled = true;
+
+try {
+const res = await fetch('/api/admin/reset-logs', {
+method: 'POST',
+credentials: 'include',
+headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+body: JSON.stringify({ confirm: 'RESET_ALL_LOGS' }),
+});
+
+let data = null;
+try { data = await res.json(); } catch (e) { data = null; }
+
+if (!res.ok || !data || !data.success) {
+const msg = (data && data.error) || `HTTP ${res.status}: ${res.statusText}`;
+if (errEl) errEl.textContent = 'Lỗi: ' + msg;
+if (resEl) resEl.innerHTML = '';
+if (btn) btn.disabled = false;
+return;
+}
+
+// Thành công — hiển thị tóm tắt + refresh số liệu
+const rd = data.rows_deleted || {};
+const rdLines = Object.keys(rd).map(k => `${k}: ${rd[k]}`).join(', ') || '—';
+const backupTxt = data.backup_file
+? `<code>${data.backup_file}</code> (${_formatBytesShort(data.backup_size_bytes)})`
+: 'không có';
+if (resEl) {
+resEl.innerHTML = `
+<div style="background: #e8f5e9; border-left: 4px solid #43a047; padding: 10px 14px; border-radius: 4px; color: #1b5e20;">
+<strong>✅ Đã reset log thành công.</strong><br>
+Số dòng đã xoá: ${rdLines}<br>
+Backup: ${backupTxt}
+</div>`;
+}
+
+// Refresh stats + bảng logs
+try { await loadLogStats(); } catch (e) { /* nuốt lỗi cosmetic */ }
+try {
+logsOffset = 0;
+await loadActivityLogs(logsLimit, logsOffset, logsFilters);
+} catch (e) { /* nuốt lỗi cosmetic */ }
+
+// Đóng modal sau 1.5s để user kịp đọc thông báo
+setTimeout(closeResetLogsModal, 1500);
+} catch (err) {
+if (errEl) errEl.textContent = 'Lỗi: ' + (err && err.message ? err.message : String(err));
+if (resEl) resEl.innerHTML = '';
+if (btn) btn.disabled = false;
+}
+}
+
+// ESC để đóng modal
+document.addEventListener('keydown', (e) => {
+if (e.key === 'Escape') {
+const m = document.getElementById('resetLogsModal');
+if (m && m.style.display !== 'none') closeResetLogsModal();
+}
+});
+
+// Initialize activity logs on page load
+document.addEventListener('DOMContentLoaded', () => {
+loadLogStats();
+loadActivityLogs();
+});
+</script>
+</div>
+</body>
+</html>
