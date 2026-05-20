@@ -6,10 +6,7 @@ from mysql.connector import Error
 from auth import get_user_by_username, verify_password, User
 from extensions import rate_limit
 from utils.url_safety import safe_redirect_target
-try:
-    from folder_py.db_config import get_db_connection
-except ImportError:
-    from db_config import get_db_connection
+from folder_py.db_config import get_db_connection
 
 try:
     from audit_log import log_login

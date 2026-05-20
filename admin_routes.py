@@ -25,10 +25,7 @@ DASHBOARD_DEFAULT_STATS = {
     'generation_stats': [], 'gender_stats': [], 'status_stats': []
 }
 from flask_login import login_user, logout_user, login_required, current_user
-try:
-    from folder_py.db_config import get_db_connection
-except ImportError:
-    from db_config import get_db_connection
+from folder_py.db_config import get_db_connection
 from auth import (get_user_by_username, verify_password, hash_password,
                   admin_required, permission_required, role_required)
 from audit_log import log_activity, log_login, log_user_update
