@@ -1,0 +1,16 @@
+{
+  "blueprints_registered": true,
+  "database": "connected",
+  "db_config": {
+    "database_non_empty": true,
+    "host_non_empty": true,
+    "password_set": "Yes",
+    "port_present": true,
+    "user_non_empty": true
+  },
+  "server": "ok",
+  "stats": {
+    "persons_count": 3,
+    "relationships_count": 2
+  }
+}

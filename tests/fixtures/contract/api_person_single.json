@@ -1,0 +1,23 @@
+{
+  "children": [
+    {
+      "full_name": "Nguoi Mau",
+      "generation_number": 2,
+      "person_id": "P-2-1"
+    }
+  ],
+  "father_id": null,
+  "full_name": "To Tien",
+  "generation_number": 1,
+  "marriages": [
+    {
+      "marriage_id": 1,
+      "marriage_status": "Dang ket hon",
+      "spouse_id": "P-1-2",
+      "spouse_name": "Phoi Nguu"
+    }
+  ],
+  "mother_id": null,
+  "person_id": "P-1-1",
+  "spouse": "Phoi Nguu"
+}
