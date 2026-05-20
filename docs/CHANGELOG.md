@@ -8,7 +8,8 @@
 
 ## [Unreleased]
 
-Các thay đổi đang phát triển, chưa push lên `master`.
+### Removed
+- Bảng `facebook_tokens` (migration note `docs/refactor/migrations/2026-05-20_drop_facebook_tokens.md`) — dead table, 0 code reference; app đã dùng `FB_PAGE_ID`/`FB_ACCESS_TOKEN` env var.
 
 ---
 
