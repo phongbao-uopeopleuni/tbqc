@@ -75,3 +75,36 @@ def verify_grave_image_delete_password(password):
     """Xác thực mật khẩu để xóa ảnh mộ phần."""
     expected = _get_grave_image_delete_password()
     return expected and secure_compare(password or "", expected)
+
+
+def ensure_albums_table(cursor):
+    """Đảm bảo bảng albums tồn tại trong database."""
+    cursor.execute('\n        CREATE TABLE IF NOT EXISTS albums (\n            album_id INT PRIMARY KEY AUTO_INCREMENT,\n            name VARCHAR(500) NOT NULL,\n            theme VARCHAR(500),\n            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n            created_by VARCHAR(255),\n            INDEX idx_created_at (created_at)\n        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n    ')
+
+
+def ensure_album_images_table(cursor):
+    """Đảm bảo bảng album_images tồn tại trong database."""
+    cursor.execute('\n        CREATE TABLE IF NOT EXISTS album_images (\n            image_id INT PRIMARY KEY AUTO_INCREMENT,\n            album_id INT NOT NULL,\n            filename VARCHAR(500) NOT NULL,\n            filepath VARCHAR(1000) NOT NULL,\n            url VARCHAR(1000) NOT NULL,\n            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n            FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE CASCADE,\n            INDEX idx_album_id (album_id),\n            INDEX idx_uploaded_at (uploaded_at)\n        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n    ')
+
+
+def _delete_album_image_file(filepath):
+    """
+    Xóa file ảnh album nếu đường dẫn nằm trong Railway Volume hoặc static/images.
+    Không raise nếu file đã mất để DB vẫn được dọn sạch bản ghi ảnh.
+    """
+    if not filepath:
+        return False
+    allowed_roots = []
+    volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
+    if volume_mount_path:
+        allowed_roots.append(os.path.abspath(volume_mount_path))
+    allowed_roots.append(os.path.abspath(os.path.join(BASE_DIR, 'static', 'images')))
+
+    file_path = os.path.abspath(filepath)
+    if not any(file_path == root or file_path.startswith(root + os.sep) for root in allowed_roots):
+        logger.warning('Skip deleting album image outside allowed roots: %s', filepath)
+        return False
+    if os.path.exists(file_path) and os.path.isfile(file_path):
+        os.remove(file_path)
+        return True
+    return False
