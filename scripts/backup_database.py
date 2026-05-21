@@ -59,29 +59,41 @@ def create_backup_python(connection, backup_file):
             f.write("SET FOREIGN_KEY_CHECKS=0;\n")
             f.write("SET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n\n")
             
-            # Lấy danh sách các bảng
-            cursor.execute("SHOW TABLES")
-            tables = [row[0] for row in cursor.fetchall()]
+            # Lấy danh sách base table + view để export đúng schema.
+            cursor.execute("SHOW FULL TABLES")
+            objects = cursor.fetchall()
             
-            logger.info(f"Exporting {len(tables)} tables...")
+            logger.info(f"Exporting {len(objects)} schema objects...")
             
-            for table in tables:
+            for obj in objects:
+                name = obj[0]
+                obj_type = str(obj[1]).upper() if len(obj) > 1 else "BASE TABLE"
+
+                if obj_type == "VIEW":
+                    cursor.execute(f"SHOW CREATE VIEW `{name}`")
+                    create_view = cursor.fetchone()
+                    if create_view:
+                        f.write(f"\n-- View: {name}\n")
+                        f.write(f"DROP VIEW IF EXISTS `{name}`;\n")
+                        f.write(f"{create_view[1]};\n\n")
+                    continue
+
                 # Export CREATE TABLE
-                cursor.execute(f"SHOW CREATE TABLE `{table}`")
+                cursor.execute(f"SHOW CREATE TABLE `{name}`")
                 create_table = cursor.fetchone()
                 if create_table:
-                    f.write(f"\n-- Table: {table}\n")
-                    f.write(f"DROP TABLE IF EXISTS `{table}`;\n")
+                    f.write(f"\n-- Table: {name}\n")
+                    f.write(f"DROP TABLE IF EXISTS `{name}`;\n")
                     f.write(f"{create_table[1]};\n\n")
                 
                 # Export data
-                cursor.execute(f"SELECT * FROM `{table}`")
+                cursor.execute(f"SELECT * FROM `{name}`")
                 columns = [desc[0] for desc in cursor.description]
                 
                 rows = cursor.fetchall()
                 if rows:
-                    f.write(f"-- Data for table `{table}`\n")
-                    f.write(f"LOCK TABLES `{table}` WRITE;\n")
+                    f.write(f"-- Data for table `{name}`\n")
+                    f.write(f"LOCK TABLES `{name}` WRITE;\n")
                     
                     for row in rows:
                         values = []
@@ -95,7 +107,7 @@ def create_backup_python(connection, backup_file):
                                 val_str = str(val).replace('\\', '\\\\').replace("'", "\\'")
                                 values.append(f"'{val_str}'")
                         
-                        f.write(f"INSERT INTO `{table}` (`{'`, `'.join(columns)}`) VALUES ({', '.join(values)});\n")
+                        f.write(f"INSERT INTO `{name}` (`{'`, `'.join(columns)}`) VALUES ({', '.join(values)});\n")
                     
                     f.write("UNLOCK TABLES;\n\n")
             

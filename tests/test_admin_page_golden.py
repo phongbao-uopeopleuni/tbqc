@@ -164,11 +164,13 @@ def _set_logged_in_admin(client):
 
 @pytest.fixture
 def admin_page_client(flask_app, monkeypatch):
-    import admin_routes
+    from admin import dashboard_routes, members_routes, requests_routes
     import auth
 
     monkeypatch.setattr(auth, "get_user_by_id", lambda user_id: User(1, "admin.seed", "admin", full_name="Admin Seed"))
-    monkeypatch.setattr(admin_routes, "get_db_connection", lambda: FakeAdminConnection())
+    monkeypatch.setattr(dashboard_routes, "get_db_connection", lambda: FakeAdminConnection())
+    monkeypatch.setattr(members_routes, "get_db_connection", lambda: FakeAdminConnection())
+    monkeypatch.setattr(requests_routes, "get_db_connection", lambda: FakeAdminConnection())
     client = flask_app.test_client()
     _set_logged_in_admin(client)
     return client

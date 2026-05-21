@@ -171,7 +171,6 @@ try:
 except Exception as e:
     print(f'WARNING: Khong dang ky page_views: {e}')
 
-
 # NOTE: /members/verify va /api/members da duoc dang ky boi blueprints.members_portal
 # Khong dinh nghia lai o day de tranh duplicate route conflict
 
@@ -195,11 +194,10 @@ from services.family_tree_service import (
     get_children,
     get_generations_api,
 )
-from services.members_service import (
-    get_members_password,
-    create_backup_api as _svc_create_backup_api,
-    list_backups_api as _svc_list_backups_api,
-    download_backup as _svc_download_backup,
+from services.members_service import get_members_password
+from admin.backup_routes import (
+    register_admin_backup_create_api_route,
+    register_admin_backup_api_routes,
 )
 from services.gallery_service import (
     get_geoapify_api_key,
@@ -1413,155 +1411,12 @@ def verify_password_api():
         logger.error(f'Error verifying password: {e}', exc_info=True)
         return (jsonify({'success': False, 'error': f'Lỗi server: {str(e)}'}), 500)
 
-@app.route('/api/admin/activity-logs', methods=['GET'])
-@login_required
-def api_admin_activity_logs():
-    """API lấy activity logs (admin only)"""
-    if not current_user.is_authenticated:
-        logger.warning(f'Activity logs API: Unauthenticated request from {request.remote_addr}')
-        return (jsonify({'success': False, 'error': 'Chưa đăng nhập. Vui lòng đăng nhập lại.'}), 401)
-    if getattr(current_user, 'role', '') != 'admin':
-        logger.warning(f"Activity logs API: Unauthorized access attempt by user {current_user.username} (role: {getattr(current_user, 'role', 'none')})")
-        return (jsonify({'success': False, 'error': 'Không có quyền truy cập. Chỉ admin mới có thể xem logs.'}), 403)
-    connection = get_db_connection()
-    if not connection:
-        return (jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500)
-    try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute("SHOW TABLES LIKE 'activity_logs'")
-        table_exists = cursor.fetchone()
-        if not table_exists:
-            logger.warning("Activity logs API: Table 'activity_logs' does not exist in database, attempting to create it")
-            try:
-                cursor.execute("\n                    CREATE TABLE IF NOT EXISTS activity_logs (\n                        log_id INT AUTO_INCREMENT PRIMARY KEY,\n                        user_id INT NULL COMMENT 'ID của user thực hiện hành động',\n                        action VARCHAR(100) NOT NULL COMMENT 'Hành động',\n                        target_type VARCHAR(50) NULL COMMENT 'Loại đối tượng',\n                        target_id VARCHAR(255) NULL COMMENT 'ID của đối tượng',\n                        before_data JSON NULL COMMENT 'Dữ liệu trước khi thay đổi',\n                        after_data JSON NULL COMMENT 'Dữ liệu sau khi thay đổi',\n                        ip_address VARCHAR(45) NULL COMMENT 'IP address',\n                        user_agent TEXT NULL COMMENT 'User agent',\n                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian tạo log',\n                        INDEX idx_user_id (user_id),\n                        INDEX idx_action (action),\n                        INDEX idx_target_type (target_type),\n                        INDEX idx_target_id (target_id),\n                        INDEX idx_created_at (created_at)\n                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Bảng lưu log hoạt động hệ thống'\n                ")
-                connection.commit()
-                logger.info("Activity logs API: Successfully created 'activity_logs' table")
-            except Exception as create_error:
-                logger.error(f"Activity logs API: Failed to create 'activity_logs' table: {create_error}")
-                return (jsonify({'success': False, 'error': f'Bảng activity_logs không tồn tại và không thể tự động tạo. Lỗi: {str(create_error)}. Vui lòng chạy script migration: folder_sql/create_activity_logs_table.sql'}), 404)
-        limit = request.args.get('limit', default=100, type=int)
-        offset = request.args.get('offset', default=0, type=int)
-        action_filter = request.args.get('action', default=None, type=str)
-        target_type_filter = request.args.get('target_type', default=None, type=str)
-        user_id_filter = request.args.get('user_id', default=None, type=int)
-        cursor.execute("SHOW COLUMNS FROM activity_logs LIKE 'log_id'")
-        has_log_id = cursor.fetchone()
-        id_column = 'log_id' if has_log_id else 'id'
-        cursor.execute("SHOW COLUMNS FROM activity_logs LIKE 'created_at'")
-        has_created_at = cursor.fetchone()
-        time_column = 'created_at' if has_created_at else 'timestamp'
-        query = f'\n            SELECT \n                al.{id_column} as log_id,\n                al.user_id,\n                al.action,\n                al.target_type,\n                al.target_id,\n                al.before_data,\n                al.after_data,\n                al.ip_address,\n                al.user_agent,\n                al.{time_column} as created_at,\n                u.username,\n                u.full_name\n            FROM activity_logs al\n            LEFT JOIN users u ON al.user_id = u.user_id\n            WHERE 1=1\n        '
-        params = []
-        if action_filter:
-            query += ' AND al.action = %s'
-            params.append(action_filter)
-        if target_type_filter:
-            query += ' AND al.target_type = %s'
-            params.append(target_type_filter)
-        if user_id_filter:
-            query += ' AND al.user_id = %s'
-            params.append(user_id_filter)
-        count_query = f'\n            SELECT COUNT(*) as total\n            FROM activity_logs al\n            LEFT JOIN users u ON al.user_id = u.user_id\n            WHERE 1=1\n        '
-        count_params = []
-        if action_filter:
-            count_query += ' AND al.action = %s'
-            count_params.append(action_filter)
-        if target_type_filter:
-            count_query += ' AND al.target_type = %s'
-            count_params.append(target_type_filter)
-        if user_id_filter:
-            count_query += ' AND al.user_id = %s'
-            count_params.append(user_id_filter)
-        cursor.execute(count_query, count_params)
-        total_result = cursor.fetchone()
-        total = total_result['total'] if total_result else 0
-        query += f' ORDER BY al.{time_column} DESC LIMIT %s OFFSET %s'
-        params.extend([limit, offset])
-        cursor.execute(query, params)
-        logs = cursor.fetchall()
-        for log in logs:
-            if log.get('before_data'):
-                try:
-                    log['before_data'] = json.loads(log['before_data']) if isinstance(log['before_data'], str) else log['before_data']
-                except (json.JSONDecodeError, TypeError):
-                    pass
-            if log.get('after_data'):
-                try:
-                    log['after_data'] = json.loads(log['after_data']) if isinstance(log['after_data'], str) else log['after_data']
-                except (json.JSONDecodeError, TypeError):
-                    pass
-            if log.get('created_at'):
-                if isinstance(log['created_at'], datetime):
-                    log['created_at'] = log['created_at'].isoformat() + 'Z' if log['created_at'].tzinfo is None else log['created_at'].isoformat()
-                elif hasattr(log['created_at'], 'isoformat'):
-                    log['created_at'] = log['created_at'].isoformat() + 'Z'
-                else:
-                    created_at_str = str(log['created_at'])
-                    if 'T' in created_at_str and (not created_at_str.endswith('Z')) and ('+' not in created_at_str[-6:]):
-                        log['created_at'] = created_at_str + 'Z'
-                    else:
-                        log['created_at'] = created_at_str
-        return jsonify({'success': True, 'logs': logs, 'total': total, 'limit': limit, 'offset': offset})
-    except Error as e:
-        logger.error(f'Error in activity logs API: {e}')
-        return (jsonify({'success': False, 'error': str(e)}), 500)
-    except Exception as e:
-        logger.error(f'Unexpected error in activity logs API: {e}', exc_info=True)
-        return (jsonify({'success': False, 'error': str(e)}), 500)
-    finally:
-        if connection.is_connected():
-            cursor.close()
-            connection.close()
+try:
+    from admin.logs_api_routes import register_admin_logs_api_routes
 
-@app.route('/api/admin/reset-logs', methods=['POST'])
-@login_required
-def api_admin_reset_logs():
-    """
-    Reset toàn bộ "bản log" (activity_logs + page_views):
-      - Dump trước ra backups/logs-YYYYMMDD-HHMMSS.sql (có thể restore).
-      - TRUNCATE cả 2 bảng.
-      - Ghi 1 entry LOG_RESET vào activity_logs sau khi reset.
-
-    Yêu cầu:
-      - Đã login (Flask-Login).
-      - role == 'admin'.
-      - Body JSON: {"confirm": "RESET_ALL_LOGS"} — token confirmation để tránh POST
-        nhầm. CSRF vẫn được kiểm qua Flask-WTF như mọi endpoint POST khác.
-    """
-    if not current_user.is_authenticated:
-        return (jsonify({'success': False, 'error': 'Chưa đăng nhập.'}), 401)
-    if getattr(current_user, 'role', '') != 'admin':
-        return (jsonify({'success': False, 'error': 'Không có quyền truy cập.'}), 403)
-
-    try:
-        payload = request.get_json(silent=True) or {}
-    except Exception:
-        payload = {}
-    confirm_token = (payload.get('confirm') or '').strip()
-    if confirm_token != 'RESET_ALL_LOGS':
-        return (
-            jsonify({
-                'success': False,
-                'error': 'Thiếu xác nhận. Body JSON phải có {"confirm": "RESET_ALL_LOGS"}.',
-            }),
-            400,
-        )
-
-    try:
-        from services.log_reset import perform_log_reset
-    except Exception as import_err:
-        logger.error('Không import được services.log_reset: %s', import_err)
-        return (jsonify({'success': False, 'error': 'Service reset-logs không khả dụng.'}), 500)
-
-    result = perform_log_reset(
-        actor_user_id=getattr(current_user, 'id', None),
-        ip_address=request.remote_addr,
-        user_agent=request.headers.get('User-Agent'),
-    )
-    if not result.get('success'):
-        return (jsonify(result), 500)
-    return jsonify(result)
-
+    register_admin_logs_api_routes(app)
+except Exception as e:
+    print(f'WARNING: Khong dang ky admin logs APIs: {e}')
 
 @app.route('/api/admin/code-graph/rescan', methods=['POST'])
 @login_required
@@ -1593,20 +1448,9 @@ def api_admin_code_graph_rescan():
     return (jsonify(result), status)
 
 
-@app.route('/api/admin/backup', methods=['POST'])
-def create_backup_api():
-    """API tạo backup database - Yêu cầu mật khẩu"""
-    return _svc_create_backup_api()
+register_admin_backup_create_api_route(app)
 
-@app.route('/api/admin/backups', methods=['GET'])
-def list_backups_api():
-    """API liệt kê các backup có sẵn"""
-    return _svc_list_backups_api()
-
-@app.route('/api/admin/backup/<filename>', methods=['GET'])
-def download_backup(filename):
-    """API download file backup"""
-    return _svc_download_backup(filename)
+register_admin_backup_api_routes(app)
 
 @app.route('/api/health', methods=['GET'])
 def api_health():

@@ -77,7 +77,7 @@ def test_admin_table_stats_uses_identifier_guard():
     """Đảm bảo route `/admin/api/table-stats` đã gắn lớp chặn identifier."""
 
     root = Path(__file__).resolve().parent.parent
-    src = (root / "admin_routes.py").read_text(encoding="utf-8")
+    src = (root / "admin" / "data_management_routes.py").read_text(encoding="utf-8")
 
     # Route còn nguyên
     assert "/admin/api/table-stats" in src
@@ -103,7 +103,7 @@ def test_source_no_longer_trusts_show_tables_like_alone():
     """
 
     root = Path(__file__).resolve().parent.parent
-    src = (root / "admin_routes.py").read_text(encoding="utf-8")
+    src = (root / "admin" / "data_management_routes.py").read_text(encoding="utf-8")
 
     tbl_stats_start = src.find("def admin_api_table_stats")
     assert tbl_stats_start != -1

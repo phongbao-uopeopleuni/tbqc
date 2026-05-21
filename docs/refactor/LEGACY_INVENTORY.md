@@ -57,8 +57,8 @@
 
 | File | Status | Ghi chu |
 |---|---|---|
-| `tree-default-view.png` (repo root) | legacy | Diagram cu, co the move docs/ hoac xoa |
-| `tree-zoomed.png` (repo root) | legacy | Tuong tu |
+| `docs/assets/tree-default-view.png` | moved | Moved tu repo root 2026-05-21 |
+| `docs/assets/tree-zoomed.png` | moved | Moved tu repo root 2026-05-21 |
 | `static/images/anh1/*.jpg` cu | da xoa 3 file | Commit 8b0e8fd |
 | `static/data/code-graph.json` | active | Da regenerate commit e1317e7, ~94k dong |
 

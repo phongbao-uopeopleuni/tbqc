@@ -15,7 +15,7 @@ from pathlib import Path
 
 def _source() -> str:
     root = Path(__file__).resolve().parent.parent
-    return (root / "admin_routes.py").read_text(encoding="utf-8")
+    return (root / "admin" / "login_routes.py").read_text(encoding="utf-8")
 
 
 def test_remember_cookie_sets_secure_from_request():
@@ -46,4 +46,4 @@ def test_remember_cookie_still_httponly_and_lax():
     assert idx != -1
     block = src[idx : idx + 600]
     assert "httponly=True" in block
-    assert "samesite='Lax'" in block
+    assert 'samesite="Lax"' in block or "samesite='Lax'" in block
