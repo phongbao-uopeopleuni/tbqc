@@ -78,3 +78,24 @@ def normalize_excel_header(header):
     s = re.sub(r"[^a-z0-9]+", " ", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s
+
+
+def sll_merge_excel_into_payload(base, excel_by_internal_key):
+    out = dict(base)
+    key_map = {
+        "spouses": "spouse_info",
+        "children": "children_info",
+        "siblings": "siblings_info",
+        "grave": "grave_info",
+    }
+    for key, value in excel_by_internal_key.items():
+        if key == "person_id":
+            continue
+        if not sll_cell_nonempty(value):
+            continue
+        normalized_value = sll_normalize_cell(value)
+        payload_key = key_map.get(key, key)
+        if payload_key == "branch_name":
+            normalized_value = sll_canonical_branch(normalized_value)
+        out[payload_key] = normalized_value
+    return out

@@ -17,6 +17,7 @@ from services.members_helpers import (
     sll_branch_code_to_name as _sll_branch_code_to_name,
     sll_canonical_branch as _sll_canonical_branch,
     sll_cell_nonempty as _sll_cell_nonempty,
+    sll_merge_excel_into_payload as _sll_merge_excel_into_payload,
     sll_normalize_cell as _sll_normalize_cell,
 )
 
@@ -794,28 +795,6 @@ def _sll_base_payload(cursor, person_id, rel_data):
         'biography': p.get('biography'),
         'personal_image_url': p.get('personal_image_url') or p.get('personal_image'),
     }
-
-
-def _sll_merge_excel_into_payload(base, excel_by_internal_key):
-    """Chỉ ghi đè các ô Excel khác rỗng; map spouses/children/siblings/grave -> đúng key form."""
-    out = dict(base)
-    key_map = {
-        'spouses': 'spouse_info',
-        'children': 'children_info',
-        'siblings': 'siblings_info',
-        'grave': 'grave_info',
-    }
-    for k, v in excel_by_internal_key.items():
-        if k == 'person_id':
-            continue
-        if not _sll_cell_nonempty(v):
-            continue
-        nv = _sll_normalize_cell(v)
-        pk = key_map.get(k, k)
-        if pk == 'branch_name':
-            nv = _sll_canonical_branch(nv)
-        out[pk] = nv
-    return out
 
 
 _EXCEL_HEADER_ALIASES = {

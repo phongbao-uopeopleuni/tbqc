@@ -15,7 +15,7 @@
 | 0c | Fix-only Stabilization | ✅ Done | `docs/phase-0a-skeleton` |
 | 0d | Observability & Performance Gates | ✅ Done | `docs/phase-0a-skeleton` |
 | 1 | Admin Vertical Slices | Done | `master` |
-| 2 | Service Refactor | In progress - 2.2 members SLL pure helpers | `codex/phase-2-service-refactor` |
+| 2 | Service Refactor | In progress - 2.3 members SLL presenter helper | `codex/phase-2-service-refactor` |
 | 3 | App Bootstrap Shrink | ⏳ Pending | - |
 | 4 | JS Refactor | ⏳ Pending | - |
 | 5 | Gallery + Members High-risk | ⏳ Pending | - |
@@ -99,6 +99,33 @@ git revert 81af030
 
 ```bash
 git revert 6597323
+```
+
+---
+
+## Phase 2.3 - Members SLL Presenter Helper
+
+**Ngay:** 2026-05-21
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - presenter helper move, behavior unchanged.
+
+### Scope
+
+- Moved `sll_merge_excel_into_payload` into `services/members_helpers.py`.
+- Kept compatibility alias `_sll_merge_excel_into_payload` from `blueprints.members_portal`.
+- Did not touch `_sll_base_payload`, bulk update routes, mutation, audit, or filesystem side effects.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Members helper + route contract gate | `pytest -q tests/test_members_helpers.py tests/test_members_gate_fixed_accounts.py tests/test_api_routes.py::TestMembersGate tests/test_p0_contract.py::test_api_members_contract tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py` | 21 passed |
+| Full regression | `pytest -x -q` | 348 passed, 3 skipped |
+
+### Rollback
+
+```bash
+git revert <phase-2.3-sha>
 ```
 
 ---
