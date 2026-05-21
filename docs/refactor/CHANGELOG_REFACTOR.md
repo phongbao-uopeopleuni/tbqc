@@ -14,7 +14,7 @@
 | 0b | Baseline Tests + Snapshots | ✅ Done | `docs/phase-0a-skeleton` |
 | 0c | Fix-only Stabilization | ✅ Done | `docs/phase-0a-skeleton` |
 | 0d | Observability & Performance Gates | ✅ Done | `docs/phase-0a-skeleton` |
-| 1 | Admin Vertical Slices | Done | `master` |
+| 1 | Admin Vertical Slices | ✅ Done | `master` (commit `1df0a34`) |
 | 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
 | 3 | App Bootstrap Shrink | ⏳ Pending | - |
 | 4 | JS Refactor | ⏳ Pending | - |
@@ -27,7 +27,7 @@
 **Ngay closeout:** 2026-05-22  
 **Branch:** `codex/phase-2-service-refactor`  
 **Trang thai:** ✅ PASS — san sang merge vao master, khong co bug ton dong.  
-**Commit HEAD:** `0f62c26`  
+**Commit HEAD:** `7dbd47a` (bao gồm closeout log + PHASE_3_PREFLIGHT.md)  
 **PR:** https://github.com/phongbao-uopeopleuni/tbqc/compare/master...codex/phase-2-service-refactor
 
 ### Ket qua audit 6 layers
@@ -160,58 +160,82 @@ git revert 6597323
 
 ---
 
-## Phase 2.8 - Gallery DDL + File Delete Helpers
+## Phase 2.3 - Members SLL Presenter Helper
 
-**Ngay:** 2026-05-22
+**Ngay:** 2026-05-21
 **Branch:** `codex/phase-2-service-refactor`
-**Trang thai:** PASS - DDL + filesystem helper move, behavior unchanged.
+**Trang thai:** PASS - presenter helper move, behavior unchanged.
 
 ### Scope
 
-- Moved `ensure_albums_table`, `ensure_album_images_table`, `_delete_album_image_file` vao `services/gallery_helpers.py`.
-- Tat ca 3 ham chi co caller noi bo trong `gallery_service.py`, khong can facade.
-- `BASE_DIR`, `logger`, `os` da co san trong `gallery_helpers.py`.
+- Moved `sll_merge_excel_into_payload` into `services/members_helpers.py`.
+- Kept compatibility alias `_sll_merge_excel_into_payload` from `blueprints.members_portal`.
+- Did not touch `_sll_base_payload`, bulk update routes, mutation, audit, or filesystem side effects.
 
 ### Gate evidence
 
 | Gate | File / Command | Ket qua |
 |---|---|---|
-| Compile | `python -m compileall services/gallery_helpers.py services/gallery_service.py -q` | 0 errors |
-| Narrow gate | `pytest -x -q test_gallery_helpers.py test_url_map_contract.py ...` | 32 passed |
-| Full regression | `pytest -x -q -m "not db_integration"` | 382 passed, 3 skipped, 13 deselected |
+| Members helper + route contract gate | `pytest -q tests/test_members_helpers.py tests/test_members_gate_fixed_accounts.py tests/test_api_routes.py::TestMembersGate tests/test_p0_contract.py::test_api_members_contract tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py` | 21 passed |
+| Full regression | `pytest -x -q` | 348 passed, 3 skipped |
 
 ### Rollback
 
 ```bash
-git revert 506df3e
+git revert 833d080
 ```
 
 ---
 
-## Phase 2.7 - Upsert Helpers (get_or_create_*)
+## Phase 2.4 - Gallery Env/Password Helpers
 
-**Ngay:** 2026-05-22
+**Ngay:** 2026-05-21
 **Branch:** `codex/phase-2-service-refactor`
-**Trang thai:** PASS - upsert helpers (SELECT + INSERT) move, behavior unchanged.
+**Trang thai:** PASS - env/password pure helpers extracted.
 
 ### Scope
 
-- Moved `get_or_create_location`, `get_or_create_generation`, `get_or_create_branch` vao `services/person_helpers.py`.
-- `get_or_create_branch` co external caller trong `members_portal.py` → facade via `person_service.py`.
-- Location va generation chi co caller noi bo.
+- Added `services/gallery_helpers.py`.
+- Moved 7 helpers tu `gallery_service.py`: `_load_env_file_safe`, `_geoapify_*_from_env`, `_get_*_password`, `verify_*_password`.
+- Fix: xoa 3 unused private facade imports (commit `51ab3a8`).
 
 ### Gate evidence
 
 | Gate | File / Command | Ket qua |
 |---|---|---|
-| Compile | `python -m compileall services/person_helpers.py services/person_service.py -q` | 0 errors |
-| Narrow gate | `pytest -x -q test_person_helpers.py test_url_map_contract.py ...` | 40 passed |
-| Full regression | `pytest -x -q -m "not db_integration"` | 377 passed, 3 skipped, 13 deselected |
+| Full regression | `pytest -x -q -m "not db_integration"` | 356 passed, 3 skipped, 13 deselected |
 
 ### Rollback
 
 ```bash
-git revert 4c3140a
+git revert 51ab3a8 75d4a44
+```
+
+---
+
+## Phase 2.5 - Read Query Helpers
+
+**Ngay:** 2026-05-21
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - read query cursor helpers move, behavior unchanged.
+
+### Scope
+
+- Moved `find_person_by_name` vao `services/person_helpers.py`.
+- Moved `_sll_base_payload` (public name `sll_base_payload`) vao `services/members_helpers.py`.
+- Kept facade `_sll_base_payload` in `members_portal.py`.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Narrow gate | `pytest -x -q test_person_helpers.py test_members_helpers.py test_url_map_contract.py ...` | 39 passed |
+| Full regression | `pytest -x -q -m "not db_integration"` | 362 passed, 3 skipped, 13 deselected |
+
+### Rollback
+
+```bash
+git revert 2f08971
 ```
 
 ---
@@ -245,82 +269,58 @@ git revert 01222a6
 
 ---
 
-## Phase 2.5 - Read Query Helpers
+## Phase 2.7 - Upsert Helpers (get_or_create_*)
 
-**Ngay:** 2026-05-21
+**Ngay:** 2026-05-22
 **Branch:** `codex/phase-2-service-refactor`
-**Trang thai:** PASS - read query cursor helpers move, behavior unchanged.
+**Trang thai:** PASS - upsert helpers (SELECT + INSERT) move, behavior unchanged.
 
 ### Scope
 
-- Moved `find_person_by_name` vao `services/person_helpers.py`.
-- Moved `_sll_base_payload` (public name `sll_base_payload`) vao `services/members_helpers.py`.
-- Kept facade `_sll_base_payload` in `members_portal.py`.
+- Moved `get_or_create_location`, `get_or_create_generation`, `get_or_create_branch` vao `services/person_helpers.py`.
+- `get_or_create_branch` co external caller trong `members_portal.py` → facade via `person_service.py`.
+- Location va generation chi co caller noi bo.
 
 ### Gate evidence
 
 | Gate | File / Command | Ket qua |
 |---|---|---|
-| Narrow gate | `pytest -x -q test_person_helpers.py test_members_helpers.py test_url_map_contract.py ...` | 39 passed |
-| Full regression | `pytest -x -q -m "not db_integration"` | 362 passed, 3 skipped, 13 deselected |
+| Compile | `python -m compileall services/person_helpers.py services/person_service.py -q` | 0 errors |
+| Narrow gate | `pytest -x -q test_person_helpers.py test_url_map_contract.py ...` | 40 passed |
+| Full regression | `pytest -x -q -m "not db_integration"` | 377 passed, 3 skipped, 13 deselected |
 
 ### Rollback
 
 ```bash
-git revert 2f08971
+git revert 4c3140a
 ```
 
 ---
 
-## Phase 2.4 - Gallery Env/Password Helpers
+## Phase 2.8 - Gallery DDL + File Delete Helpers
 
-**Ngay:** 2026-05-21
+**Ngay:** 2026-05-22
 **Branch:** `codex/phase-2-service-refactor`
-**Trang thai:** PASS - env/password pure helpers extracted.
+**Trang thai:** PASS - DDL + filesystem helper move, behavior unchanged.
 
 ### Scope
 
-- Added `services/gallery_helpers.py`.
-- Moved 7 helpers tu `gallery_service.py`: `_load_env_file_safe`, `_geoapify_*_from_env`, `_get_*_password`, `verify_*_password`.
-- Fix: xoa 3 unused private facade imports (commit `51ab3a8`).
+- Moved `ensure_albums_table`, `ensure_album_images_table`, `_delete_album_image_file` vao `services/gallery_helpers.py`.
+- Tat ca 3 ham chi co caller noi bo trong `gallery_service.py`, khong can facade.
+- `BASE_DIR`, `logger`, `os` da co san trong `gallery_helpers.py`.
 
 ### Gate evidence
 
 | Gate | File / Command | Ket qua |
 |---|---|---|
-| Full regression | `pytest -x -q -m "not db_integration"` | 356 passed, 3 skipped, 13 deselected |
+| Compile | `python -m compileall services/gallery_helpers.py services/gallery_service.py -q` | 0 errors |
+| Narrow gate | `pytest -x -q test_gallery_helpers.py test_url_map_contract.py ...` | 32 passed |
+| Full regression | `pytest -x -q -m "not db_integration"` | 382 passed, 3 skipped, 13 deselected |
 
 ### Rollback
 
 ```bash
-git revert 51ab3a8 75d4a44
-```
-
----
-
-## Phase 2.3 - Members SLL Presenter Helper
-
-**Ngay:** 2026-05-21
-**Branch:** `codex/phase-2-service-refactor`
-**Trang thai:** PASS - presenter helper move, behavior unchanged.
-
-### Scope
-
-- Moved `sll_merge_excel_into_payload` into `services/members_helpers.py`.
-- Kept compatibility alias `_sll_merge_excel_into_payload` from `blueprints.members_portal`.
-- Did not touch `_sll_base_payload`, bulk update routes, mutation, audit, or filesystem side effects.
-
-### Gate evidence
-
-| Gate | File / Command | Ket qua |
-|---|---|---|
-| Members helper + route contract gate | `pytest -q tests/test_members_helpers.py tests/test_members_gate_fixed_accounts.py tests/test_api_routes.py::TestMembersGate tests/test_p0_contract.py::test_api_members_contract tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py` | 21 passed |
-| Full regression | `pytest -x -q` | 348 passed, 3 skipped |
-
-### Rollback
-
-```bash
-git revert 833d080
+git revert 506df3e
 ```
 
 ---
