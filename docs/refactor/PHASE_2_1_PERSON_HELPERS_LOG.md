@@ -43,5 +43,5 @@ No route, endpoint, DB query, mutation, audit, upload, or filesystem behavior wa
 ## Rollback
 
 ```bash
-git revert <phase-2.1-sha>
+git revert 81af030
 ```

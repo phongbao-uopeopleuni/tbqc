@@ -42,7 +42,7 @@
 ### Residual notes before Phase 2
 
 - Raw `.log` files stay local-only by `.gitignore`; gate results are recorded in tracked markdown instead.
-- `docs/refactor/MASTER_DEPLOYMENT_LOG.md`, Phase 0d docs, baseline JSON, incident template, and `logs/.gitkeep` are staged as artefact evidence before Phase 2.
+- `docs/refactor/MASTER_DEPLOYMENT_LOG.md`, Phase 0d docs, baseline JSON, incident template, and `logs/.gitkeep` were recorded in commit `faeac82`.
 - Public JS URLs remain frozen: `/family-tree-core.js`, `/family-tree-ui.js`, `/genealogy-lineage.js`.
 
 ---
@@ -70,7 +70,7 @@
 ### Rollback
 
 ```bash
-git revert <phase-2.1-sha>
+git revert 81af030
 ```
 
 ---
@@ -116,7 +116,7 @@ git revert 59ebd9f 1df0a34
 | Loai | SHA | Mo ta |
 |---|---|---|
 | `[docs]/[test]/[fix]` | `1df0a34` | Baseline scripts/tests landed with Phase 1 commit |
-| `[docs]` | `staged` | Phase 0d docs/baseline artefacts staged before Phase 2; fill final SHA after commit |
+| `[docs]` | `faeac82` | Phase 0d docs/baseline artefacts recorded before Phase 2 |
 
 ### Scope
 
