@@ -17,6 +17,7 @@ from db import get_db_connection
 from extensions import cache
 from services.members_service import get_members_password
 from services.activities_service import is_admin_user
+from services.person_helpers import normalize_search_query, split_semicolon_values
 from utils.validation import (
     validate_filename,
     validate_person_id,
@@ -27,6 +28,7 @@ from utils.validation import (
 
 logger = logging.getLogger(__name__)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_split_semicolon_values = split_semicolon_values
 
 def get_persons():
     """Lấy danh sách tất cả người từ schema mới (person_id VARCHAR, relationships mới)"""
@@ -1066,46 +1068,6 @@ def sync_person(person_id):
         if connection.is_connected():
             cursor.close()
             connection.close()
-
-def normalize_search_query(q):
-    """
-    Normalize search query để hỗ trợ tìm kiếm tốt hơn:
-    - Trim khoảng trắng
-    - Hỗ trợ Person_ID variants (P-7-654, p-7-654, 7-654, 654)
-    - Chuẩn bị cho case-insensitive search (MySQL COLLATE đã hỗ trợ)
-    
-    Returns:
-        tuple: (normalized_query, person_id_patterns)
-        - normalized_query: query đã normalize
-        - person_id_patterns: list các pattern để search Person_ID
-    """
-    if not q:
-        return ('', [])
-    q = str(q).strip()
-    person_id_patterns = []
-    if q.upper().startswith('P-') or q.lower().startswith('p-'):
-        person_id_patterns.append(f'%{q}%')
-        person_id_patterns.append(f'%{q.upper()}%')
-        person_id_patterns.append(f'%{q.lower()}%')
-    if q.replace('-', '').replace(' ', '').isdigit():
-        if '-' in q:
-            parts = q.split('-')
-            if len(parts) == 2:
-                gen, num = (parts[0].strip(), parts[1].strip())
-                person_id_patterns.append(f'%P-{gen}-{num}%')
-                person_id_patterns.append(f'%p-{gen}-{num}%')
-                person_id_patterns.append(f'%{gen}-{num}%')
-        else:
-            person_id_patterns.append(f'%-{q}%')
-            person_id_patterns.append(f'%{q}%')
-    normalized_query = q
-    return (normalized_query, person_id_patterns)
-
-def _split_semicolon_values(raw_value):
-    if not raw_value:
-        return []
-    return [s.strip() for s in str(raw_value).split(';') if s and str(s).strip()]
-
 
 def load_relationship_data(cursor):
     """

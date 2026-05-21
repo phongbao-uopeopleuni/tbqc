@@ -15,7 +15,7 @@
 | 0c | Fix-only Stabilization | ✅ Done | `docs/phase-0a-skeleton` |
 | 0d | Observability & Performance Gates | ✅ Done | `docs/phase-0a-skeleton` |
 | 1 | Admin Vertical Slices | Done | `master` |
-| 2 | Service Refactor | Ready - pre-flight PASS, chua bat dau | - |
+| 2 | Service Refactor | In progress - 2.1 person pure helpers | `codex/phase-2-service-refactor` |
 | 3 | App Bootstrap Shrink | ⏳ Pending | - |
 | 4 | JS Refactor | ⏳ Pending | - |
 | 5 | Gallery + Members High-risk | ⏳ Pending | - |
@@ -44,6 +44,34 @@
 - Raw `.log` files stay local-only by `.gitignore`; gate results are recorded in tracked markdown instead.
 - `docs/refactor/MASTER_DEPLOYMENT_LOG.md`, Phase 0d docs, baseline JSON, incident template, and `logs/.gitkeep` are staged as artefact evidence before Phase 2.
 - Public JS URLs remain frozen: `/family-tree-core.js`, `/family-tree-ui.js`, `/genealogy-lineage.js`.
+
+---
+
+## Phase 2.1 - Person Pure Helpers
+
+**Ngay:** 2026-05-21
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - pure helper move, behavior unchanged.
+
+### Scope
+
+- Added `services/person_helpers.py`.
+- Moved `normalize_search_query` and semicolon splitting helper out of `services/person_service.py`.
+- Kept compatibility aliases from `services.person_service`.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Helper unit tests | `pytest -q tests/test_person_helpers.py` | 6 passed |
+| Person/API/contract gate | `pytest -q tests/test_person_helpers.py tests/test_api_routes.py::TestFamilyTreeAndPersons tests/test_p0_contract.py tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py` | 25 passed, 1 skipped |
+| Full regression | `pytest -x -q` | 341 passed, 3 skipped |
+
+### Rollback
+
+```bash
+git revert <phase-2.1-sha>
+```
 
 ---
 
