@@ -15,10 +15,67 @@
 | 0c | Fix-only Stabilization | ✅ Done | `docs/phase-0a-skeleton` |
 | 0d | Observability & Performance Gates | ✅ Done | `docs/phase-0a-skeleton` |
 | 1 | Admin Vertical Slices | Done | `master` |
-| 2 | Service Refactor | In progress — 2.1–2.8 done, mutations (2.9) deferred P0 gate | `codex/phase-2-service-refactor` |
+| 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
 | 3 | App Bootstrap Shrink | ⏳ Pending | - |
 | 4 | JS Refactor | ⏳ Pending | - |
 | 5 | Gallery + Members High-risk | ⏳ Pending | - |
+
+---
+
+## Phase 2 Closeout — Final Audit (2026-05-22)
+
+**Ngay closeout:** 2026-05-22  
+**Branch:** `codex/phase-2-service-refactor`  
+**Trang thai:** ✅ PASS — san sang merge vao master, khong co bug ton dong.  
+**Commit HEAD:** `0f62c26`  
+**PR:** https://github.com/phongbao-uopeopleuni/tbqc/compare/master...codex/phase-2-service-refactor
+
+### Ket qua audit 6 layers
+
+| Layer | Noi dung | Ket qua |
+|---|---|---|
+| L1 Code completeness | 25 functions trong 3 helper modules (person 7, members 8, gallery 10) | ✅ PASS |
+| L2 Import chain integrity | 14 facade identity checks (7 public + 3 gallery + 3 members private alias + 1 app.py import fix) | ✅ PASS |
+| L3 Test coverage | 60 helper tests (person 27, members 14, gallery 19) — tat ca pass | ✅ PASS |
+| L4 Contract snapshots | url_map, bootstrap, endpoint_names, p0_contract — 13/13 pass | ✅ PASS |
+| L5 Branch state | Working tree clean, 17 commits ahead master, 0 conflicts | ✅ PASS |
+| L6 Phase 3 prereqs | Bootstrap snapshot frozen, url_map_ordered frozen, 117 routes stable | ✅ PASS |
+
+### Tong ket helper modules
+
+| Module | Functions | Tests |
+|---|---|---|
+| `services/person_helpers.py` | normalize_search_query, split_semicolon_values, find_person_by_name, load_relationship_data, get_or_create_location/generation/branch | 27 |
+| `services/members_helpers.py` | sll_cell_nonempty, sll_normalize_cell, normalize_sll_row_id, sll_branch_code_to_name, sll_canonical_branch, normalize_excel_header, sll_merge_excel_into_payload, sll_base_payload | 14 |
+| `services/gallery_helpers.py` | _load_env_file_safe, _geoapify_server/browser_key_from_env, _get_album/grave_password, verify_album/grave_password, ensure_albums/album_images_table, _delete_album_image_file | 19 |
+
+### Gate evidence final
+
+| Gate | Command | Ket qua |
+|---|---|---|
+| Compile | `python -m compileall app.py services/person_service.py services/person_helpers.py services/members_helpers.py services/gallery_service.py services/gallery_helpers.py blueprints/members_portal.py -q` | OK |
+| Facade identity (14) | inline python `is` checks | ALL PASS |
+| Helper tests | `pytest -q tests/test_person_helpers.py tests/test_members_helpers.py tests/test_gallery_helpers.py` | 60 passed |
+| Contract gate | `pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py tests/test_p0_contract.py` | 13 passed |
+| Full regression | `pytest -q -m "not db_integration"` | **382 passed, 3 skipped, 13 deselected** |
+| Bootstrap smoke | `python -c "import app; print(len(list(app.app.url_map.iter_rules())))"`| 117 routes |
+
+### Deferred (P0 gate required — separate PR)
+
+| Function | Source file | Ly do defer |
+|---|---|---|
+| `_process_children_spouse_siblings` | `services/person_service.py` | Mutation + relationship writes |
+| `apply_person_members_update_core` | `services/person_service.py` | Bulk mutation, audit trail |
+| `bulk_update_members_branch` | `blueprints/members_portal.py` | Bulk mutation |
+| `bulk_update_members_sll` | `blueprints/members_portal.py` | Bulk mutation, Excel I/O |
+
+Can truoc khi move: DB strategy pass + audit snapshot + before/after fixture + unauthorized test + delete/cascade baseline.
+
+### Rollback toan bo Phase 2
+
+```bash
+git revert 0f62c26 27eacd0 506df3e 4c3140a 01222a6 67cd20e 2f08971 51ab3a8 fbee1aa 75d4a44 53e517b 833d080 add03e9 6597323 efbef7a 81af030 faeac82
+```
 
 ---
 
