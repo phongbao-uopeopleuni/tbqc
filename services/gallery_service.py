@@ -12,11 +12,8 @@ from extensions import limiter
 from utils.validation import validate_filename, validate_person_id
 from services.activities_service import is_admin_user
 from services.gallery_helpers import (
-    _load_env_file_safe,
     _geoapify_server_key_from_env,
     _geoapify_browser_key_from_env,
-    _get_album_password,
-    _get_grave_image_delete_password,
     verify_album_password,
     verify_grave_image_delete_password,
 )
