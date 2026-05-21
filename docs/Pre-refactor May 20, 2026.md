@@ -91,7 +91,7 @@ Output dat trong `docs/refactor/`:
 | `ROUTE_INVENTORY.md` | URL, method, endpoint, handler, file:line, pattern, domain, risk tier, auth, audit, has_test. Bao gom `app.py`, `admin_routes.py`, `blueprints/*`, `marriage_api.py`. |
 | `JS_LOAD_GRAPH.md` | Template -> script order -> inline script range -> JS file -> expected `window.*` -> critical DOM selectors. |
 | `AUDIT_LOG_SCHEMA.md` | Call-site cua `log_activity`, `log_person_*`, user/member audit; action, target_type, before/after fields. |
-| `DB_TEST_STRATEGY.md` | Chot cach test DB cho mutation/audit. Preferred: MySQL test DB/container + seed/truncate. Mock chi dung cho pure helper. |
+| `DB_TEST_STRATEGY.md` | Chot cach test DB cho mutation/audit. Canonical: Docker `testcontainers` + MySQL 8.4 + seed/truncate. Mock chi dung cho pure helper. |
 | `FROZEN_FILE_POLICY.md` | Policy freeze theo domain/file, cach rebase, ai xu ly conflict. |
 | `BOOTSTRAP_TRUTH.md` | Railway/Procfile la production truth hien tai; Render fallback phai match Procfile; cam `create_app()` trong refactor. |
 | `IMPORT_PATH_AUDIT.md` | Liet ke tat ca import fallback `folder_py.X / X`, muc tieu chuan hoa theo tung nhom nho. |
@@ -180,8 +180,8 @@ Khong bat 100% route coverage ngay 0b. Gate theo risk:
 
 DB test strategy:
 
-- Preferred: MySQL test DB/container (MySQL 8.0 match Railway), seed schema, truncate giua test.
-- Fallback chap nhan duoc: local MySQL test database rieng voi seed/truncate.
+- Preferred: Docker `testcontainers` + MySQL 8.4, seed schema, truncate giua test.
+- Fallback chap nhan duoc: local MySQL/MariaDB test database rieng voi seed/truncate, nhung khong phai canonical path.
 - Khong dung mock DB cho mutation/audit integration vi se mat integrity cua test.
 - Test fixture phai reset pool va xoa `.db_resolved.json` neu can.
 
@@ -204,8 +204,8 @@ KHONG chay `drop_old_tables.sql`, `reset_database_complete.sql`, `reset_tbqc_tab
 
 Test DB isolation:
 
-- Test DB phai khac database name voi local dev DB (vd `tbqc_test` vs `tbqc_db`).
-- Connection string test set qua env rieng (`TBQC_TEST_DB_NAME`, `TBQC_TEST_DB_HOST`) hoac `tbqc_test.env`.
+- Test DB phai nam trong container rieng hoac khac database name voi local dev DB (vd `tbqc_test` vs `tbqc_db`).
+- Connection string test set qua env rieng (`TBQC_TEST_DB_NAME`, `TBQC_TEST_DB_HOST`) va duoc fixture container inject truoc khi import app.
 - Pytest parallel: dung `--maxprocesses=1` cho mutation test; pure helper test moi parallel.
 - Sau moi test mutation: `TRUNCATE TABLE activity_logs, edit_requests, marriages, relationships, persons, users` hoac tuong duong, theo thu tu reverse FK.
 
@@ -792,7 +792,8 @@ __pycache__/
 
 ```text
 Python    : 3.11+ (match Railway image)
-MySQL     : 8.0   (match Railway managed DB)
+Docker    : Desktop/Engine current, healthy
+MySQL     : 8.4 image via testcontainers
 Node      : 18+   (cho lint frontend)
 gunicorn  : 21+   (theo requirements.txt)
 pytest    : 8+    (theo requirements.txt)
@@ -800,7 +801,7 @@ pytest    : 8+    (theo requirements.txt)
 
 ### 17.2 Required dev/test dependencies
 
-Toi thieu them vao `requirements-dev.txt` neu chua co:
+Toi thieu them vao `requirements-dev.txt`:
 
 ```text
 pytest
@@ -811,7 +812,7 @@ requests
 beautifulsoup4
 ```
 
-Neu khong dung testcontainers: phai co local MySQL 8.0 install va env `TBQC_TEST_DB_*` chi vao database test rieng.
+Neu fallback local DB: phai ghi ro trong `DB_TEST_STRATEGY.md` va khong duoc thay canonical path B trong im lang.
 
 ### 17.3 Canonical commands per gate
 
@@ -835,19 +836,13 @@ Neu khong dung testcontainers: phai co local MySQL 8.0 install va env `TBQC_TEST
 ### 17.4 Test DB setup commands
 
 ```text
-# Tao test DB local (Windows PowerShell)
-mysql -u root -p -e "CREATE DATABASE tbqc_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p tbqc_test < folder_sql/reset_schema_tbqc.sql
-mysql -u root -p tbqc_test < folder_sql/create_users_table.sql
-mysql -u root -p tbqc_test < folder_sql/create_activity_logs_table.sql
-mysql -u root -p tbqc_test < folder_sql/create_edit_requests_table.sql
+# Canonical path B
+pip install -r requirements-dev.txt
+docker version
+python -c "from testcontainers.mysql import MySqlContainer; print('ok')"
 
-# Set env cho pytest
-$env:TBQC_TEST_DB_HOST = "127.0.0.1"
-$env:TBQC_TEST_DB_PORT = "3306"
-$env:TBQC_TEST_DB_USER = "tbqc_test"
-$env:TBQC_TEST_DB_PASSWORD = "<test-password>"
-$env:TBQC_TEST_DB_NAME = "tbqc_test"
+# DB-backed tests se tu start mysql:8.4 va bootstrap schema qua fixture
+pytest -x -m db_integration
 ```
 
 ---
@@ -901,7 +896,7 @@ Truoc khi commit dau tien:
 ```text
 [ ] Doc ca file plan nay tu §1 den §24.
 [ ] `git status` clean tren master.
-[ ] Local MySQL 8.0 da co.
+[ ] Docker Desktop/Engine da co va `docker version` ok.
 [ ] Python 3.11+ da co.
 [ ] Node 18+ da co.
 [ ] `pytest -x tests/` pass tren master HIEN TAI (baseline).

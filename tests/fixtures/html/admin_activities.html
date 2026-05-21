@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta name="csrf-token" content="__CSRF_TOKEN__">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>Quản lý Hoạt động - Admin - Gia Phả Nguyễn Phước Tộc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+<link rel="stylesheet" href="/static/css/admin.css">
+<!-- Quill Editor CSS -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<style>
+/* Chỉ Quill: bảo vệ khỏi reset admin, toolbar/container/editor - giữ tại trang vì !important và .ql-* */
+#contentEditor, #contentEditor *,
+.ql-container, .ql-container *, .ql-editor, .ql-editor *,
+.ql-toolbar, .ql-toolbar * { box-sizing: content-box !important; }
+.ql-toolbar, .ql-toolbar *, .ql-container, .ql-container * {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+.ql-toolbar {
+background: var(--admin-bg) !important;
+padding: 12px !important;
+border: 1px solid var(--admin-border) !important;
+border-bottom: none !important;
+border-radius: 8px 8px 0 0 !important;
+display: flex !important;
+flex-wrap: wrap !important;
+align-items: center !important;
+min-height: 42px !important;
+}
+
+.ql-toolbar .ql-formats {
+display: inline-flex !important;
+align-items: center !important;
+margin-right: 15px !important;
+vertical-align: middle !important;
+}
+
+/* Toolbar Buttons */
+.ql-toolbar button {
+width: auto !important;
+height: auto !important;
+min-width: 28px !important;
+min-height: 28px !important;
+padding: 4px 6px !important;
+margin: 0 2px !important;
+border: none !important;
+background: transparent !important;
+cursor: pointer !important;
+display: inline-flex !important;
+align-items: center !important;
+justify-content: center !important;
+border-radius: 4px !important;
+transition: background 0.2s ease !important;
+}
+
+.ql-toolbar button:hover,
+.ql-toolbar button:focus,
+.ql-toolbar button.ql-active {
+background: #e8e8e8 !important;
+outline: none !important;
+}
+
+/* SVG Icons - CRITICAL FIX */
+.ql-toolbar svg {
+display: inline-block !important;
+height: 18px !important;
+width: 18px !important;
+vertical-align: middle !important;
+pointer-events: none !important;
+}
+
+.ql-toolbar .ql-stroke {
+stroke: #444 !important;
+fill: none !important;
+stroke-width: 2 !important;
+}
+
+.ql-toolbar .ql-fill {
+fill: #444 !important;
+stroke: none !important;
+}
+
+.ql-toolbar .ql-stroke.ql-thin {
+stroke-width: 1 !important;
+}
+
+.ql-toolbar button:hover .ql-stroke,
+.ql-toolbar button.ql-active .ql-stroke {
+stroke: #06c !important;
+}
+
+.ql-toolbar button:hover .ql-fill,
+.ql-toolbar button.ql-active .ql-fill {
+fill: #06c !important;
+}
+
+/* Ẩn các pseudo-elements có thể gây ký tự lạ */
+.ql-toolbar button::before,
+.ql-toolbar button::after {
+display: none !important;
+content: none !important;
+}
+
+/* Picker Dropdowns */
+.ql-toolbar .ql-picker {
+color: #444 !important;
+display: inline-block !important;
+font-size: 14px !important;
+font-weight: 500 !important;
+height: 28px !important;
+position: relative !important;
+vertical-align: middle !important;
+margin: 0 2px !important;
+}
+
+.ql-toolbar .ql-picker-label {
+cursor: pointer !important;
+display: inline-block !important;
+height: 100% !important;
+padding: 4px 8px !important;
+position: relative !important;
+border-radius: 4px !important;
+transition: background 0.2s ease !important;
+}
+
+.ql-toolbar .ql-picker-label:hover {
+background: #e8e8e8 !important;
+}
+
+.ql-toolbar .ql-picker-label::before {
+display: inline-block !important;
+line-height: 20px !important;
+}
+
+.ql-toolbar .ql-picker-options {
+background-color: #fff !important;
+border: 1px solid var(--admin-border) !important;
+box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+display: none !important;
+padding: 4px 0 !important;
+position: absolute !important;
+white-space: nowrap !important;
+z-index: 1000 !important;
+border-radius: 4px !important;
+margin-top: 4px !important;
+}
+
+.ql-toolbar .ql-picker.ql-expanded .ql-picker-options {
+display: block !important;
+}
+
+.ql-toolbar .ql-picker-item {
+cursor: pointer !important;
+display: block !important;
+padding: 6px 12px !important;
+transition: background 0.2s ease !important;
+}
+
+.ql-toolbar .ql-picker-item:hover {
+background-color: #f0f0f0 !important;
+}
+
+/* Editor Container */
+.ql-container {
+border: 1px solid var(--admin-border) !important;
+border-top: none !important;
+border-radius: 0 0 8px 8px !important;
+font-family: 'Noto Serif TC', serif !important;
+font-size: 15px !important;
+}
+
+.ql-editor {
+min-height: 400px !important;
+padding: 20px !important;
+line-height: 1.8 !important;
+color: var(--admin-text) !important;
+}
+.ql-editor.ql-blank::before {
+color: var(--admin-text-muted) !important;
+font-style: normal !important;
+left: 20px !important;
+}
+
+/* Text Rendering */
+.ql-toolbar,
+.ql-toolbar *,
+.ql-container,
+.ql-container * {
+text-rendering: optimizeLegibility !important;
+-webkit-font-smoothing: antialiased !important;
+-moz-osx-font-smoothing: grayscale !important;
+}
+
+.ql-toolbar button:focus,
+.ql-toolbar .ql-picker-label:focus {
+outline: 2px solid var(--admin-primary) !important;
+outline-offset: 2px !important;
+}
+</style>
+<!-- Global CSRF Fetch Interceptor -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+var metaTag = document.querySelector('meta[name="csrf-token"]');
+if (metaTag) {
+var csrfToken = metaTag.getAttribute('content');
+var originalFetch = window.fetch;
+window.fetch = function(url, options) {
+options = options || {};
+if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+options.headers = options.headers || {};
+// Set the token header as expected by flask_wtf.csrf
+options.headers['X-CSRFToken'] = csrfToken;
+if (options.body && !(options.body instanceof FormData) && !options.headers['Content-Type']) {
+options.headers['Content-Type'] = 'application/json';
+}
+}
+return originalFetch(url, options);
+};
+}
+});
+</script>
+</head>
+<body class="admin-body">
+<nav class="admin-navbar">
+<div class="admin-navbar-left">
+<ul class="admin-navbar-menu">
+<li><a href="/admin/activities" class="active">Hoạt động</a></li>
+<li><a href="/">Trang chủ</a></li>
+</ul>
+</div>
+<div class="admin-navbar-right">
+<div class="admin-user-info">
+<span class="username">admin.seed</span>
+<span>(Admin Seed)</span>
+<span class="role">admin</span>
+</div>
+<a href="/admin/logout" class="admin-logout-btn">Đăng xuất</a>
+</div>
+</nav>
+<div class="admin-container">
+<!-- Page Header -->
+<div class="page-header">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+<div>
+<h1 style="color: var(--admin-primary);">Quản lý Hoạt động</h1>
+<p>Tạo, chỉnh sửa và quản lý các bài viết hoạt động</p>
+</div>
+</div>
+</div>
+<!-- Messages -->
+<div id="message" class="message"></div>
+<!-- Main Layout -->
+<div class="activities-layout">
+<!-- Form Panel (70%) -->
+<div class="form-panel">
+<div class="form-header">
+<h2 id="formTitle">Tạo bài đăng mới</h2>
+</div>
+<div class="form-content">
+<form id="activityForm">
+<input type="hidden" id="activityId" value="">
+<!-- Section 1: Thông tin cơ bản -->
+<div class="form-section">
+<h3 class="section-title">Thông tin cơ bản</h3>
+<div class="form-group">
+<label for="title">Tiêu đề <span class="required">*</span></label>
+<input type="text" id="title" name="title" required placeholder="Nhập tiêu đề bài viết">
+</div>
+<div class="form-group">
+<label for="summary">Tóm tắt</label>
+<textarea id="summary" name="summary" placeholder="Nhập tóm tắt ngắn gọn về bài viết"></textarea>
+<small>Mô tả ngắn gọn về nội dung bài viết (tùy chọn)</small>
+</div>
+<div class="form-group">
+<label for="category">Chuyên mục</label>
+<input type="text" id="category" name="category" list="categorySuggestions" placeholder="Ví dụ: Hoạt động Hội đồng NPT VN">
+<datalist id="categorySuggestions">
+<option value="Hoạt động Hội đồng NPT VN">
+<option value="Báo chí với Nguyễn Phúc">
+<option value="Nhúm Lửa Nhỏ">
+<option value="Lăng Bà Tài Nhân">
+<option value="Tin tức chung">
+</datalist>
+<small>Nhập tên chuyên mục hoặc chọn từ danh sách gợi ý</small>
+</div>
+</div>
+<!-- Section 2: Nội dung bài viết -->
+<div class="form-section">
+<h3 class="section-title">Nội dung bài viết</h3>
+<div class="form-group">
+<label for="contentEditor">Nội dung <span class="required">*</span></label>
+<div class="quill-wrapper">
+<div id="contentEditor"></div>
+</div>
+<textarea id="content" name="content" required style="display: none;"></textarea>
+<small>Nhập nội dung chi tiết của bài viết</small>
+</div>
+</div>
+<!-- Section 3: Hình ảnh -->
+<div class="form-section">
+<h3 class="section-title">Hình ảnh</h3>
+<div class="form-group">
+<label for="thumbnail">Ảnh đại diện / Thumbnail</label>
+<div class="upload-area">
+<div class="upload-input-group">
+<input type="text" id="thumbnail" name="thumbnail" placeholder="https://example.com/image.jpg hoặc upload ảnh">
+<input type="file" id="thumbnailFile" accept="image/*" style="display: none;" onchange="handleThumbnailUpload(event)">
+<button type="button" class="btn btn-secondary" onclick="document.getElementById('thumbnailFile').click()">Upload</button>
+</div>
+<small>Có thể nhập URL hoặc upload ảnh từ máy tính</small>
+<div id="thumbnailPreview" class="thumbnail-preview">
+<img id="previewImg" src="" alt="Preview">
+</div>
+</div>
+</div>
+<div class="form-group">
+<label>Hình ảnh bài viết (tối đa 10 ảnh)</label>
+<div class="upload-area">
+<input type="file" id="imagesFile" accept="image/*" multiple style="display: none;" onchange="handleImagesUpload(event)">
+<div style="display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 10px;">
+<button type="button" class="btn btn-secondary" onclick="document.getElementById('imagesFile').click()">Chọn ảnh (tối đa 10)</button>
+<span id="imagesCount" style="color: var(--admin-text-muted); font-size: 14px;">Đã chọn: 0/10</span>
+</div>
+<small>Chọn nhiều ảnh cùng lúc (PNG, JPG, JPEG, GIF, WEBP)</small>
+<div id="imagesPreview" class="images-preview"></div>
+</div>
+</div>
+</div>
+<!-- Section 4: Cài đặt -->
+<div class="form-section">
+<h3 class="section-title">Cài đặt</h3>
+<div class="form-group">
+<label for="status">Trạng thái</label>
+<select id="status" name="status">
+<option value="draft">Nháp</option>
+<option value="published">Đã đăng</option>
+</select>
+<small>Chọn trạng thái cho bài viết</small>
+</div>
+</div>
+</form>
+</div>
+<!-- Sticky Action Bar -->
+<div class="form-action-bar">
+<div class="action-bar-left">
+<button type="button" class="btn btn-secondary" onclick="resetForm()">Hủy</button>
+</div>
+<div class="action-bar-right">
+<button type="submit" form="activityForm" class="btn btn-secondary" id="submitBtn">Lưu nháp</button>
+<button type="button" class="btn btn-primary" onclick="publishNow()" id="publishBtn">Đăng bài</button>
+</div>
+</div>
+</div>
+<!-- Sidebar Panel (30%) -->
+<div class="sidebar-panel">
+<div class="sidebar-header">
+<h2>Danh sách bài đăng</h2>
+</div>
+<div id="postsList" class="posts-list">
+<div class="loading">Đang tải...</div>
+</div>
+</div>
+</div>
+<!-- Quill Editor JS -->
+<script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+<script>
+// Khởi tạo Quill Editor
+let quillEditor = null;
+let currentPostId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+const editorElement = document.getElementById('contentEditor');
+if (!editorElement) {
+console.error('Quill Editor: Element #contentEditor not found');
+return;
+}
+
+try {
+quillEditor = new Quill('#contentEditor', {
+theme: 'snow',
+modules: {
+toolbar: [
+[{ 'header': [1, 2, 3, false] }],
+['bold', 'italic', 'underline', 'strike'],
+[{ 'color': [] }, { 'background': [] }],
+[{ 'list': 'ordered'}, { 'list': 'bullet' }],
+[{ 'align': [] }],
+['link', 'image'],
+['clean']
+]
+},
+placeholder: 'Nhập nội dung bài viết...'
+});
+console.log('Quill Editor initialized successfully');
+} catch (error) {
+console.error('Quill Editor initialization error:', error);
+showMessage('Lỗi khởi tạo editor. Vui lòng tải lại trang.', 'error');
+}
+});
+
+/**
+* Clean text - Loại bỏ TẤT CẢ các ký tự không hợp lệ
+*/
+function cleanText(text) {
+if (!text || typeof text !== 'string') {
+return '';
+}
+
+return text.replace(/[^\x20-\x7E\u00A0-\uFFFF\n\r\t]/g, '')
+.replace(/[\u200B-\u200D\uFEFF]/g, '')
+.replace(/[\u25A0-\u25FF]/g, '')
+.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '');
+}
+
+/**
+* Sanitize HTML content để load vào Quill Editor
+*/
+function sanitizeHtmlForQuill(html) {
+if (!html || typeof html !== 'string') {
+return '';
+}
+
+try {
+let cleaned = cleanText(html);
+const tempDiv = document.createElement('div');
+tempDiv.innerHTML = cleaned;
+
+const scripts = tempDiv.querySelectorAll('script, style, iframe, object, embed, form, input, button');
+scripts.forEach(el => el.remove());
+
+const allElements = tempDiv.querySelectorAll('*');
+allElements.forEach(el => {
+Array.from(el.attributes).forEach(attr => {
+if (attr.name.toLowerCase().startsWith('on')) {
+el.removeAttribute(attr.name);
+}
+});
+});
+
+const walker = document.createTreeWalker(
+tempDiv,
+NodeFilter.SHOW_TEXT,
+null,
+false
+);
+
+let node;
+while (node = walker.nextNode()) {
+node.textContent = cleanText(node.textContent);
+}
+
+allElements.forEach(el => {
+Array.from(el.attributes).forEach(attr => {
+const cleanedValue = cleanText(attr.value);
+if (cleanedValue !== attr.value) {
+el.setAttribute(attr.name, cleanedValue);
+}
+});
+});
+
+let sanitized = tempDiv.innerHTML;
+sanitized = cleanText(sanitized);
+
+sanitized = sanitized
+.replace(/&nbsp;/g, ' ')
+.replace(/&amp;/g, '&')
+.replace(/&lt;/g, '<')
+.replace(/&gt;/g, '>')
+.replace(/&quot;/g, '"')
+.replace(/&#39;/g, "'");
+
+sanitized = cleanText(sanitized);
+
+return sanitized;
+} catch (error) {
+console.error('Error sanitizing HTML for Quill:', error);
+return cleanText(html);
+}
+}
+
+// Generic JSON fetch helper
+async function fetchJson(url, options) {
+const res = await fetch(url, options);
+const contentType = res.headers.get('Content-Type') || '';
+const text = await res.text();
+
+if (!res.ok) {
+console.error('HTTP error for', url, res.status, text);
+throw new Error(`HTTP ${res.status} khi gọi ${url}`);
+}
+
+if (!contentType.includes('application/json')) {
+console.error('Non‑JSON response for', url, 'contentType =', contentType, 'body =', text.slice(0, 200));
+throw new Error(`Phản hồi không phải JSON. Server trả về HTML hoặc nội dung khác.`);
+}
+
+try {
+return JSON.parse(text);
+} catch (e) {
+console.error('JSON parse error for', url, 'body =', text.slice(0, 200));
+throw e;
+}
+}
+
+function escapeHtml(text) {
+if (text === null || text === undefined) return '';
+const div = document.createElement('div');
+div.textContent = text;
+return div.innerHTML;
+}
+
+function showMessage(msg, type = 'success') {
+const msgEl = document.getElementById('message');
+msgEl.className = `message ${type}`;
+msgEl.textContent = msg;
+msgEl.style.display = 'block';
+setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+}
+
+async function checkAuth() {
+try {
+const result = await fetchJson('/api/activities/can-post');
+return !!(result && result.allowed);
+} catch (e) {
+console.warn('checkAuth failed (API unavailable or error):', e.message);
+return true;
+}
+}
+
+async function loadPosts() {
+const listEl = document.getElementById('postsList');
+try {
+const posts = await fetchJson('/api/activities');
+if (!Array.isArray(posts) || posts.length === 0) {
+listEl.innerHTML = '<div class="loading">Chưa có bài viết nào</div>';
+return;
+}
+listEl.innerHTML = posts.map(p => {
+const date = p.created_at ? new Date(p.created_at).toLocaleDateString('vi-VN') : '';
+const statusClass = p.status === 'published' ? 'status-published' : 'status-draft';
+const statusText = p.status === 'published' ? 'Đã đăng' : 'Nháp';
+const thumbnail = p.thumbnail ? `<img src="${escapeHtml(p.thumbnail)}" alt="Thumbnail">` : '';
+const isActive = currentPostId == p.id ? 'active' : '';
+return `
+<div class="post-item ${isActive}" onclick="editPost(${p.id})">
+<div class="post-title">
+${thumbnail}
+<span>${escapeHtml(p.title || 'Không có tiêu đề')}</span>
+</div>
+<div class="post-meta">
+<span class="post-status ${statusClass}">${statusText}</span>
+${date ? date : ''}
+</div>
+<div class="post-actions">
+<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); editPost(${p.id})">Sửa</button>
+<button class="btn btn-sm btn-danger" onclick="event.stopPropagation(); deletePost(${p.id}, '${escapeHtml(p.title || '')}')">Xóa</button>
+<a href="/activities/${p.id || p.activity_id}" target="_blank" class="btn btn-sm btn-primary" style="text-decoration:none;display:inline-block;" onclick="event.stopPropagation();">Xem</a>
+</div>
+</div>
+`;
+}).join('');
+} catch (err) {
+listEl.innerHTML = `<div class="message error">Lỗi: ${err.message}</div>`;
+}
+}
+
+async function editPost(id) {
+try {
+currentPostId = id;
+const post = await fetchJson(`/api/activities/${id}`);
+document.getElementById('activityId').value = post.id;
+document.getElementById('title').value = post.title || '';
+document.getElementById('summary').value = post.summary || '';
+document.getElementById('category').value = post.category || '';
+
+const content = post.content || '';
+console.log('Loading content into Quill Editor, length:', content.length);
+
+if (quillEditor) {
+try {
+if (!quillEditor.root) {
+console.error('Quill Editor root not available');
+document.getElementById('content').value = content;
+} else {
+if (!content || content.trim() === '') {
+quillEditor.setContents([]);
+console.log('Quill Editor: Set empty content');
+} else {
+const sanitizedContent = sanitizeHtmlForQuill(content);
+console.log('Quill Editor: Sanitized content length:', sanitizedContent.length);
+
+try {
+quillEditor.setContents([]);
+const finalCleanHtml = sanitizeHtmlForQuill(sanitizedContent);
+let delta = quillEditor.clipboard.convert({ html: finalCleanHtml });
+
+if (delta && delta.ops) {
+delta.ops = delta.ops.map(op => {
+if (op.insert && typeof op.insert === 'string') {
+op.insert = cleanText(op.insert);
+}
+if (op.attributes) {
+Object.keys(op.attributes).forEach(key => {
+if (typeof op.attributes[key] === 'string') {
+op.attributes[key] = cleanText(op.attributes[key]);
+}
+});
+}
+return op;
+}).filter(op => {
+if (op.insert && typeof op.insert === 'string') {
+const cleaned = cleanText(op.insert);
+return cleaned.length > 0;
+}
+return true;
+});
+}
+
+quillEditor.setContents(delta);
+console.log('Quill Editor: Content loaded successfully');
+} catch (deltaError) {
+console.error('Quill Editor: Error loading content:', deltaError);
+const cleanTextOnly = cleanText(sanitizedContent);
+quillEditor.setText(cleanTextOnly);
+console.log('Quill Editor: Fallback to text-only mode');
+}
+}
+}
+} catch (error) {
+console.error('Quill Editor: Error setting content:', error);
+document.getElementById('content').value = content;
+showMessage('Lỗi khi load nội dung vào editor. Đã fallback về textarea.', 'error');
+}
+} else {
+console.warn('Quill Editor not initialized, using textarea');
+document.getElementById('content').value = content;
+}
+
+document.getElementById('thumbnail').value = post.thumbnail || '';
+document.getElementById('status').value = post.status || 'draft';
+document.getElementById('formTitle').textContent = 'Chỉnh sửa bài đăng';
+document.getElementById('submitBtn').textContent = 'Cập nhật';
+// Nút Đăng bài luôn hiển thị
+
+uploadedImages = post.images || [];
+updateImagesPreview();
+updateImagesCount();
+
+if (post.thumbnail) {
+const previewDiv = document.getElementById('thumbnailPreview');
+const previewImg = document.getElementById('previewImg');
+previewImg.src = post.thumbnail;
+previewDiv.style.display = 'block';
+}
+
+document.getElementById('activityForm').scrollIntoView({ behavior: 'smooth' });
+loadPosts(); // Reload để highlight active post
+} catch (err) {
+console.error('Error in editPost:', err);
+showMessage('Lỗi: ' + err.message, 'error');
+}
+}
+
+async function deletePost(id, title) {
+if (!confirm(`Bạn có chắc muốn xóa bài "${title}"?`)) return;
+try {
+await fetchJson(`/api/activities/${id}`, { method: 'DELETE' });
+showMessage('Đã xóa thành công');
+loadPosts();
+if (document.getElementById('activityId').value == id) {
+resetForm();
+}
+} catch (err) {
+showMessage('Lỗi: ' + err.message, 'error');
+}
+}
+
+function resetForm() {
+document.getElementById('activityForm').reset();
+document.getElementById('activityId').value = '';
+currentPostId = null;
+document.getElementById('formTitle').textContent = 'Tạo bài đăng mới';
+document.getElementById('submitBtn').textContent = 'Lưu nháp';
+// Nút Đăng bài luôn hiển thị
+document.getElementById('thumbnailPreview').style.display = 'none';
+document.getElementById('thumbnailFile').value = '';
+uploadedImages = [];
+updateImagesPreview();
+updateImagesCount();
+
+if (quillEditor) {
+try {
+quillEditor.setContents([]);
+console.log('Quill Editor: Reset to empty state');
+} catch (error) {
+console.error('Quill Editor: Error resetting editor:', error);
+try {
+if (quillEditor.root) {
+quillEditor.root.innerHTML = '';
+}
+} catch (fallbackError) {
+console.error('Quill Editor: Fallback reset failed:', fallbackError);
+}
+}
+}
+
+document.getElementById('content').value = '';
+loadPosts(); // Reload để remove active highlight
+}
+
+async function publishNow() {
+const form = document.getElementById('activityForm');
+const title = document.getElementById('title').value.trim();
+const contentText = quillEditor ? quillEditor.getText().trim() : document.getElementById('content').value.trim();
+
+// Validate trước khi đăng
+if (!title) {
+showMessage('Vui lòng nhập tiêu đề', 'error');
+document.getElementById('title').focus();
+return;
+}
+
+if (!contentText) {
+showMessage('Vui lòng nhập nội dung', 'error');
+if (quillEditor) {
+quillEditor.focus();
+}
+return;
+}
+
+// Set status thành published và submit form
+document.getElementById('status').value = 'published';
+form.dispatchEvent(new Event('submit'));
+}
+
+// Danh sách ảnh đã upload
+let uploadedImages = [];
+
+async function handleThumbnailUpload(event) {
+const file = event.target.files[0];
+if (!file) {
+console.log('No file selected');
+return;
+}
+
+console.log('Thumbnail upload started:', file.name, file.size, file.type);
+
+if (!file.type.startsWith('image/')) {
+showMessage('Vui lòng chọn file ảnh', 'error');
+event.target.value = '';
+return;
+}
+
+if (file.size > 5 * 1024 * 1024) {
+showMessage('File ảnh quá lớn (tối đa 5MB)', 'error');
+event.target.value = '';
+return;
+}
+
+// Show preview immediately
+const reader = new FileReader();
+reader.onload = function(e) {
+const previewDiv = document.getElementById('thumbnailPreview');
+const previewImg = document.getElementById('previewImg');
+previewImg.src = e.target.result;
+previewDiv.style.display = 'block';
+};
+reader.readAsDataURL(file);
+
+const formData = new FormData();
+formData.append('image', file);
+
+try {
+showMessage('Đang upload ảnh...', 'success');
+console.log('Sending upload request to /api/upload-image');
+
+const response = await fetch('/api/upload-image', {
+method: 'POST',
+body: formData,
+credentials: 'include'
+});
+
+console.log('Upload response status:', response.status);
+console.log('Upload response headers:', response.headers);
+
+if (!response.ok) {
+const errorText = await response.text();
+console.error('Upload failed:', response.status, errorText);
+throw new Error(`HTTP ${response.status}: ${response.statusText || errorText}`);
+}
+
+const contentType = response.headers.get('Content-Type') || '';
+console.log('Response Content-Type:', contentType);
+
+let result;
+if (contentType.includes('application/json')) {
+result = await response.json();
+} else {
+const text = await response.text();
+console.error('Non-JSON response:', text);
+throw new Error('Server trả về response không phải JSON');
+}
+
+console.log('Upload result:', result);
+
+if (result.success && result.url) {
+document.getElementById('thumbnail').value = result.url;
+showMessage('Upload ảnh thành công!', 'success');
+console.log('Thumbnail URL set to:', result.url);
+} else {
+const errorMsg = result.error || result.message || 'Lỗi khi upload ảnh';
+console.error('Upload failed:', errorMsg);
+showMessage(errorMsg, 'error');
+// Reset preview on error
+document.getElementById('thumbnailPreview').style.display = 'none';
+}
+} catch (err) {
+console.error('Upload error:', err);
+showMessage('Lỗi: ' + err.message, 'error');
+// Reset preview on error
+document.getElementById('thumbnailPreview').style.display = 'none';
+} finally {
+// Reset input để có thể chọn lại file cùng tên
+event.target.value = '';
+}
+}
+
+async function handleImagesUpload(event) {
+const files = Array.from(event.target.files);
+if (files.length === 0) {
+console.log('No files selected');
+return;
+}
+
+console.log('Images upload started:', files.length, 'files');
+
+const currentCount = uploadedImages.length;
+const remainingSlots = 10 - currentCount;
+
+if (files.length > remainingSlots) {
+showMessage(`Chỉ có thể upload tối đa 10 ảnh. Bạn đã có ${currentCount} ảnh, chỉ có thể thêm ${remainingSlots} ảnh nữa.`, 'error');
+event.target.value = '';
+return;
+}
+
+const validFiles = files.filter(file => {
+if (!file.type.startsWith('image/')) {
+showMessage(`File "${file.name}" không phải là ảnh`, 'error');
+return false;
+}
+
+if (file.size > 5 * 1024 * 1024) {
+showMessage(`File "${file.name}" quá lớn (tối đa 5MB)`, 'error');
+return false;
+}
+return true;
+});
+
+if (validFiles.length === 0) {
+event.target.value = '';
+return;
+}
+
+showMessage(`Đang upload ${validFiles.length} ảnh...`, 'success');
+
+let successCount = 0;
+let failCount = 0;
+
+for (let i = 0; i < validFiles.length; i++) {
+const file = validFiles[i];
+const formData = new FormData();
+formData.append('image', file);
+
+console.log(`Uploading file ${i + 1}/${validFiles.length}:`, file.name, file.size, file.type);
+
+try {
+const response = await fetch('/api/upload-image', {
+method: 'POST',
+body: formData,
+credentials: 'include'
+});
+
+console.log(`Upload response for ${file.name}:`, response.status);
+
+if (!response.ok) {
+const errorText = await response.text();
+console.error(`Upload failed for ${file.name}:`, response.status, errorText);
+throw new Error(`HTTP ${response.status}: ${response.statusText || errorText}`);
+}
+
+const contentType = response.headers.get('Content-Type') || '';
+let result;
+
+if (contentType.includes('application/json')) {
+result = await response.json();
+} else {
+const text = await response.text();
+console.error('Non-JSON response for', file.name, ':', text);
+throw new Error('Server trả về response không phải JSON');
+}
+
+console.log('Upload result for', file.name, ':', result);
+
+if (result.success && result.url) {
+uploadedImages.push(result.url);
+updateImagesPreview();
+updateImagesCount();
+successCount++;
+console.log('Successfully uploaded:', file.name, 'URL:', result.url);
+} else {
+const errorMsg = result.error || result.message || 'Lỗi không xác định';
+console.error(`Upload failed for ${file.name}:`, errorMsg);
+showMessage(`Lỗi upload "${file.name}": ${errorMsg}`, 'error');
+failCount++;
+}
+} catch (err) {
+console.error(`Upload error for ${file.name}:`, err);
+showMessage(`Lỗi upload "${file.name}": ${err.message}`, 'error');
+failCount++;
+}
+}
+
+event.target.value = '';
+
+if (successCount > 0) {
+showMessage(`Đã upload thành công ${successCount}/${validFiles.length} ảnh`, 'success');
+}
+
+if (failCount > 0 && successCount === 0) {
+showMessage(`Không thể upload ảnh. Vui lòng kiểm tra console để xem chi tiết lỗi.`, 'error');
+}
+}
+
+function updateImagesPreview() {
+const previewDiv = document.getElementById('imagesPreview');
+if (!previewDiv) {
+console.error('imagesPreview element not found');
+return;
+}
+
+previewDiv.innerHTML = '';
+
+if (!uploadedImages || uploadedImages.length === 0) {
+previewDiv.style.display = 'none';
+return;
+}
+
+uploadedImages.forEach((url, index) => {
+if (!url) return;
+
+const imgContainer = document.createElement('div');
+imgContainer.className = 'image-preview-item';
+
+const img = document.createElement('img');
+let imageUrl = url;
+if (!imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+imageUrl = '/' + imageUrl;
+}
+img.src = imageUrl;
+img.loading = 'lazy';
+
+const removeBtn = document.createElement('button');
+removeBtn.className = 'remove-btn';
+removeBtn.textContent = '×';
+removeBtn.onclick = (e) => {
+e.preventDefault();
+e.stopPropagation();
+if (confirm('Bạn có chắc muốn xóa ảnh này?')) {
+uploadedImages.splice(index, 1);
+updateImagesPreview();
+updateImagesCount();
+}
+};
+
+img.onerror = function() {
+console.error('Failed to load image:', imageUrl);
+imgContainer.style.border = '2px solid #c62828';
+img.style.display = 'none';
+};
+
+imgContainer.appendChild(img);
+imgContainer.appendChild(removeBtn);
+previewDiv.appendChild(imgContainer);
+});
+
+previewDiv.style.display = 'grid';
+}
+
+function updateImagesCount() {
+document.getElementById('imagesCount').textContent = `Đã chọn: ${uploadedImages.length}/10`;
+}
+
+document.getElementById('activityForm').addEventListener('submit', async (e) => {
+e.preventDefault();
+const id = document.getElementById('activityId').value;
+
+let contentHtml = '';
+if (quillEditor) {
+contentHtml = quillEditor.root.innerHTML;
+const textContent = quillEditor.getText().trim();
+if (!textContent) {
+showMessage('Vui lòng nhập nội dung', 'error');
+return;
+}
+
+contentHtml = sanitizeHtmlForQuill(contentHtml);
+console.log('Form submit: Cleaned content length:', contentHtml.length);
+} else {
+contentHtml = document.getElementById('content').value.trim();
+contentHtml = sanitizeHtmlForQuill(contentHtml);
+}
+
+document.getElementById('content').value = contentHtml;
+
+const data = {
+title: document.getElementById('title').value.trim(),
+summary: document.getElementById('summary').value.trim(),
+category: document.getElementById('category').value.trim() || null,
+content: contentHtml,
+status: document.getElementById('status').value,
+thumbnail: document.getElementById('thumbnail').value.trim(),
+images: uploadedImages
+};
+
+if (!data.title) {
+showMessage('Vui lòng nhập tiêu đề', 'error');
+return;
+}
+
+try {
+if (id) {
+await fetchJson(`/api/activities/${id}`, {
+method: 'PUT',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(data)
+});
+showMessage('Đã cập nhật thành công');
+} else {
+await fetchJson('/api/activities', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify(data)
+});
+showMessage('Đã tạo bài viết thành công');
+}
+resetForm();
+loadPosts();
+} catch (err) {
+showMessage('Lỗi: ' + err.message, 'error');
+}
+});
+
+// Initialize: load danh sách bài ngay (trang đã được gate phía server).
+// Không redirect khi checkAuth lỗi để tránh vòng lặp request -> 429.
+(async () => {
+loadPosts();
+})();
+</script>
+</div>
+</body>
+</html>

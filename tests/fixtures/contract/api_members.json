@@ -1,0 +1,33 @@
+{
+  "count": 3,
+  "items": [
+    {
+      "children": "Nguoi Mau",
+      "father_name": null,
+      "full_name": "To Tien",
+      "generation_number": 1,
+      "mother_name": null,
+      "person_id": "P-1-1",
+      "spouses": "Phoi Nguu"
+    },
+    {
+      "children": "Nguoi Mau",
+      "father_name": null,
+      "full_name": "Phoi Nguu",
+      "generation_number": 1,
+      "mother_name": null,
+      "person_id": "P-1-2",
+      "spouses": "To Tien"
+    },
+    {
+      "children": null,
+      "father_name": "To Tien",
+      "full_name": "Nguoi Mau",
+      "generation_number": 2,
+      "mother_name": "Phoi Nguu",
+      "person_id": "P-2-1",
+      "spouses": null
+    }
+  ],
+  "success": true
+}

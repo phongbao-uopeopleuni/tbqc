@@ -84,14 +84,15 @@ def test_file_is_deleted_even_on_exception():
 
 
 def test_admin_routes_source_no_longer_leaks_password_on_cmdline():
-    """admin_routes.py không còn pattern f-string truyền password vào cmd."""
-    src = _read(os.path.join(os.path.dirname(__file__), "..", "admin_routes.py"))
+    """admin/backup_routes.py (nơi create_backup sống sau Phase 1.10) không còn
+    pattern f-string truyền password vào cmd — security fix --defaults-extra-file còn đó."""
+    src = _read(os.path.join(os.path.dirname(__file__), "..", "admin", "backup_routes.py"))
     # Pattern cụ thể của bug cũ: f'--password={db_password}' hoặc tương đương
     assert "f'--password=" not in src
     assert 'f"--password=' not in src
     assert "f'-p{" not in src
     assert 'f"-p{' not in src
-    assert "defaults-extra-file" in src, "admin_routes.py phải dùng --defaults-extra-file"
+    assert "defaults-extra-file" in src, "admin/backup_routes.py phải dùng --defaults-extra-file"
 
 
 def test_backup_script_source_no_longer_leaks_password_on_cmdline():

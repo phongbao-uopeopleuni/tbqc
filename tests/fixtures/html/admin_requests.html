@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yêu cầu chỉnh sửa - Admin TBQC</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+.navbar { background: #2c3e50; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+.navbar-menu { display: flex; gap: 20px; list-style: none; }
+.navbar-menu a { color: white; text-decoration: none; padding: 8px 15px; border-radius: 4px; }
+.navbar-menu a:hover { background: rgba(255,255,255,0.1); }
+.container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+table { width: 100%; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+th { background: #34495e; color: white; }
+.error { background: #fee; color: #c33; padding: 12px; border-radius: 6px; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<nav class="navbar">
+<h1>Yêu cầu chỉnh sửa</h1>
+<ul class="navbar-menu">
+<li><a href="/admin/dashboard">Dashboard</a></li>
+<li><a href="/admin/users">Tài Khoản</a></li>
+<li><a href="/admin/data-management">Quản Lý Dữ Liệu</a></li>
+<li><a href="/">Trang Chủ</a></li>
+<li><a href="/admin/logout">Đăng Xuất</a></li>
+</ul>
+</nav>
+<div class="container">
+<h2>Danh sách yêu cầu</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Người yêu cầu</th>
+<th>Người liên quan</th>
+<th>Đời</th>
+<th>Trạng thái</th>
+<th>Ngày tạo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>101</td>
+<td>member.seed (Member Seed)</td>
+<td>Nguoi Mau</td>
+<td>2</td>
+<td>pending</td>
+<td>20/05/2026 09:30</td>
+</tr>
+<tr>
+<td>102</td>
+<td>guest.seed (Guest Seed)</td>
+<td>Nguoi Thu Hai</td>
+<td>3</td>
+<td>approved</td>
+<td>19/05/2026 16:45</td>
+</tr>
+</tbody>
+</table>
+</div>
+</body>
+</html>

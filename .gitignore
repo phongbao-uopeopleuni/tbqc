@@ -49,7 +49,10 @@ instance/
 !instance/.gitkeep
 
 # Logs
+# Convention: log files MUST go to logs/ (configured in pytest.ini log_file = logs/pytest.log)
+# Root-level *.log files are blocked — chỉ logs/ là canonical location
 *.log
+!logs/.gitkeep
 
 # Database
 *.db

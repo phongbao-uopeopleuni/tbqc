@@ -18,9 +18,9 @@ import pytest
 
 
 def test_dummy_bcrypt_hash_exists_and_valid():
-    import admin_routes
+    from admin import login_routes
 
-    h = admin_routes._DUMMY_BCRYPT_HASH
+    h = login_routes._DUMMY_BCRYPT_HASH
     assert isinstance(h, bytes)
     # bcrypt hash luôn bắt đầu $2a$, $2b$ hoặc $2y$
     assert re.match(rb"^\$2[aby]\$\d{2}\$", h), h
@@ -68,23 +68,23 @@ def test_error_message_same_for_unknown_user_and_wrong_password(flask_app, monke
     So sánh: cùng status, cùng chứa chuỗi "Sai tài khoản hoặc mật khẩu",
     KHÔNG chứa các chuỗi cũ bị deprecated ("Không tồn tại tài khoản" / "Sai mật khẩu").
     """
-    import admin_routes
+    from admin import login_routes
 
     client = flask_app.test_client()
 
     # Case A: user không tồn tại.
-    monkeypatch.setattr("admin_routes.get_user_by_username", lambda u: None)
-    monkeypatch.setattr("admin_routes.log_login", lambda **kw: None)
+    monkeypatch.setattr("admin.login_routes.get_user_by_username", lambda u: None)
+    monkeypatch.setattr("admin.login_routes.log_login", lambda **kw: None)
     ra = _login_post(client, "nonexistent_user_xyz", "somepass")
     assert ra.status_code == 200
     body_a = ra.get_data(as_text=True)
 
     # Case B: user tồn tại, password sai.
     monkeypatch.setattr(
-        "admin_routes.get_user_by_username",
+        "admin.login_routes.get_user_by_username",
         lambda u: {"user_id": 1, "username": u, "password_hash": "$2b$12$xxxxxxxxxxxxxxxxxxxxxx"},
     )
-    monkeypatch.setattr("admin_routes.verify_password", lambda p, h: False)
+    monkeypatch.setattr("admin.login_routes.verify_password", lambda p, h: False)
     rb = _login_post(client, "realuser", "wrongpass")
     assert rb.status_code == 200
     body_b = rb.get_data(as_text=True)
@@ -104,7 +104,7 @@ def test_empty_fields_do_not_leak_user_existence(flask_app, monkeypatch):
     """Username trống / password trống → trả lỗi 'Vui lòng nhập đầy đủ'
     — không gọi get_user_by_username, không có side-effect bcrypt.
     """
-    import admin_routes
+    from admin import login_routes
 
     called = {"n": 0}
 
@@ -112,7 +112,7 @@ def test_empty_fields_do_not_leak_user_existence(flask_app, monkeypatch):
         called["n"] += 1
         raise AssertionError("get_user_by_username không được gọi khi field trống")
 
-    monkeypatch.setattr("admin_routes.get_user_by_username", boom)
+    monkeypatch.setattr("admin.login_routes.get_user_by_username", boom)
     client = flask_app.test_client()
     r = client.post("/admin/login", data={"username": "", "password": ""})
     assert r.status_code == 200

@@ -280,7 +280,7 @@
                 <div class="upload-input-group">
                   <input type="text" id="thumbnail" name="thumbnail" placeholder="https://example.com/image.jpg hoặc upload ảnh">
                   <input type="file" id="thumbnailFile" accept="image/*" style="display: none;" onchange="handleThumbnailUpload(event)">
-                  <button type="button" class="btn btn-secondary" onclick="document.getElementById('thumbnailFile').click()">📷 Upload</button>
+                  <button type="button" class="btn btn-secondary" onclick="document.getElementById('thumbnailFile').click()">Upload</button>
                 </div>
                 <small>Có thể nhập URL hoặc upload ảnh từ máy tính</small>
                 <div id="thumbnailPreview" class="thumbnail-preview">
@@ -294,7 +294,7 @@
               <div class="upload-area">
                 <input type="file" id="imagesFile" accept="image/*" multiple style="display: none;" onchange="handleImagesUpload(event)">
                 <div style="display: flex; gap: 10px; align-items: center; justify-content: center; margin-bottom: 10px;">
-                  <button type="button" class="btn btn-secondary" onclick="document.getElementById('imagesFile').click()">📷 Chọn ảnh (tối đa 10)</button>
+                  <button type="button" class="btn btn-secondary" onclick="document.getElementById('imagesFile').click()">Chọn ảnh (tối đa 10)</button>
                   <span id="imagesCount" style="color: var(--admin-text-muted); font-size: 14px;">Đã chọn: 0/10</span>
                 </div>
                 <small>Chọn nhiều ảnh cùng lúc (PNG, JPG, JPEG, GIF, WEBP)</small>
@@ -322,11 +322,11 @@
       <!-- Sticky Action Bar -->
       <div class="form-action-bar">
         <div class="action-bar-left">
-          <button type="button" class="btn btn-secondary" onclick="resetForm()">🔄 Hủy</button>
+          <button type="button" class="btn btn-secondary" onclick="resetForm()">Hủy</button>
         </div>
         <div class="action-bar-right">
-          <button type="submit" form="activityForm" class="btn btn-secondary" id="submitBtn">💾 Lưu nháp</button>
-          <button type="button" class="btn btn-primary" onclick="publishNow()" id="publishBtn">🚀 Đăng bài</button>
+          <button type="submit" form="activityForm" class="btn btn-secondary" id="submitBtn">Lưu nháp</button>
+          <button type="button" class="btn btn-primary" onclick="publishNow()" id="publishBtn">Đăng bài</button>
         </div>
       </div>
     </div>
@@ -334,7 +334,7 @@
     <!-- Sidebar Panel (30%) -->
     <div class="sidebar-panel">
       <div class="sidebar-header">
-        <h2>📋 Danh sách bài đăng</h2>
+        <h2>Danh sách bài đăng</h2>
       </div>
       <div id="postsList" class="posts-list">
         <div class="loading">Đang tải...</div>
@@ -530,7 +530,7 @@
               </div>
               <div class="post-meta">
                 <span class="post-status ${statusClass}">${statusText}</span>
-                ${date ? '📅 ' + date : ''}
+                ${date ? date : ''}
               </div>
               <div class="post-actions">
                 <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); editPost(${p.id})">Sửa</button>

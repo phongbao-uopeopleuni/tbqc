@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta name="csrf-token" content="__CSRF_TOKEN__">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<title>Đăng nhập - Quản lý Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+<style>
+:root {
+--admin-nav-bg: #111827;
+--admin-accent: #FFD700;
+--admin-accent-rgb: 255, 215, 0;
+--admin-primary: #B8860B;
+--admin-primary-hover: #D4A84B;
+--admin-danger: #c53030;
+--admin-bg: #f5f5f5;
+--admin-card-bg: #ffffff;
+--admin-border: #e5e7eb;
+--admin-text: #111827;
+--admin-text-muted: #6b7280;
+--admin-radius: 8px;
+--admin-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+font-family: 'Inter', sans-serif;
+background: var(--admin-bg);
+min-height: 100vh;
+padding-top: 64px;
+display: flex;
+flex-direction: column;
+}
+.navbar {
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+background: var(--admin-nav-bg);
+color: white;
+padding: 12px 24px;
+height: 64px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+z-index: 1000;
+box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.navbar-menu {
+display: flex;
+gap: 8px;
+list-style: none;
+flex-wrap: wrap;
+}
+.navbar-menu a {
+color: rgba(255,255,255,0.9);
+text-decoration: none;
+font-size: 14px;
+padding: 8px 12px;
+border-radius: 6px;
+transition: background 0.2s, color 0.2s;
+}
+.navbar-menu a:hover,
+.navbar-menu a.active {
+color: var(--admin-accent);
+background: rgba(var(--admin-accent-rgb), 0.15);
+}
+.gate-container {
+flex: 1;
+display: flex;
+justify-content: center;
+align-items: center;
+padding: 40px 20px;
+}
+.gate-card {
+background: var(--admin-card-bg);
+padding: 40px;
+border-radius: 12px;
+box-shadow: var(--admin-shadow);
+max-width: 450px;
+width: 100%;
+border: 1px solid var(--admin-border);
+}
+.gate-card h1 {
+color: var(--admin-primary);
+font-size: 28px;
+margin-bottom: 10px;
+text-align: center;
+}
+.gate-card p {
+color: var(--admin-text-muted);
+font-size: 16px;
+text-align: center;
+margin-bottom: 28px;
+}
+.form-group { margin-bottom: 20px; }
+.form-group label {
+display: block;
+margin-bottom: 8px;
+font-weight: 600;
+color: var(--admin-text);
+font-size: 14px;
+}
+.form-group input {
+width: 100%;
+padding: 12px 16px;
+border: 2px solid var(--admin-border);
+border-radius: var(--admin-radius);
+font-size: 16px;
+font-family: inherit;
+transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-group input:focus {
+outline: none;
+border-color: var(--admin-primary);
+box-shadow: 0 0 0 3px rgba(184, 134, 11, 0.15);
+}
+.error-message {
+color: var(--admin-danger);
+font-size: 14px;
+margin-top: 10px;
+padding: 12px;
+background: #fef2f2;
+border-radius: var(--admin-radius);
+border-left: 4px solid var(--admin-danger);
+display: none;
+}
+.error-message.show { display: block; }
+.btn-login {
+width: 100%;
+padding: 12px 24px;
+border: none;
+border-radius: var(--admin-radius);
+font-size: 16px;
+font-weight: 600;
+cursor: pointer;
+font-family: inherit;
+background: var(--admin-primary);
+color: white;
+margin-top: 8px;
+transition: background 0.2s;
+}
+.btn-login:hover { background: var(--admin-primary-hover); }
+.btn-login:disabled {
+opacity: 0.6;
+cursor: not-allowed;
+}
+.form-group label.checkbox-label {
+display: flex;
+align-items: center;
+cursor: pointer;
+font-weight: 500;
+}
+.form-group label.checkbox-label input {
+width: auto;
+margin-right: 8px;
+}
+@media (max-width: 768px) {
+.navbar { height: auto; padding: 12px; }
+.gate-card { padding: 28px 20px; }
+.gate-card h1 { font-size: 22px; }
+}
+</style>
+<!-- Global CSRF Fetch Interceptor -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+var metaTag = document.querySelector('meta[name="csrf-token"]');
+if (metaTag) {
+var csrfToken = metaTag.getAttribute('content');
+var originalFetch = window.fetch;
+window.fetch = function(url, options) {
+options = options || {};
+if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+options.headers = options.headers || {};
+// Set the token header as expected by flask_wtf.csrf
+options.headers['X-CSRFToken'] = csrfToken;
+if (options.body && !(options.body instanceof FormData) && !options.headers['Content-Type']) {
+options.headers['Content-Type'] = 'application/json';
+}
+}
+return originalFetch(url, options);
+};
+}
+});
+</script>
+</head>
+<body>
+<nav class="navbar">
+<ul class="navbar-menu" id="navbarMenu">
+<li><a href="/">Trang chủ</a></li>
+<li><a href="/genealogy">Gia phả</a></li>
+<li><a href="/activities">Hoạt động</a></li>
+<li><a href="/members">Thành viên</a></li>
+<li><a href="/contact">Liên hệ</a></li>
+<li><a href="/documents">Tài liệu</a></li>
+<li><a href="/admin/activities" class="active">Đăng nhập bài đăng</a></li>
+</ul>
+</nav>
+<div class="gate-container">
+<div class="gate-card">
+<h1>Đăng nhập</h1>
+<p>Vui lòng đăng nhập để quản lý bài đăng</p>
+<form id="loginForm" onsubmit="handleLogin(event)">
+<div class="form-group">
+<label for="username">Tên đăng nhập</label>
+<input type="text" id="username" name="username" required autofocus>
+</div>
+<div class="form-group">
+<label for="password">Mật khẩu</label>
+<input type="password" id="password" name="password" required>
+</div>
+<div class="form-group">
+<label class="checkbox-label">
+<input type="checkbox" id="rememberPassword">
+<span>Lưu mật khẩu</span>
+</label>
+</div>
+<div class="error-message" id="errorMessage">
+Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.
+</div>
+<button type="submit" class="btn-login" id="loginBtn">Đăng nhập</button>
+</form>
+</div>
+</div>
+<script>
+async function handleLogin(event) {
+event.preventDefault();
+var username = document.getElementById('username').value.trim();
+var password = document.getElementById('password').value.trim();
+var rememberPassword = document.getElementById('rememberPassword').checked;
+var errorDiv = document.getElementById('errorMessage');
+var loginBtn = document.getElementById('loginBtn');
+errorDiv.classList.remove('show');
+loginBtn.disabled = true;
+loginBtn.textContent = 'Đang xác thực...';
+try {
+var response = await fetch('/api/activities/post-login', {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+credentials: 'include',
+body: JSON.stringify({ username: username, password: password })
+});
+var result = await response.json();
+if (result.success) {
+if (rememberPassword) {
+localStorage.setItem('activities_username', username);
+localStorage.setItem('activities_password', password);
+localStorage.setItem('activities_remember', 'true');
+} else {
+localStorage.removeItem('activities_username');
+localStorage.removeItem('activities_password');
+localStorage.removeItem('activities_remember');
+}
+window.location.reload();
+} else {
+errorDiv.classList.add('show');
+document.getElementById('password').value = '';
+document.getElementById('username').focus();
+}
+} catch (error) {
+errorDiv.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+errorDiv.classList.add('show');
+} finally {
+loginBtn.disabled = false;
+loginBtn.textContent = 'Đăng nhập';
+}
+}
+document.addEventListener('DOMContentLoaded', function() {
+var savedUsername = localStorage.getItem('activities_username');
+var savedPassword = localStorage.getItem('activities_password');
+var savedRemember = localStorage.getItem('activities_remember');
+if (savedRemember === 'true' && savedUsername && savedPassword) {
+document.getElementById('username').value = savedUsername;
+document.getElementById('password').value = savedPassword;
+document.getElementById('rememberPassword').checked = true;
+document.getElementById('password').focus();
+} else {
+document.getElementById('username').focus();
+}
+});
+</script>
+</body>
+</html>

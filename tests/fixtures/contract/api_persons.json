@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "children": "Nguoi Mau",
+      "father_name": null,
+      "full_name": "Phoi Nguu",
+      "generation_level": 1,
+      "mother_name": null,
+      "person_id": "P-1-2",
+      "spouse": "To Tien"
+    },
+    {
+      "children": "Nguoi Mau",
+      "father_name": null,
+      "full_name": "To Tien",
+      "generation_level": 1,
+      "mother_name": null,
+      "person_id": "P-1-1",
+      "spouse": "Phoi Nguu"
+    }
+  ],
+  "page": 1,
+  "pages": 2,
+  "per_page": 2,
+  "total": 3
+}

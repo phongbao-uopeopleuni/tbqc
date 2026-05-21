@@ -1,0 +1,3 @@
+GET /api/activities/can-post -> activities.api_activities_can_post | api_activities_can_post
+GET /api/generations -> api_generations | family_tree.get_generations_api
+GET /api/tree -> api_tree | family_tree.get_tree

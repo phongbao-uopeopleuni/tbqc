@@ -8,35 +8,31 @@
 
 {% block content %}
 <div class="admin-card">
-  <h1>📊 Dashboard</h1>
+  <h1>Dashboard</h1>
   <p class="text-muted admin-desc">Tổng quan hệ thống và cấu trúc website</p>
 </div>
 
 <div class="dashboard-grid">
   <div class="stat-card">
-    <div class="icon">👥</div>
     <div class="value" id="totalUsers">-</div>
     <div class="label">Tổng số người dùng</div>
   </div>
   <div class="stat-card">
-    <div class="icon">📝</div>
     <div class="value" id="totalActivities">-</div>
     <div class="label">Tổng số hoạt động</div>
   </div>
   <div class="stat-card">
-    <div class="icon">👨‍👩‍👧‍👦</div>
     <div class="value" id="totalMembers">-</div>
     <div class="label">Tổng số thành viên</div>
   </div>
   <div class="stat-card">
-    <div class="icon">📋</div>
     <div class="value" id="totalLogs">-</div>
     <div class="label">Tổng số logs</div>
   </div>
 </div>
 
 <div class="website-structure">
-  <h2>🌐 Cấu trúc Website</h2>
+  <h2>Cấu trúc Website</h2>
   <p class="tree-desc">Tất cả trang công khai và khu vực quản trị hiện đang hoạt động.</p>
   <div class="tree-structure">
     <div class="tree-item level-0">Công khai</div>
@@ -62,17 +58,17 @@
 </div>
 
 <div class="website-structure">
-  <h2>⚡ Thao tác nhanh</h2>
+  <h2>Thao tác nhanh</h2>
   <div class="quick-actions">
-    <a href="/admin/users" class="quick-action-btn">👥 Tài khoản</a>
-    <a href="/admin/data-management" class="quick-action-btn">📂 Quản lý dữ liệu</a>
-    <a href="/admin/logs" class="quick-action-btn">📋 Log</a>
-    <a href="/admin/requests" class="quick-action-btn">✏️ Yêu cầu chỉnh sửa</a>
+    <a href="/admin/users" class="quick-action-btn">Tài khoản</a>
+    <a href="/admin/data-management" class="quick-action-btn">Quản lý dữ liệu</a>
+    <a href="/admin/logs" class="quick-action-btn">Log</a>
+    <a href="/admin/requests" class="quick-action-btn">Yêu cầu chỉnh sửa</a>
   </div>
 </div>
 
 <div class="system-info">
-  <h2>ℹ️ Thông tin hệ thống</h2>
+  <h2>Thông tin hệ thống</h2>
   <div class="info-row">
     <span class="info-label">Database:</span>
     <span class="info-value" id="dbName">-</span>
@@ -89,23 +85,23 @@
 
 <div class="admin-card code-graph-section">
   <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--admin-space-4, 16px); flex-wrap: wrap;">
-    <h2 style="margin: 0;">🔗 Knowledge Graph (mã nguồn)</h2>
+    <h2 style="margin: 0;">Knowledge Graph (mã nguồn)</h2>
     <div class="code-graph-header-actions">
       <span id="code-graph-refresh-status" class="text-muted" style="font-size: 13px; min-height: 1em;"></span>
       <button class="btn btn-secondary" id="btnCodeGraphOverview" type="button">
-        📊 Project Overview
+        Project Overview
       </button>
       <button class="btn btn-secondary" id="btnCodeGraphExportMd" type="button">
-        📝 Export MD
+        Export MD
       </button>
       <button class="btn btn-secondary" id="btnCodeGraphExportJson" type="button">
-        💾 Export JSON
+        Export JSON
       </button>
       <button class="btn btn-secondary" id="btnCodeGraphResetView" type="button">
-        🎯 Reset View
+        Reset View
       </button>
       <button class="btn btn-secondary" id="btnRescanCodeGraph" type="button" onclick="rescanCodeGraph()" title="Quét lại mã nguồn để cập nhật đồ thị.">
-        🔄 Cập nhật
+        Cập nhật
       </button>
     </div>
   </div>
@@ -193,7 +189,7 @@
       <div class="code-graph-detail-head">
         <h3 class="code-graph-sidebar-title">Chi tiết</h3>
         <button class="btn btn-secondary btn-sm" id="cg-trace-selected" type="button" disabled>
-          🔍 Trace Flow
+          Trace Flow
         </button>
       </div>
       <div id="code-graph-detail">
@@ -300,7 +296,7 @@
 
     btn.disabled = true;
     const originalLabel = btn.textContent;
-    btn.textContent = '⏳ Đang quét…';
+    btn.textContent = 'Đang quét…';
     if (statusEl) {
       statusEl.textContent = 'Đang chạy scanner (có thể mất vài giây)…';
       statusEl.style.color = '';
@@ -343,7 +339,7 @@
       const nodes = (s.nodes != null) ? s.nodes : '?';
       const edges = (s.edges != null) ? s.edges : '?';
       if (statusEl) {
-        statusEl.textContent = `✅ Đã cập nhật: ${nodes} nodes, ${edges} edges${dur ? ' (' + dur + ')' : ''}`;
+        statusEl.textContent = `Đã cập nhật: ${nodes} nodes, ${edges} edges${dur ? ' (' + dur + ')' : ''}`;
         statusEl.style.color = 'var(--admin-success, #2e7d32)';
       }
     } catch (err) {

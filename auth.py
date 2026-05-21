@@ -57,14 +57,7 @@ def _auth_debug(tag: str):
 # Bỏ đoạn hardcode DB_CONFIG từ os.environ vì db_config.py đã lo việc này
 def get_connection():
     """Tạo kết nối database qua Connection Pool"""
-    try:
-        from folder_py.db_config import get_db_connection
-    except ImportError:
-        try:
-            from db_config import get_db_connection
-        except ImportError:
-            return None
-    
+    from folder_py.db_config import get_db_connection
     return get_db_connection()
 
 class User(UserMixin):

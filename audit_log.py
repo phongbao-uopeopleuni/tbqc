@@ -6,8 +6,8 @@ Ghi log các hoạt động quan trọng
 """
 
 import json
-import os
-from datetime import datetime
+from datetime import date, datetime, time
+from decimal import Decimal
 from flask import request
 
 try:
@@ -16,42 +16,26 @@ except ImportError:
     def redact_for_audit(data):
         return data
 from flask_login import current_user
-import mysql.connector
 from mysql.connector import Error
 
-# Cấu hình database - chỉ từ env, không hardcode
-DB_CONFIG = {
-    'host': os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST') or 'localhost',
-    'database': os.environ.get('DB_NAME') or os.environ.get('MYSQLDATABASE') or '',
-    'user': os.environ.get('DB_USER') or os.environ.get('MYSQLUSER') or 'root',
-    'password': os.environ.get('DB_PASSWORD') or os.environ.get('MYSQLPASSWORD') or '',
-    'charset': 'utf8mb4',
-    'collation': 'utf8mb4_unicode_ci'
-}
+from folder_py.db_config import get_db_connection
 
-db_port = os.environ.get('DB_PORT') or os.environ.get('MYSQLPORT')
-if db_port:
-    try:
-        DB_CONFIG['port'] = int(db_port)
-    except ValueError:
-        pass
+def _audit_json_default(value):
+    """Serialize common DB/runtime types for audit payloads."""
+    if isinstance(value, (datetime, date, time)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, bytes):
+        return value.decode('utf-8', errors='replace')
+    raise TypeError(f'Object of type {type(value).__name__} is not JSON serializable')
 
-# Import unified DB connection
-try:
-    from folder_py.db_config import get_db_connection
-except ImportError:
-    try:
-        from db_config import get_db_connection
-    except ImportError:
-        # Fallback
-        def get_db_connection():
-            """Tạo kết nối database (fallback)"""
-            try:
-                connection = mysql.connector.connect(**DB_CONFIG)
-                return connection
-            except Error as e:
-                print(f"Lỗi kết nối database: {e}")
-                return None
+
+def _to_audit_json(data):
+    if not data:
+        return None
+    return json.dumps(data, ensure_ascii=False, default=_audit_json_default)
+
 
 def log_activity(action, target_type=None, target_id=None, before_data=None, after_data=None):
     """
@@ -77,8 +61,8 @@ def log_activity(action, target_type=None, target_id=None, before_data=None, aft
         # Không lưu mật khẩu / token vào activity_logs (bản sao đã redact)
         safe_before = redact_for_audit(before_data) if before_data else None
         safe_after = redact_for_audit(after_data) if after_data else None
-        before_json = json.dumps(safe_before, ensure_ascii=False) if safe_before else None
-        after_json = json.dumps(safe_after, ensure_ascii=False) if safe_after else None
+        before_json = _to_audit_json(safe_before)
+        after_json = _to_audit_json(safe_after)
         
         # Kiểm tra xem bảng activity_logs có tồn tại không
         cursor = connection.cursor()

@@ -201,7 +201,7 @@ mysql -e "SELECT COUNT(*) FROM persons;" dev_db
 
 ```bash
 # Kiá»ƒm tra ngay
-curl -I https://your-domain.example/api/health
+curl -I https://www.phongtuybienquancong.info/api/health
 
 # Náº¿u khÃ´ng cÃ³ curl, má»Ÿ browser vÃ o /api/health
 ```

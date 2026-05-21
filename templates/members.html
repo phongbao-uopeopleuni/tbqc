@@ -618,24 +618,23 @@
       <div class="controls-row controls-row-1">
         <div class="search-box">
           <input type="text" id="membersSearch"
-            placeholder="🔍 Tìm kiếm theo ID, tên, giới tính, trạng thái, đời, FM_ID, bố, mẹ, hôn phối, anh chị em, con cái..."
+            placeholder="Tìm kiếm theo ID, tên, giới tính, trạng thái, đời, FM_ID, bố, mẹ, hôn phối, anh chị em, con cái..."
             onkeypress="if(event.key==='Enter') filterMembers()">
         </div>
         <button class="btn btn-search" onclick="filterMembers()">Tìm kiếm</button>
       </div>
       <div class="controls-row controls-row-2">
-        <button class="btn btn-refresh" onclick="loadMembers()">🔄 Làm mới</button>
+        <button class="btn btn-refresh" onclick="loadMembers()">Làm mới</button>
         <a href="/members/export/excel" class="btn btn-export-excel" download
-          title="Tải file Excel toàn bộ danh sách thành viên">📥 Xuất Excel</a>
-        <button class="btn btn-backup" onclick="checkAuthAndBackup()" id="btnBackup" title="Tạo backup database">💾
-          Backup</button>
-        <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">➕ Thêm</button>
-        <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">✏️ Cập nhật</button>
+          title="Tải file Excel toàn bộ danh sách thành viên">Xuất Excel</a>
+        <button class="btn btn-backup" onclick="checkAuthAndBackup()" id="btnBackup" title="Tạo backup database">Backup</button>
+        <button class="btn btn-add" onclick="checkAuthAndOpenAdd()" id="btnAddMember">Thêm</button>
+        <button class="btn btn-update" onclick="checkAuthAndOpenUpdate()" id="btnUpdateMember">Cập nhật</button>
         <button class="btn btn-branch-update" onclick="openBranchUploadModal()" id="btnUpdateBranch">Update
           Nhánh</button>
         <button class="btn btn-sll-update" onclick="openSllUploadModal()" id="btnUpdateSll"
           title="Cập nhật nhiều thành viên từ Excel (cùng file Xuất Excel / Template_updatetbqc)">Update SLL</button>
-        <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">🗑️ Xóa</button>
+        <button class="btn btn-delete" onclick="checkAuthAndDelete()" id="btnDeleteMember">Xóa</button>
       </div>
     </div>
 
@@ -961,7 +960,7 @@
       try {
         // Disable button và hiển thị loading
         backupBtn.disabled = true;
-        backupBtn.textContent = '⏳ Đang backup...';
+        backupBtn.textContent = 'Đang backup...';
 
         // Lấy password đã xác thực
         const authPassword = getAuthPassword();
@@ -988,14 +987,14 @@
           const dlNote = downloadOk
             ? '\n\nĐã bắt đầu tải bản sao .sql về máy (thường vào thư mục Tải xuống). Bản trên server đã lưu trong thư mục backups của ứng dụng (ví dụ D:\\tbqc\\backups khi chạy local).'
             : '\n\nKhông tự tải được bản sao; mở /api/admin/backup/' + encodeURIComponent(result.backup_file) + ' trong trình duyệt để tải thủ công.';
-          alert(`✅ Backup thành công!\n\nFile: ${result.backup_file}\nKích thước: ${fileSize} MB` + dlNote);
+          alert(`Backup thành công!\n\nFile: ${result.backup_file}\nKích thước: ${fileSize} MB` + dlNote);
         } else {
           // Xử lý lỗi 403 (unauthorized)
           if (response.status === 403) {
             alert('Mật khẩu hệ thống không đúng hoặc đã thay đổi. Vui lòng kiểm tra lại cấu hình server.');
             return;
           }
-          alert(`❌ Backup thất bại: ${result.error || 'Lỗi không xác định'}`);
+          alert(`Backup thất bại: ${result.error || 'Lỗi không xác định'}`);
         }
       } catch (error) {
         console.error('[Members] Error creating backup:', error);
@@ -1050,7 +1049,7 @@
           console.error('[Members] API returned error or invalid data:', result);
           const errorMsg = result.error || 'Không thể tải dữ liệu';
           const dataInfo = result.data ? `Data type: ${typeof result.data}, isArray: ${Array.isArray(result.data)}` : 'No data field';
-          container.innerHTML = `<div class="error">❌ Lỗi: ${errorMsg}<br><small>${dataInfo}</small></div>`;
+          container.innerHTML = `<div class="error">Lỗi: ${errorMsg}<br><small>${dataInfo}</small></div>`;
         }
       } catch (error) {
         console.error('[Members] Error loading members:', error);
@@ -1059,7 +1058,7 @@
         if (error.message && error.message.includes('403')) {
           container.innerHTML = `
             <div class="error">
-              ❌ Phiên đăng nhập đã hết hạn hoặc bạn chưa đăng nhập.<br>
+              Phiên đăng nhập đã hết hạn hoặc bạn chưa đăng nhập.<br>
               <a href="/members" style="color: var(--color-primary, #8B0000); text-decoration: underline;">
                 Nhấn vào đây để đăng nhập lại
               </a>
@@ -1069,7 +1068,7 @@
         }
 
         // Error handling khác
-        container.innerHTML = `<div class="error">❌ Lỗi kết nối: ${error.message}<br><small>Vui lòng kiểm tra console để biết thêm chi tiết</small></div>`;
+        container.innerHTML = `<div class="error">Lỗi kết nối: ${error.message}<br><small>Vui lòng kiểm tra console để biết thêm chi tiết</small></div>`;
       }
     }
 
@@ -1493,8 +1492,8 @@
         if (response.ok && result.success) {
           const updatedCount = result.updated_count || 0;
           const errorCount = result.error_count || 0;
-          let message = `✅ Update Nhánh thành công: ${updatedCount} dòng`;
-          if (errorCount > 0) message += `\n⚠️ Dòng lỗi: ${errorCount}`;
+          let message = `Update Nhánh thành công: ${updatedCount} dòng`;
+          if (errorCount > 0) message += `\nDòng lỗi: ${errorCount}`;
           alert(message);
 
           closeBranchUploadModal();
@@ -1551,9 +1550,9 @@
           const updatedCount = result.updated_count || 0;
           const errorCount = result.error_count || 0;
           const skippedCount = result.skipped_count || 0;
-          let message = `✅ Update SLL: ${updatedCount} dòng đã cập nhật`;
-          if (skippedCount > 0) message += `\n⏭ Bỏ qua (không có ID trong DB): ${skippedCount}`;
-          if (errorCount > 0) message += `\n⚠️ Dòng lỗi: ${errorCount}`;
+          let message = `Update SLL: ${updatedCount} dòng đã cập nhật`;
+          if (skippedCount > 0) message += `\nBỏ qua (không có ID trong DB): ${skippedCount}`;
+          if (errorCount > 0) message += `\nDòng lỗi: ${errorCount}`;
           alert(message);
 
           closeSllUploadModal();
@@ -1731,13 +1730,13 @@
         const result = await response.json();
 
         if (result.success) {
-          let message = `✅ Xóa thành công ${checkboxes.length} thành viên!`;
+          let message = `Xóa thành công ${checkboxes.length} thành viên!`;
 
           // Hiển thị thông tin backup nếu có
           if (result.backup_created) {
-            message += `\n\n💾 Backup đã được tạo tự động:\nFile: ${result.backup_file}`;
+            message += `\n\nBackup đã được tạo tự động:\nFile: ${result.backup_file}`;
           } else if (result.backup_warning) {
-            message += `\n\n⚠️ Cảnh báo: ${result.backup_warning}`;
+            message += `\n\nCảnh báo: ${result.backup_warning}`;
           }
 
           alert(message);

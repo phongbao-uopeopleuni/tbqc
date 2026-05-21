@@ -222,7 +222,6 @@
       {% if error %}
         <div class="card">
           <div class="empty-state">
-            <div class="empty-state-icon">⚠️</div>
             <h2 class="empty-state-title">Lỗi</h2>
             <p class="empty-state-text">{{ error }}</p>
             <a href="/activities" class="btn btn-primary mt-6">← Quay lại danh sách</a>
@@ -235,7 +234,7 @@
           <div class="article-header">
             <div class="article-meta">
               {% if activity.created_at %}
-                📅 {% if activity.created_at is string %}{{ activity.created_at[:16] }}{% else %}{{ activity.created_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+                {% if activity.created_at is string %}{{ activity.created_at[:16] }}{% else %}{{ activity.created_at.strftime('%d/%m/%Y %H:%M') }}{% endif %}
               {% endif %}
             </div>
             <h1 class="article-title">{{ activity.title or 'Không có tiêu đề' }}</h1>
@@ -288,7 +287,7 @@
                     <h3>{{ related.title or 'Không có tiêu đề' }}</h3>
                     <div class="meta">
                       {% if related.created_at %}
-                        📅 {% if related.created_at is string %}{{ related.created_at[:10] }}{% else %}{{ related.created_at.strftime('%d/%m/%Y') }}{% endif %}
+                        {% if related.created_at is string %}{{ related.created_at[:10] }}{% else %}{{ related.created_at.strftime('%d/%m/%Y') }}{% endif %}
                       {% endif %}
                     </div>
                     <div class="summary">
@@ -303,7 +302,6 @@
       {% else %}
         <div class="card">
           <div class="empty-state">
-            <div class="empty-state-icon">📭</div>
             <h2 class="empty-state-title">Không tìm thấy bài viết</h2>
             <p class="empty-state-text">Bài viết bạn đang tìm có thể đã bị xóa hoặc chưa được xuất bản.</p>
             <a href="/activities" class="btn btn-primary mt-6">← Quay lại danh sách</a>

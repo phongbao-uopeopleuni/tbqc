@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# Test-only dependencies for Phase 0b/0d and refactor gates.
+pytest-xdist>=3.6,<4
+testcontainers[mysql]>=4.8,<5
+psutil>=6,<7
