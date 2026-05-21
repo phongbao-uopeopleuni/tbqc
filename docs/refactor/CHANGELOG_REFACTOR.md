@@ -14,25 +14,81 @@
 | 0b | Baseline Tests + Snapshots | ✅ Done | `docs/phase-0a-skeleton` |
 | 0c | Fix-only Stabilization | ✅ Done | `docs/phase-0a-skeleton` |
 | 0d | Observability & Performance Gates | ✅ Done | `docs/phase-0a-skeleton` |
-| 1 | Admin Vertical Slices | ⏳ Pending | - |
-| 2 | Service Refactor | ⏳ Pending | - |
+| 1 | Admin Vertical Slices | Done | `master` |
+| 2 | Service Refactor | Ready - pre-flight PASS, chua bat dau | - |
 | 3 | App Bootstrap Shrink | ⏳ Pending | - |
 | 4 | JS Refactor | ⏳ Pending | - |
 | 5 | Gallery + Members High-risk | ⏳ Pending | - |
 
 ---
 
+## Phase 2 Readiness - Service Refactor Pre-flight
+
+**Ngay kiem tra:** 2026-05-21
+**Trang thai:** PASS - san sang mo Phase 2 theo thu tu an toan: pure helpers -> formatter/presenter -> validation -> read queries. Mutation/filesystem side effects van phai chay lai DB/audit gates truoc tung PR.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Docker/testcontainers | `docker version`; `from testcontainers.mysql import MySqlContainer` | PASS |
+| DB container + P0 contract | `pytest -q tests/test_db_container_smoke.py tests/test_p0_contract.py` | 7 passed |
+| Phase 2 risk cluster | `pytest -q tests/test_audit_emits.py tests/test_grave_endpoints_auth.py tests/test_image_safety.py tests/test_gallery_service_secure_compare_import.py tests/test_members_gate_fixed_accounts.py tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py` | 39 passed |
+| Pre-upgrade gate | `python scripts/run_pre_upgrade.py` | 40 passed, 2 skipped; local log `logs/pre_upgrade_20260521_191955.log` |
+| Full regression | `pytest -x -q` | 335 passed, 3 skipped |
+| JS lint | `npm run lint` | 0 errors, 71 existing warnings |
+| App import smoke | `python -c "from app import app; ..."` | 117 routes; `/family-tree-core.js` registered |
+
+### Residual notes before Phase 2
+
+- Raw `.log` files stay local-only by `.gitignore`; gate results are recorded in tracked markdown instead.
+- `docs/refactor/MASTER_DEPLOYMENT_LOG.md`, Phase 0d docs, baseline JSON, incident template, and `logs/.gitkeep` are staged as artefact evidence before Phase 2.
+- Public JS URLs remain frozen: `/family-tree-core.js`, `/family-tree-ui.js`, `/genealogy-lineage.js`.
+
+---
+
+## Phase 1 - Admin Vertical Slices
+
+**Ngay hoan thanh:** 2026-05-21
+**Branch:** `master`
+**Exit gate:** PASS - admin routes extracted into `admin/*_routes.py`, endpoint names/url_map contract preserved, full local regression pass.
+
+### Commits
+
+| Loai | SHA | Mo ta |
+|---|---|---|
+| `[refactor]` | `1df0a34` | phase-1: tach admin_routes thanh modules, them contract tests |
+| `[ui]` | `59ebd9f` | xoa icon emoji khoi template, cap nhat golden fixtures sau Phase 1 |
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Master deployment log | `docs/refactor/MASTER_DEPLOYMENT_LOG.md` | Phase 1.1 -> 1.10 complete |
+| URL map + bootstrap + endpoint names | `pytest -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py` | PASS |
+| Full regression after Docker enabled | `pytest -x -q` | 335 passed, 3 skipped |
+| Pre-upgrade after Docker enabled | `python scripts/run_pre_upgrade.py` | 40 passed, 2 skipped |
+
+### Rollback
+
+```bash
+git revert 59ebd9f 1df0a34
+```
+
+---
+
 ## Phase 0d - Observability & Performance Gates
 
-**Ngay hoan thanh:** 2026-05-21  
-**Branch:** `docs/phase-0a-skeleton`  
+**Ngay hoan thanh:** 2026-05-21
+**Branch:** `docs/phase-0a-skeleton`
 **Exit gate:** PASS - `pytest` 260 passed, 3 skipped; baseline variance pass 2 lan lien tiep; backup/restore drill local pass; operational sign-off Phase 0d da dong.
 
 ### Commits
 
 | Loai | SHA | Mo ta |
 |---|---|---|
-| `[docs]/[test]/[fix]` | `pending` | Phase 0d changes dang o local working tree; dien SHA cuoi cung khi commit phase nay |
+| `[docs]/[test]/[fix]` | `1df0a34` | Baseline scripts/tests landed with Phase 1 commit |
+| `[docs]` | `staged` | Phase 0d docs/baseline artefacts staged before Phase 2; fill final SHA after commit |
 
 ### Scope
 
@@ -53,10 +109,11 @@
 | Backup restore drill | `docs/refactor/BACKUP_RESTORE_DRILL.md` | PASS (local synthetic restore) |
 | Backup export view safety | `tests/test_backup_python_export.py` | PASS |
 | Operational sign-off | `docs/refactor/PHASE_0D_CLOSEOUT_CHECKLIST.md` | PASS |
+| Pre-Phase 2 recheck | `pytest -x -q` | 335 passed, 3 skipped |
 
 ### Residual notes
 
-- Runtime hien tai van co deviation giua `POST /api/admin/users` va `POST /admin/api/users`; Phase 1.x khong duoc cham domain `admin_users` khi deviation nay chua duoc fix.
+- Runtime deviation giua `POST /api/admin/users` va `POST /admin/api/users` van duoc ghi trong baseline JSON; Phase 2 khong duoc sua contract nay neu khong co PR `[chore]` rieng.
 - Production backup parity restore drill la follow-up khuyen nghi, khong con la blocker Phase 1 gate.
 
 ### Rollback
@@ -69,8 +126,8 @@
 
 ## Phase 0c - Fix-only Stabilization
 
-**Ngay hoan thanh:** 2026-05-21  
-**Branch:** `docs/phase-0a-skeleton`  
+**Ngay hoan thanh:** 2026-05-21
+**Branch:** `docs/phase-0a-skeleton`
 **Exit gate:** PASS - `pytest` 259 passed, 3 skipped (105.39s).
 
 ### Commits
@@ -113,8 +170,8 @@ git revert 5688a7e b57f662 6e0e9a0 f089835 f6f496a
 
 ## Phase 0b - Baseline Tests + Snapshots
 
-**Ngay hoan thanh:** 2026-05-20  
-**Branch:** `docs/phase-0a-skeleton`  
+**Ngay hoan thanh:** 2026-05-20
+**Branch:** `docs/phase-0a-skeleton`
 **Exit gate:** PASS - `pytest` 259 passed, 3 skipped (111.81s).
 
 ### Commits
@@ -151,8 +208,8 @@ git revert e44925d 4589f53 ad55a65 6a226e1 aa05f2e dc367a4 b51c672
 
 ## Phase 0a - Inventory + Truth Snapshot
 
-**Ngay hoan thanh:** 2026-05-20  
-**Branch:** `docs/phase-0a-skeleton`  
+**Ngay hoan thanh:** 2026-05-20
+**Branch:** `docs/phase-0a-skeleton`
 **Exit gate:** PASS - 9/9 artefact, khong co PR `[move]`.
 
 ### Commits
