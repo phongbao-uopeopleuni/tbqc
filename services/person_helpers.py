@@ -39,3 +39,34 @@ def split_semicolon_values(raw_value):
     if not raw_value:
         return []
     return [s.strip() for s in str(raw_value).split(";") if s and str(s).strip()]
+
+
+def find_person_by_name(cursor, name, generation_id=None):
+    """Tìm person_id theo tên, có thể lọc theo generation_id."""
+    if not name or not name.strip():
+        return None
+    name = name.strip()
+    if generation_id:
+        cursor.execute(
+            """
+            SELECT person_id FROM persons
+            WHERE full_name = %s AND generation_id = %s
+            LIMIT 1
+        """,
+            (name, generation_id),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT person_id FROM persons
+            WHERE full_name = %s
+            LIMIT 1
+        """,
+            (name,),
+        )
+    result = cursor.fetchone()
+    if not result:
+        return None
+    if isinstance(result, dict):
+        return result.get("person_id")
+    return result[0]

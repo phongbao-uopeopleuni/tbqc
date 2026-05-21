@@ -17,7 +17,7 @@ from db import get_db_connection
 from extensions import cache
 from services.members_service import get_members_password
 from services.activities_service import is_admin_user
-from services.person_helpers import normalize_search_query, split_semicolon_values
+from services.person_helpers import normalize_search_query, split_semicolon_values, find_person_by_name
 from utils.validation import (
     validate_filename,
     validate_person_id,
@@ -876,22 +876,6 @@ def get_or_create_branch(cursor, branch_name):
         return result[0]
     cursor.execute('INSERT INTO branches (branch_name) VALUES (%s)', (branch_name,))
     return cursor.lastrowid
-
-def find_person_by_name(cursor, name, generation_id=None):
-    """Tìm person_id theo tên, có thể lọc theo generation_id"""
-    if not name or not name.strip():
-        return None
-    name = name.strip()
-    if generation_id:
-        cursor.execute('\n            SELECT person_id FROM persons \n            WHERE full_name = %s AND generation_id = %s\n            LIMIT 1\n        ', (name, generation_id))
-    else:
-        cursor.execute('\n            SELECT person_id FROM persons \n            WHERE full_name = %s\n            LIMIT 1\n        ', (name,))
-    result = cursor.fetchone()
-    if not result:
-        return None
-    if isinstance(result, dict):
-        return result.get('person_id')
-    return result[0]
 
 @login_required
 def update_person(person_id):
