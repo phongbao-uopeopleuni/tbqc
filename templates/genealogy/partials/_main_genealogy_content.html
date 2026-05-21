@@ -22,9 +22,9 @@
                 <input type="text" class="input" id="searchInput" placeholder="Vui lòng nhập tên cần tìm kiếm">
               </div>
               <button id="searchBtn" class="btn btn-primary">Tìm kiếm</button>
-              <button id="syncBtn" class="btn btn-secondary" title="Đồng bộ / làm mới từ database mới nhất (trang Thành viên)">🔄 Đồng bộ</button>
-              <button id="updateInfoBtn" class="btn btn-secondary" title="Cập nhật thông tin hôn phối và tổ tiên">📝 Cập nhật thông tin</button>
-              <button id="exportPdfBtn" class="btn btn-secondary" title="Xuất Family Tree ra file PDF">📄 Xuất PDF</button>
+              <button id="syncBtn" class="btn btn-secondary" title="Đồng bộ / làm mới từ database mới nhất (trang Thành viên)">Đồng bộ</button>
+              <button id="updateInfoBtn" class="btn btn-secondary" title="Cập nhật thông tin hôn phối và tổ tiên">Cập nhật thông tin</button>
+              <button id="exportPdfBtn" class="btn btn-secondary" title="Xuất Family Tree ra file PDF">Xuất PDF</button>
             </div>
             
             <!-- Search Results -->
@@ -94,7 +94,7 @@
           <!-- Panel thông tin chi tiết -->
           <div class="lineage-detail-panel card" id="lineageDetailPanel" style="display: none;">
             <div class="detail-panel-header">
-              <h3>📋 Thông tin chi tiết</h3>
+              <h3>Thông tin chi tiết</h3>
               <button onclick="closeDetailPanel()" class="close-btn">&times;</button>
             </div>
             <div class="detail-panel-content" id="lineageDetailContent">
@@ -118,7 +118,7 @@
       <div class="generation-stats-panel" style="margin-top: var(--space-8);">
         <div class="card lineage-card">
           <div class="lineage-header">
-            <h2>📊 Thống kê theo thế hệ</h2>
+            <h2>Thống kê theo thế hệ</h2>
             <p>Xem danh sách thành viên và số lượng con cháu theo từng thế hệ.</p>
           </div>
           
@@ -302,20 +302,20 @@
                         </div>
                         <div id="graveDirectionsWrap" class="grave-directions-wrap" style="display: none;">
                           <a id="btnGraveGoogleDirections" class="btn btn-primary grave-directions-link" href="#" target="_blank" rel="noopener noreferrer">
-                            🗺️ Chỉ dẫn theo Google Map
+                            Chỉ dẫn theo Google Map
                           </a>
                         </div>
                         <div id="graveImageSection" class="grave-image-block" style="display: none;">
-                          <h5 class="grave-image-block-title">📷 Ảnh mộ phần</h5>
+                          <h5 class="grave-image-block-title">Ảnh mộ phần</h5>
                           <div id="graveImageContainer" class="grave-image-container">
                             <img id="graveImage" src="" alt="Ảnh mộ phần" class="grave-image-preview" onclick="openGraveImageModal()">
                           </div>
                           <div class="grave-image-actions">
                             <button id="btnUploadGraveImage" type="button" onclick="showGraveImageUpload()" class="btn btn-grave-secondary">
-                              📤 Upload ảnh mộ phần
+                              Upload ảnh mộ phần
                             </button>
                             <button id="btnDeleteGraveImage" type="button" onclick="showDeleteGraveImageConfirm()" class="btn btn-grave-danger" style="display: none;">
-                              🗑️ Xóa ảnh
+                              Xóa ảnh
                             </button>
                           </div>
                         </div>
@@ -327,7 +327,7 @@
                           <input type="file" id="graveImageInput" accept="image/png,image/jpeg,image/jpg,image/gif,image/webp" class="grave-upload-input">
                           <div class="grave-upload-actions">
                             <button id="btnSubmitGraveImage" type="button" onclick="uploadGraveImage()" class="btn btn-primary">
-                              📤 Upload
+                              Upload
                             </button>
                             <button type="button" onclick="hideGraveImageUpload()" class="btn btn-grave-secondary">
                               Hủy
@@ -337,18 +337,18 @@
                         </div>
                         <div id="deleteGraveImageModal" class="grave-delete-modal" style="display: none;">
                           <div class="grave-delete-modal-inner">
-                            <h3 class="grave-delete-modal-title">⚠️ Xác nhận xóa ảnh</h3>
+                            <h3 class="grave-delete-modal-title">Xác nhận xóa ảnh</h3>
                             <p class="grave-delete-modal-text">
                               Bạn có chắc chắn muốn xóa ảnh mộ phần này không? Hành động này không thể hoàn tác.
                             </p>
                             <div class="grave-delete-modal-field">
-                              <label for="deleteGraveImagePassword">🔒 Nhập mật khẩu để xác nhận:</label>
+                              <label for="deleteGraveImagePassword">Nhập mật khẩu để xác nhận:</label>
                               <input type="password" id="deleteGraveImagePassword" placeholder="Nhập mật khẩu..." class="input" onkeypress="if(event.key==='Enter') confirmDeleteGraveImage()">
                             </div>
                             <div id="deleteGraveImageStatus" class="grave-delete-modal-status" style="display: none;"></div>
                             <div class="grave-delete-modal-actions">
                               <button type="button" onclick="hideDeleteGraveImageConfirm()" class="btn btn-grave-secondary">Hủy</button>
-                              <button type="button" onclick="confirmDeleteGraveImage()" class="btn btn-grave-danger-solid">🗑️ Xóa ảnh</button>
+                              <button type="button" onclick="confirmDeleteGraveImage()" class="btn btn-grave-danger-solid">Xóa ảnh</button>
                             </div>
                           </div>
                         </div>
@@ -360,7 +360,7 @@
                       <div class="grave-map-toolbar">
                         <h4>Bản đồ định vị</h4>
                         <button id="btnUpdateGraveLocation" type="button" onclick="enableGraveLocationEdit()" class="btn btn-grave-secondary">
-                          ✏️ Cập nhật vị trí
+                          Cập nhật vị trí
                         </button>
                       </div>
                       <div id="graveMap" class="grave-map-host">
@@ -368,13 +368,13 @@
                       </div>
                       <div id="graveMapControls" style="display: none; margin-top: var(--space-3); padding: var(--space-4); background: var(--color-bg); border-radius: var(--radius-md);">
                     <p style="color: var(--color-text-muted); margin-bottom: var(--space-3);">
-                      💡 Tìm kiếm địa chỉ hoặc nhấp vào bản đồ để đặt marker tại vị trí mộ phần. Sau đó nhấn "Lưu" để cập nhật.
+                      Tìm kiếm địa chỉ hoặc nhấp vào bản đồ để đặt marker tại vị trí mộ phần. Sau đó nhấn "Lưu" để cập nhật.
                     </p>
                     
                     <!-- Thanh tìm kiếm địa chỉ -->
                     <div style="margin-bottom: var(--space-3);">
                       <label for="graveAddressSearch" style="display: block; margin-bottom: var(--space-2); font-weight: var(--font-weight-semibold); color: var(--color-primary); font-size: var(--font-size-sm);">
-                        🔍 Tìm kiếm địa chỉ:
+                        Tìm kiếm địa chỉ:
                       </label>
                       <div style="display: flex; gap: var(--space-2);">
                         <input type="text" id="graveAddressSearch" placeholder="Ví dụ: Phú Thượng, Phú Vang, Thừa Thiên Huế" 
@@ -392,17 +392,17 @@
                     <!-- Nút định vị bằng điện thoại -->
                     <div style="margin-bottom: var(--space-3); padding: var(--space-3); background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
                       <p style="color: var(--color-text-muted); margin-bottom: var(--space-2); font-size: var(--font-size-sm);">
-                        📱 Định vị bằng điện thoại:
+                        Định vị bằng điện thoại:
                       </p>
                       <button id="btnGetCurrentLocation" onclick="getCurrentLocation()" class="btn btn-primary" style="width: 100%;">
-                        📍 Định vị bằng điện thoại
+                        Định vị bằng điện thoại
                       </button>
                       <div id="locationStatus" style="margin-top: var(--space-2); font-size: var(--font-size-sm); color: var(--color-text-muted); display: none;"></div>
                     </div>
                     
                     <div style="display: flex; gap: var(--space-3); align-items: center;">
                       <button id="btnSaveGraveLocation" onclick="saveGraveLocation()" class="btn btn-primary">
-                        💾 Lưu vị trí
+                        Lưu vị trí
                       </button>
                       <button id="btnCancelGraveLocation" onclick="cancelGraveLocationEdit()" class="btn" style="background: var(--color-surface); border: 1px solid var(--color-border);">
                         Hủy

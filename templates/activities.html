@@ -910,7 +910,7 @@
 
   <div class="container section">
     <div class="page-header">
-      <h1>📰 Hoạt động</h1>
+      <h1>Hoạt động</h1>
       <p class="page-subtitle">Tin tức và sự kiện của dòng họ Nguyễn Phước Tộc</p>
     </div>
 
@@ -923,7 +923,7 @@
     <section class="gallery-section" id="albums">
       <div class="container section">
         <div class="gallery-header">
-          <h2>📷 Album Ảnh</h2>
+          <h2>Album Ảnh</h2>
           <p>Bộ sưu tập hình ảnh từ các hoạt động và sự kiện</p>
         </div>
         
@@ -1103,7 +1103,7 @@
     function renderList(posts) {
       listEl.style.display = 'block';
       if (!posts || posts.length === 0) {
-        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div class="empty-state-title">Chưa có bài viết nào</div><div class="empty-state-text">Vui lòng quay lại sau!</div></div>';
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-title">Chưa có bài viết nào</div><div class="empty-state-text">Vui lòng quay lại sau!</div></div>';
         return;
       }
       const html = `
@@ -1136,7 +1136,7 @@
                     </div>
                   `}
                   <h3 class="activity-card-title">${escapeHtml(p.title || 'Không có tiêu đề')}</h3>
-                  ${date ? `<div class="activity-meta">📅 ${date}</div>` : ''}
+                  ${date ? `<div class="activity-meta">${date}</div>` : ''}
                   <div class="activity-summary">${escapeHtml(summary).substring(0, 150)}${summary && summary.length > 150 ? '...' : ''}</div>
                   <span class="activity-link">Đọc tiếp →</span>
                 </div>
@@ -1248,7 +1248,7 @@
               ${album.thumbnail ? `
                 <img src="${escapeHtml(album.thumbnail)}" alt="${escapeHtml(album.name || 'Album')}" loading="lazy">
               ` : `
-                <div class="album-card-thumbnail-placeholder">📷</div>
+                <div class="album-card-thumbnail-placeholder">Ảnh</div>
               `}
               <div class="album-card-thumbnail-overlay">
                 Xem album
@@ -1263,29 +1263,29 @@
                 <div class="album-meta">
                   ${album.imageCount > 0 ? `
                     <div class="album-image-count">
-                      📷 ${album.imageCount}
+                      ${album.imageCount} ảnh
                     </div>
                   ` : ''}
                   ${dateStr ? `
                     <div class="album-meta-item">
-                      📅 ${dateStr}
+                      ${dateStr}
                     </div>
                   ` : ''}
                   ${album.created_by ? `
                     <div class="album-meta-item">
-                      👤 ${escapeHtml(album.created_by)}
+                      ${escapeHtml(album.created_by)}
                     </div>
                   ` : ''}
                 </div>
                 <div class="album-card-actions" onclick="event.stopPropagation()">
                   <button class="album-card-action-btn" onclick="showUploadImagesModal(${album.album_id})" title="Upload ảnh">
-                    ⬆️
+                    Upload
                   </button>
                   <button class="album-card-action-btn" onclick="showUpdateAlbumModal(${album.album_id})" title="Cập nhật">
-                    ✏️
+                    Sửa
                   </button>
                   <button class="album-card-action-btn" onclick="showDeleteAlbumConfirm(${album.album_id})" title="Xóa" style="color: var(--color-error);">
-                    🗑️
+                    Xóa
                   </button>
                 </div>
               </div>
@@ -1655,7 +1655,6 @@
         updateSelectionToolbar();
         galleryContainer.innerHTML = `
           <div style="text-align: center; padding: var(--space-10); color: var(--color-text-muted);">
-            <div style="font-size: 64px; margin-bottom: var(--space-4);">📷</div>
             <p style="font-size: var(--font-size-lg); margin-bottom: var(--space-2);">Album này chưa có ảnh</p>
             <p style="font-size: var(--font-size-base);">Hãy upload ảnh vào album để bắt đầu</p>
           </div>
