@@ -5,14 +5,20 @@ Cổng nội bộ Members - /members, /members/verify, /members/logout, /api/mem
 import logging
 import os
 import re
-import unicodedata
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-
 from flask import Blueprint, redirect, render_template, request, jsonify, session, send_file
 
 from extensions import rate_limit
+from services.members_helpers import (
+    normalize_excel_header as _normalize_excel_header,
+    normalize_sll_row_id as _normalize_sll_row_id,
+    sll_branch_code_to_name as _sll_branch_code_to_name,
+    sll_canonical_branch as _sll_canonical_branch,
+    sll_cell_nonempty as _sll_cell_nonempty,
+    sll_normalize_cell as _sll_normalize_cell,
+)
 
 logger = logging.getLogger(__name__)
 members_portal_bp = Blueprint('members_portal', __name__)
@@ -719,68 +725,6 @@ def bulk_update_members_branch():
                 pass
 
 
-def _sll_cell_nonempty(val):
-    if val is None:
-        return False
-    if isinstance(val, str) and not val.strip():
-        return False
-    return True
-
-
-def _sll_normalize_cell(val):
-    if val is None:
-        return None
-    if isinstance(val, datetime):
-        return val.strftime('%Y-%m-%d')
-    if isinstance(val, date):
-        return val.isoformat()
-    if isinstance(val, float):
-        if val == int(val):
-            return int(val)
-    return val
-
-
-def _normalize_sll_row_id(val):
-    """Chuẩn hóa ô cột ID từ Excel/CSV (float 1.0, khoảng trắng, v.v.)."""
-    if val is None:
-        return ''
-    if isinstance(val, float):
-        if val == int(val):
-            return str(int(val))
-        return str(val).strip()
-    if isinstance(val, (datetime, date)):
-        return str(val).strip()
-    return str(val).strip()
-
-
-def _sll_branch_code_to_name():
-    return {
-        '0': 'Tổ tiên',
-        '1': 'Một',
-        '2': 'Hai',
-        '3': 'Ba',
-        '4': 'Bốn',
-        '5': 'Năm',
-        '6': 'Sáu',
-        '7': 'Bảy',
-        '-1': 'Khác',
-    }
-
-
-def _sll_canonical_branch(val):
-    if val is None:
-        return None
-    s = str(val).strip()
-    if not s:
-        return None
-    m = _sll_branch_code_to_name()
-    if s in m.values():
-        return s
-    if s in m:
-        return m[s]
-    return s
-
-
 def _sll_base_payload(cursor, person_id, rel_data):
     cursor.execute('SELECT * FROM persons WHERE person_id = %s', (person_id,))
     p = cursor.fetchone()
@@ -872,21 +816,6 @@ def _sll_merge_excel_into_payload(base, excel_by_internal_key):
             nv = _sll_canonical_branch(nv)
         out[pk] = nv
     return out
-
-
-def _normalize_excel_header(header):
-    if header is None:
-        return ''
-    s = str(header).strip().lower()
-    if not s:
-        return ''
-    # Bỏ dấu tiếng Việt để map được các biến thể header.
-    s = ''.join(ch for ch in unicodedata.normalize('NFD', s) if unicodedata.category(ch) != 'Mn')
-    s = s.replace('đ', 'd')
-    # Gom mọi ký tự ngăn cách về 1 dấu cách.
-    s = re.sub(r'[^a-z0-9]+', ' ', s)
-    s = re.sub(r'\s+', ' ', s).strip()
-    return s
 
 
 _EXCEL_HEADER_ALIASES = {
