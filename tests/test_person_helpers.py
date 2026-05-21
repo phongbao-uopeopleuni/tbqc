@@ -1,7 +1,15 @@
 import pytest
 from unittest.mock import MagicMock
 
-from services.person_helpers import normalize_search_query, split_semicolon_values, find_person_by_name, load_relationship_data
+from services.person_helpers import (
+    normalize_search_query,
+    split_semicolon_values,
+    find_person_by_name,
+    load_relationship_data,
+    get_or_create_location,
+    get_or_create_generation,
+    get_or_create_branch,
+)
 from services import person_service
 
 
@@ -49,6 +57,9 @@ def test_person_service_keeps_legacy_helper_aliases():
     assert person_service.normalize_search_query is normalize_search_query
     assert person_service._split_semicolon_values is split_semicolon_values
     assert person_service.find_person_by_name is find_person_by_name
+    assert person_service.get_or_create_branch is get_or_create_branch
+    assert person_service.get_or_create_location is get_or_create_location
+    assert person_service.get_or_create_generation is get_or_create_generation
 
 
 # ---------------------------------------------------------------------------
@@ -185,3 +196,70 @@ def test_load_relationship_data_deduplicates_spouse_from_marriages(mock_cursor):
     mock_cursor.fetchall.side_effect = lambda: next(fetch_iter, [])
     result = load_relationship_data(mock_cursor)
     assert result['spouse_data_from_marriages'].get('p-1-1') == ['Vợ A']
+
+
+# ---------------------------------------------------------------------------
+# get_or_create_location / generation / branch
+# ---------------------------------------------------------------------------
+
+
+def test_get_or_create_location_blank_returns_none(mock_cursor):
+    assert get_or_create_location(mock_cursor, "", "Nơi sinh") is None
+    assert get_or_create_location(mock_cursor, None, "Nơi sinh") is None
+    mock_cursor.execute.assert_not_called()
+
+
+def test_get_or_create_location_returns_existing_id(mock_cursor):
+    mock_cursor.fetchone.return_value = (7,)
+    result = get_or_create_location(mock_cursor, "Hà Nội", "Nơi sinh")
+    assert result == 7
+    mock_cursor.execute.assert_called_once()
+
+
+def test_get_or_create_location_inserts_when_absent(mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    mock_cursor.lastrowid = 42
+    result = get_or_create_location(mock_cursor, "Đà Nẵng", "Nguyên quán")
+    assert result == 42
+    assert mock_cursor.execute.call_count == 2
+
+
+def test_get_or_create_generation_none_returns_none(mock_cursor):
+    assert get_or_create_generation(mock_cursor, None) is None
+    assert get_or_create_generation(mock_cursor, "") is None
+    assert get_or_create_generation(mock_cursor, "abc") is None
+    mock_cursor.execute.assert_not_called()
+
+
+def test_get_or_create_generation_returns_existing_dict_row(mock_cursor):
+    mock_cursor.fetchone.return_value = {"generation_id": 3}
+    result = get_or_create_generation(mock_cursor, 3)
+    assert result == 3
+
+
+def test_get_or_create_generation_inserts_when_absent(mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    mock_cursor.lastrowid = 10
+    result = get_or_create_generation(mock_cursor, "5")
+    assert result == 10
+    assert mock_cursor.execute.call_count == 2
+
+
+def test_get_or_create_branch_blank_returns_none(mock_cursor):
+    assert get_or_create_branch(mock_cursor, "") is None
+    assert get_or_create_branch(mock_cursor, None) is None
+    mock_cursor.execute.assert_not_called()
+
+
+def test_get_or_create_branch_returns_existing_dict_row(mock_cursor):
+    mock_cursor.fetchone.return_value = {"branch_id": 2}
+    result = get_or_create_branch(mock_cursor, "Hai")
+    assert result == 2
+
+
+def test_get_or_create_branch_inserts_when_absent(mock_cursor):
+    mock_cursor.fetchone.return_value = None
+    mock_cursor.lastrowid = 5
+    result = get_or_create_branch(mock_cursor, "Ba")
+    assert result == 5
+    assert mock_cursor.execute.call_count == 2

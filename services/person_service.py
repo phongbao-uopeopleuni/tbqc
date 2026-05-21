@@ -17,7 +17,15 @@ from db import get_db_connection
 from extensions import cache
 from services.members_service import get_members_password
 from services.activities_service import is_admin_user
-from services.person_helpers import normalize_search_query, split_semicolon_values, find_person_by_name, load_relationship_data
+from services.person_helpers import (
+    normalize_search_query,
+    split_semicolon_values,
+    find_person_by_name,
+    load_relationship_data,
+    get_or_create_location,
+    get_or_create_generation,
+    get_or_create_branch,
+)
 from utils.validation import (
     validate_filename,
     validate_person_id,
@@ -831,51 +839,6 @@ def delete_person(person_id):
         if connection.is_connected():
             cursor.close()
             connection.close()
-
-def get_or_create_location(cursor, location_name, location_type):
-    """Lấy hoặc tạo location"""
-    if not location_name or not location_name.strip():
-        return None
-    location_name = location_name.strip()
-    cursor.execute('SELECT location_id FROM locations WHERE location_name = %s AND location_type = %s', (location_name, location_type))
-    result = cursor.fetchone()
-    if result:
-        return result[0]
-    cursor.execute('INSERT INTO locations (location_name, location_type, full_address) VALUES (%s, %s, %s)', (location_name, location_type, location_name))
-    return cursor.lastrowid
-
-def get_or_create_generation(cursor, generation_number):
-    """Lấy hoặc tạo generation (generation_number có thể là 0 — tổ tiên)."""
-    if generation_number is None:
-        return None
-    if isinstance(generation_number, str) and not generation_number.strip():
-        return None
-    try:
-        gen_num = int(generation_number)
-    except (TypeError, ValueError):
-        return None
-    cursor.execute('SELECT generation_id FROM generations WHERE generation_number = %s', (gen_num,))
-    result = cursor.fetchone()
-    if result:
-        if isinstance(result, dict):
-            return result.get('generation_id')
-        return result[0]
-    cursor.execute('INSERT INTO generations (generation_number) VALUES (%s)', (gen_num,))
-    return cursor.lastrowid
-
-def get_or_create_branch(cursor, branch_name):
-    """Lấy hoặc tạo branch"""
-    if not branch_name or not branch_name.strip():
-        return None
-    branch_name = branch_name.strip()
-    cursor.execute('SELECT branch_id FROM branches WHERE branch_name = %s', (branch_name,))
-    result = cursor.fetchone()
-    if result:
-        if isinstance(result, dict):
-            return result.get('branch_id')
-        return result[0]
-    cursor.execute('INSERT INTO branches (branch_name) VALUES (%s)', (branch_name,))
-    return cursor.lastrowid
 
 @login_required
 def update_person(person_id):
