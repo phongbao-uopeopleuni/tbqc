@@ -1,0 +1,131 @@
+# -*- coding: utf-8 -*-
+"""Unit tests for services/gallery_helpers.py (Phase 2.4)."""
+import pytest
+
+
+# ---------------------------------------------------------------------------
+# verify_album_password
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def album_env(monkeypatch):
+    monkeypatch.setenv("ALBUM_PASSWORD", "open-sesame")
+    monkeypatch.setenv("GRAVE_IMAGE_DELETE_PASSWORD", "delete-me")
+    yield
+
+
+def test_verify_album_password_correct(album_env):
+    from services.gallery_helpers import verify_album_password
+
+    assert verify_album_password("open-sesame") is True
+
+
+def test_verify_album_password_wrong(album_env):
+    from services.gallery_helpers import verify_album_password
+
+    assert verify_album_password("wrong") is False
+
+
+def test_verify_album_password_none(album_env):
+    from services.gallery_helpers import verify_album_password
+
+    assert verify_album_password(None) is False
+
+
+def test_verify_album_password_empty(album_env):
+    from services.gallery_helpers import verify_album_password
+
+    assert verify_album_password("") is False
+
+
+# ---------------------------------------------------------------------------
+# verify_grave_image_delete_password
+# ---------------------------------------------------------------------------
+
+
+def test_verify_grave_image_delete_password_correct(album_env):
+    from services.gallery_helpers import verify_grave_image_delete_password
+
+    assert verify_grave_image_delete_password("delete-me") is True
+
+
+def test_verify_grave_image_delete_password_wrong(album_env):
+    from services.gallery_helpers import verify_grave_image_delete_password
+
+    assert verify_grave_image_delete_password("nope") is False
+
+
+def test_verify_grave_image_delete_password_none(album_env):
+    from services.gallery_helpers import verify_grave_image_delete_password
+
+    assert verify_grave_image_delete_password(None) is False
+
+
+# ---------------------------------------------------------------------------
+# _get_album_password — env fallback chain
+# ---------------------------------------------------------------------------
+
+
+def test_get_album_password_reads_album_env(monkeypatch):
+    monkeypatch.setenv("ALBUM_PASSWORD", "album-pw")
+    monkeypatch.delenv("MEMBERS_PASSWORD", raising=False)
+    from services import gallery_helpers
+
+    assert gallery_helpers._get_album_password() == "album-pw"
+
+
+def test_get_album_password_falls_back_to_members_env(monkeypatch):
+    monkeypatch.delenv("ALBUM_PASSWORD", raising=False)
+    monkeypatch.setenv("MEMBERS_PASSWORD", "members-pw")
+    from services import gallery_helpers
+
+    assert gallery_helpers._get_album_password() == "members-pw"
+
+
+def test_get_grave_image_delete_password_reads_own_env(monkeypatch):
+    monkeypatch.setenv("GRAVE_IMAGE_DELETE_PASSWORD", "grave-pw")
+    monkeypatch.delenv("MEMBERS_PASSWORD", raising=False)
+    from services import gallery_helpers
+
+    assert gallery_helpers._get_grave_image_delete_password() == "grave-pw"
+
+
+# ---------------------------------------------------------------------------
+# _geoapify_*_from_env — env var fast path
+# ---------------------------------------------------------------------------
+
+
+def test_geoapify_server_key_from_env_set(monkeypatch):
+    monkeypatch.setenv("GEOAPIFY_API_KEY", "server-key-abc")
+    from services import gallery_helpers
+
+    assert gallery_helpers._geoapify_server_key_from_env() == "server-key-abc"
+
+
+def test_geoapify_browser_key_from_env_set(monkeypatch):
+    monkeypatch.setenv("GEOAPIFY_BROWSER_KEY", "browser-key-xyz")
+    from services import gallery_helpers
+
+    assert gallery_helpers._geoapify_browser_key_from_env() == "browser-key-xyz"
+
+
+def test_geoapify_server_key_missing_no_file_returns_empty(monkeypatch):
+    monkeypatch.delenv("GEOAPIFY_API_KEY", raising=False)
+    from services import gallery_helpers
+    import unittest.mock as mock
+
+    with mock.patch("os.path.exists", return_value=False):
+        result = gallery_helpers._geoapify_server_key_from_env()
+    assert result == ""
+
+
+# ---------------------------------------------------------------------------
+# secure_compare import guard
+# ---------------------------------------------------------------------------
+
+
+def test_secure_compare_importable_from_gallery_helpers():
+    import services.gallery_helpers as gh
+
+    assert callable(getattr(gh, "secure_compare", None))

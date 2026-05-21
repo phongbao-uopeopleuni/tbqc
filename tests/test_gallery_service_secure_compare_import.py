@@ -4,10 +4,11 @@ Bug #7: `gallery_service.py` trước đây gọi `secure_compare(...)` nhưng
 không import hàm này → NameError runtime khi người dùng nhập password
 album / xóa ảnh mộ.
 
-Test này xác nhận:
-  - Import được `secure_compare` từ module.
-  - `verify_album_password` / `verify_grave_image_delete_password`
-    chạy được không NameError với env pass đã set (so sánh string thô).
+Sau Phase 2.4: verify_album_password / verify_grave_image_delete_password
+đã được chuyển sang services/gallery_helpers.py. Test này xác nhận:
+  - `secure_compare` được import trong `gallery_helpers` (nơi logic verify ở).
+  - `verify_album_password` / `verify_grave_image_delete_password` vẫn
+    importable từ `gallery_service` (facade re-export).
   - So sánh từ chối password sai, chấp nhận password đúng.
 """
 import os
@@ -23,12 +24,12 @@ def album_env(monkeypatch):
     yield
 
 
-def test_secure_compare_is_imported_in_gallery_service():
-    import services.gallery_service as gs
+def test_secure_compare_is_imported_in_gallery_helpers():
+    import services.gallery_helpers as gh
 
-    # Nếu secure_compare chưa import, attribute sẽ KeyError trên `vars(gs)`.
-    assert callable(getattr(gs, "secure_compare", None)), (
-        "gallery_service phải import secure_compare từ utils.validation"
+    # verify_album_password đã chuyển sang gallery_helpers — secure_compare phải có ở đây.
+    assert callable(getattr(gh, "secure_compare", None)), (
+        "gallery_helpers phải import secure_compare từ utils.validation"
     )
 
 
