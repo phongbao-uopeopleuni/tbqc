@@ -125,7 +125,7 @@ git revert 6597323
 ### Rollback
 
 ```bash
-git revert <phase-2.3-sha>
+git revert 833d080
 ```
 
 ---
