@@ -1,0 +1,53 @@
+{
+  "sha": "44e8402",
+  "phase": "0d",
+  "date": "2026-05-21",
+  "platform": "win32",
+  "mode": "local",
+  "endpoints": {
+    "/api/health": {
+      "p50_ms": 18.424,
+      "p95_ms": 23.837,
+      "samples": 100,
+      "errors": 0
+    },
+    "/api/persons": {
+      "p50_ms": 4281.267,
+      "p95_ms": 5329.276,
+      "samples": 100,
+      "errors": 0
+    },
+    "/api/family-tree": {
+      "p50_ms": 21.927,
+      "p95_ms": 41.27,
+      "samples": 100,
+      "errors": 0
+    }
+  },
+  "mutation": {
+    "POST /admin/api/users": {
+      "p50_ms": 327.044,
+      "p95_ms": 370.092,
+      "samples": 30,
+      "audit_verified": true
+    }
+  },
+  "rss_peak_mb": 91.18,
+  "startup_ms": 745,
+  "dataset": {
+    "persons_count": 1188,
+    "relationships_count": 1611,
+    "marriages_count": 212
+  },
+  "db_pool": {
+    "pool_size": 3,
+    "max_active": 1,
+    "exceeded": false
+  },
+  "notes": {
+    "login_flow": "GET /admin/login -> POST /admin/login -> POST /admin/api/users",
+    "known_deviation": "/api/admin/users exists but does not emit CREATE_USER audit; local baseline uses /admin/api/users for the audited mutation gate.",
+    "rate_limit_disabled_local": true,
+    "data_source": "testcontainers mysql:8.4 synthetic production-like seed"
+  }
+}

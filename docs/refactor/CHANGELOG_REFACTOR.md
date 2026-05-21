@@ -14,25 +14,359 @@
 | 0b | Baseline Tests + Snapshots | ✅ Done | `docs/phase-0a-skeleton` |
 | 0c | Fix-only Stabilization | ✅ Done | `docs/phase-0a-skeleton` |
 | 0d | Observability & Performance Gates | ✅ Done | `docs/phase-0a-skeleton` |
-| 1 | Admin Vertical Slices | ⏳ Pending | - |
-| 2 | Service Refactor | ⏳ Pending | - |
+| 1 | Admin Vertical Slices | ✅ Done | `master` (commit `1df0a34`) |
+| 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
 | 3 | App Bootstrap Shrink | ⏳ Pending | - |
 | 4 | JS Refactor | ⏳ Pending | - |
 | 5 | Gallery + Members High-risk | ⏳ Pending | - |
 
 ---
 
+## Phase 2 Closeout — Final Audit (2026-05-22)
+
+**Ngay closeout:** 2026-05-22  
+**Branch:** `codex/phase-2-service-refactor`  
+**Trang thai:** ✅ PASS — san sang merge vao master, khong co bug ton dong.  
+**Commit HEAD:** `7dbd47a` (bao gồm closeout log + PHASE_3_PREFLIGHT.md)  
+**PR:** https://github.com/phongbao-uopeopleuni/tbqc/compare/master...codex/phase-2-service-refactor
+
+### Ket qua audit 6 layers
+
+| Layer | Noi dung | Ket qua |
+|---|---|---|
+| L1 Code completeness | 25 functions trong 3 helper modules (person 7, members 8, gallery 10) | ✅ PASS |
+| L2 Import chain integrity | 14 facade identity checks (7 public + 3 gallery + 3 members private alias + 1 app.py import fix) | ✅ PASS |
+| L3 Test coverage | 60 helper tests (person 27, members 14, gallery 19) — tat ca pass | ✅ PASS |
+| L4 Contract snapshots | url_map, bootstrap, endpoint_names, p0_contract — 13/13 pass | ✅ PASS |
+| L5 Branch state | Working tree clean, 17 commits ahead master, 0 conflicts | ✅ PASS |
+| L6 Phase 3 prereqs | Bootstrap snapshot frozen, url_map_ordered frozen, 117 routes stable | ✅ PASS |
+
+### Tong ket helper modules
+
+| Module | Functions | Tests |
+|---|---|---|
+| `services/person_helpers.py` | normalize_search_query, split_semicolon_values, find_person_by_name, load_relationship_data, get_or_create_location/generation/branch | 27 |
+| `services/members_helpers.py` | sll_cell_nonempty, sll_normalize_cell, normalize_sll_row_id, sll_branch_code_to_name, sll_canonical_branch, normalize_excel_header, sll_merge_excel_into_payload, sll_base_payload | 14 |
+| `services/gallery_helpers.py` | _load_env_file_safe, _geoapify_server/browser_key_from_env, _get_album/grave_password, verify_album/grave_password, ensure_albums/album_images_table, _delete_album_image_file | 19 |
+
+### Gate evidence final
+
+| Gate | Command | Ket qua |
+|---|---|---|
+| Compile | `python -m compileall app.py services/person_service.py services/person_helpers.py services/members_helpers.py services/gallery_service.py services/gallery_helpers.py blueprints/members_portal.py -q` | OK |
+| Facade identity (14) | inline python `is` checks | ALL PASS |
+| Helper tests | `pytest -q tests/test_person_helpers.py tests/test_members_helpers.py tests/test_gallery_helpers.py` | 60 passed |
+| Contract gate | `pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py tests/test_p0_contract.py` | 13 passed |
+| Full regression | `pytest -q -m "not db_integration"` | **382 passed, 3 skipped, 13 deselected** |
+| Bootstrap smoke | `python -c "import app; print(len(list(app.app.url_map.iter_rules())))"`| 117 routes |
+
+### Deferred (P0 gate required — separate PR)
+
+| Function | Source file | Ly do defer |
+|---|---|---|
+| `_process_children_spouse_siblings` | `services/person_service.py` | Mutation + relationship writes |
+| `apply_person_members_update_core` | `services/person_service.py` | Bulk mutation, audit trail |
+| `bulk_update_members_branch` | `blueprints/members_portal.py` | Bulk mutation |
+| `bulk_update_members_sll` | `blueprints/members_portal.py` | Bulk mutation, Excel I/O |
+
+Can truoc khi move: DB strategy pass + audit snapshot + before/after fixture + unauthorized test + delete/cascade baseline.
+
+### Rollback toan bo Phase 2
+
+```bash
+git revert 0f62c26 27eacd0 506df3e 4c3140a 01222a6 67cd20e 2f08971 51ab3a8 fbee1aa 75d4a44 53e517b 833d080 add03e9 6597323 efbef7a 81af030 faeac82
+```
+
+---
+
+## Phase 2 Readiness - Service Refactor Pre-flight
+
+**Ngay kiem tra:** 2026-05-21
+**Trang thai:** PASS - san sang mo Phase 2 theo thu tu an toan: pure helpers -> formatter/presenter -> validation -> read queries. Mutation/filesystem side effects van phai chay lai DB/audit gates truoc tung PR.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Docker/testcontainers | `docker version`; `from testcontainers.mysql import MySqlContainer` | PASS |
+| DB container + P0 contract | `pytest -q tests/test_db_container_smoke.py tests/test_p0_contract.py` | 7 passed |
+| Phase 2 risk cluster | `pytest -q tests/test_audit_emits.py tests/test_grave_endpoints_auth.py tests/test_image_safety.py tests/test_gallery_service_secure_compare_import.py tests/test_members_gate_fixed_accounts.py tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py` | 39 passed |
+| Pre-upgrade gate | `python scripts/run_pre_upgrade.py` | 40 passed, 2 skipped; local log `logs/pre_upgrade_20260521_191955.log` |
+| Full regression | `pytest -x -q` | 335 passed, 3 skipped |
+| JS lint | `npm run lint` | 0 errors, 71 existing warnings |
+| App import smoke | `python -c "from app import app; ..."` | 117 routes; `/family-tree-core.js` registered |
+
+### Residual notes before Phase 2
+
+- Raw `.log` files stay local-only by `.gitignore`; gate results are recorded in tracked markdown instead.
+- `docs/refactor/MASTER_DEPLOYMENT_LOG.md`, Phase 0d docs, baseline JSON, incident template, and `logs/.gitkeep` were recorded in commit `faeac82`.
+- Public JS URLs remain frozen: `/family-tree-core.js`, `/family-tree-ui.js`, `/genealogy-lineage.js`.
+
+---
+
+## Phase 2.1 - Person Pure Helpers
+
+**Ngay:** 2026-05-21
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - pure helper move, behavior unchanged.
+
+### Scope
+
+- Added `services/person_helpers.py`.
+- Moved `normalize_search_query` and semicolon splitting helper out of `services/person_service.py`.
+- Kept compatibility aliases from `services.person_service`.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Helper unit tests | `pytest -q tests/test_person_helpers.py` | 6 passed |
+| Person/API/contract gate | `pytest -q tests/test_person_helpers.py tests/test_api_routes.py::TestFamilyTreeAndPersons tests/test_p0_contract.py tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py` | 25 passed, 1 skipped |
+| Full regression | `pytest -x -q` | 341 passed, 3 skipped |
+
+### Rollback
+
+```bash
+git revert 81af030
+```
+
+---
+
+## Phase 2.2 - Members SLL Pure Helpers
+
+**Ngay:** 2026-05-21
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - pure helper move, behavior unchanged.
+
+### Scope
+
+- Added `services/members_helpers.py`.
+- Moved SLL/Excel normalization helpers out of `blueprints/members_portal.py`.
+- Kept compatibility aliases from `blueprints.members_portal`.
+- Did not touch `_sll_base_payload`, bulk update routes, mutation, audit, or filesystem side effects.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Members helper + route contract gate | `pytest -q tests/test_members_helpers.py tests/test_members_gate_fixed_accounts.py tests/test_api_routes.py::TestMembersGate tests/test_p0_contract.py::test_api_members_contract tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py` | 20 passed |
+| Full regression | `pytest -x -q` | 347 passed, 3 skipped |
+
+### Rollback
+
+```bash
+git revert 6597323
+```
+
+---
+
+## Phase 2.3 - Members SLL Presenter Helper
+
+**Ngay:** 2026-05-21
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - presenter helper move, behavior unchanged.
+
+### Scope
+
+- Moved `sll_merge_excel_into_payload` into `services/members_helpers.py`.
+- Kept compatibility alias `_sll_merge_excel_into_payload` from `blueprints.members_portal`.
+- Did not touch `_sll_base_payload`, bulk update routes, mutation, audit, or filesystem side effects.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Members helper + route contract gate | `pytest -q tests/test_members_helpers.py tests/test_members_gate_fixed_accounts.py tests/test_api_routes.py::TestMembersGate tests/test_p0_contract.py::test_api_members_contract tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py` | 21 passed |
+| Full regression | `pytest -x -q` | 348 passed, 3 skipped |
+
+### Rollback
+
+```bash
+git revert 833d080
+```
+
+---
+
+## Phase 2.4 - Gallery Env/Password Helpers
+
+**Ngay:** 2026-05-21
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - env/password pure helpers extracted.
+
+### Scope
+
+- Added `services/gallery_helpers.py`.
+- Moved 7 helpers tu `gallery_service.py`: `_load_env_file_safe`, `_geoapify_*_from_env`, `_get_*_password`, `verify_*_password`.
+- Fix: xoa 3 unused private facade imports (commit `51ab3a8`).
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Full regression | `pytest -x -q -m "not db_integration"` | 356 passed, 3 skipped, 13 deselected |
+
+### Rollback
+
+```bash
+git revert 51ab3a8 75d4a44
+```
+
+---
+
+## Phase 2.5 - Read Query Helpers
+
+**Ngay:** 2026-05-21
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - read query cursor helpers move, behavior unchanged.
+
+### Scope
+
+- Moved `find_person_by_name` vao `services/person_helpers.py`.
+- Moved `_sll_base_payload` (public name `sll_base_payload`) vao `services/members_helpers.py`.
+- Kept facade `_sll_base_payload` in `members_portal.py`.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Narrow gate | `pytest -x -q test_person_helpers.py test_members_helpers.py test_url_map_contract.py ...` | 39 passed |
+| Full regression | `pytest -x -q -m "not db_integration"` | 362 passed, 3 skipped, 13 deselected |
+
+### Rollback
+
+```bash
+git revert 2f08971
+```
+
+---
+
+## Phase 2.6 - load_relationship_data
+
+**Ngay:** 2026-05-22
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - read query helper move + fix pre-existing app.py missing import.
+
+### Scope
+
+- Moved `load_relationship_data` (~216 lines) vao `services/person_helpers.py`.
+- Internal `_split_semicolon_values` → `split_semicolon_values` (public name in helpers).
+- Fixed pre-existing bug: `app.py` goi `load_relationship_data` ma chua bao gio import.
+- `members_portal.py` dung late import via facade → tiep tuc hoat dong.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Compile | `python -m compileall services/person_helpers.py services/person_service.py app.py -q` | 0 errors |
+| Narrow gate | `pytest -x -q test_person_helpers.py test_url_map_contract.py ...` | 31 passed |
+| Full regression | `pytest -x -q -m "not db_integration"` | 368 passed, 3 skipped, 13 deselected |
+
+### Rollback
+
+```bash
+git revert 01222a6
+```
+
+---
+
+## Phase 2.7 - Upsert Helpers (get_or_create_*)
+
+**Ngay:** 2026-05-22
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - upsert helpers (SELECT + INSERT) move, behavior unchanged.
+
+### Scope
+
+- Moved `get_or_create_location`, `get_or_create_generation`, `get_or_create_branch` vao `services/person_helpers.py`.
+- `get_or_create_branch` co external caller trong `members_portal.py` → facade via `person_service.py`.
+- Location va generation chi co caller noi bo.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Compile | `python -m compileall services/person_helpers.py services/person_service.py -q` | 0 errors |
+| Narrow gate | `pytest -x -q test_person_helpers.py test_url_map_contract.py ...` | 40 passed |
+| Full regression | `pytest -x -q -m "not db_integration"` | 377 passed, 3 skipped, 13 deselected |
+
+### Rollback
+
+```bash
+git revert 4c3140a
+```
+
+---
+
+## Phase 2.8 - Gallery DDL + File Delete Helpers
+
+**Ngay:** 2026-05-22
+**Branch:** `codex/phase-2-service-refactor`
+**Trang thai:** PASS - DDL + filesystem helper move, behavior unchanged.
+
+### Scope
+
+- Moved `ensure_albums_table`, `ensure_album_images_table`, `_delete_album_image_file` vao `services/gallery_helpers.py`.
+- Tat ca 3 ham chi co caller noi bo trong `gallery_service.py`, khong can facade.
+- `BASE_DIR`, `logger`, `os` da co san trong `gallery_helpers.py`.
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Compile | `python -m compileall services/gallery_helpers.py services/gallery_service.py -q` | 0 errors |
+| Narrow gate | `pytest -x -q test_gallery_helpers.py test_url_map_contract.py ...` | 32 passed |
+| Full regression | `pytest -x -q -m "not db_integration"` | 382 passed, 3 skipped, 13 deselected |
+
+### Rollback
+
+```bash
+git revert 506df3e
+```
+
+---
+
+## Phase 1 - Admin Vertical Slices
+
+**Ngay hoan thanh:** 2026-05-21
+**Branch:** `master`
+**Exit gate:** PASS - admin routes extracted into `admin/*_routes.py`, endpoint names/url_map contract preserved, full local regression pass.
+
+### Commits
+
+| Loai | SHA | Mo ta |
+|---|---|---|
+| `[refactor]` | `1df0a34` | phase-1: tach admin_routes thanh modules, them contract tests |
+| `[ui]` | `59ebd9f` | xoa icon emoji khoi template, cap nhat golden fixtures sau Phase 1 |
+
+### Gate evidence
+
+| Gate | File / Command | Ket qua |
+|---|---|---|
+| Master deployment log | `docs/refactor/MASTER_DEPLOYMENT_LOG.md` | Phase 1.1 -> 1.10 complete |
+| URL map + bootstrap + endpoint names | `pytest -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py` | PASS |
+| Full regression after Docker enabled | `pytest -x -q` | 335 passed, 3 skipped |
+| Pre-upgrade after Docker enabled | `python scripts/run_pre_upgrade.py` | 40 passed, 2 skipped |
+
+### Rollback
+
+```bash
+git revert 59ebd9f 1df0a34
+```
+
+---
+
 ## Phase 0d - Observability & Performance Gates
 
-**Ngay hoan thanh:** 2026-05-21  
-**Branch:** `docs/phase-0a-skeleton`  
+**Ngay hoan thanh:** 2026-05-21
+**Branch:** `docs/phase-0a-skeleton`
 **Exit gate:** PASS - `pytest` 260 passed, 3 skipped; baseline variance pass 2 lan lien tiep; backup/restore drill local pass; operational sign-off Phase 0d da dong.
 
 ### Commits
 
 | Loai | SHA | Mo ta |
 |---|---|---|
-| `[docs]/[test]/[fix]` | `pending` | Phase 0d changes dang o local working tree; dien SHA cuoi cung khi commit phase nay |
+| `[docs]/[test]/[fix]` | `1df0a34` | Baseline scripts/tests landed with Phase 1 commit |
+| `[docs]` | `faeac82` | Phase 0d docs/baseline artefacts recorded before Phase 2 |
 
 ### Scope
 
@@ -53,10 +387,11 @@
 | Backup restore drill | `docs/refactor/BACKUP_RESTORE_DRILL.md` | PASS (local synthetic restore) |
 | Backup export view safety | `tests/test_backup_python_export.py` | PASS |
 | Operational sign-off | `docs/refactor/PHASE_0D_CLOSEOUT_CHECKLIST.md` | PASS |
+| Pre-Phase 2 recheck | `pytest -x -q` | 335 passed, 3 skipped |
 
 ### Residual notes
 
-- Runtime hien tai van co deviation giua `POST /api/admin/users` va `POST /admin/api/users`; Phase 1.x khong duoc cham domain `admin_users` khi deviation nay chua duoc fix.
+- Runtime deviation giua `POST /api/admin/users` va `POST /admin/api/users` van duoc ghi trong baseline JSON; Phase 2 khong duoc sua contract nay neu khong co PR `[chore]` rieng.
 - Production backup parity restore drill la follow-up khuyen nghi, khong con la blocker Phase 1 gate.
 
 ### Rollback
@@ -69,8 +404,8 @@
 
 ## Phase 0c - Fix-only Stabilization
 
-**Ngay hoan thanh:** 2026-05-21  
-**Branch:** `docs/phase-0a-skeleton`  
+**Ngay hoan thanh:** 2026-05-21
+**Branch:** `docs/phase-0a-skeleton`
 **Exit gate:** PASS - `pytest` 259 passed, 3 skipped (105.39s).
 
 ### Commits
@@ -113,8 +448,8 @@ git revert 5688a7e b57f662 6e0e9a0 f089835 f6f496a
 
 ## Phase 0b - Baseline Tests + Snapshots
 
-**Ngay hoan thanh:** 2026-05-20  
-**Branch:** `docs/phase-0a-skeleton`  
+**Ngay hoan thanh:** 2026-05-20
+**Branch:** `docs/phase-0a-skeleton`
 **Exit gate:** PASS - `pytest` 259 passed, 3 skipped (111.81s).
 
 ### Commits
@@ -151,8 +486,8 @@ git revert e44925d 4589f53 ad55a65 6a226e1 aa05f2e dc367a4 b51c672
 
 ## Phase 0a - Inventory + Truth Snapshot
 
-**Ngay hoan thanh:** 2026-05-20  
-**Branch:** `docs/phase-0a-skeleton`  
+**Ngay hoan thanh:** 2026-05-20
+**Branch:** `docs/phase-0a-skeleton`
 **Exit gate:** PASS - 9/9 artefact, khong co PR `[move]`.
 
 ### Commits

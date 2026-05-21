@@ -238,6 +238,7 @@ from services.person_service import (
     fix_p1_1_parents,
     update_genealogy_info,
     delete_persons_batch,
+    load_relationship_data,
 )
 from utils.validation import (
     validate_filename,

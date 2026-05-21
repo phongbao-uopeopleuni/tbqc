@@ -9,59 +9,20 @@ from werkzeug.utils import secure_filename
 
 from db import get_db_connection
 from extensions import limiter
-from utils.validation import validate_filename, validate_person_id, secure_compare
-from services.members_service import get_members_password
+from utils.validation import validate_filename, validate_person_id
 from services.activities_service import is_admin_user
+from services.gallery_helpers import (
+    _geoapify_server_key_from_env,
+    _geoapify_browser_key_from_env,
+    verify_album_password,
+    verify_grave_image_delete_password,
+    ensure_albums_table,
+    ensure_album_images_table,
+    _delete_album_image_file,
+)
 
 logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-def _load_env_file_safe():
-    try:
-        from folder_py.db_config import load_env_file
-    except ImportError:
-        from db_config import load_env_file  # type: ignore
-    return load_env_file
-
-
-def _geoapify_server_key_from_env():
-    """Chỉ dùng phía server — không gửi ra JSON."""
-    api_key = (os.environ.get("GEOAPIFY_API_KEY") or "").strip()
-    if api_key:
-        return api_key
-    try:
-        load_env_file = _load_env_file_safe()
-        env_file = os.path.join(BASE_DIR, "tbqc_db.env")
-        if os.path.exists(env_file):
-            env_vars = load_env_file(env_file)
-            file_api_key = (env_vars.get("GEOAPIFY_API_KEY") or "").strip()
-            if file_api_key:
-                os.environ["GEOAPIFY_API_KEY"] = file_api_key
-                logger.info("GEOAPIFY_API_KEY loaded from tbqc_db.env (local dev)")
-                return file_api_key
-    except Exception as e:
-        logger.error("Could not load GEOAPIFY_API_KEY: %s", e)
-    return ""
-
-
-def _geoapify_browser_key_from_env():
-    """Key dành cho client (nên tạo key riêng + giới hạn HTTP Referrer trên Geoapify)."""
-    k = (os.environ.get("GEOAPIFY_BROWSER_KEY") or "").strip()
-    if k:
-        return k
-    try:
-        load_env_file = _load_env_file_safe()
-        env_file = os.path.join(BASE_DIR, "tbqc_db.env")
-        if os.path.exists(env_file):
-            env_vars = load_env_file(env_file)
-            bk = (env_vars.get("GEOAPIFY_BROWSER_KEY") or "").strip()
-            if bk:
-                os.environ["GEOAPIFY_BROWSER_KEY"] = bk
-                return bk
-    except Exception as e:
-        logger.debug("GEOAPIFY_BROWSER_KEY from file: %s", e)
-    return ""
 
 
 def get_geoapify_api_key():
@@ -665,55 +626,6 @@ def api_gallery_anh1():
         logger.error(f'Error listing gallery images: {e}')
         return (jsonify({'success': False, 'error': f'Lỗi khi lấy danh sách ảnh: {str(e)}'}), 500)
 
-def ensure_albums_table(cursor):
-    """
-    Đảm bảo bảng albums tồn tại trong database.
-    Tạo bảng nếu chưa có.
-    
-    Ensure the albums table exists in the database.
-    Creates the table if it doesn't exist.
-    
-    Args:
-        cursor: Database cursor để thực thi SQL queries
-                Database cursor to execute SQL queries
-    """
-    cursor.execute('\n        CREATE TABLE IF NOT EXISTS albums (\n            album_id INT PRIMARY KEY AUTO_INCREMENT,\n            name VARCHAR(500) NOT NULL,\n            theme VARCHAR(500),\n            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n            created_by VARCHAR(255),\n            INDEX idx_created_at (created_at)\n        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n    ')
-
-def ensure_album_images_table(cursor):
-    """
-    Đảm bảo bảng album_images tồn tại trong database.
-    Tạo bảng nếu chưa có.
-    
-    Ensure the album_images table exists in the database.
-    Creates the table if it doesn't exist.
-    
-    Args:
-        cursor: Database cursor để thực thi SQL queries
-                Database cursor to execute SQL queries
-    """
-    cursor.execute('\n        CREATE TABLE IF NOT EXISTS album_images (\n            image_id INT PRIMARY KEY AUTO_INCREMENT,\n            album_id INT NOT NULL,\n            filename VARCHAR(500) NOT NULL,\n            filepath VARCHAR(1000) NOT NULL,\n            url VARCHAR(1000) NOT NULL,\n            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,\n            FOREIGN KEY (album_id) REFERENCES albums(album_id) ON DELETE CASCADE,\n            INDEX idx_album_id (album_id),\n            INDEX idx_uploaded_at (uploaded_at)\n        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n    ')
-def _get_album_password():
-    return os.environ.get('ALBUM_PASSWORD') or os.environ.get('MEMBERS_PASSWORD') or get_members_password()
-
-def _get_grave_image_delete_password():
-    return os.environ.get('GRAVE_IMAGE_DELETE_PASSWORD') or os.environ.get('MEMBERS_PASSWORD') or get_members_password()
-
-def verify_album_password(password):
-    """
-    Xác thực mật khẩu để đăng ảnh vào album.
-    Mật khẩu lấy từ env ALBUM_PASSWORD hoặc MEMBERS_PASSWORD (chỉ lưu local).
-    """
-    expected = _get_album_password()
-    return expected and secure_compare(password or '', expected)
-
-def verify_grave_image_delete_password(password):
-    """
-    Xác thực mật khẩu để xóa ảnh mộ phần.
-    Mật khẩu lấy từ env GRAVE_IMAGE_DELETE_PASSWORD hoặc MEMBERS_PASSWORD (chỉ lưu local).
-    """
-    expected = _get_grave_image_delete_password()
-    return expected and secure_compare(password or '', expected)
-
 def api_verify_album_password():
     """API kiểm tra mật khẩu album trước khi bật thao tác quản lý ảnh."""
     data = request.get_json() or {}
@@ -924,28 +836,6 @@ def api_get_album_images(album_id):
     except Exception as e:
         logger.error(f'Error getting album images: {e}')
         return (jsonify({'success': False, 'error': f'Lỗi khi lấy danh sách ảnh: {str(e)}'}), 500)
-
-def _delete_album_image_file(filepath):
-    """
-    Xóa file ảnh album nếu đường dẫn nằm trong Railway Volume hoặc static/images.
-    Không raise nếu file đã mất để DB vẫn được dọn sạch bản ghi ảnh.
-    """
-    if not filepath:
-        return False
-    allowed_roots = []
-    volume_mount_path = os.environ.get('RAILWAY_VOLUME_MOUNT_PATH')
-    if volume_mount_path:
-        allowed_roots.append(os.path.abspath(volume_mount_path))
-    allowed_roots.append(os.path.abspath(os.path.join(BASE_DIR, 'static', 'images')))
-
-    file_path = os.path.abspath(filepath)
-    if not any(file_path == root or file_path.startswith(root + os.sep) for root in allowed_roots):
-        logger.warning('Skip deleting album image outside allowed roots: %s', filepath)
-        return False
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        os.remove(file_path)
-        return True
-    return False
 
 def api_delete_album_images(album_id):
     """
