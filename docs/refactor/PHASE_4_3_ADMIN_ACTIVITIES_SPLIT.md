@@ -3,6 +3,7 @@
 **Date:** 2026-05-22
 **Type:** `[move]`
 **Scope:** `templates/admin/activities.html` inline script -> `static/js/admin-activities.js`
+**Runtime commit:** `3313dc0`
 
 ## Preflight
 
@@ -63,5 +64,5 @@ Manual smoke covered:
 After this phase is committed, rollback with:
 
 ```powershell
-git revert <phase-4.3-admin-activities-commit-sha>
+git revert 3313dc0
 ```
