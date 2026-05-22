@@ -27,6 +27,7 @@
 **Branch:** `codex/phase-4-1-lint-hygiene`
 **Trang thai:** docs-only probe logged; no Gallery/Members mutation code changed.
 **Preflight doc:** `docs/refactor/PHASE_5_PREFLIGHT_PROBE.md`
+**Step 1 characterization:** `docs/refactor/PHASE_5_STEP_1_CHARACTERIZATION.md`
 
 ### Scope
 
@@ -44,6 +45,8 @@
 | Docker | `docker version --format 'Client={{.Client.Version}} Server={{.Server.Version}}'` | `Client=29.4.3 Server=29.4.3` |
 | Testcontainers import | `python -c "from testcontainers.mysql import MySqlContainer; print('testcontainers mysql import ok')"` | `testcontainers mysql import ok` |
 | DB integration collect | `python -m pytest --collect-only -q -m db_integration` | `13/398 tests collected (385 deselected)` |
+| DB integration full gate | `python -m pytest -x -q -m db_integration` | `13 passed, 385 deselected` |
+| Focused Phase 5 read-only/helper gate | `python -m pytest -q tests/test_api_routes.py::TestGallery tests/test_api_routes.py::TestMembersGate tests/test_gallery_helpers.py tests/test_gallery_service_secure_compare_import.py tests/test_p0_contract.py::test_api_members_contract` | `32 passed` |
 
 ### Blockers before mutation
 
