@@ -151,6 +151,29 @@ class TestGallery:
 
 
 class TestMembersGate:
+    def test_members_page_unauthorized_renders_gate(self, client):
+        r = client.get("/members")
+        assert r.status_code == 200
+        body = r.get_data(as_text=True)
+        assert "/members/verify" in body
+
+    def test_members_verify_success_sets_session(self, client, monkeypatch):
+        import app as app_module
+
+        monkeypatch.setitem(app_module.FIXED_MEMBERS_PASSWORDS, "phase5_user", "phase5_pass")
+        try:
+            r = client.post(
+                "/members/verify",
+                json={"username": "phase5_user", "password": "phase5_pass"},
+            )
+            assert r.status_code == 200
+            assert _json(r)["success"] is True
+            with client.session_transaction() as sess:
+                assert sess["members_gate_ok"] is True
+                assert sess["members_gate_user"] == "phase5_user"
+        finally:
+            app_module.FIXED_MEMBERS_PASSWORDS.pop("phase5_user", None)
+
     def test_api_members_unauthorized(self, client):
         r = client.get("/api/members")
         assert r.status_code == 401

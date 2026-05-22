@@ -18,7 +18,41 @@
 | 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
 | 3 | App Bootstrap Shrink | ✅ Closeout audit PASS | `codex/phase-3-bootstrap-shrink` |
 | 4 | JS Refactor | 🟡 Preflight opened | `codex/phase-4-js-preflight` |
-| 5 | Gallery + Members High-risk | Preflight + Step 1 characterized; backup parity PASS; next is 5.1 read-only contracts | `codex/phase-5-gallery-members` |
+| 5 | Gallery + Members High-risk | 5.1 read-only contracts complete; next is 5.2 audit emit coverage | `codex/phase-5-gallery-members` |
+
+---
+
+## Phase 5.1 - Gallery/Members Read-Only Contracts (2026-05-22)
+
+**Branch:** `codex/phase-5-gallery-members`
+**Trang thai:** PASS - read-only contract tests added; no mutation/template/JS changes.
+**Detail:** `docs/refactor/PHASE_5_1_READ_ONLY_CONTRACTS.md`
+
+### Scope
+
+| Area | Result |
+|---|---|
+| Gallery albums | Added DB-backed contract for `GET /api/albums` |
+| Gallery album images | Added DB-backed contract for `GET /api/albums/<id>/images` |
+| Members export | Added DB-backed Excel export characterization |
+| Members gate | Added endpoint/session characterization for `/members` and `/members/verify` |
+| DB cleanup | Added `album_images` and `albums` to test DB truncation list |
+
+### Gate evidence
+
+| Gate | Command | Ket qua |
+|---|---|---|
+| Focused Phase 5.1 gate | `python -m pytest -q tests/test_api_routes.py::TestGallery tests/test_api_routes.py::TestMembersGate tests/test_gallery_helpers.py tests/test_gallery_service_secure_compare_import.py tests/test_p0_contract.py::test_api_members_contract tests/test_p0_contract.py::test_api_albums_contract tests/test_p0_contract.py::test_api_album_images_contract tests/test_p0_contract.py::test_members_export_excel_contract` | `37 passed` |
+| DB integration | `python -m pytest -x -q -m db_integration` | `16 passed, 387 deselected` |
+| Core contract/snapshot gate | `python -m pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_frontend_cdn_versions.py` | `11 passed` |
+| Full non-DB regression | `python -m pytest -x -q -m "not db_integration"` | `384 passed, 3 skipped, 16 deselected` |
+| JS lint | `npm run lint` | `0 errors, 68 warnings` |
+
+### Rollback
+
+```powershell
+git revert <phase-5-1-read-only-contracts-sha>
+```
 
 ---
 

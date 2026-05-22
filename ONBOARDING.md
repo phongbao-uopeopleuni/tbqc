@@ -11,8 +11,8 @@
 
 | Hạng mục | Giá trị |
 |---|---|
-| Python tests | `382 passed, 3 skipped, 13 deselected` (baseline) |
-| DB integration tests | `13 passed` (baseline — `python -m pytest -x -q -m db_integration`) |
+| Python tests | `384 passed, 3 skipped, 16 deselected` (after Phase 5.1) |
+| DB integration tests | `16 passed` (after Phase 5.1 — `python -m pytest -x -q -m db_integration`) |
 | `npm run lint` | `0 errors, 68 warnings` (baseline) |
 | `app.py` | 291 lines |
 | Backup drill | PASS 2026-05-22 — `tbqc_backup_20260522_064546.sql`, persons=1188 |
@@ -41,8 +41,8 @@ npm run lint   # phải 0 errors, warnings <= 68
 ## Thứ tự Phase 5 (KHÔNG được đảo)
 
 ```
-5.1  [test]  Gallery + Members read-only contract tests     ← BẮT ĐẦU ĐÂY
-5.2  [test]  Audit emit coverage cho mutations              ← Trước khi move bất kỳ mutation nào
+5.1  [test]  Gallery + Members read-only contract tests     ✅ Done
+5.2  [test]  Audit emit coverage cho mutations              ← BẮT ĐẦU TIẾP THEO
 5.3  [move]  members.html JS split (data-attr pattern)      ← Sau khi có test coverage
 5.4  [move]  Gallery mutation isolation                     ← Sau 5.1 + 5.2 + backup drill
 5.5  [move]  Members bulk update / export / batch delete    ← Cuối cùng
@@ -50,29 +50,28 @@ npm run lint   # phải 0 errors, warnings <= 68
 
 ---
 
-## Phase 5.1 — Gallery/Members read-only contracts (BẮT ĐẦU)
+## Phase 5.1 — Gallery/Members read-only contracts (DONE)
 
 Không đụng mutation. Chỉ thêm tests.
 
-**Target tests cần viết:**
+**Tests đã thêm:**
 
 ```python
-# 1. GET /api/albums  →  {success: true, albums: [...]}
-# 2. GET /api/albums/<id>/images  →  {success: true, images: [...]}
-# 3. GET /members/export/excel  →  status 302 (redirect khi chưa auth) hoặc 200 + content-type Excel
-# 4. GET /members  →  render gate page khi chưa auth
-# 5. POST /members/verify  →  session set khi đúng password
+# 1. GET /api/albums  →  tests/test_p0_contract.py::test_api_albums_contract
+# 2. GET /api/albums/<id>/images  →  tests/test_p0_contract.py::test_api_album_images_contract
+# 3. GET /members/export/excel  →  tests/test_p0_contract.py::test_members_export_excel_contract
+# 4. GET /members  →  tests/test_api_routes.py::TestMembersGate::test_members_page_unauthorized_renders_gate
+# 5. POST /members/verify  →  tests/test_api_routes.py::TestMembersGate::test_members_verify_success_sets_session
 ```
 
-**File reference:**
-- `tests/test_api_routes.py::TestGallery` — có smoke tests rồi, bổ sung contract fixture
-- `tests/test_p0_contract.py::test_api_members_contract` — đã có
-- `tests/test_gallery_helpers.py` — đã có helper coverage
+**Contract fixtures đã thêm:**
+- `tests/fixtures/contract/api_albums.json`
+- `tests/fixtures/contract/api_album_images.json`
 
-**Gate sau Phase 5.1:**
+**Gate Phase 5.1:**
 ```powershell
-python -m pytest -x -q -m db_integration
-python -m pytest -q tests/test_api_routes.py::TestGallery tests/test_api_routes.py::TestMembersGate tests/test_gallery_helpers.py tests/test_p0_contract.py::test_api_members_contract
+python -m pytest -x -q -m db_integration  # 16 passed
+python -m pytest -q tests/test_api_routes.py::TestGallery tests/test_api_routes.py::TestMembersGate tests/test_gallery_helpers.py tests/test_gallery_service_secure_compare_import.py tests/test_p0_contract.py::test_api_members_contract tests/test_p0_contract.py::test_api_albums_contract tests/test_p0_contract.py::test_api_album_images_contract tests/test_p0_contract.py::test_members_export_excel_contract  # 37 passed
 ```
 
 ---
