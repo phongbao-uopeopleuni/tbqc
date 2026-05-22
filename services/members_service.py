@@ -6,6 +6,7 @@ from pathlib import Path
 
 from flask import jsonify, request, send_from_directory
 
+from audit_log import log_activity
 from utils.validation import secure_compare
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,12 @@ def create_backup_api():
         backup_dir = os.environ.get("BACKUP_DIR", "").strip() or "backups"
         result = create_backup(backup_dir=backup_dir)
         if result["success"]:
+            log_activity(
+                'BACKUP_CREATE_APP',
+                target_type='Backup',
+                target_id=result['backup_filename'],
+                after_data={'file_size': result['file_size'], 'timestamp': result['timestamp']},
+            )
             return jsonify(
                 {
                     "success": True,

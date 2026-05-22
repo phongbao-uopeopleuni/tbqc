@@ -5,6 +5,7 @@ from datetime import datetime
 from flask import jsonify
 from mysql.connector import Error
 
+from audit_log import log_activity
 from db import get_db_connection
 
 logger = logging.getLogger(__name__)
@@ -214,6 +215,7 @@ def sync_genealogy_from_members():
         sync_timestamp = datetime.now().isoformat()
         sync_info = {'success': True, 'message': f'Đã sync {len(members_data)} members từ database chuẩn', 'timestamp': sync_timestamp, 'source_url': standard_db_url, 'stats': {'persons_before': before_persons_count, 'persons_after': after_persons_count, 'persons_inserted': inserted_persons, 'persons_updated': updated_persons, 'relationships_before': before_relationships_count, 'relationships_after': after_relationships_count, 'relationships_inserted': inserted_relationships, 'marriages_before': before_marriages_count, 'marriages_after': after_marriages_count, 'marriages_inserted': inserted_marriages}, 'note': f'Đã sync từ {standard_db_url}. Inserted {inserted_persons} persons, updated {updated_persons} persons, inserted {inserted_relationships} relationships, {inserted_marriages} marriages.'}
         logger.info(f'✅ Sync thành công: {inserted_persons} inserted, {updated_persons} updated persons, {inserted_relationships} relationships, {inserted_marriages} marriages')
+        log_activity('SYNC_GENEALOGY', target_type='Persons', after_data={'inserted_persons': inserted_persons, 'updated_persons': updated_persons, 'inserted_relationships': inserted_relationships, 'inserted_marriages': inserted_marriages})
         return jsonify(sync_info)
     except Error as e:
         logger.error(f'❌ Lỗi database trong /api/genealogy/sync: {e}', exc_info=True)

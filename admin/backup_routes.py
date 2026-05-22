@@ -7,6 +7,7 @@ from flask import jsonify, send_file
 from auth import permission_required
 from utils.backup_safety import resolve_safe_backup_path
 from utils.mysql_auth import mysqldump_credentials
+from audit_log import log_activity
 from services.members_service import (
     create_backup_api as _svc_create_backup_api,
     list_backups_api as _svc_list_backups_api,
@@ -63,6 +64,12 @@ def register_admin_backup_create_route(app):
 
             download_url = f'/admin/api/backup/download/{backup_filename}'
 
+            log_activity(
+                'BACKUP_CREATE_ADMIN',
+                target_type='Backup',
+                target_id=backup_filename,
+                after_data={'download_url': download_url},
+            )
             return jsonify({
                 'success': True,
                 'message': 'Backup thành công',

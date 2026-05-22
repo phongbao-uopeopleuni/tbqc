@@ -10,6 +10,7 @@ from io import BytesIO
 from pathlib import Path
 from flask import Blueprint, redirect, render_template, request, jsonify, session, send_file
 
+from audit_log import log_activity
 from extensions import rate_limit
 from services.members_helpers import (
     normalize_excel_header as _normalize_excel_header,
@@ -635,6 +636,7 @@ def bulk_update_members_branch():
         cursor = connection.cursor(dictionary=True)
 
         if not valid_to_update:
+            log_activity('BULK_UPDATE_BRANCH', target_type='Members', after_data={'updated_count': 0, 'error_count': error_count})
             return jsonify({'success': True, 'updated_count': 0, 'error_count': error_count})
 
         ids = list(valid_to_update.keys())
@@ -708,6 +710,7 @@ def bulk_update_members_branch():
         except Exception as e:
             logger.warning(f'Cache invalidation error (continuing): {e}')
 
+        log_activity('BULK_UPDATE_BRANCH', target_type='Members', after_data={'updated_count': updated_count, 'error_count': error_count})
         return jsonify({'success': True, 'updated_count': updated_count, 'error_count': error_count})
 
     except Exception as e:
@@ -978,6 +981,7 @@ def bulk_update_members_sll():
         except Exception as e:
             logger.warning(f'Cache invalidation error (bulk SLL): {e}')
 
+        log_activity('BULK_UPDATE_SLL', target_type='Members', after_data={'updated_count': updated_count, 'error_count': error_count, 'skipped_count': skipped_count})
         return jsonify({
             'success': True,
             'updated_count': updated_count,
