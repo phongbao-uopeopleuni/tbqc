@@ -203,6 +203,7 @@ DELETE /api/persons/batch                     ← Bulk DB delete + auto backup
 # Một commit nhỏ:
 git revert <SHA>
 
-# Toàn bộ Phase 5 (nếu cần):
-git reset --hard origin/codex/phase-4-1-lint-hygiene
+# Toàn bộ Phase 5:
+# ưu tiên revert từng commit Phase 5 theo thứ tự ngược.
+# Chỉ dùng reset hard trên worktree throwaway và khi đã được approve rõ ràng.
 ```

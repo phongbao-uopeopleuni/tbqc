@@ -6,7 +6,7 @@
 ## Status
 
 - Date: 2026-05-22
-- Branch: `codex/phase-4-1-lint-hygiene`
+- Branch: `codex/phase-5-gallery-members`
 - Phase 4 status: page/domain split completed for admin pages; public activities gallery block and members page remain deferred to Phase 5.
 - Phase 5 status: preflight probe only; no Gallery/Members mutation code changed.
 
@@ -21,7 +21,7 @@ Phase 5 can start with characterization and read-only work, but P0 mutation work
 | DB integration collection | `python -m pytest --collect-only -q -m db_integration` -> `13/398 tests collected (385 deselected)` | PASS |
 | Local restore drill | `docs/refactor/BACKUP_RESTORE_DRILL.md` records 2026-05-21 local synthetic restore pass, `persons_count = 1188` | PASS local |
 | Production backup parity drill | `tbqc_backup_20260522_064546.sql` restored via testcontainer 2026-05-22; persons_count=1188, 20 tables, sample_non_null=True | PASS — blocker resolved |
-| Full DB integration execution | Not run in this probe | PENDING before mutation |
+| Full DB integration execution | `python -m pytest -x -q -m db_integration` -> `13 passed, 385 deselected` | PASS |
 
 ## DB integration inventory
 
@@ -116,7 +116,7 @@ These are not Phase 4 bugs, but they are Phase 5 risk inputs. Do not silently re
 
 Stop before mutation work if any condition is true:
 
-- Production backup parity drill is still missing and the PR touches DB write, file write/delete, backup, bulk update, or export-sensitive logic.
+- Latest production backup parity drill has not been rerun for the current P0 mutation PR.
 - `python -m pytest -x -q -m db_integration` cannot run locally.
 - A proposed JS split requires changing Members/Gallery mutation behavior to pass.
 - A change needs to alter Members auth/session/password semantics without a focused characterization test.
@@ -126,8 +126,8 @@ Stop before mutation work if any condition is true:
 
 Recommended next Phase 5 actions:
 
-1. Run full DB integration gate once: `python -m pytest -x -q -m db_integration`.
-2. Complete production backup parity restore drill and update `docs/refactor/BACKUP_RESTORE_DRILL.md`.
+1. Rerun full DB integration gate before mutation: `python -m pytest -x -q -m db_integration`.
+2. Rerun production backup parity restore drill before each P0 mutation PR and update `docs/refactor/BACKUP_RESTORE_DRILL.md`.
 3. Add read-only Gallery contract tests before mutation work.
 4. Add Members gate/read/export characterization tests before bulk update or delete work.
 5. Only then open the first P0 mutation PR with backup evidence, audit evidence, and rollback command.

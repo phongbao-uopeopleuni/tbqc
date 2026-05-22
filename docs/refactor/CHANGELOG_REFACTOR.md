@@ -18,23 +18,24 @@
 | 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
 | 3 | App Bootstrap Shrink | ✅ Closeout audit PASS | `codex/phase-3-bootstrap-shrink` |
 | 4 | JS Refactor | 🟡 Preflight opened | `codex/phase-4-js-preflight` |
-| 5 | Gallery + Members High-risk | Preflight probe logged; mutation blocked until backup parity + DB gate | `codex/phase-4-1-lint-hygiene` |
+| 5 | Gallery + Members High-risk | Preflight + Step 1 characterized; backup parity PASS; next is 5.1 read-only contracts | `codex/phase-5-gallery-members` |
 
 ---
 
 ## Phase 5 Preflight Probe - Gallery + Members (2026-05-22)
 
-**Branch:** `codex/phase-4-1-lint-hygiene`
+**Branch:** `codex/phase-5-gallery-members`
 **Trang thai:** docs-only probe logged; no Gallery/Members mutation code changed.
 **Preflight doc:** `docs/refactor/PHASE_5_PREFLIGHT_PROBE.md`
 **Step 1 characterization:** `docs/refactor/PHASE_5_STEP_1_CHARACTERIZATION.md`
+**Readiness audit:** `docs/refactor/PHASE_5_READINESS_AUDIT.md`
 
 ### Scope
 
 | Area | Decision |
 |---|---|
 | DB integration readiness | Docker + `testcontainers[mysql]` import verified; 13 DB integration tests collect |
-| Backup readiness | Local synthetic restore drill pass carried forward; production backup parity drill still pending |
+| Backup readiness | Production backup parity drill PASS 2026-05-22; rerun before each P0 mutation PR |
 | Gallery | Read-only characterization can start; album/grave mutation/upload/delete remains P0-gated |
 | Members | Gate/read/export characterization can start; bulk update/delete/backup remains P0-gated |
 
@@ -47,11 +48,12 @@
 | DB integration collect | `python -m pytest --collect-only -q -m db_integration` | `13/398 tests collected (385 deselected)` |
 | DB integration full gate | `python -m pytest -x -q -m db_integration` | `13 passed, 385 deselected` |
 | Focused Phase 5 read-only/helper gate | `python -m pytest -q tests/test_api_routes.py::TestGallery tests/test_api_routes.py::TestMembersGate tests/test_gallery_helpers.py tests/test_gallery_service_secure_compare_import.py tests/test_p0_contract.py::test_api_members_contract` | `32 passed` |
+| Phase 5 readiness audit | `npm run lint`; core contract gate; focused Phase 5 gate; full non-DB regression; DB integration rerun after Docker start | PASS; details in `PHASE_5_READINESS_AUDIT.md` |
 
-### Blockers before mutation
+### Conditions before mutation
 
-- Production backup parity restore drill is still pending in `docs/refactor/BACKUP_RESTORE_DRILL.md`.
-- Full DB integration execution must pass before DB write/file write/delete/bulk update work.
+- Production backup parity restore drill has passed once, but must be rerun with the latest backup before each P0 mutation PR.
+- Full DB integration execution passed once, but must pass again before DB write/file write/delete/bulk update work.
 - Audit matrix still records missing audit emit/baseline gaps for backup and members bulk update.
 
 ---

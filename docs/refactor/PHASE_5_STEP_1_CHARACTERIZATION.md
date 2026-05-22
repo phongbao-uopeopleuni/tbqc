@@ -7,7 +7,7 @@
 ## Status
 
 - Date: 2026-05-22
-- Branch: `codex/phase-4-1-lint-hygiene`
+- Branch: `codex/phase-5-gallery-members`
 - Scope type: characterization / gate evidence
 - Runtime changes: none
 - Mutation permission: not granted yet
@@ -17,10 +17,10 @@
 Phase 5 may proceed only in this order:
 
 1. Keep Step 1 read-only: inventory, contracts, tests, and docs.
-2. Finish production backup parity restore drill before any DB/file mutation refactor.
+2. Rerun production backup parity restore drill before any DB/file mutation refactor.
 3. Keep Gallery album/grave upload/delete and Members bulk update/delete/backup out of scope until P0 gates exist.
 
-This means the first implementation PR in Phase 5 should be a read-only contract/test PR unless the backup parity drill is completed first.
+The production backup parity drill passed once on 2026-05-22, but the first implementation PR in Phase 5 should still be a read-only contract/test PR. P0 mutation PRs need a fresh backup drill before they start.
 
 ## Hard evidence collected
 
@@ -116,9 +116,10 @@ const REQUIRED_PASSWORD = {{ members_password| tojson | safe if members_password
 - Therefore `members.html` cannot be split by copying the inline script to a static JS file.
 - Any later split must first pass data through a data attribute or JSON script block and freeze the rendered HTML contract.
 
-## Known blockers before mutation
+## Known conditions before mutation
 
-- `docs/refactor/BACKUP_RESTORE_DRILL.md` still lists production backup parity drill as pending.
+- `docs/refactor/BACKUP_RESTORE_DRILL.md` records production backup parity PASS on 2026-05-22.
+- Rerun `python -X utf8 scripts/run_backup_restore_drill.py backups/<latest>.sql` before each P0 mutation PR.
 - Audit fixtures still flag missing backup and bulk update audit coverage:
   - `BACKUP_CREATE_APP`
   - `BACKUP_CREATE_ADMIN`
