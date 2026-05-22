@@ -31,6 +31,8 @@ DB_TRUNCATE_TABLES = (
     "page_views",
     "activity_logs",
     "edit_requests",
+    "album_images",
+    "albums",
     "marriages",
     "relationships",
     "persons",

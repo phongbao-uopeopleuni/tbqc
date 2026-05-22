@@ -23,6 +23,9 @@ Critical DOM IDs:    id ma JS file include trong template query bang getElementB
 |---|---|
 | `device-detection.js` | `DeviceDetection` |
 | `admin-code-graph.js` | `reloadCodeGraph` |
+| `admin-activities.js` | `cleanText`, `sanitizeHtmlForQuill`, `fetchJson`, `escapeHtml`, `showMessage`, `checkAuth`, `loadPosts`, `editPost`, `deletePost`, `resetForm`, `publishNow`, `handleThumbnailUpload`, `handleImagesUpload`, `updateImagesPreview`, `updateImagesCount` |
+| `admin-logs.js` | `openResetLogsModal`, `closeResetLogsModal`, `confirmResetLogs`, `applyFilters`, `clearFilters`, `changeLogsPerPage`, `previousPage`, `nextPage` |
+| `admin-users.js` | `fetchJson`, `showMessage`, `loadUsers`, `getCurrentUser`, `openAddUserModal`, `closeUserModal`, `editUser`, `deleteUser`, `loadActivityLogs`, `formatLogTimestamp`, `formatDateTime`, `formatLogDiff`, `applyFilters`, `clearFilters`, `changeLogsPerPage`, `previousPage`, `nextPage`, `toggleAutoRefresh`, `syncTbqcAccounts` |
 | `family-tree-core.js` | `DEBUG_FAMILY_TREE`, `DEBUG_TREE`, `childrenMap`, `compareSiblingPersonIds`, `familyGraph`, `founderId`, `getBirthSortKey`, `graph`, `marriagesMap`, `nameToIdsMap`, `parentMap`, `personMap` |
 | `family-tree-family-renderer.js` | `renderFamilyNode` |
 | `family-tree-family-ui.js` | `CONNECTOR_GENERATION_PALETTE`, `FAMILY_UI_SCRIPT_STARTED`, `applyGenealogyDefaultView`, `applyTreeMinZoomCentered`, `applyZoom`, `buildFamilyTree`, `createNodeElement`, `currentLevelDensityMap`, `destroyTreePanzoom`, `familyTreeDiv`, `fitTreeToView`, `getGenealogyBranchMode`, `getGenealogyDisplayMaxGen`, `getGenerationColor`, `initTreePanzoom`, `pruneFamilyTreeForFocus`, `refreshTree`, `renderFamilyDefaultTree`, `renderFamilyFocusTree`, `renderFamilyNode`, `scheduleGenealogyTreeFitRetries`, `selectPerson` |
@@ -282,13 +285,25 @@ Inline scripts:
 ```
 Script src order:
   L346: https://cdn.quilljs.com/1.3.6/quill.js  [CDN]
+  L347: /static/js/admin-activities.js
 
 Inline scripts:
-  L347-1039: 693 lines  — quill editor + activity CRUD
+  (none)
 
-Phase 4 candidate: split inline -> static/js/admin-activities.js
+window.* set by admin-activities.js:
+  cleanText, sanitizeHtmlForQuill, fetchJson, escapeHtml, showMessage,
+  checkAuth, loadPosts, editPost, deletePost, resetForm, publishNow,
+  handleThumbnailUpload, handleImagesUpload, updateImagesPreview,
+  updateImagesCount
+
+Critical DOM IDs:
+  contentEditor, message, postsList, activityId, title, summary, category,
+  content, thumbnail, status, formTitle, submitBtn, thumbnailPreview,
+  previewImg, activityForm, thumbnailFile, imagesFile, imagesPreview,
+  imagesCount
+
+Phase 4.3 split completed: old L347-1039 inline script -> static/js/admin-activities.js
 ```
-
 ### templates/admin/activities_gate.html
 
 ```
@@ -309,12 +324,23 @@ Inline scripts:
 ### templates/admin/logs.html
 
 ```
+Script src order:
+  L130: /static/js/admin-logs.js
+
 Inline scripts:
-  L133-580: 448 lines  — activity log table, filter, reset
+  (none)
 
-(no external JS)
+window.* set by admin-logs.js:
+  openResetLogsModal, closeResetLogsModal, confirmResetLogs, applyFilters,
+  clearFilters, changeLogsPerPage, previousPage, nextPage
 
-Phase 4 candidate split: L133-580 -> static/js/admin-logs.js
+Critical DOM IDs:
+  activityLogsList, logsPaginationInfo, prevPageBtn, nextPageBtn, filterAction,
+  filterTargetType, filterUserId, logsPerPage, statPvMonth, statPvToday,
+  statLogBytes, resetLogsModal, resetLogsConfirmInput, resetLogsError,
+  resetLogsResult, btnConfirmResetLogs
+
+Phase 4.3 split completed: old L133-580 inline script -> static/js/admin-logs.js
 ```
 
 ### templates/admin/users.html
@@ -322,13 +348,25 @@ Phase 4 candidate split: L133-580 -> static/js/admin-logs.js
 ```
 Script src order:
   L145: /static/js/common.js
+  L146: /static/js/admin-users.js
 
 Inline scripts:
-  L146-605: 460 lines  — user CRUD, role select, reset-password
+  (none)
 
-Phase 4 candidate split.
+window.* set by admin-users.js:
+  fetchJson, showMessage, loadUsers, getCurrentUser, openAddUserModal,
+  closeUserModal, editUser, deleteUser, loadActivityLogs, formatLogTimestamp,
+  formatDateTime, formatLogDiff, applyFilters, clearFilters, changeLogsPerPage,
+  previousPage, nextPage, toggleAutoRefresh, syncTbqcAccounts
+
+Critical DOM IDs:
+  message, usersList, modalTitle, userForm, userId, passwordGroup, password,
+  userModal, username, full_name, email, role, is_active, plainLogViewer,
+  logsPaginationInfo, prevPageBtn, nextPageBtn, filterAction, filterUserId,
+  logsPerPage, autoRefreshCheckbox, syncBtn
+
+Phase 4.3 split completed: old L146-605 inline script -> static/js/admin-users.js
 ```
-
 ### templates/admin/requests.html
 
 ```

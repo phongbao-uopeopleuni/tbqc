@@ -658,6 +658,16 @@ function createNodeElement(person, isHighlighted = false, isFounder = false) {
 function drawConnectorToSiblings(parentNode, siblings, container) {
   if (!parentNode || !siblings || siblings.length === 0) return;
 
+  function findNodeById(node, targetId) {
+    if (!node) return null;
+    if (node.id === targetId) return node;
+    for (const child of (node.children || [])) {
+      const found = findNodeById(child, targetId);
+      if (found) return found;
+    }
+    return null;
+  }
+
   const nodeWidth = 200;
   const nodeHeight = 115;
   const firstChildTopY = siblings[0].y;
@@ -685,16 +695,6 @@ function drawConnectorToSiblings(parentNode, siblings, container) {
       const motherId = firstSiblingPerson.mother_id;
       
       // Tìm father và mother nodes trong tree
-      function findNodeById(node, targetId) {
-        if (!node) return null;
-        if (node.id === targetId) return node;
-        for (const child of (node.children || [])) {
-          const found = findNodeById(child, targetId);
-          if (found) return found;
-        }
-        return null;
-      }
-      
       // Tìm root để traverse
       let rootNode = parentNode;
       while (rootNode.parent) {

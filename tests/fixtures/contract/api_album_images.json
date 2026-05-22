@@ -1,0 +1,21 @@
+{
+  "images": [
+    {
+      "album_id": 501,
+      "filename": "to-duong-2.jpg",
+      "filepath": "static/images/albums/to-duong-2.jpg",
+      "image_id": 9002,
+      "uploaded_at": "2026-05-21 10:05:00",
+      "url": "/static/images/albums/to-duong-2.jpg"
+    },
+    {
+      "album_id": 501,
+      "filename": "to-duong-1.jpg",
+      "filepath": "static/images/albums/to-duong-1.jpg",
+      "image_id": 9001,
+      "uploaded_at": "2026-05-21 10:00:00",
+      "url": "/static/images/albums/to-duong-1.jpg"
+    }
+  ],
+  "success": true
+}

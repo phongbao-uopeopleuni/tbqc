@@ -4,7 +4,7 @@
 
 ## Status
 
-- **Current state:** Local synthetic restore drill da pass; production backup parity drill la follow-up khuyen nghi
+- **Current state:** Production backup parity drill PASS (2026-05-22) — blocker resolved
 - **Required by plan:** `docs/Pre-refactor May 20, 2026.md` §22.2, §24
 - **Owner:** solo dev / refactor owner
 
@@ -23,7 +23,7 @@
 |---|---|---|---|---|---|---|
 | 2026-05-21 | `tbqc_backup_20260521_011320.sql` | download-only local verify | N/A | N/A | Partial | Backup create + download pass |
 | 2026-05-21 | `tbqc_backup_20260521_014806.sql` | `tbqc_drill` (MySQL 8.4 testcontainer) | 1188 | PASS | PASS (local synthetic) | Restore bang root account trong container; replay qua mysql-connector, bo qua `LOCK/UNLOCK` vi khong dung mysql CLI |
-| Pending | Production backup moi nhat | `tbqc_drill` | Pending | Pending | Pending | Chua chay parity drill voi backup production |
+| 2026-05-22 | `tbqc_backup_20260522_064546.sql` | `tbqc_drill` (MySQL 8.4 testcontainer) | 1188 | PASS | PASS (production parity) | 2,069,925 bytes; 5102 statements; 20 tables restored; 3 VIEW DEFINER statements stripped (non-SUPER user); run via `python -X utf8 scripts/run_backup_restore_drill.py` |
 
 ## Procedure (canonical)
 
@@ -52,5 +52,7 @@
 
 ## Follow-up
 
-- Production backup + restore drill parity theo plan §22.2 chua chay; hien tai day la follow-up sau Phase 0d, khong con la blocker mo Phase 1.
-- May local hien tai khong co `mysql` / `mysqldump` CLI; local drill da replay qua `mysql-connector`, nhung neu muon sat canonical command thi can them MySQL CLI.
+- Production backup parity drill PASS 2026-05-22 — Phase 5 mutation blocker resolved.
+- Drill script: `scripts/run_backup_restore_drill.py` — dung testcontainers MySQL 8.4, strip DEFINER clause tu CREATE VIEW statements.
+- May local khong co `mysql` CLI; drill replay qua `mysql-connector`. VIEW DEFINER bi strip la expected behavior (test user khong co SUPER privilege).
+- Next drill: chay lai truoc moi Phase 5 P0 mutation PR de confirm production data integrity.

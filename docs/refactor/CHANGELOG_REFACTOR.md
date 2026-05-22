@@ -16,15 +16,148 @@
 | 0d | Observability & Performance Gates | ✅ Done | `docs/phase-0a-skeleton` |
 | 1 | Admin Vertical Slices | ✅ Done | `master` (commit `1df0a34`) |
 | 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
-| 3 | App Bootstrap Shrink | ⏳ Pending | - |
-| 4 | JS Refactor | ⏳ Pending | - |
-| 5 | Gallery + Members High-risk | ⏳ Pending | - |
+| 3 | App Bootstrap Shrink | ✅ Closeout audit PASS | `codex/phase-3-bootstrap-shrink` |
+| 4 | JS Refactor | 🟡 Preflight opened | `codex/phase-4-js-preflight` |
+| 5 | Gallery + Members High-risk | 5.1 read-only contracts complete; next is 5.2 audit emit coverage | `codex/phase-5-gallery-members` |
+
+---
+
+## Phase 5.1 - Gallery/Members Read-Only Contracts (2026-05-22)
+
+**Branch:** `codex/phase-5-gallery-members`
+**Trang thai:** PASS - read-only contract tests added; no mutation/template/JS changes.
+**Detail:** `docs/refactor/PHASE_5_1_READ_ONLY_CONTRACTS.md`
+
+### Scope
+
+| Area | Result |
+|---|---|
+| Gallery albums | Added DB-backed contract for `GET /api/albums` |
+| Gallery album images | Added DB-backed contract for `GET /api/albums/<id>/images` |
+| Members export | Added DB-backed Excel export characterization |
+| Members gate | Added endpoint/session characterization for `/members` and `/members/verify` |
+| DB cleanup | Added `album_images` and `albums` to test DB truncation list |
+
+### Gate evidence
+
+| Gate | Command | Ket qua |
+|---|---|---|
+| Focused Phase 5.1 gate | `python -m pytest -q tests/test_api_routes.py::TestGallery tests/test_api_routes.py::TestMembersGate tests/test_gallery_helpers.py tests/test_gallery_service_secure_compare_import.py tests/test_p0_contract.py::test_api_members_contract tests/test_p0_contract.py::test_api_albums_contract tests/test_p0_contract.py::test_api_album_images_contract tests/test_p0_contract.py::test_members_export_excel_contract` | `37 passed` |
+| DB integration | `python -m pytest -x -q -m db_integration` | `16 passed, 387 deselected` |
+| Core contract/snapshot gate | `python -m pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_frontend_cdn_versions.py` | `11 passed` |
+| Full non-DB regression | `python -m pytest -x -q -m "not db_integration"` | `384 passed, 3 skipped, 16 deselected` |
+| JS lint | `npm run lint` | `0 errors, 68 warnings` |
+
+### Rollback
+
+```powershell
+git revert <phase-5-1-read-only-contracts-sha>
+```
+
+---
+
+## Phase 5 Preflight Probe - Gallery + Members (2026-05-22)
+
+**Branch:** `codex/phase-5-gallery-members`
+**Trang thai:** docs-only probe logged; no Gallery/Members mutation code changed.
+**Preflight doc:** `docs/refactor/PHASE_5_PREFLIGHT_PROBE.md`
+**Step 1 characterization:** `docs/refactor/PHASE_5_STEP_1_CHARACTERIZATION.md`
+**Readiness audit:** `docs/refactor/PHASE_5_READINESS_AUDIT.md`
+
+### Scope
+
+| Area | Decision |
+|---|---|
+| DB integration readiness | Docker + `testcontainers[mysql]` import verified; 13 DB integration tests collect |
+| Backup readiness | Production backup parity drill PASS 2026-05-22; rerun before each P0 mutation PR |
+| Gallery | Read-only characterization can start; album/grave mutation/upload/delete remains P0-gated |
+| Members | Gate/read/export characterization can start; bulk update/delete/backup remains P0-gated |
+
+### Gate evidence
+
+| Gate | Command | Ket qua |
+|---|---|---|
+| Docker | `docker version --format 'Client={{.Client.Version}} Server={{.Server.Version}}'` | `Client=29.4.3 Server=29.4.3` |
+| Testcontainers import | `python -c "from testcontainers.mysql import MySqlContainer; print('testcontainers mysql import ok')"` | `testcontainers mysql import ok` |
+| DB integration collect | `python -m pytest --collect-only -q -m db_integration` | `13/398 tests collected (385 deselected)` |
+| DB integration full gate | `python -m pytest -x -q -m db_integration` | `13 passed, 385 deselected` |
+| Focused Phase 5 read-only/helper gate | `python -m pytest -q tests/test_api_routes.py::TestGallery tests/test_api_routes.py::TestMembersGate tests/test_gallery_helpers.py tests/test_gallery_service_secure_compare_import.py tests/test_p0_contract.py::test_api_members_contract` | `32 passed` |
+| Phase 5 readiness audit | `npm run lint`; core contract gate; focused Phase 5 gate; full non-DB regression; DB integration rerun after Docker start | PASS; details in `PHASE_5_READINESS_AUDIT.md` |
+
+### Conditions before mutation
+
+- Production backup parity restore drill has passed once, but must be rerun with the latest backup before each P0 mutation PR.
+- Full DB integration execution passed once, but must pass again before DB write/file write/delete/bulk update work.
+- Audit matrix still records missing audit emit/baseline gaps for backup and members bulk update.
+
+---
+
+## Phase 4 Preflight - JS Refactor Risk Gates (2026-05-22)
+
+**Branch:** `codex/phase-4-js-preflight`
+**Trang thai:** docs-only preflight opened; no runtime JS/CSS/template edits.
+**Preflight doc:** `docs/refactor/PHASE_4_PREFLIGHT.md`
+
+### Scope
+
+| Area | Decision |
+|---|---|
+| Lint baseline | `0 errors, 71 warnings` carried forward from Phase 3 closeout |
+| First code PR shape | Tiny risk-gated JS cleanup only |
+| Delete policy | No delete from `no-unused-vars` without `rg` across `static/js` + `templates` and `JS_LOAD_GRAPH.md` check |
+| Rollback | One tiny commit per JS cleanup; `git revert <sha>` restores behavior |
+
+### Required gates before first JS edit
+
+```powershell
+npm run lint
+pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_frontend_cdn_versions.py
+```
+
+---
+
+## Phase 3 Closeout - App Bootstrap Shrink (2026-05-22)
+
+**Branch:** `codex/phase-3-bootstrap-shrink`
+**Trang thai:** PASS - `app.py` con 291 lines, runtime contract giu nguyen.
+**Audit detail:** `docs/refactor/PHASE_3_CLOSEOUT_AUDIT.md`
+
+### Scope
+
+| Area | File |
+|---|---|
+| Health + member stats routes | `services/infra_api_routes.py` |
+| External posts routes | `services/external_posts_service.py` |
+| Error handlers | `app_errors.py` |
+| Runtime route dump tooling | `scripts/list_routes.py` |
+
+### Gate evidence
+
+| Gate | Command | Ket qua |
+|---|---|---|
+| Runtime route count | `python -c "import app; print(len(list(app.app.url_map.iter_rules())), 'routes')"` | 117 routes |
+| Contract gate | `pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py` | 8 passed |
+| Focused API/security gate | `pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py tests/test_api_routes.py tests/test_health_and_cache_security.py tests/test_error_response_sanitizer.py tests/test_members_gate_fixed_accounts.py` | 60 passed, 2 skipped |
+| P0 DB contract | `pytest -x -q tests/test_p0_contract.py` | 5 passed |
+| Full non-DB regression | `pytest -x -q -m "not db_integration"` | 382 passed, 3 skipped, 13 deselected |
+| JS Phase 4 preflight | `npm run lint` | 0 errors, 71 pre-existing warnings |
+
+### Rollback
+
+Before commit:
+
+```powershell
+git restore app.py services/external_posts_service.py scripts/list_routes.py docs/refactor/CHANGELOG_REFACTOR.md
+Remove-Item app_errors.py, services/infra_api_routes.py, docs/refactor/PHASE_3_CLOSEOUT_AUDIT.md
+```
+
+After commit: `git revert <phase-3-closeout-sha>`.
 
 ---
 
 ## Phase 2 Closeout — Final Audit (2026-05-22)
 
-**Ngay closeout:** 2026-05-22  
+**Ngay closeout:** 2026-05-22
 **Branch:** `codex/phase-2-service-refactor`  
 **Trang thai:** ✅ PASS — san sang merge vao master, khong co bug ton dong.  
 **Commit HEAD:** `7dbd47a` (bao gồm closeout log + PHASE_3_PREFLIGHT.md)  

@@ -83,6 +83,34 @@ def _members_session(client):
         session["members_gate_user"] = "pytest"
 
 
+def _seed_gallery_contract_data(cursor):
+    from services.gallery_helpers import ensure_album_images_table, ensure_albums_table
+
+    ensure_albums_table(cursor)
+    ensure_album_images_table(cursor)
+    cursor.execute("DELETE FROM album_images")
+    cursor.execute("DELETE FROM albums")
+    cursor.execute(
+        """
+        INSERT INTO albums (album_id, name, theme, created_at, created_by)
+        VALUES
+            (501, 'Album To Duong', 'Le gio', '2026-05-20 08:00:00', 'pytest'),
+            (502, 'Album Gia Dinh', NULL, '2026-05-21 09:30:00', NULL)
+        """
+    )
+    cursor.execute(
+        """
+        INSERT INTO album_images (image_id, album_id, filename, filepath, url, uploaded_at)
+        VALUES
+            (9001, 501, 'to-duong-1.jpg', 'static/images/albums/to-duong-1.jpg',
+             '/static/images/albums/to-duong-1.jpg', '2026-05-21 10:00:00'),
+            (9002, 501, 'to-duong-2.jpg', 'static/images/albums/to-duong-2.jpg',
+             '/static/images/albums/to-duong-2.jpg', '2026-05-21 10:05:00')
+        """
+    )
+    _commit(cursor)
+
+
 @pytest.mark.db_integration
 def test_api_health_contract(db_client, test_db_cursor):
     _seed_contract_data(test_db_cursor)
@@ -190,6 +218,65 @@ def test_api_members_contract(db_client, test_db_cursor):
         ],
     }
     _assert_json_fixture("api_members.json", payload)
+
+
+@pytest.mark.db_integration
+def test_api_albums_contract(db_client, test_db_cursor):
+    _seed_gallery_contract_data(test_db_cursor)
+    response = db_client.get("/api/albums")
+    assert response.status_code == 200
+    data = response.get_json()
+    payload = {
+        "success": data["success"],
+        "albums": [
+            {
+                "album_id": album["album_id"],
+                "name": album["name"],
+                "theme": album["theme"],
+                "created_at": album["created_at"],
+                "created_by": album["created_by"],
+            }
+            for album in data["albums"]
+        ],
+    }
+    _assert_json_fixture("api_albums.json", payload)
+
+
+@pytest.mark.db_integration
+def test_api_album_images_contract(db_client, test_db_cursor):
+    _seed_gallery_contract_data(test_db_cursor)
+    response = db_client.get("/api/albums/501/images")
+    assert response.status_code == 200
+    data = response.get_json()
+    payload = {
+        "success": data["success"],
+        "images": [
+            {
+                "image_id": image["image_id"],
+                "album_id": image["album_id"],
+                "filename": image["filename"],
+                "filepath": image["filepath"],
+                "url": image["url"],
+                "uploaded_at": image["uploaded_at"],
+            }
+            for image in data["images"]
+        ],
+    }
+    _assert_json_fixture("api_album_images.json", payload)
+
+
+@pytest.mark.db_integration
+def test_members_export_excel_contract(db_client, test_db_cursor):
+    _seed_contract_data(test_db_cursor)
+    _members_session(db_client)
+    response = db_client.get("/members/export/excel")
+    assert response.status_code == 200
+    assert response.mimetype == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert response.headers["Content-Disposition"].startswith(
+        "attachment; filename=danh_sach_thanh_vien_"
+    )
+    assert response.headers["Content-Disposition"].endswith(".xlsx")
+    assert len(response.data) > 1024
 
 
 @pytest.mark.db_integration

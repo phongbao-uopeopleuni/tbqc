@@ -190,6 +190,123 @@ def test_expected_actions_fixture_tracks_step6_scope():
         "CREATE_SPOUSE",
         "UPDATE_SPOUSE",
         "DELETE_SPOUSE",
+        "BACKUP_CREATE_APP",
+        "BACKUP_CREATE_ADMIN",
+        "BULK_UPDATE_BRANCH",
+        "BULK_UPDATE_SLL",
+        "SYNC_GENEALOGY",
     ]
     assert "CREATE_USER" not in EXPECTED_ACTIONS["known_gaps"]
     assert "UPDATE_SPOUSE" not in EXPECTED_ACTIONS["known_gaps"]
+    assert "BACKUP_CREATE_APP" not in EXPECTED_ACTIONS["known_gaps"]
+    assert "SYNC_GENEALOGY" not in EXPECTED_ACTIONS["known_gaps"]
+
+
+@pytest.mark.db_integration
+def test_backup_create_app_emits_audit(db_client, test_db_cursor, monkeypatch):
+    monkeypatch.setenv("MEMBERS_PASSWORD", "test-backup-app-pw")
+
+    import scripts.backup_database as bdb
+
+    monkeypatch.setattr(
+        bdb,
+        "create_backup",
+        lambda **kw: {
+            "success": True,
+            "backup_filename": "tbqc_backup_20260522_120000.sql",
+            "file_size": 1024,
+            "timestamp": "2026-05-22T12:00:00",
+        },
+    )
+
+    resp = db_client.post("/api/admin/backup", json={"password": "test-backup-app-pw"})
+    assert resp.status_code == 200
+    assert resp.get_json()["success"] is True
+    assert _count_action(test_db_cursor, "BACKUP_CREATE_APP") == 1
+
+
+@pytest.mark.db_integration
+def test_backup_create_admin_emits_audit(db_client, test_db_cursor, monkeypatch, tmp_path):
+    _insert_admin_user(test_db_cursor)
+    _set_admin_session(db_client)
+
+    import admin.backup_routes as backup_mod
+
+    monkeypatch.setattr(backup_mod, "_BACKUPS_DIR", tmp_path)
+
+    class _FakeResult:
+        returncode = 0
+        stderr = ""
+
+    monkeypatch.setattr(backup_mod.subprocess, "run", lambda *a, **kw: _FakeResult())
+
+    resp = db_client.post("/admin/api/backup")
+    assert resp.status_code == 200
+    assert resp.get_json()["success"] is True
+    assert _count_action(test_db_cursor, "BACKUP_CREATE_ADMIN") == 1
+
+
+@pytest.mark.db_integration
+def test_bulk_update_branch_emits_audit(db_client, test_db_cursor, monkeypatch):
+    import io
+    import services.members_service as ms_mod
+
+    monkeypatch.setattr(ms_mod, "get_members_password", lambda: "test-branch-pw")
+
+    with db_client.session_transaction() as sess:
+        sess["members_gate_ok"] = True
+
+    # CSV with correct headers but no data rows — triggers the early-success path
+    csv_bytes = "ID,Nhánh\n".encode("utf-8")
+
+    resp = db_client.post(
+        "/api/members/bulk-update-branch",
+        data={"password": "test-branch-pw", "file": (io.BytesIO(csv_bytes), "update.csv")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["success"] is True
+    assert body["updated_count"] == 0
+    assert _count_action(test_db_cursor, "BULK_UPDATE_BRANCH") == 1
+
+
+@pytest.mark.db_integration
+def test_bulk_update_sll_emits_audit(db_client, test_db_cursor, monkeypatch):
+    import io
+    import services.members_service as ms_mod
+
+    monkeypatch.setattr(ms_mod, "get_members_password", lambda: "test-sll-pw")
+
+    with db_client.session_transaction() as sess:
+        sess["members_gate_ok"] = True
+
+    # CSV with ID header only — rows_to_process stays empty, loop skipped
+    csv_bytes = "ID\n".encode("utf-8")
+
+    resp = db_client.post(
+        "/api/members/bulk-update-sll",
+        data={"password": "test-sll-pw", "file": (io.BytesIO(csv_bytes), "update.csv")},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["success"] is True
+    assert body["updated_count"] == 0
+    assert _count_action(test_db_cursor, "BULK_UPDATE_SLL") == 1
+
+
+@pytest.mark.db_integration
+def test_sync_genealogy_emits_audit(db_client, test_db_cursor, monkeypatch):
+    import requests as _requests
+    from unittest.mock import MagicMock
+
+    mock_response = MagicMock()
+    mock_response.json.return_value = []
+    mock_response.raise_for_status.return_value = None
+    monkeypatch.setattr(_requests, "get", lambda *a, **kw: mock_response)
+
+    resp = db_client.post("/api/genealogy/sync")
+    assert resp.status_code == 200
+    assert resp.get_json()["success"] is True
+    assert _count_action(test_db_cursor, "SYNC_GENEALOGY") == 1

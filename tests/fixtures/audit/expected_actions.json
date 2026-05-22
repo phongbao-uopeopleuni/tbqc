@@ -7,15 +7,15 @@
     "DELETE_USER",
     "CREATE_SPOUSE",
     "UPDATE_SPOUSE",
-    "DELETE_SPOUSE"
+    "DELETE_SPOUSE",
+    "BACKUP_CREATE_APP",
+    "BACKUP_CREATE_ADMIN",
+    "BULK_UPDATE_BRANCH",
+    "BULK_UPDATE_SLL",
+    "SYNC_GENEALOGY"
   ],
   "known_gaps": {
     "PROCESS_EDIT_REQUEST": "admin_routes.api_process_request mutates edit_requests but does not call log_activity",
-    "RESET_PASSWORD": "admin_routes.api_reset_password mutates users but does not call log_activity",
-    "BACKUP_CREATE_APP": "app.create_backup_api can mutate filesystem without audit baseline yet",
-    "BACKUP_CREATE_ADMIN": "admin_routes.admin backup endpoint has no audit emit",
-    "BULK_UPDATE_BRANCH": "blueprints.members_portal.bulk_update_members_branch has no audit emit",
-    "BULK_UPDATE_SLL": "blueprints.members_portal.bulk_update_members_sll has no audit emit",
-    "SYNC_GENEALOGY": "blueprints.family_tree.sync_genealogy_from_members has no audit emit"
+    "RESET_PASSWORD": "admin_routes.api_reset_password mutates users but does not call log_activity"
   }
 }
