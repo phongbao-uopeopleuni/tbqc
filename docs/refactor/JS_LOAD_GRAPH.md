@@ -23,6 +23,7 @@ Critical DOM IDs:    id ma JS file include trong template query bang getElementB
 |---|---|
 | `device-detection.js` | `DeviceDetection` |
 | `admin-code-graph.js` | `reloadCodeGraph` |
+| `admin-logs.js` | `openResetLogsModal`, `closeResetLogsModal`, `confirmResetLogs`, `applyFilters`, `clearFilters`, `changeLogsPerPage`, `previousPage`, `nextPage` |
 | `family-tree-core.js` | `DEBUG_FAMILY_TREE`, `DEBUG_TREE`, `childrenMap`, `compareSiblingPersonIds`, `familyGraph`, `founderId`, `getBirthSortKey`, `graph`, `marriagesMap`, `nameToIdsMap`, `parentMap`, `personMap` |
 | `family-tree-family-renderer.js` | `renderFamilyNode` |
 | `family-tree-family-ui.js` | `CONNECTOR_GENERATION_PALETTE`, `FAMILY_UI_SCRIPT_STARTED`, `applyGenealogyDefaultView`, `applyTreeMinZoomCentered`, `applyZoom`, `buildFamilyTree`, `createNodeElement`, `currentLevelDensityMap`, `destroyTreePanzoom`, `familyTreeDiv`, `fitTreeToView`, `getGenealogyBranchMode`, `getGenealogyDisplayMaxGen`, `getGenerationColor`, `initTreePanzoom`, `pruneFamilyTreeForFocus`, `refreshTree`, `renderFamilyDefaultTree`, `renderFamilyFocusTree`, `renderFamilyNode`, `scheduleGenealogyTreeFitRetries`, `selectPerson` |
@@ -309,12 +310,23 @@ Inline scripts:
 ### templates/admin/logs.html
 
 ```
+Script src order:
+  L130: /static/js/admin-logs.js
+
 Inline scripts:
-  L133-580: 448 lines  — activity log table, filter, reset
+  (none)
 
-(no external JS)
+window.* set by admin-logs.js:
+  openResetLogsModal, closeResetLogsModal, confirmResetLogs, applyFilters,
+  clearFilters, changeLogsPerPage, previousPage, nextPage
 
-Phase 4 candidate split: L133-580 -> static/js/admin-logs.js
+Critical DOM IDs:
+  activityLogsList, logsPaginationInfo, prevPageBtn, nextPageBtn, filterAction,
+  filterTargetType, filterUserId, logsPerPage, statPvMonth, statPvToday,
+  statLogBytes, resetLogsModal, resetLogsConfirmInput, resetLogsError,
+  resetLogsResult, btnConfirmResetLogs
+
+Phase 4.3 split completed: old L133-580 inline script -> static/js/admin-logs.js
 ```
 
 ### templates/admin/users.html
