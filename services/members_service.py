@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Members password and admin backup API handlers."""
+"""Members password, admin backup API handlers, and members list service."""
 import logging
 import os
 from pathlib import Path
@@ -132,3 +132,144 @@ def download_backup(filename):
     except Exception as e:
         logger.error(f"Error downloading backup: {e}", exc_info=True)
         return (jsonify({"success": False, "error": f"Lỗi: {str(e)}"}), 500)
+
+
+def fetch_members_list():
+    """
+    Lấy danh sách thành viên đầy đủ (không cache).
+    Dùng bởi export_members_excel và các caller cần raw list.
+    Returns (list of member dicts, None) hoặc (None, error_message).
+    """
+    from db import get_db_connection
+    from mysql.connector import Error as MySqlError
+    from services.person_service import load_relationship_data
+
+    connection = None
+    cursor = None
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return (None, 'Không thể kết nối database')
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT COLUMN_NAME FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons'
+            AND COLUMN_NAME IN ('csv_id', 'personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'place_of_death', 'occupation')
+        """)
+        _col_rows = cursor.fetchall()
+        available_columns = set()
+        for row in _col_rows:
+            col = row.get('COLUMN_NAME') or row.get('column_name') or ''
+            if col:
+                available_columns.add(str(col).strip())
+
+        # Nhánh: ưu tiên persons.branch_name nếu có; nếu không thì join branches qua branch_id
+        has_branch_name_col = False
+        has_branch_id = False
+        has_branches_table = False
+        try:
+            cursor.execute("""
+                SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons' AND COLUMN_NAME = 'branch_name'
+                LIMIT 1
+            """)
+            has_branch_name_col = bool(cursor.fetchone())
+            cursor.execute("""
+                SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'persons' AND COLUMN_NAME = 'branch_id'
+                LIMIT 1
+            """)
+            has_branch_id = bool(cursor.fetchone())
+            cursor.execute("""
+                SELECT TABLE_NAME FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'branches'
+                LIMIT 1
+            """)
+            has_branches_table = bool(cursor.fetchone())
+        except Exception as e:
+            logger.warning(f'Could not detect branch schema (fetch_members_list): {e}')
+            has_branch_name_col = False
+            has_branch_id = False
+            has_branches_table = False
+
+        select_fields = [
+            'p.person_id', 'p.father_mother_id AS fm_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status',
+            'p.generation_level AS generation_number', 'p.birth_date_solar', 'p.birth_date_lunar',
+            'p.death_date_solar', 'p.death_date_lunar', 'p.grave_info AS grave'
+        ]
+        select_fields.append('p.place_of_death' if 'place_of_death' in available_columns else 'NULL AS place_of_death')
+        select_fields.append('p.personal_image_url AS personal_image_url' if 'personal_image_url' in available_columns else 'p.personal_image AS personal_image_url' if 'personal_image' in available_columns else 'NULL AS personal_image_url')
+        select_fields.append('p.biography' if 'biography' in available_columns else 'NULL AS biography')
+        select_fields.append('p.academic_rank' if 'academic_rank' in available_columns else 'NULL AS academic_rank')
+        select_fields.append('p.academic_degree' if 'academic_degree' in available_columns else 'NULL AS academic_degree')
+        select_fields.append('p.phone' if 'phone' in available_columns else 'NULL AS phone')
+        select_fields.append('p.email' if 'email' in available_columns else 'NULL AS email')
+        select_fields.append('p.occupation' if 'occupation' in available_columns else 'NULL AS occupation')
+        select_fields.append('p.csv_id' if 'csv_id' in available_columns else 'NULL AS csv_id')
+        if has_branch_name_col:
+            select_fields.append('p.branch_name AS branch_name')
+        else:
+            select_fields.append('b.branch_name AS branch_name' if (has_branch_id and has_branches_table) else 'NULL AS branch_name')
+        cursor.execute(f"""
+            SELECT {', '.join(select_fields)}
+            FROM persons p
+            {'LEFT JOIN branches b ON p.branch_id = b.branch_id' if (has_branch_id and has_branches_table) else ''}
+            ORDER BY COALESCE(p.generation_level, 999) ASC,
+                CASE WHEN p.person_id LIKE 'P-%' AND SUBSTRING(p.person_id, 3) REGEXP '^[0-9]+-[0-9]+$'
+                    THEN CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(p.person_id, '-', 2), '-', -1) AS UNSIGNED) ELSE 999999 END ASC,
+                CASE WHEN p.person_id LIKE 'P-%' AND SUBSTRING(p.person_id, 3) REGEXP '^[0-9]+-[0-9]+$'
+                    THEN CAST(SUBSTRING_INDEX(p.person_id, '-', -1) AS UNSIGNED) ELSE 999999 END ASC,
+                p.person_id ASC, p.full_name ASC
+        """)
+        persons = cursor.fetchall()
+        relationship_data = load_relationship_data(cursor)
+        parent_data = relationship_data['parent_data']
+        spouse_data_from_table = relationship_data['spouse_data_from_table']
+        spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
+        spouse_data_from_csv = relationship_data['spouse_data_from_csv']
+        children_map = relationship_data['children_map']
+        siblings_map = relationship_data['siblings_map']
+        members = []
+        for person in persons:
+            person_id = person['person_id']
+            rel = parent_data.get(person_id, {'father_name': None, 'mother_name': None})
+            spouse_names = spouse_data_from_table.get(person_id) or spouse_data_from_marriages.get(person_id) or spouse_data_from_csv.get(person_id) or []
+            siblings = siblings_map.get(person_id, [])
+            children = children_map.get(person_id, [])
+            member = {
+                'person_id': person_id, 'csv_id': person.get('csv_id') or person_id, 'fm_id': person.get('fm_id'), 'full_name': person.get('full_name'),
+                'alias': person.get('alias'), 'gender': person.get('gender'), 'status': person.get('status'),
+                'generation_number': person.get('generation_number'),
+                'birth_date_solar': str(person['birth_date_solar']) if person.get('birth_date_solar') else None,
+                'birth_date_lunar': str(person['birth_date_lunar']) if person.get('birth_date_lunar') else None,
+                'death_date_solar': str(person['death_date_solar']) if person.get('death_date_solar') else None,
+                'death_date_lunar': str(person['death_date_lunar']) if person.get('death_date_lunar') else None,
+                'grave': person.get('grave'), 'grave_info': person.get('grave'), 'place_of_death': person.get('place_of_death'),
+                'branch_name': person.get('branch_name'),
+                'father_name': rel.get('father_name'), 'mother_name': rel.get('mother_name'),
+                'spouses': '; '.join(spouse_names) if spouse_names else None,
+                'siblings': '; '.join(siblings) if siblings else None,
+                'children': '; '.join(children) if children else None,
+                'personal_image_url': person.get('personal_image_url'), 'biography': person.get('biography'),
+                'academic_rank': person.get('academic_rank'), 'academic_degree': person.get('academic_degree'),
+                'phone': person.get('phone'), 'email': person.get('email'), 'occupation': person.get('occupation')
+            }
+            members.append(member)
+        return (members, None)
+    except MySqlError as e:
+        logger.error(f'Error in fetch_members_list: {e}', exc_info=True)
+        return (None, str(e))
+    except Exception as e:
+        logger.error(f'Unexpected error in fetch_members_list: {e}', exc_info=True)
+        return (None, str(e))
+    finally:
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if connection and getattr(connection, 'is_connected', lambda: False)():
+            try:
+                connection.close()
+            except Exception:
+                pass
