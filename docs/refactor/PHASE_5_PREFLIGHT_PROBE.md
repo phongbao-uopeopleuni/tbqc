@@ -20,7 +20,7 @@ Phase 5 can start with characterization and read-only work, but P0 mutation work
 | `testcontainers[mysql]` importable | `python -c "from testcontainers.mysql import MySqlContainer; print('testcontainers mysql import ok')"` -> `testcontainers mysql import ok` | PASS |
 | DB integration collection | `python -m pytest --collect-only -q -m db_integration` -> `13/398 tests collected (385 deselected)` | PASS |
 | Local restore drill | `docs/refactor/BACKUP_RESTORE_DRILL.md` records 2026-05-21 local synthetic restore pass, `persons_count = 1188` | PASS local |
-| Production backup parity drill | `docs/refactor/BACKUP_RESTORE_DRILL.md` still lists production backup as pending | BLOCKER for mutation |
+| Production backup parity drill | `tbqc_backup_20260522_064546.sql` restored via testcontainer 2026-05-22; persons_count=1188, 20 tables, sample_non_null=True | PASS — blocker resolved |
 | Full DB integration execution | Not run in this probe | PENDING before mutation |
 
 ## DB integration inventory
