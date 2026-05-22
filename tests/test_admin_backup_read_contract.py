@@ -74,11 +74,11 @@ def test_backup_routes_backups_dir_points_to_repo_root():
 
 
 # ---------------------------------------------------------------------------
-# list_backups_api — không có auth, accessible publicly (behavior gốc)
+# list_backups_api — auth guard (security fix: endpoint yêu cầu login)
 # ---------------------------------------------------------------------------
 
-def test_list_backups_api_accessible_without_auth(flask_app, monkeypatch):
-    """list_backups_api không có @permission_required — phải accessible, không trả 403"""
+def test_list_backups_api_requires_auth(flask_app, monkeypatch):
+    """list_backups_api phải trả 401/302 khi không có session."""
     def fake_list():
         from flask import jsonify
         return jsonify({'success': True, 'backups': [], 'count': 0})
@@ -86,14 +86,11 @@ def test_list_backups_api_accessible_without_auth(flask_app, monkeypatch):
     monkeypatch.setattr(backup_routes, '_svc_list_backups_api', fake_list)
     client = flask_app.test_client()
     resp = client.get('/api/admin/backups')
-    assert resp.status_code == 200
-    body = resp.get_json()
-    assert body['success'] is True
-    assert 'backups' in body
+    assert resp.status_code in (302, 401, 403)
 
 
 def test_list_backups_api_success_shape(flask_app, monkeypatch):
-    """Shape: {success, backups: [...], count: N}"""
+    """Shape: {success, backups: [...], count: N} — yêu cầu admin session."""
     fake_data = [
         {'filename': 'tbqc_backup_20260521_120000.sql', 'size': 1024,
          'size_mb': 0.0, 'created_at': '2026-05-21T12:00:00'},
@@ -104,7 +101,7 @@ def test_list_backups_api_success_shape(flask_app, monkeypatch):
         return jsonify({'success': True, 'backups': fake_data, 'count': 1})
 
     monkeypatch.setattr(backup_routes, '_svc_list_backups_api', fake_list)
-    client = flask_app.test_client()
+    client = _patch_admin(monkeypatch, flask_app)
     resp = client.get('/api/admin/backups')
     assert resp.status_code == 200
     body = resp.get_json()
@@ -113,8 +110,20 @@ def test_list_backups_api_success_shape(flask_app, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# download_backup — service-level validation (tên không hợp lệ → 400)
+# download_backup — auth guard + service-level validation
 # ---------------------------------------------------------------------------
+
+def test_download_backup_requires_auth(flask_app, monkeypatch):
+    """download_backup phải trả 401/302 khi không có session."""
+    def fake_download(filename):
+        from flask import jsonify
+        return (jsonify({'success': False, 'error': 'Backup file not found'}), 404)
+
+    monkeypatch.setattr(backup_routes, '_svc_download_backup', fake_download)
+    client = flask_app.test_client()
+    resp = client.get('/api/admin/backup/tbqc_backup_20260521_120000.sql')
+    assert resp.status_code in (302, 401, 403)
+
 
 def test_download_backup_invalid_filename(flask_app, monkeypatch):
     """download_backup: tên không khớp tbqc_backup_*.sql → 400 từ service"""
@@ -125,7 +134,7 @@ def test_download_backup_invalid_filename(flask_app, monkeypatch):
         return (jsonify({'success': False, 'error': 'Backup file not found'}), 404)
 
     monkeypatch.setattr(backup_routes, '_svc_download_backup', fake_download)
-    client = flask_app.test_client()
+    client = _patch_admin(monkeypatch, flask_app)
     resp = client.get('/api/admin/backup/evil.exe')
     assert resp.status_code == 400
     body = resp.get_json()
@@ -139,6 +148,6 @@ def test_download_backup_valid_name_not_found(flask_app, monkeypatch):
         return (jsonify({'success': False, 'error': 'Backup file not found'}), 404)
 
     monkeypatch.setattr(backup_routes, '_svc_download_backup', fake_download)
-    client = flask_app.test_client()
+    client = _patch_admin(monkeypatch, flask_app)
     resp = client.get('/api/admin/backup/tbqc_backup_20260521_120000.sql')
     assert resp.status_code == 404

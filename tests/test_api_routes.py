@@ -208,7 +208,7 @@ def test_backup_routes_need_password_or_500(client):
     assert r.status_code in (403, 500)
 
     r2 = client.get("/api/admin/backups")
-    assert r2.status_code in (200, 500)
+    assert r2.status_code in (302, 401, 403)
 
 
 def test_list_registered_routes_sample(flask_app):

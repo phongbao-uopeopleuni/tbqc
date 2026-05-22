@@ -120,11 +120,13 @@ def register_admin_backup_api_routes(app):
     """list_backups_api + download_backup — từ app.py (url_map #109-110)"""
 
     @app.route('/api/admin/backups', methods=['GET'])
+    @permission_required('canViewDashboard')
     def list_backups_api():
         """API liệt kê các backup có sẵn"""
         return _svc_list_backups_api()
 
     @app.route('/api/admin/backup/<filename>', methods=['GET'])
+    @permission_required('canViewDashboard')
     def download_backup(filename):
         """API download file backup"""
         return _svc_download_backup(filename)
