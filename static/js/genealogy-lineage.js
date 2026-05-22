@@ -66,7 +66,7 @@ function normalizeName(str) {
     // Chuẩn hóa tất cả các loại gạch nối về khoảng trắng
     // \u2010-\u2015: các loại gạch nối Unicode (‑, ‒, –, —, ―)
     // \-: dấu gạch nối thông thường
-    .replace(/[\u2010-\u2015\-]/g, ' ')
+    .replace(/[\u2010-\u2015-]/g, ' ')
     // Gom nhiều khoảng trắng về 1
     .replace(/\s+/g, ' ')
     .trim();
