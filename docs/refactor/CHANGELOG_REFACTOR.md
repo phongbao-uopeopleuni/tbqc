@@ -18,7 +18,38 @@
 | 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
 | 3 | App Bootstrap Shrink | ✅ Closeout audit PASS | `codex/phase-3-bootstrap-shrink` |
 | 4 | JS Refactor | 🟡 Preflight opened | `codex/phase-4-js-preflight` |
-| 5 | Gallery + Members High-risk | ⏳ Pending | - |
+| 5 | Gallery + Members High-risk | Preflight probe logged; mutation blocked until backup parity + DB gate | `codex/phase-4-1-lint-hygiene` |
+
+---
+
+## Phase 5 Preflight Probe - Gallery + Members (2026-05-22)
+
+**Branch:** `codex/phase-4-1-lint-hygiene`
+**Trang thai:** docs-only probe logged; no Gallery/Members mutation code changed.
+**Preflight doc:** `docs/refactor/PHASE_5_PREFLIGHT_PROBE.md`
+
+### Scope
+
+| Area | Decision |
+|---|---|
+| DB integration readiness | Docker + `testcontainers[mysql]` import verified; 13 DB integration tests collect |
+| Backup readiness | Local synthetic restore drill pass carried forward; production backup parity drill still pending |
+| Gallery | Read-only characterization can start; album/grave mutation/upload/delete remains P0-gated |
+| Members | Gate/read/export characterization can start; bulk update/delete/backup remains P0-gated |
+
+### Gate evidence
+
+| Gate | Command | Ket qua |
+|---|---|---|
+| Docker | `docker version --format 'Client={{.Client.Version}} Server={{.Server.Version}}'` | `Client=29.4.3 Server=29.4.3` |
+| Testcontainers import | `python -c "from testcontainers.mysql import MySqlContainer; print('testcontainers mysql import ok')"` | `testcontainers mysql import ok` |
+| DB integration collect | `python -m pytest --collect-only -q -m db_integration` | `13/398 tests collected (385 deselected)` |
+
+### Blockers before mutation
+
+- Production backup parity restore drill is still pending in `docs/refactor/BACKUP_RESTORE_DRILL.md`.
+- Full DB integration execution must pass before DB write/file write/delete/bulk update work.
+- Audit matrix still records missing audit emit/baseline gaps for backup and members bulk update.
 
 ---
 
