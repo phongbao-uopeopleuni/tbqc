@@ -17,8 +17,32 @@
 | 1 | Admin Vertical Slices | ✅ Done | `master` (commit `1df0a34`) |
 | 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
 | 3 | App Bootstrap Shrink | ✅ Closeout audit PASS | `codex/phase-3-bootstrap-shrink` |
-| 4 | JS Refactor | ⏳ Pending | - |
+| 4 | JS Refactor | 🟡 Preflight opened | `codex/phase-4-js-preflight` |
 | 5 | Gallery + Members High-risk | ⏳ Pending | - |
+
+---
+
+## Phase 4 Preflight - JS Refactor Risk Gates (2026-05-22)
+
+**Branch:** `codex/phase-4-js-preflight`
+**Trang thai:** docs-only preflight opened; no runtime JS/CSS/template edits.
+**Preflight doc:** `docs/refactor/PHASE_4_PREFLIGHT.md`
+
+### Scope
+
+| Area | Decision |
+|---|---|
+| Lint baseline | `0 errors, 71 warnings` carried forward from Phase 3 closeout |
+| First code PR shape | Tiny risk-gated JS cleanup only |
+| Delete policy | No delete from `no-unused-vars` without `rg` across `static/js` + `templates` and `JS_LOAD_GRAPH.md` check |
+| Rollback | One tiny commit per JS cleanup; `git revert <sha>` restores behavior |
+
+### Required gates before first JS edit
+
+```powershell
+npm run lint
+pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_frontend_cdn_versions.py
+```
 
 ---
 
