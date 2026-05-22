@@ -46,6 +46,7 @@ export default [
         html2pdf: 'readonly', // html2pdf.bundle.min.js (PDF export)
         html2canvas: 'readonly', // html2canvas (PDF fallback)
         L: 'readonly', // Leaflet (grave map)
+        Quill: 'readonly', // Quill editor (admin activities/editor pages)
 
         // === UMD guard (module.exports check trong vài file) ===
         module: 'readonly',

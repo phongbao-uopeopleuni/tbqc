@@ -23,6 +23,7 @@ Critical DOM IDs:    id ma JS file include trong template query bang getElementB
 |---|---|
 | `device-detection.js` | `DeviceDetection` |
 | `admin-code-graph.js` | `reloadCodeGraph` |
+| `admin-activities.js` | `cleanText`, `sanitizeHtmlForQuill`, `fetchJson`, `escapeHtml`, `showMessage`, `checkAuth`, `loadPosts`, `editPost`, `deletePost`, `resetForm`, `publishNow`, `handleThumbnailUpload`, `handleImagesUpload`, `updateImagesPreview`, `updateImagesCount` |
 | `admin-logs.js` | `openResetLogsModal`, `closeResetLogsModal`, `confirmResetLogs`, `applyFilters`, `clearFilters`, `changeLogsPerPage`, `previousPage`, `nextPage` |
 | `admin-users.js` | `fetchJson`, `showMessage`, `loadUsers`, `getCurrentUser`, `openAddUserModal`, `closeUserModal`, `editUser`, `deleteUser`, `loadActivityLogs`, `formatLogTimestamp`, `formatDateTime`, `formatLogDiff`, `applyFilters`, `clearFilters`, `changeLogsPerPage`, `previousPage`, `nextPage`, `toggleAutoRefresh`, `syncTbqcAccounts` |
 | `family-tree-core.js` | `DEBUG_FAMILY_TREE`, `DEBUG_TREE`, `childrenMap`, `compareSiblingPersonIds`, `familyGraph`, `founderId`, `getBirthSortKey`, `graph`, `marriagesMap`, `nameToIdsMap`, `parentMap`, `personMap` |
@@ -284,13 +285,25 @@ Inline scripts:
 ```
 Script src order:
   L346: https://cdn.quilljs.com/1.3.6/quill.js  [CDN]
+  L347: /static/js/admin-activities.js
 
 Inline scripts:
-  L347-1039: 693 lines  — quill editor + activity CRUD
+  (none)
 
-Phase 4 candidate: split inline -> static/js/admin-activities.js
+window.* set by admin-activities.js:
+  cleanText, sanitizeHtmlForQuill, fetchJson, escapeHtml, showMessage,
+  checkAuth, loadPosts, editPost, deletePost, resetForm, publishNow,
+  handleThumbnailUpload, handleImagesUpload, updateImagesPreview,
+  updateImagesCount
+
+Critical DOM IDs:
+  contentEditor, message, postsList, activityId, title, summary, category,
+  content, thumbnail, status, formTitle, submitBtn, thumbnailPreview,
+  previewImg, activityForm, thumbnailFile, imagesFile, imagesPreview,
+  imagesCount
+
+Phase 4.3 split completed: old L347-1039 inline script -> static/js/admin-activities.js
 ```
-
 ### templates/admin/activities_gate.html
 
 ```
