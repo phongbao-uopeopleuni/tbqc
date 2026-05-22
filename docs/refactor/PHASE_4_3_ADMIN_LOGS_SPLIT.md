@@ -3,6 +3,7 @@
 **Date:** 2026-05-22
 **Type:** `[move]`
 **Scope:** `templates/admin/logs.html` inline script -> `static/js/admin-logs.js`
+**Runtime commit:** `03aa1ce`
 
 ## Preflight
 
@@ -70,5 +71,5 @@ Additional required smoke covered:
 After this phase is committed, rollback with:
 
 ```powershell
-git revert <phase-4.3-commit-sha>
+git revert 03aa1ce
 ```
