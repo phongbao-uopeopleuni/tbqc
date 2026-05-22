@@ -2289,30 +2289,6 @@
      * Render family tree vào Activities section (Đời 1-5) - Horizontal Layout
      */
 
-// Generic fetch helper to ensure JSON responses and better error logging
-    async function fetchJson(url, options) {
-      const res = await fetch(url, options);
-      const contentType = res.headers.get('Content-Type') || '';
-      const text = await res.text();
-
-      if (!res.ok) {
-        console.error('HTTP error for', url, res.status, text);
-        throw new Error(`HTTP ${res.status} when fetching ${url}`);
-      }
-
-      if (!contentType.includes('application/json')) {
-        console.error('Non-JSON response for', url, 'contentType =', contentType, 'body =', text.slice(0, 300));
-        throw new Error(`Expected JSON but got non-JSON response from ${url}`);
-      }
-
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        console.error('JSON parse error for', url, 'body =', text.slice(0, 300));
-        throw e;
-      }
-    }
-
 // ============================================
     // INTERACTIVE GENEALOGY TREE
     // ============================================
