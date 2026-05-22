@@ -16,15 +16,54 @@
 | 0d | Observability & Performance Gates | ✅ Done | `docs/phase-0a-skeleton` |
 | 1 | Admin Vertical Slices | ✅ Done | `master` (commit `1df0a34`) |
 | 2 | Service Refactor | ✅ Done — 2.1–2.8 pass, mutations deferred P0 gate (separate PR) | `codex/phase-2-service-refactor` → PR pending merge |
-| 3 | App Bootstrap Shrink | ⏳ Pending | - |
+| 3 | App Bootstrap Shrink | ✅ Closeout audit PASS | `codex/phase-3-bootstrap-shrink` |
 | 4 | JS Refactor | ⏳ Pending | - |
 | 5 | Gallery + Members High-risk | ⏳ Pending | - |
 
 ---
 
+## Phase 3 Closeout - App Bootstrap Shrink (2026-05-22)
+
+**Branch:** `codex/phase-3-bootstrap-shrink`
+**Trang thai:** PASS - `app.py` con 291 lines, runtime contract giu nguyen.
+**Audit detail:** `docs/refactor/PHASE_3_CLOSEOUT_AUDIT.md`
+
+### Scope
+
+| Area | File |
+|---|---|
+| Health + member stats routes | `services/infra_api_routes.py` |
+| External posts routes | `services/external_posts_service.py` |
+| Error handlers | `app_errors.py` |
+| Runtime route dump tooling | `scripts/list_routes.py` |
+
+### Gate evidence
+
+| Gate | Command | Ket qua |
+|---|---|---|
+| Runtime route count | `python -c "import app; print(len(list(app.app.url_map.iter_rules())), 'routes')"` | 117 routes |
+| Contract gate | `pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py` | 8 passed |
+| Focused API/security gate | `pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_endpoint_names.py tests/test_api_routes.py tests/test_health_and_cache_security.py tests/test_error_response_sanitizer.py tests/test_members_gate_fixed_accounts.py` | 60 passed, 2 skipped |
+| P0 DB contract | `pytest -x -q tests/test_p0_contract.py` | 5 passed |
+| Full non-DB regression | `pytest -x -q -m "not db_integration"` | 382 passed, 3 skipped, 13 deselected |
+| JS Phase 4 preflight | `npm run lint` | 0 errors, 71 pre-existing warnings |
+
+### Rollback
+
+Before commit:
+
+```powershell
+git restore app.py services/external_posts_service.py scripts/list_routes.py docs/refactor/CHANGELOG_REFACTOR.md
+Remove-Item app_errors.py, services/infra_api_routes.py, docs/refactor/PHASE_3_CLOSEOUT_AUDIT.md
+```
+
+After commit: `git revert <phase-3-closeout-sha>`.
+
+---
+
 ## Phase 2 Closeout — Final Audit (2026-05-22)
 
-**Ngay closeout:** 2026-05-22  
+**Ngay closeout:** 2026-05-22
 **Branch:** `codex/phase-2-service-refactor`  
 **Trang thai:** ✅ PASS — san sang merge vao master, khong co bug ton dong.  
 **Commit HEAD:** `7dbd47a` (bao gồm closeout log + PHASE_3_PREFLIGHT.md)  

@@ -7,7 +7,7 @@ from email.utils import parsedate_to_datetime
 
 import requests
 from bs4 import BeautifulSoup
-from flask import request
+from flask import jsonify, request
 
 logger = logging.getLogger(__name__)
 
@@ -93,3 +93,74 @@ def _fetch_npt_council_rss(limit: int = 15):
             'is_new': _npt_post_is_new(pub),
         })
     return out
+
+
+def register_external_posts_routes(app):
+    @app.route('/api/external-posts', methods=['GET'])
+    def get_external_posts():
+        """
+        Tin Hoạt động Hội đồng NPT VN từ RSS nguyenphuoctoc.info (cache 30 phút).
+        """
+        now = datetime.now(timezone.utc)
+        cache = external_posts_cache
+        try:
+            limit = min(max(int(request.args.get('limit', 15)), 1), 50)
+        except (TypeError, ValueError):
+            limit = 15
+        if cache['data'] is not None and cache['timestamp'] is not None:
+            age = now - cache['timestamp']
+            if age < cache['cache_duration']:
+                return jsonify({'success': True, 'data': cache['data'], 'cached': True, 'source': NPT_COUNCIL_RSS_URL})
+        try:
+            data = _fetch_npt_council_rss(limit=limit)
+            cache['data'] = data
+            cache['timestamp'] = now
+            return jsonify({'success': True, 'data': data, 'cached': False, 'source': NPT_COUNCIL_RSS_URL})
+        except Exception as e:
+            logger.exception('get_external_posts: RSS fetch failed: %s', e)
+            if cache['data']:
+                return jsonify({
+                    'success': True,
+                    'data': cache['data'],
+                    'cached': True,
+                    'stale': True,
+                    'warning': 'Không tải được RSS mới; đang dùng dữ liệu cache.',
+                    'source': NPT_COUNCIL_RSS_URL,
+                })
+            return jsonify({'success': False, 'error': 'Không thể tải tin từ Hội đồng NPT VN', 'detail': str(e)}), 502
+
+    @app.route('/api/external-posts/clear-cache', methods=['POST'])
+    def clear_external_posts_cache():
+        """Xóa cache RSS. Tùy chọn: EXTERNAL_POSTS_CACHE_SECRET + header X-External-Posts-Token."""
+        if not _external_posts_mutation_authorized():
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        external_posts_cache['data'] = None
+        external_posts_cache['timestamp'] = None
+        return jsonify({'success': True, 'message': 'Đã xóa cache external-posts'})
+
+    @app.route('/api/external-posts/refresh', methods=['GET', 'POST'])
+    def refresh_external_posts():
+        """Bỏ qua cache và tải lại RSS. Cùng quy tắc token với clear-cache khi đặt EXTERNAL_POSTS_CACHE_SECRET."""
+        if not _external_posts_mutation_authorized():
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        now = datetime.now(timezone.utc)
+        try:
+            limit = min(max(int(request.args.get('limit', 15)), 1), 50)
+        except (TypeError, ValueError):
+            limit = 15
+        try:
+            data = _fetch_npt_council_rss(limit=limit)
+            external_posts_cache['data'] = data
+            external_posts_cache['timestamp'] = now
+            return jsonify({'success': True, 'data': data, 'cached': False, 'source': NPT_COUNCIL_RSS_URL})
+        except Exception as e:
+            logger.exception('refresh_external_posts failed: %s', e)
+            if external_posts_cache['data']:
+                return jsonify({
+                    'success': True,
+                    'data': external_posts_cache['data'],
+                    'stale': True,
+                    'warning': str(e),
+                    'source': NPT_COUNCIL_RSS_URL,
+                })
+            return jsonify({'success': False, 'error': str(e)}), 502
