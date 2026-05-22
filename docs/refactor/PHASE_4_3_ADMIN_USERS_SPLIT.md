@@ -3,7 +3,7 @@
 **Date:** 2026-05-22
 **Type:** `[move]`
 **Scope:** `templates/admin/users.html` inline script -> `static/js/admin-users.js`
-**Runtime commit:** `0caaa65`
+**Runtime commit:** `a081ac7`
 
 ## Preflight
 
@@ -64,5 +64,5 @@ Manual smoke covered:
 After this phase is committed, rollback with:
 
 ```powershell
-git revert 0caaa65
+git revert a081ac7
 ```
