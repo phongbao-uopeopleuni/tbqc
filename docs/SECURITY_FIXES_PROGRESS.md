@@ -87,7 +87,7 @@
 - [x] **Fix 7.4** (NĐ13 Điều 24): `docs/dpia-tbqc.md` — DPIA đầy đủ: data inventory, risk matrix, controls mapping, kết luận chấp nhận rủi ro trung bình.
 - [x] **Fix 7.5** (NĐ13 Điều 14–17): `GET /members/my-data` (export account data, log DATA_ACCESS_REQUEST) + `POST /members/request-deletion` (log DELETION_REQUEST, rate-limited 5/hour). SHOW COLUMNS guard cho consent fields.
 
-**pytest:** *(chờ kết quả)*
+**pytest:** 495 passed, 3 skipped (baseline: 495 → Phase 7 không thêm test mới; fixtures regenerated)
 
 ## Deferred (not in this refactor)
 - M4 — Redis rate limiter (revisit khi scale horizontal)

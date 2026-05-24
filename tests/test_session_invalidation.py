@@ -60,6 +60,5 @@ def test_session_valid_when_no_pwd_change_after_login(flask_app, monkeypatch):
         sess["pwd_changed_at"] = session_time  # session mới hơn pwd change
 
     resp = client.get("/admin/dashboard")
-    # Session valid, nhưng test này không quan trọng pass assert response, vì mục đích là load_user trả về object
-    # Nên mình chỉ check status != 401/302 (hoặc nó gọi hàm get user thành công)
-    pass
+    # Session valid → user_loader trả về user, không bị redirect login
+    assert resp.status_code not in (302, 401)
