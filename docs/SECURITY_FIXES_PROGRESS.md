@@ -39,7 +39,7 @@
 
 **Tech debt ghi nhận (không block):**
 - F1: Fix 3.2 dùng post-fetch nullification thay vì SQL-level filtering
-- F2: `contact` field chưa verify có chứa PII không (low risk)
+- ~~F2: `contact` field chưa verify có chứa PII không~~ → **ĐÃ FIX 2026-05-25**: `contact` confirmed chứa SĐT, đã nullify cho non-admin tại cả `get_persons()` + `get_person()`. Test coverage thêm vào `test_person_field_filtering.py`.
 - F3: CREATE user path dùng silent-ignore thay vì `VALID_PERMISSION_KEYS` (scope ngoài spec)
 
 ## Phase 4 — Auth & Data Integrity ✅ DONE (2026-05-24)
@@ -76,7 +76,7 @@
 
 **Tech debt ghi nhận (không block):**
 - TD-1: Spec SHA cho `setup-node@v4.0.4` sai (`1e60f620b...`). Đã dùng SHA verified `49933ea5...` (v4.4.0) thay thế.
-- TD-2: `mermaid@11` trong `admin/data_management.html` chưa pin exact version — admin-only, không trong scope M7, nhưng nên fix sau.
+- ~~TD-2: `mermaid@11` trong `admin/data_management.html` chưa pin exact version~~ → **ĐÃ FIX 2026-05-25**: pin `mermaid@11.15.0` + SRI `sha384-yQ4mmBBT+...` + `crossorigin="anonymous"` + `referrerpolicy="no-referrer"`.
 
 ## Phase 7 — Legal & Compliance ✅ DONE (2026-05-24)
 *Branch: security/hardening-phase7*

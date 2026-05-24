@@ -146,6 +146,8 @@ def get_persons():
                     person['phone'] = None
                 if 'email' in person:
                     person['email'] = None
+                if 'contact' in person:  # Fix F2: contact chứa SĐT — PII, chỉ admin xem
+                    person['contact'] = None
 
         if paginated and total is not None:
             pages = int(math.ceil(total / float(per_page))) if per_page else 0
@@ -672,6 +674,8 @@ def get_person(person_id):
                         clean_person['phone'] = None
                     if 'email' in clean_person:
                         clean_person['email'] = None
+                    if 'contact' in clean_person:  # Fix F2: contact chứa SĐT — PII, chỉ admin xem
+                        clean_person['contact'] = None
 
                 return jsonify(clean_person)
             except Exception as e:
