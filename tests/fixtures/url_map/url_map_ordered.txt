@@ -4,6 +4,8 @@ POST /api/genealogy/verify-passphrase -> main.verify_genealogy_passphrase
 GET /genealogy -> main.genealogy_page
 GET /contact -> main.contact_page
 GET /documents -> main.documents_page
+GET /chinh-sach-bao-mat -> main.privacy_page
+GET /privacy-policy -> main.privacy_page
 GET /privacy -> main.privacy_page
 GET /login -> auth.login_page
 GET /admin/login-page -> auth.admin_login_page
@@ -45,6 +47,8 @@ GET /members/export/excel -> members_portal.export_members_excel
 POST /api/members/bulk-update-branch -> members_portal.bulk_update_members_branch
 GET /members/template/Template_updatetbqc.xlsx -> members_portal.download_template_update_sll
 POST /api/members/bulk-update-sll -> members_portal.bulk_update_members_sll
+GET /members/my-data -> members_portal.members_my_data
+POST /members/request-deletion -> members_portal.members_request_deletion
 GET /api/geoapify-key -> gallery.get_geoapify_api_key
 POST /api/grave/update-location -> gallery.update_grave_location
 POST /api/grave/upload-image -> gallery.upload_grave_image

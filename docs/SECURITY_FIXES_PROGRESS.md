@@ -78,12 +78,16 @@
 - TD-1: Spec SHA cho `setup-node@v4.0.4` sai (`1e60f620b...`). Đã dùng SHA verified `49933ea5...` (v4.4.0) thay thế.
 - TD-2: `mermaid@11` trong `admin/data_management.html` chưa pin exact version — admin-only, không trong scope M7, nhưng nên fix sau.
 
-## Phase 7 — Legal & Compliance 🚨
-- [ ] Fix 7.1 — Privacy Policy page
-- [ ] Fix 7.2 — Consent checkbox
-- [ ] Fix 7.3 — Data breach response procedure
-- [ ] Fix 7.4 — DPIA documentation
-- [ ] Fix 7.5 — Data subject rights endpoints
+## Phase 7 — Legal & Compliance ✅ DONE (2026-05-24)
+*Branch: security/hardening-phase7*
+
+- [x] **Fix 7.1** (NĐ13 Điều 13): Cập nhật `privacy.html` — thêm Bên kiểm soát dữ liệu "Nguyễn Phước Tộc — Phòng Tuy Biên Quậng Công", Facebook link, thời gian phản hồi 30 ngày. Thêm alias routes `/privacy-policy` + `/chinh-sach-bao-mat`.
+- [x] **Fix 7.2** (NĐ13 Điều 11): Consent notice tại `members_gate.html` (by-login consent). Consent checkbox tại admin create user modal (`admin/users.html`). `consent_at` + `consent_version` columns vào migration.
+- [x] **Fix 7.3** (NĐ13 Điều 23): `docs/data-breach-response.md` — quy trình 4 giai đoạn (0–1h containment, 1–24h assessment, 24–72h report to A05, post-72h remediation).
+- [x] **Fix 7.4** (NĐ13 Điều 24): `docs/dpia-tbqc.md` — DPIA đầy đủ: data inventory, risk matrix, controls mapping, kết luận chấp nhận rủi ro trung bình.
+- [x] **Fix 7.5** (NĐ13 Điều 14–17): `GET /members/my-data` (export account data, log DATA_ACCESS_REQUEST) + `POST /members/request-deletion` (log DELETION_REQUEST, rate-limited 5/hour). SHOW COLUMNS guard cho consent fields.
+
+**pytest:** *(chờ kết quả)*
 
 ## Deferred (not in this refactor)
 - M4 — Redis rate limiter (revisit khi scale horizontal)

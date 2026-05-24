@@ -55,6 +55,7 @@ GET /api/stats -> get_stats
 GET /api/stats/members -> api_member_stats
 GET /api/tree -> api_tree
 GET /api/tree -> family_tree.get_tree
+GET /chinh-sach-bao-mat -> main.privacy_page
 GET /contact -> main.contact_page
 GET /documents -> main.documents_page
 GET /editor -> activities.editor_page
@@ -66,8 +67,10 @@ GET /images/<path:filename> -> gallery.serve_image
 GET /login -> auth.login_page
 GET /members -> members_portal.members
 GET /members/export/excel -> members_portal.export_members_excel
+GET /members/my-data -> members_portal.members_my_data
 GET /members/template/Template_updatetbqc.xlsx -> members_portal.download_template_update_sll
 GET /privacy -> main.privacy_page
+GET /privacy-policy -> main.privacy_page
 GET /robots.txt -> serve_robots
 GET /static/<path:filename> -> static
 GET /static/images/<path:filename> -> gallery.serve_image_static
@@ -108,6 +111,7 @@ POST /api/person/<int:person_id>/sync -> persons.sync_person
 POST /api/person/<person_id>/spouses -> create_spouse
 POST /api/persons -> persons.create_person
 POST /api/upload-image -> gallery.upload_image
+POST /members/request-deletion -> members_portal.members_request_deletion
 POST /members/verify -> members_portal.members_verify
 PUT /admin/api/csv-data/<sheet_name>/<int:row_index> -> update_csv_row
 PUT /admin/api/members/<person_id> -> update_member_admin

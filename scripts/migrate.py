@@ -102,7 +102,17 @@ def run_migrations():
         ADD COLUMN IF NOT EXISTS version INT NOT NULL DEFAULT 1
     """)
     cursor.execute("UPDATE persons SET version = 1 WHERE version IS NULL")
-    
+
+    # Fix 7.2 — Consent tracking (NĐ13/2023)
+    cursor.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS consent_at TIMESTAMP NULL DEFAULT NULL
+    """)
+    cursor.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS consent_version VARCHAR(20) NULL DEFAULT NULL
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()

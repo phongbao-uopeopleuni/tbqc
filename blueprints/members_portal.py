@@ -865,3 +865,98 @@ def bulk_update_members_sll():
                 connection.close()
             except Exception:
                 pass
+
+
+# ---------------------------------------------------------------------------
+# Fix 7.5 — Data Subject Rights (NĐ13/2023, Điều 14–19)
+# ---------------------------------------------------------------------------
+
+@members_portal_bp.route('/members/my-data', methods=['GET'])
+def members_my_data():
+    """Trả về dữ liệu cá nhân của member hiện tại (quyền truy cập — Điều 14 NĐ13)."""
+    if not session.get('members_gate_ok'):
+        return jsonify({'success': False, 'error': 'Chưa đăng nhập'}), 401
+
+    username = session.get('members_gate_user', '')
+    from db import get_db_connection
+
+    connection = get_db_connection()
+    if not connection:
+        return jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500
+
+    cursor = None
+    try:
+        cursor = connection.cursor(dictionary=True)
+        # SHOW COLUMNS guard — consent columns added by Fix 7.2 migration
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'consent_at'")
+        has_consent_col = cursor.fetchone() is not None
+        consent_fields = ', consent_at, consent_version' if has_consent_col else ''
+        cursor.execute(
+            f"""SELECT user_id, username, full_name, email, role, is_active,
+                       created_at, last_login{consent_fields}
+               FROM users WHERE username = %s""",
+            (username,),
+        )
+        user = cursor.fetchone()
+
+        if user:
+            for field in ('created_at', 'last_login', 'consent_at'):
+                if user.get(field) and hasattr(user[field], 'isoformat'):
+                    user[field] = user[field].isoformat()
+
+        log_activity(
+            'DATA_ACCESS_REQUEST',
+            target_type='User',
+            target_id=username,
+            after_data={'route': '/members/my-data'},
+        )
+        return jsonify({
+            'success': True,
+            'username': username,
+            'account': user,
+            'note': (
+                'Đây là toàn bộ dữ liệu cá nhân liên kết với tài khoản của bạn. '
+                'Để yêu cầu chỉnh sửa hoặc xóa, liên hệ qua '
+                'https://www.facebook.com/PhongTuyBienQuanCong'
+            ),
+        })
+    except Exception as exc:
+        logger.error('Error in members_my_data: %s', exc, exc_info=True)
+        return jsonify({'success': False, 'error': str(exc)}), 500
+    finally:
+        try:
+            if cursor:
+                cursor.close()
+            if connection and getattr(connection, 'is_connected', lambda: False)():
+                connection.close()
+        except Exception:
+            pass
+
+
+@members_portal_bp.route('/members/request-deletion', methods=['POST'])
+@rate_limit("5 per hour")
+def members_request_deletion():
+    """Tạo yêu cầu xóa tài khoản và dữ liệu cá nhân (Điều 17 NĐ13)."""
+    if not session.get('members_gate_ok'):
+        return jsonify({'success': False, 'error': 'Chưa đăng nhập'}), 401
+
+    username = session.get('members_gate_user', '')
+    data = request.get_json(silent=True) or {}
+    reason = (data.get('reason') or '').strip()[:500]
+
+    log_activity(
+        'DELETION_REQUEST',
+        target_type='User',
+        target_id=username,
+        after_data={'reason': reason or None, 'route': '/members/request-deletion'},
+    )
+    logger.info('Deletion request submitted by member: %s', username)
+
+    return jsonify({
+        'success': True,
+        'message': (
+            'Yêu cầu xóa dữ liệu của bạn đã được ghi nhận. '
+            'Quản trị viên sẽ liên hệ và xử lý trong vòng 30 ngày. '
+            'Để theo dõi, liên hệ qua https://www.facebook.com/PhongTuyBienQuanCong'
+        ),
+    })
