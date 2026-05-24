@@ -13,7 +13,7 @@ flask-cors==5.0.1
 # 8.4.0 là bản LTS cùng dòng 8.x, không đổi protocol mặc định.
 mysql-connector-python==8.4.0
 
-bcrypt==4.1.2
+bcrypt==5.0.0
 flask-login==0.6.3
 gunicorn==23.0.0
 pytest==7.4.3
