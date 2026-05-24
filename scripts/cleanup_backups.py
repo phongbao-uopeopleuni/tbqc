@@ -19,8 +19,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BACKUP_DIR = 'backups'
-MIN_RETENTION_DAYS = 7
-MAX_RETENTION_DAYS = 30
+MIN_RETENTION_COUNT = 7   # Giữ ít nhất 7 files mới nhất bất kể tuổi đời
+MAX_RETENTION_DAYS = 30   # Xóa files > 30 ngày nếu đã có đủ MIN_RETENTION_COUNT
 
 def cleanup_backups(backup_dir=None):
     if backup_dir is None:
@@ -34,6 +34,7 @@ def cleanup_backups(backup_dir=None):
     now = time.time()
     deleted_count = 0
 
+    # Thu thập tất cả backup files và tính tuổi đời
     backups = []
     for filepath in backup_path.glob("tbqc_backup_*.sql"):
         try:
@@ -43,11 +44,14 @@ def cleanup_backups(backup_dir=None):
         except Exception as e:
             logger.warning(f"Error checking {filepath}: {e}")
 
-    # Xóa các file cũ hơn MAX_RETENTION_DAYS, giữ lại ít nhất MIN_RETENTION_DAYS
-    # Hiện tại policy nói: "enforce min 7/max 30 days retention policy"
-    # Nghĩa là xóa các file > 30 ngày.
-    
-    for filepath, age_days in backups:
+    # Sắp xếp: file mới nhất (age_days nhỏ nhất) đứng đầu
+    backups.sort(key=lambda x: x[1])
+
+    for i, (filepath, age_days) in enumerate(backups):
+        # Luôn bảo vệ MIN_RETENTION_COUNT files mới nhất
+        if i < MIN_RETENTION_COUNT:
+            continue
+        # Chỉ xóa file vừa nằm ngoài top MIN_RETENTION_COUNT VÀ già hơn MAX_RETENTION_DAYS
         if age_days > MAX_RETENTION_DAYS:
             try:
                 filepath.unlink()

@@ -67,13 +67,14 @@ def get_connection():
 
 class User(UserMixin):
     """User class cho Flask-Login với permissions"""
-    def __init__(self, user_id, username, role, full_name=None, email=None, permissions=None):
+    def __init__(self, user_id, username, role, full_name=None, email=None, permissions=None, password_changed_at=None):
         self.id = user_id
         self.username = username
         self.role = role
         self.full_name = full_name
         self.email = email
         self.permissions = permissions or {}
+        self.password_changed_at = password_changed_at
     
     def has_permission(self, permission_name):
         """Kiểm tra user có permission không"""
@@ -114,17 +115,22 @@ def get_user_by_id(user_id):
         # Check if permissions column exists
         cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
         has_permissions = cursor.fetchone() is not None
+        # Check if password_changed_at column exists
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+        has_pwd_changed = cursor.fetchone() is not None
+
+        pwd_col = ", password_changed_at" if has_pwd_changed else ""
         
         # Build SELECT query based on available columns
         if has_permissions:
-            cursor.execute("""
-                SELECT user_id, username, role, full_name, email, permissions 
+            cursor.execute(f"""
+                SELECT user_id, username, role, full_name, email, permissions{pwd_col} 
                 FROM users 
                 WHERE user_id = %s AND is_active = TRUE
             """, (user_id,))
         else:
-            cursor.execute("""
-                SELECT user_id, username, role, full_name, email
+            cursor.execute(f"""
+                SELECT user_id, username, role, full_name, email{pwd_col}
                 FROM users 
                 WHERE user_id = %s AND is_active = TRUE
             """, (user_id,))
@@ -150,7 +156,8 @@ def get_user_by_id(user_id):
                 role=user_data['role'],
                 full_name=user_data.get('full_name'),
                 email=user_data.get('email'),
-                permissions=permissions
+                permissions=permissions,
+                password_changed_at=user_data.get('password_changed_at')
             )
         return None
     except Error as e:
@@ -173,16 +180,22 @@ def get_user_by_username(username):
         cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
         has_permissions = cursor.fetchone() is not None
         
+        # Check if password_changed_at column exists
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+        has_pwd_changed = cursor.fetchone() is not None
+
+        pwd_col = ", password_changed_at" if has_pwd_changed else ""
+        
         # Build SELECT query based on available columns
         if has_permissions:
-            cursor.execute("""
-                SELECT user_id, username, password_hash, role, full_name, email, permissions 
+            cursor.execute(f"""
+                SELECT user_id, username, password_hash, role, full_name, email, permissions{pwd_col} 
                 FROM users 
                 WHERE username = %s AND is_active = TRUE
             """, (username,))
         else:
-            cursor.execute("""
-                SELECT user_id, username, password_hash, role, full_name, email
+            cursor.execute(f"""
+                SELECT user_id, username, password_hash, role, full_name, email{pwd_col}
                 FROM users 
                 WHERE username = %s AND is_active = TRUE
             """, (username,))
@@ -251,7 +264,14 @@ def init_login_manager(app):
         if user_id is None:
             return None
         try:
-            return get_user_by_id(int(user_id))
+            user = get_user_by_id(int(user_id))
+            if user and user.password_changed_at:
+                session_pwd_changed_at = session.get('pwd_changed_at')
+                # Nếu không có pwd_changed_at trong session HOẶC cũ hơn DB -> invalidate
+                if not session_pwd_changed_at or session_pwd_changed_at < user.password_changed_at.isoformat():
+                    _auth_debug("load_user:invalidated_by_password_change")
+                    return None
+            return user
         except (TypeError, ValueError):
             return None
         except Exception:

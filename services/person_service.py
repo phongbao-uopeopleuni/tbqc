@@ -56,6 +56,11 @@ def get_persons():
             select_fields.append('p.personal_image AS personal_image_url')
         else:
             select_fields.append('NULL AS personal_image_url')
+            
+        if 'version' in available_columns:
+            select_fields.append('p.version')
+        else:
+            select_fields.append('1 AS version')
         if 'biography' in available_columns:
             select_fields.append('p.biography')
         else:
@@ -134,6 +139,14 @@ def get_persons():
                 person['spouse'] = '; '.join(spouse_names) if spouse_names else None
             else:
                 person['spouse'] = None
+        is_admin = current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin'
+        for person in persons:
+            if not is_admin:
+                if 'phone' in person:
+                    person['phone'] = None
+                if 'email' in person:
+                    person['email'] = None
+
         if paginated and total is not None:
             pages = int(math.ceil(total / float(per_page))) if per_page else 0
             return jsonify({
@@ -218,6 +231,11 @@ def get_person(person_id):
             select_fields.append('p.personal_image AS personal_image_url')
         else:
             select_fields.append('NULL AS personal_image_url')
+            
+        if 'version' in available_columns:
+            select_fields.append('p.version')
+        else:
+            select_fields.append('1 AS version')
         if 'biography' in available_columns:
             select_fields.append('p.biography')
         else:
@@ -647,6 +665,14 @@ def get_person(person_id):
                         clean_person[key] = {k: clean_value(v) for k, v in value.items()}
                     else:
                         clean_person[key] = clean_value(value)
+
+                is_admin = current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin'
+                if not is_admin:
+                    if 'phone' in clean_person:
+                        clean_person['phone'] = None
+                    if 'email' in clean_person:
+                        clean_person['email'] = None
+
                 return jsonify(clean_person)
             except Exception as e:
                 logger.error(f'Error serializing person data for {person_id}: {e}')
@@ -861,12 +887,31 @@ def update_person(person_id):
         if not data:
             return (jsonify({'error': 'Không có dữ liệu để cập nhật'}), 400)
         cursor = connection.cursor(dictionary=True)
-        cursor.execute('SELECT person_id, generation_id FROM persons WHERE person_id = %s', (person_id,))
+        cursor.execute('SHOW COLUMNS FROM persons LIKE "version"')
+        has_version = cursor.fetchone() is not None
+        
+        if has_version:
+            cursor.execute('SELECT person_id, generation_id, version FROM persons WHERE person_id = %s', (person_id,))
+        else:
+            cursor.execute('SELECT person_id, generation_id FROM persons WHERE person_id = %s', (person_id,))
+            
         person = cursor.fetchone()
         if not person:
             return (jsonify({'error': 'Không tìm thấy người này'}), 404)
+            
+        if has_version and 'version' in data:
+            try:
+                client_version = int(data['version'])
+                db_version = person.get('version', 1) or 1
+                if client_version != db_version:
+                    return (jsonify({'error': f'Xung đột phiên bản dữ liệu (Conflict). Dữ liệu đã bị thay đổi bởi người khác (version hiện tại: {db_version}, của bạn: {client_version}). Vui lòng tải lại trang.'}), 409)
+            except (ValueError, TypeError):
+                pass
+                
         current_generation_id = person['generation_id']
         updates = {}
+        if has_version:
+            updates['version'] = person.get('version', 1) + 1
         if 'full_name' in data and data['full_name']:
             full_name = sanitize_string(data['full_name'], max_length=255, allow_empty=False)
             updates['full_name'] = full_name

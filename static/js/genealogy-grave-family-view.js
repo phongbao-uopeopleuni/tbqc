@@ -471,7 +471,7 @@
         
         if (graveInfoDiv) {
           if (graveInfoText) {
-            graveInfoDiv.innerHTML = graveInfoText;
+            graveInfoDiv.innerHTML = escapeHtml(graveInfoText);
           } else {
             graveInfoDiv.innerHTML = '<span style="color: var(--color-text-muted); font-style: italic;">Chưa có thông tin mộ phần. Bạn có thể thêm vị trí bằng cách nhấn "Cập nhật vị trí".</span>';
           }

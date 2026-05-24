@@ -116,7 +116,7 @@ def test_api_delete_user_403_unauth(flask_app):
 
 def test_create_user_400_missing_username(flask_app, monkeypatch):
     client = _patch_admin(monkeypatch, flask_app)
-    resp = client.post("/admin/api/users", json={"password": "secret1", "password_confirm": "secret1"})
+    resp = client.post("/admin/api/users", json={"password": "StrongPass1", "password_confirm": "StrongPass1"})
     assert resp.status_code == 400
     assert "error" in resp.get_json()
 
@@ -124,7 +124,7 @@ def test_create_user_400_missing_username(flask_app, monkeypatch):
 def test_create_user_400_password_mismatch(flask_app, monkeypatch):
     client = _patch_admin(monkeypatch, flask_app)
     resp = client.post("/admin/api/users", json={
-        "username": "newuser", "password": "secret1", "password_confirm": "different"
+        "username": "newuser", "password": "StrongPass1", "password_confirm": "different"
     })
     assert resp.status_code == 400
 
@@ -140,7 +140,7 @@ def test_create_user_400_short_password(flask_app, monkeypatch):
 def test_create_user_400_invalid_role(flask_app, monkeypatch):
     client = _patch_admin(monkeypatch, flask_app)
     resp = client.post("/admin/api/users", json={
-        "username": "newuser", "password": "secret1", "password_confirm": "secret1", "role": "superadmin"
+        "username": "newuser", "password": "StrongPass1", "password_confirm": "StrongPass1", "role": "superadmin"
     })
     assert resp.status_code == 400
 
@@ -148,7 +148,7 @@ def test_create_user_400_invalid_role(flask_app, monkeypatch):
 def test_create_user_success_shape(flask_app, monkeypatch):
     client = _patch_admin(monkeypatch, flask_app)
     resp = client.post("/admin/api/users", json={
-        "username": "newuser", "password": "secret1", "password_confirm": "secret1", "role": "user"
+        "username": "newuser", "password": "StrongPass1", "password_confirm": "StrongPass1", "role": "user"
     })
     assert resp.status_code == 200
     body = resp.get_json()
@@ -201,14 +201,14 @@ def test_reset_password_400_missing(flask_app, monkeypatch):
 def test_reset_password_400_mismatch(flask_app, monkeypatch):
     client = _patch_admin(monkeypatch, flask_app)
     resp = client.post("/admin/api/users/2/reset-password",
-                       json={"password": "newpass1", "password_confirm": "different"})
+                       json={"password": "StrongPass1", "password_confirm": "different"})
     assert resp.status_code == 400
 
 
 def test_reset_password_success_shape(flask_app, monkeypatch):
     client = _patch_admin(monkeypatch, flask_app)
     resp = client.post("/admin/api/users/2/reset-password",
-                       json={"password": "newpass1", "password_confirm": "newpass1"})
+                       json={"password": "StrongPass1", "password_confirm": "StrongPass1"})
     assert resp.status_code == 200
     assert resp.get_json().get("success") is True
 

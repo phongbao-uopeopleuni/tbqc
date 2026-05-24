@@ -2,8 +2,15 @@
 import os
 import mysql.connector
 
-MIGRATOR_USER = os.environ.get('DB_MIGRATOR_USER') or os.environ.get('DB_USER')
-MIGRATOR_PASSWORD = os.environ.get('DB_MIGRATOR_PASSWORD') or os.environ.get('DB_PASSWORD')
+MIGRATOR_USER = os.environ.get('DB_MIGRATOR_USER')
+MIGRATOR_PASSWORD = os.environ.get('DB_MIGRATOR_PASSWORD')
+
+if not MIGRATOR_USER or not MIGRATOR_PASSWORD:
+    raise EnvironmentError(
+        "DB_MIGRATOR_USER và DB_MIGRATOR_PASSWORD phải được set trước khi chạy migrate.py.\n"
+        "Script này KHÔNG được chạy với runtime app user (DB_USER).\n"
+        "Xem .env.example để biết cách cấu hình 2-user model."
+    )
 
 def ensure_users_table(cursor):
     cursor.execute("""
@@ -76,6 +83,24 @@ def run_migrations():
     
     # Table sử dụng conn
     _ensure_page_views_table(conn)
+    
+    # Fix 3.1 — Thêm is_public column vào albums (C4)
+    cursor.execute("""
+        ALTER TABLE albums
+        ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE
+    """)
+    
+    # Fix 4.1 — Thêm password_changed_at vào users
+    cursor.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP NULL DEFAULT NULL
+    """)
+    
+    # Fix 4.2 — Optimistic Locking trên persons
+    cursor.execute("""
+        ALTER TABLE persons
+        ADD COLUMN IF NOT EXISTS version INT DEFAULT 1
+    """)
     
     conn.commit()
     cursor.close()

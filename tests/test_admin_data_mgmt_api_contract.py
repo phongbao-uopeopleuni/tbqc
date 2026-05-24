@@ -119,7 +119,7 @@ def test_db_info_forbids_non_admin(flask_app, monkeypatch):
     assert response.status_code == 403
     payload = response.get_json()
     assert payload["success"] is False
-    assert payload["error"] == "Unauthorized"
+    assert "Không có quyền" in payload["error"] or payload["error"] == "Unauthorized"
 
 
 def test_db_info_contract_success(flask_app, monkeypatch):
@@ -165,7 +165,7 @@ def test_schema_forbids_non_admin(flask_app, monkeypatch):
     assert response.status_code == 403
     payload = response.get_json()
     assert payload["success"] is False
-    assert payload["error"] == "Unauthorized"
+    assert "Không có quyền" in payload["error"] or payload["error"] == "Unauthorized"
 
 
 # ── table-stats ───────────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ def test_table_stats_forbids_non_admin(flask_app, monkeypatch):
     assert response.status_code == 403
     payload = response.get_json()
     assert payload["success"] is False
-    assert payload["error"] == "Unauthorized"
+    assert "Không có quyền" in payload["error"] or payload["error"] == "Unauthorized"
 
 
 def test_table_stats_missing_table_param(flask_app, monkeypatch):

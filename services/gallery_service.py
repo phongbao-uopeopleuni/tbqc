@@ -632,6 +632,15 @@ def api_verify_album_password():
         return (jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401)
     return jsonify({'success': True})
 
+def _is_gallery_authorized():
+    """True nếu user đã qua members gate HOẶC là admin đã login."""
+    from flask import session
+    from flask_login import current_user
+    return (
+        session.get('members_gate_ok')
+        or (current_user.is_authenticated and getattr(current_user, 'role', '') == 'admin')
+    )
+
 def api_get_albums():
     """
     API lấy danh sách tất cả albums.
@@ -645,7 +654,19 @@ def api_get_albums():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         conn.commit()
-        cursor.execute('\n            SELECT album_id, name, theme, created_at, created_by\n            FROM albums\n            ORDER BY created_at DESC\n        ')
+        if _is_gallery_authorized():
+            cursor.execute('''
+                SELECT album_id, name, theme, created_at, created_by, is_public
+                FROM albums
+                ORDER BY created_at DESC
+            ''')
+        else:
+            cursor.execute('''
+                SELECT album_id, name, theme, created_at, created_by, is_public
+                FROM albums
+                WHERE is_public = TRUE
+                ORDER BY created_at DESC
+            ''')
         albums = cursor.fetchall()
         for album in albums:
             if album.get('created_at'):
@@ -810,11 +831,17 @@ def api_get_album_images(album_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
-        if not cursor.fetchone():
+        cursor.execute('SELECT album_id, is_public FROM albums WHERE album_id = %s', (album_id,))
+        album = cursor.fetchone()
+        if not album:
             cursor.close()
             conn.close()
             return (jsonify({'success': False, 'error': 'Album không tồn tại'}), 404)
+
+        if not album['is_public'] and not _is_gallery_authorized():
+            cursor.close()
+            conn.close()
+            return (jsonify({'success': False, 'error': 'Không có quyền truy cập album này'}), 403)
         cursor.execute('\n            SELECT image_id, album_id, filename, filepath, url, uploaded_at\n            FROM album_images\n            WHERE album_id = %s\n            ORDER BY uploaded_at DESC\n        ', (album_id,))
         images = cursor.fetchall()
         for image in images:

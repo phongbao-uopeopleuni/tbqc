@@ -11,6 +11,7 @@ from flask_login import current_user, login_required
 from mysql.connector import Error
 
 from db import get_db_connection
+from auth import admin_required
 
 
 logger = logging.getLogger(__name__)
@@ -20,38 +21,9 @@ def register_admin_logs_api_routes(app):
     """Register admin logs APIs owned by the logs domain."""
 
     @app.route("/api/admin/activity-logs", methods=["GET"])
-    @login_required
+    @admin_required
     def api_admin_activity_logs():
         """API lấy activity logs (admin only)."""
-        if not current_user.is_authenticated:
-            logger.warning(
-                "Activity logs API: Unauthenticated request from %s",
-                request.remote_addr,
-            )
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "error": "Chưa đăng nhập. Vui lòng đăng nhập lại.",
-                    }
-                ),
-                401,
-            )
-        if getattr(current_user, "role", "") != "admin":
-            logger.warning(
-                "Activity logs API: Unauthorized access attempt by user %s (role: %s)",
-                getattr(current_user, "username", "unknown"),
-                getattr(current_user, "role", "none"),
-            )
-            return (
-                jsonify(
-                    {
-                        "success": False,
-                        "error": "Không có quyền truy cập. Chỉ admin mới có thể xem logs.",
-                    }
-                ),
-                403,
-            )
 
         connection = get_db_connection()
         if not connection:

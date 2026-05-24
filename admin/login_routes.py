@@ -79,11 +79,19 @@ def register_admin_login_routes(app):
                 full_name=user_data.get("full_name"),
                 email=user_data.get("email"),
                 permissions=permissions,
+                password_changed_at=user_data.get("password_changed_at"),
             )
 
             login_user(user, remember=True)
             session.permanent = True
             session.modified = True
+            if user.password_changed_at:
+                import datetime
+                if isinstance(user.password_changed_at, datetime.datetime):
+                    session['pwd_changed_at'] = user.password_changed_at.isoformat()
+                else:
+                    session['pwd_changed_at'] = str(user.password_changed_at)
+            
             log_login(success=True, username=username)
 
             connection = get_db_connection()
