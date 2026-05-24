@@ -68,9 +68,15 @@
 
 **pytest:** 495 passed, 3 skipped (baseline: 491 → +4 tests)
 
-## Phase 6 — Supply Chain
-- [ ] Fix 6.1 — SRI cho 5 JS files (M7 scope reduced)
-- [ ] Fix 6.2 — GitHub Actions commit pinning (L4)
+## Phase 6 — Supply Chain ✅ DONE (2026-05-24)
+*Branch: security/hardening-phase6*
+
+- [x] **Fix 6.1** (M7): SRI hashes cho 6 JS files trong `_scripts_external_bundle.html` — `integrity=sha384-...` + `crossorigin="anonymous"` + `referrerpolicy="no-referrer"` cho chart.js, html2canvas, html2pdf, leaflet.js, d3, panzoom. Leaflet.css + Google Fonts skip (per spec).
+- [x] **Fix 6.2** (L4): GitHub Actions commit hash pinning — `checkout@v4.3.1` + `setup-node@v4.4.0` bằng SHA verified từ GitHub API. Thêm `github-actions` ecosystem vào `dependabot.yml`.
+
+**Tech debt ghi nhận (không block):**
+- TD-1: Spec SHA cho `setup-node@v4.0.4` sai (`1e60f620b...`). Đã dùng SHA verified `49933ea5...` (v4.4.0) thay thế.
+- TD-2: `mermaid@11` trong `admin/data_management.html` chưa pin exact version — admin-only, không trong scope M7, nhưng nên fix sau.
 
 ## Phase 7 — Legal & Compliance 🚨
 - [ ] Fix 7.1 — Privacy Policy page
