@@ -7,7 +7,7 @@ Werkzeug>=3.0.3,<4.0
 
 # Flask-Cors 4.0.0 dính CVE-2024-6839 / CVE-2024-6221 / CVE-2024-1681
 # (path handling + cấu hình mặc định lỏng). 5.0.x vá hết, API tương thích ngược.
-flask-cors==5.0.1
+flask-cors==6.0.2
 
 # mysql-connector-python 8.2.0 dính CVE-2024-21272 / CVE-2024-21275.
 # 8.4.0 là bản LTS cùng dòng 8.x, không đổi protocol mặc định.
