@@ -911,7 +911,7 @@ def update_person(person_id):
         current_generation_id = person['generation_id']
         updates = {}
         if has_version:
-            updates['version'] = person.get('version', 1) + 1
+            updates['version'] = (person.get('version') or 1) + 1
         if 'full_name' in data and data['full_name']:
             full_name = sanitize_string(data['full_name'], max_length=255, allow_empty=False)
             updates['full_name'] = full_name
@@ -999,6 +999,8 @@ def update_person(person_id):
         return (jsonify({'error': f'Lỗi database: {str(e)}'}), 500)
     except Exception as e:
         connection.rollback()
+        import traceback
+        traceback.print_exc()
         return (jsonify({'error': f'Lỗi: {str(e)}'}), 500)
     finally:
         if connection.is_connected():

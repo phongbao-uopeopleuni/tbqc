@@ -38,3 +38,26 @@ def test_optimistic_locking_conflict(flask_app, monkeypatch):
     error_msg = body.get("error", "").lower()
     assert "conflict" in error_msg or "phiên bản" in error_msg
 
+def test_optimistic_locking_null_version_no_crash(flask_app, monkeypatch):
+    """Person cũ có version=NULL trong DB → update KHÔNG crash, trả về 200."""
+    client = _patch_admin(monkeypatch, flask_app)
+
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_conn.is_connected.return_value = True
+
+    monkeypatch.setattr(person_service, "get_db_connection", lambda: mock_conn)
+
+    mock_cursor.fetchone.side_effect = [
+        {"COLUMN_NAME": "version"},                         # SHOW COLUMNS → has_version
+        {"person_id": 1, "generation_id": 1, "version": None},  # SELECT → version NULL
+        None, # For birth_record
+        None, # For any other fetchone
+        None,
+    ]
+    mock_cursor.rowcount = 1
+
+    resp = client.put("/api/person/1", json={"full_name": "Nguyen Van A"})
+    # Không có version trong payload → skip conflict check, update bình thường
+    assert resp.status_code != 500, f"Crashed with: {resp.get_json()}"

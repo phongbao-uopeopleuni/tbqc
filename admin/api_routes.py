@@ -95,10 +95,17 @@ def register_admin_api_routes(app):
                         updates.append('username = %s')
                         params.append(new_username)
                 if 'password' in data and data['password']:
+                    from admin.users_routes import _validate_password_strength
                     from auth import hash_password
+                    pwd_error = _validate_password_strength(data['password'])
+                    if pwd_error:
+                        return jsonify({'success': False, 'error': pwd_error}), 400
                     password_hash = hash_password(data['password'])
                     updates.append('password_hash = %s')
                     params.append(password_hash)
+                    cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+                    if cursor.fetchone() is not None:
+                        updates.append("password_changed_at = NOW()")
                     logger.info(f"Password updated for user_id {user_id} (username: {user.get('username', 'unknown')})")
                 if 'full_name' in data:
                     updates.append('full_name = %s')

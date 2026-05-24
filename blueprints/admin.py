@@ -52,14 +52,17 @@ def api_sync_tbqc_accounts():
             cursor.close()
             connection.close()
             return jsonify({'success': False, 'error': 'Bảng users không tồn tại. Vui lòng chạy script migration.'}), 404
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+        has_pwd_changed_col = cursor.fetchone() is not None
         for account in accounts:
             try:
                 password_hash = account.get('password_hash') or hash_password(account['password'])
                 cursor.execute('SELECT user_id, username, role FROM users WHERE username = %s', (account['username'],))
                 existing = cursor.fetchone()
                 if existing:
-                    cursor.execute("""
-                        UPDATE users SET password_hash = %s, role = 'user', full_name = %s, email = %s, is_active = TRUE, updated_at = NOW()
+                    pwd_changed_clause = ", password_changed_at = NOW()" if has_pwd_changed_col else ""
+                    cursor.execute(f"""
+                        UPDATE users SET password_hash = %s, role = 'user', full_name = %s, email = %s, is_active = TRUE, updated_at = NOW(){pwd_changed_clause}
                         WHERE username = %s
                     """, (password_hash, account['full_name'], account['email'], account['username']))
                     action = 'cập nhật'

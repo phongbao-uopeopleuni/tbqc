@@ -99,8 +99,9 @@ def run_migrations():
     # Fix 4.2 — Optimistic Locking trên persons
     cursor.execute("""
         ALTER TABLE persons
-        ADD COLUMN IF NOT EXISTS version INT DEFAULT 1
+        ADD COLUMN IF NOT EXISTS version INT NOT NULL DEFAULT 1
     """)
+    cursor.execute("UPDATE persons SET version = 1 WHERE version IS NULL")
     
     conn.commit()
     cursor.close()

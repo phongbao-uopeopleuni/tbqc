@@ -113,6 +113,18 @@ def register_admin_backup_admin_route(app):
             return jsonify({'error': 'Tên file backup không hợp lệ'}), 400
         if not os.path.isfile(candidate):
             return jsonify({'error': 'File backup không tồn tại'}), 404
+        
+        try:
+            file_size = os.path.getsize(candidate)
+        except OSError:
+            file_size = None
+        log_activity(
+            'BACKUP_DOWNLOAD',
+            target_type='Backup',
+            target_id=os.path.basename(candidate),
+            after_data={'file_size': file_size, 'route': 'admin'},
+        )
+        
         return send_file(
             candidate,
             as_attachment=True,

@@ -55,9 +55,18 @@
 - F2: `version INT DEFAULT 1` thiếu NOT NULL trong migration
 - F3: test_session_invalidation.py test 3 không có assertion (`pass`)
 
-## Phase 5 — Detection & Monitoring
-- [ ] Fix 5.1 — Log retention (M5)
-- [ ] Fix 5.2 — Backup download log (M6)
+## Phase 5 — Detection & Monitoring ✅ DONE (2026-05-24)
+*Branch: security/hardening-phase5*
+
+- [x] **Bug B1** (carryover Phase 4): `(person.get('version') or 1) + 1` — fix TypeError trên persons cũ có version=NULL
+- [x] **Bug B2** (carryover Phase 4): `version INT NOT NULL DEFAULT 1` + `UPDATE persons SET version = 1 WHERE version IS NULL`
+- [x] **Fix 5.1** (M5): `scripts/cleanup_activity_logs.py` — DELETE activity_logs > 365 ngày, SHOW TABLES guard
+- [x] **Fix 5.2** (M6): `log_activity('BACKUP_DOWNLOAD', ...)` tại `download_backup_admin` + `members_service.download_backup`
+- [x] **Fix E** (audit finding): `api_admin_reset_logs` → `@admin_required`, bỏ manual check + orphan import
+- [x] **Fix A1** (audit finding): legacy endpoint `/api/admin/users/<id>` PUT — thêm `_validate_password_strength()` + `password_changed_at = NOW()`
+- [x] **Fix A2** (audit finding): `api_sync_tbqc_accounts` — thêm `password_changed_at = NOW()` với SHOW COLUMNS guard
+
+**pytest:** 495 passed, 3 skipped (baseline: 491 → +4 tests)
 
 ## Phase 6 — Supply Chain
 - [ ] Fix 6.1 — SRI cho 5 JS files (M7 scope reduced)

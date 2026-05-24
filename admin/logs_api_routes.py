@@ -7,7 +7,7 @@ import json
 import logging
 
 from flask import jsonify, request
-from flask_login import current_user, login_required
+from flask_login import current_user
 from mysql.connector import Error
 
 from db import get_db_connection
@@ -176,13 +176,9 @@ def register_admin_logs_api_routes(app):
                 pass
 
     @app.route("/api/admin/reset-logs", methods=["POST"])
-    @login_required
+    @admin_required
     def api_admin_reset_logs():
         """Reset toàn bộ logs sau khi có confirm token."""
-        if not current_user.is_authenticated:
-            return jsonify({"success": False, "error": "Chưa đăng nhập."}), 401
-        if getattr(current_user, "role", "") != "admin":
-            return jsonify({"success": False, "error": "Không có quyền truy cập."}), 403
 
         try:
             payload = request.get_json(silent=True) or {}
