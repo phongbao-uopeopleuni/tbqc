@@ -145,10 +145,32 @@ def test_create_user_400_invalid_role(flask_app, monkeypatch):
     assert resp.status_code == 400
 
 
+def test_create_user_400_missing_consent(flask_app, monkeypatch):
+    """Fix 7.2 — tạo user không có consent_given phải trả 400."""
+    client = _patch_admin(monkeypatch, flask_app)
+    resp = client.post("/admin/api/users", json={
+        "username": "newuser", "password": "StrongPass1", "password_confirm": "StrongPass1", "role": "user",
+    })
+    assert resp.status_code == 400
+    assert "error" in resp.get_json()
+
+
+def test_create_user_400_consent_false(flask_app, monkeypatch):
+    """Fix 7.2 — consent_given=False phải trả 400."""
+    client = _patch_admin(monkeypatch, flask_app)
+    resp = client.post("/admin/api/users", json={
+        "username": "newuser", "password": "StrongPass1", "password_confirm": "StrongPass1",
+        "role": "user", "consent_given": False,
+    })
+    assert resp.status_code == 400
+    assert "error" in resp.get_json()
+
+
 def test_create_user_success_shape(flask_app, monkeypatch):
     client = _patch_admin(monkeypatch, flask_app)
     resp = client.post("/admin/api/users", json={
-        "username": "newuser", "password": "StrongPass1", "password_confirm": "StrongPass1", "role": "user"
+        "username": "newuser", "password": "StrongPass1", "password_confirm": "StrongPass1",
+        "role": "user", "consent_given": True,
     })
     assert resp.status_code == 200
     body = resp.get_json()

@@ -75,6 +75,7 @@ def register_admin_users_routes(app):
         full_name = data.get('full_name', '').strip()
         email = data.get('email', '').strip()
         role = data.get('role', 'user')
+        consent_given = bool(data.get('consent_given'))
 
         # Validate
         if not username or not password:
@@ -89,6 +90,10 @@ def register_admin_users_routes(app):
 
         if role not in ['admin', 'user', 'editor']:
             return jsonify({'error': 'Role không hợp lệ'}), 400
+
+        # Fix 7.2 — Điều 11 NĐ13: phải xác nhận đồng ý trước khi tạo tài khoản
+        if not consent_given:
+            return jsonify({'error': 'Cần xác nhận thành viên đã đồng ý với chính sách bảo mật'}), 400
 
         # Xử lý permissions nếu có
         permissions = data.get('permissions')
@@ -162,6 +167,15 @@ def register_admin_users_routes(app):
                 """, (username, password_hash, full_name or None, email or None, role))
             connection.commit()
             new_user_id = cursor.lastrowid
+
+            # Fix 7.2 — Ghi consent_at nếu column tồn tại (NĐ13 Điều 11)
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'consent_at'")
+            if cursor.fetchone() is not None:
+                cursor.execute(
+                    "UPDATE users SET consent_at = NOW(), consent_version = %s WHERE user_id = %s",
+                    ('2026-05-24-v1', new_user_id),
+                )
+                connection.commit()
 
             # Ghi log activity sau khi create thành công
             try:
