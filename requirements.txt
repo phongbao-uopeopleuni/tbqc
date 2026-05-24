@@ -28,7 +28,7 @@ lxml>=4.9.0
 # Pillow < 10.3.0 có CVE-2024-28219 (PIL.ImageCms buffer overflow).
 Pillow>=10.3.0
 
-flask-wtf==1.2.1
+flask-wtf==1.3.0
 bleach==6.2.0
 tinycss2>=1.2.0
 Flask-Limiter==3.5.0
