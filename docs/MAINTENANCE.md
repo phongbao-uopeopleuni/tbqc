@@ -2,7 +2,7 @@
 
 > **Má»¥c Ä‘Ã­ch:** HÆ°á»›ng dáº«n váº­n hÃ nh vÃ  báº£o trÃ¬ Ä‘á»‹nh ká»³ Ä‘á»ƒ há»‡ thá»‘ng á»•n Ä‘á»‹nh lÃ¢u dÃ i.  
 > **Ãp dá»¥ng cho:** Developer, DevOps, Admin váº­n hÃ nh.  
-> **Cáº­p nháº­t láº§n cuá»‘i:** 2026-05-20  
+> **Cáº­p nháº­t láº§n cuá»‘i:** 2026-05-25  
 > **Äá»c cÃ¹ng:** `README.md`, `AI_PROJECT_MEMORY.md`, `SECURITY.md`, `DEBUGGER.md`
 
 ---
@@ -41,6 +41,7 @@
 - [ ] XÃ¡c minh backup DB má»›i nháº¥t váº«n cÃ²n vÃ  cÃ³ thá»ƒ restore (xem Â§4)
 - [ ] Review log lá»—i thÃ¡ng: phÃ¢n loáº¡i `Unauthorized`, `5xx`, `database error`
 - [ ] Kiá»ƒm tra dung lÆ°á»£ng `static/images/` â€” trÃ¡nh tÄƒng Ä‘á»™t biáº¿n do upload trÃ¹ng
+- [ ] Cháº¡y `python scripts/cleanup_activity_logs.py` — dọn audit log cũ hơn 90 ngày (giữ tối thiểu 1000 bản ghi gần nhất)
 
 ### HÃ ng quÃ½ (Quarterly)
 - [ ] Rotate máº­t kháº©u: `ADMIN_PASSWORD`, `BACKUP_PASSWORD`, `MEMBERS_PASSWORD`
@@ -383,6 +384,7 @@ Cháº¡y checklist nÃ y **trÆ°á»›c má»—i láº§n push lÃªn maste
 [ ] render.yaml startCommand Ä‘Ã£ khá»›p Procfile (xem AI_PROJECT_MEMORY.md Â§6)
 [ ] KhÃ´ng commit unrelated WIP cÃ¹ng vá»›i feature/fix nÃ y
 [ ] CHANGELOG.md hoáº·c AI_PROJECT_MEMORY.md Â§8 Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t
+[ ] python scripts/migrate.py — áp dụng DB migration nếu có schema thay đổi (chạy trước khi restart service)
 ```
 
 ---

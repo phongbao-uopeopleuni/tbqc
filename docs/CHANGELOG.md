@@ -8,6 +8,36 @@
 
 ## [Unreleased]
 
+### Security (Hardening Phase 7 — Pháp lý / Tuân thủ NĐ13/2023)
+- Triển khai đầy đủ quyền chủ thể dữ liệu (Điều 9 NĐ13): endpoint `GET /api/user/export-data` xuất toàn bộ dữ liệu cá nhân, `POST /api/user/request-delete` ghi yêu cầu xóa.
+- Bổ sung tài liệu DPIA (`docs/dpia-tbqc.md`) và Data Breach Response Playbook (`docs/data-breach-response.md`).
+- Fix 7.2: bắt buộc `consent_given=true` trên server trước khi tạo user — trả `400` nếu thiếu hoặc `false`; ghi `consent_at = NOW()` ngay sau INSERT (tuân thủ Điều 11 NĐ13).
+- Nullify trường `contact` (chứa số điện thoại) cho non-admin tại `GET /api/persons` và `GET /api/person/<id>` — ngăn lộ PII qua API công khai.
+- Cập nhật `docs/AGENTS_SKILLS.md` ghi nhận toàn bộ 26 findings đã giải quyết.
+
+### Security (Hardening Phase 6 — Supply Chain)
+- Pin tất cả CDN asset bằng Subresource Integrity (`integrity="sha384-..."`) kết hợp `crossorigin="anonymous"` và `referrerpolicy="no-referrer"`.
+- Pin GitHub Actions workflow steps bằng commit SHA cụ thể thay vì tag nổi — ngăn dependency confusion qua tampered action.
+- Pin `mermaid@11.15.0` với SRI hash trong `templates/admin/data_management.html` (fix TD-2 floating `mermaid@11`).
+
+### Security (Hardening Phase 5 — Detection & Monitoring)
+- Thêm `scripts/cleanup_activity_logs.py` — dọn audit log cũ hơn 90 ngày; chạy hàng tháng qua cron/task scheduler.
+- Thêm `scripts/cleanup_backups.py` — giữ tối thiểu 7 ngày, tối đa 30 ngày backup; quyền file 0600.
+- Audit mỗi lần tải backup: ghi `BACKUP_DOWNLOAD` vào `activity_logs` khi admin tải file `.sql` từ `/admin/download-backup`.
+- Migration idempotent cột `version NOT NULL DEFAULT 0` trên bảng `persons` qua `scripts/migrate.py`.
+
+### Security (Hardening Phase 4 — Auth & Data Integrity)
+- Session invalidation sau khi đổi mật khẩu — buộc đăng xuất tất cả phiên cũ ngay khi `password_hash` thay đổi.
+- Optimistic lock trên bảng `persons` qua cột `version` — phát hiện và từ chối xung đột edit đồng thời (HTTP 409).
+- Password policy enforcement: validate độ phức tạp (chữ hoa, chữ thường, số, ≥ 8 ký tự) tại tất cả điểm thay đổi mật khẩu.
+- Ghi `consent_at` vào bảng `users` khi tạo tài khoản — nền tảng cho tuân thủ NĐ13 Phase 7.
+
+### Security (Hardening Phase 3 — IDOR & Access Control)
+- Vá IDOR trên album: kiểm tra ownership trước khi trả nội dung album riêng tư.
+- Vá IDOR trên person detail: chặn truy cập thông tin cá nhân không được uỷ quyền.
+- Vá BFLA (Broken Function Level Authorization): bổ sung `@admin_required` cho tất cả admin mutation routes còn thiếu.
+- Chặn mass assignment trong `PUT /admin/api/users/<id>`: whitelist chặt các field được phép cập nhật.
+
 ### Security (Hardening Phase 1 & 2)
 - Cập nhật kiến trúc bảo mật Database 2-user model (app user & migrator user) với script migration độc lập `scripts/migrate.py`.
 - Thiết lập quyền 0600 cho file backup cơ sở dữ liệu và thêm policy tự động dọn rác (giữ min 7 ngày, max 30 ngày) thông qua `scripts/cleanup_backups.py`.
