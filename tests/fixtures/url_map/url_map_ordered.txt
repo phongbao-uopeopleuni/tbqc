@@ -115,3 +115,4 @@ GET|POST /api/external-posts/refresh -> refresh_external_posts
 GET /api/stats/members -> api_member_stats
 GET /api/tree -> api_tree
 GET /api/generations -> api_generations
+GET /robots.txt -> serve_robots

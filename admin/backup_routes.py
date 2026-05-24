@@ -55,6 +55,10 @@ def register_admin_backup_create_route(app):
                 ]
                 with open(backup_path, 'w', encoding='utf-8') as f:
                     result = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True)
+                try:
+                    os.chmod(backup_path, 0o600)
+                except Exception:
+                    pass
 
             if result.returncode != 0:
                 return jsonify({

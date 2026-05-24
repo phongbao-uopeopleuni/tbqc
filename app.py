@@ -105,6 +105,18 @@ try:
         # KHÔNG set Cross-Origin-Resource-Policy: ảnh/ogimage có thể được Facebook /
         # Zalo crawler hay trình duyệt cross-origin nạp — `same-site` có thể làm vỡ
         # preview mạng xã hội. Bỏ qua trong batch này.
+        
+        if not response.headers.get('Cache-Control'):
+            path = request.path
+            if path.startswith('/static/'):
+                pass  # Flask static handler đã set
+            elif path.startswith('/admin/') or path.startswith('/api/'):
+                response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, private'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+            else:
+                response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+                
         return response
 
     # Sanitize str(e) rò qua JSON response ở production + errorhandler chung
@@ -250,6 +262,11 @@ except Exception as e:
     logger.warning('Khong dang ky duoc fallback API routes: %s', e)
 
 register_error_handlers(app)
+
+@app.route('/robots.txt')
+def serve_robots():
+    import flask
+    return flask.send_from_directory(app.static_folder, request.path[1:])
 
 def run_smoke_tests():
     """Basic smoke tests for key endpoints using Flask test client."""

@@ -111,8 +111,11 @@ def validate_tbqc_gate(username: str, password: str) -> bool:
                 logger.info(f'Members gate OK (database): {username}')
                 return True
             return False
-        if user_data:
-            return False
+        
+        # User not found in DB
+        from utils.crypto import equalize_login_timing
+        equalize_login_timing(password)
+        
     except Exception as e:
         logger.warning(f'Members gate DB/auth error: {e}')
     return False

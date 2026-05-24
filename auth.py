@@ -8,6 +8,11 @@ Xử lý đăng nhập, phân quyền, session management
 from functools import wraps
 from flask import session, redirect, url_for, request, jsonify
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+try:
+    from audit_log import log_login, log_activity
+except ImportError:
+    log_login = None
+    log_activity = None
 import bcrypt
 import os
 import mysql.connector
@@ -266,6 +271,7 @@ def admin_required(f):
             return redirect(url_for('admin_login'))
         if getattr(current_user, "role", None) != 'admin':
             _auth_debug("admin_required:not_admin")
+            if log_activity: log_activity("403_FORBIDDEN", target_type="Route", target_id=request.path, after_data={"error": "Requires admin", "user_id": current_user.id})
             if _is_api_request(request):
                 return jsonify({'success': False, 'error': 'Không có quyền admin'}), 403
             return redirect(url_for('admin_login'))
@@ -280,6 +286,7 @@ def editor_required(f):
         if not current_user.is_authenticated:
             return redirect(url_for('admin_login'))
         if current_user.role not in ['editor', 'admin']:
+            if log_activity: log_activity("403_FORBIDDEN", target_type="Route", target_id=request.path, after_data={"error": "Requires editor/admin", "user_id": current_user.id})
             return jsonify({'error': 'Không có quyền truy cập'}), 403
         return f(*args, **kwargs)
     return decorated_function
@@ -306,6 +313,7 @@ def permission_required(permission_name):
             # Kiểm tra permission (tránh AttributeError nếu current_user không có has_permission)
             has_perm = getattr(current_user, 'has_permission', None)
             if not (has_perm and has_perm(permission_name)):
+                if log_activity: log_activity("403_FORBIDDEN", target_type="Route", target_id=request.path, after_data={"error": f"Requires {permission_name}", "user_id": current_user.id})
                 if _is_api_request(request):
                     return jsonify({'success': False, 'error': f'Không có quyền: {permission_name}'}), 403
                 # Cho non-API requests, có thể redirect hoặc hiển thị lỗi
@@ -326,6 +334,7 @@ def role_required(*allowed_roles):
             if not current_user.is_authenticated:
                 return redirect(url_for('admin_login'))
             if current_user.role not in allowed_roles:
+                if log_activity: log_activity("403_FORBIDDEN", target_type="Route", target_id=request.path, after_data={"error": f"Requires role {allowed_roles}", "user_id": current_user.id})
                 if _is_api_request(request):
                     return jsonify({'error': 'Không có quyền truy cập'}), 403
                 return redirect(url_for('admin_login'))

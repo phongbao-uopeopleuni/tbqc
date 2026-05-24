@@ -56,7 +56,7 @@
           `;
         }).join('');
       } catch (err) {
-        listEl.innerHTML = `<tr><td colspan="8" class="loading-cell text-muted" style="color: var(--admin-danger);"><div class="loading">Lỗi: ${err.message}</div></td></tr>`;
+        listEl.innerHTML = `<tr><td colspan="8" class="loading-cell text-muted" style="color: var(--admin-danger);"><div class="loading">Lỗi: ${escapeHtml(err.message)}</div></td></tr>`;
         showMessage('Lỗi khi tải danh sách người dùng: ' + err.message, 'error');
       }
     }

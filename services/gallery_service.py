@@ -400,7 +400,6 @@ def upload_image():
             return (jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401)
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        ensure_albums_table(cursor)
         cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
         album = cursor.fetchone()
         cursor.close()
@@ -464,7 +463,6 @@ def upload_image():
         if album_id:
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            ensure_album_images_table(cursor)
             cursor.execute('\n                INSERT INTO album_images (album_id, filename, filepath, url)\n                VALUES (%s, %s, %s, %s)\n            ', (album_id, safe_filename, filepath, image_url))
             conn.commit()
             image_id = cursor.lastrowid
@@ -646,7 +644,6 @@ def api_get_albums():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        ensure_albums_table(cursor)
         conn.commit()
         cursor.execute('\n            SELECT album_id, name, theme, created_at, created_by\n            FROM albums\n            ORDER BY created_at DESC\n        ')
         albums = cursor.fetchall()
@@ -692,7 +689,6 @@ def api_create_album():
         created_by = data.get('created_by', '').strip()
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        ensure_albums_table(cursor)
         cursor.execute('\n            INSERT INTO albums (name, theme, created_by)\n            VALUES (%s, %s, %s)\n        ', (name.strip(), theme if theme else None, created_by if created_by else None))
         album_id = cursor.lastrowid
         conn.commit()
@@ -733,7 +729,6 @@ def api_update_album(album_id):
             return (jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401)
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        ensure_albums_table(cursor)
         cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
         if not cursor.fetchone():
             cursor.close()
@@ -789,8 +784,6 @@ def api_delete_album(album_id):
             return (jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401)
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        ensure_albums_table(cursor)
-        ensure_album_images_table(cursor)
         cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
         if not cursor.fetchone():
             cursor.close()
@@ -817,8 +810,6 @@ def api_get_album_images(album_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        ensure_albums_table(cursor)
-        ensure_album_images_table(cursor)
         cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
         if not cursor.fetchone():
             cursor.close()
@@ -867,8 +858,6 @@ def api_delete_album_images(album_id):
 
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        ensure_albums_table(cursor)
-        ensure_album_images_table(cursor)
         cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
         if not cursor.fetchone():
             return (jsonify({'success': False, 'error': 'Album không tồn tại'}), 404)

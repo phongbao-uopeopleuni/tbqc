@@ -6,12 +6,14 @@ from mysql.connector import Error
 from auth import get_user_by_username, verify_password, User
 from extensions import rate_limit
 from utils.url_safety import safe_redirect_target
+from utils.crypto import equalize_login_timing, GENERIC_AUTH_ERROR
 from folder_py.db_config import get_db_connection
 
 try:
-    from audit_log import log_login
+    from audit_log import log_login, log_activity
 except ImportError:
     log_login = None
+    log_activity = None
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -44,14 +46,16 @@ def api_login():
         
     user_data = get_user_by_username(username)
     if not user_data:
+        equalize_login_timing(password)
         if log_login: log_login(success=False, username=username)
-        return jsonify({'success': False, 'error': 'Không tồn tại tài khoản'}), 401
+        return jsonify({'success': False, 'error': GENERIC_AUTH_ERROR}), 401
         
     if not verify_password(password, user_data['password_hash']):
         if log_login: log_login(success=False, username=username)
-        return jsonify({'success': False, 'error': 'Sai mật khẩu'}), 401
+        return jsonify({'success': False, 'error': GENERIC_AUTH_ERROR}), 401
         
     if log_login: log_login(success=True, username=username)
+    if log_activity: log_activity("LOGIN_SUCCESS", target_type="User", target_id=username)
     
     permissions = user_data.get('permissions', {})
     user = User(
@@ -108,7 +112,10 @@ def api_login():
 @auth_bp.route('/api/logout', methods=['POST'])
 def api_logout():
     """API đăng xuất"""
+    if log_activity and current_user.is_authenticated:
+        log_activity("LOGOUT", target_type="User", target_id=current_user.username)
     logout_user()
+    session.clear()
     return jsonify({'success': True, 'message': 'Đã đăng xuất thành công'})
 
 @auth_bp.route('/api/current-user')

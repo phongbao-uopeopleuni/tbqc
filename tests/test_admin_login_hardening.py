@@ -18,9 +18,9 @@ import pytest
 
 
 def test_dummy_bcrypt_hash_exists_and_valid():
-    from admin import login_routes
+    from utils import crypto
 
-    h = login_routes._DUMMY_BCRYPT_HASH
+    h = crypto._DUMMY_BCRYPT_HASH
     assert isinstance(h, bytes)
     # bcrypt hash luôn bắt đầu $2a$, $2b$ hoặc $2y$
     assert re.match(rb"^\$2[aby]\$\d{2}\$", h), h

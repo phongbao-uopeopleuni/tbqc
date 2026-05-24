@@ -196,7 +196,7 @@
           `;
         }).join('');
       } catch (err) {
-        listEl.innerHTML = `<div class="message error">Lỗi: ${err.message}</div>`;
+        listEl.innerHTML = `<div class="message error">Lỗi: ${escapeHtml(err.message)}</div>`;
       }
     }
 

@@ -287,6 +287,11 @@ def create_backup(backup_dir=None):
                 'error': 'Backup file is empty',
                 'backup_file': None
             }
+            
+        try:
+            os.chmod(backup_file, 0o600)
+        except Exception:
+            pass
         
         logger.info(f"✅ Backup thành công!")
         logger.info(f"   File: {backup_file}")
