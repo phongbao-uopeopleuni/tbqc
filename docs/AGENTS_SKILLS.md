@@ -668,23 +668,28 @@ Pentest Scope cho tbqc:
 
 ## 10. Nhanh Chóng Theo Mức Ưu Tiên
 
+> Cập nhật 2026-05-25: Security Hardening Phases 1–7 hoàn thành. Các mục ✓ đã được implement.
+
 ### Làm ngay (CRITICAL/HIGH)
 1. `exploiting-template-injection-vulnerabilities` — Audit `|safe` và `render_template_string` trong toàn bộ codebase
-2. `exploiting-idor-vulnerabilities` — Map và test tất cả endpoints có ID parameter
-3. `exploiting-broken-function-level-authorization` — Verify decorator coverage trên mọi route
-4. `analyzing-sbom-for-supply-chain-vulnerabilities` — Chạy `pip audit` ngay
-5. `exploiting-mass-assignment-in-rest-apis` — Review PUT `/api/admin/users/<id>`
+2. ✓ `exploiting-idor-vulnerabilities` — Fix 3.1 (album is_public) + Fix 3.2 (phone/email nullification) — 2026-05-24
+3. ✓ `exploiting-broken-function-level-authorization` — Fix 3.3: 7 routes → `@admin_required`, manual checks removed — 2026-05-24
+4. ✓ `analyzing-sbom-for-supply-chain-vulnerabilities` — Fix 6.1: SRI sha384 cho 6 CDN JS files — 2026-05-24
+5. ✓ `exploiting-mass-assignment-in-rest-apis` — Fix 3.4: `VALID_PERMISSION_KEYS` frozenset + unknown keys → 400 — 2026-05-24
 
 ### Làm trong sprint tới (MEDIUM)
 6. `exploiting-sql-injection-vulnerabilities` — Audit dynamic query construction
-7. `detecting-supply-chain-attacks-in-ci-cd` — Pin GitHub Actions to commit hashes + thêm SRI cho CDN
-8. `hunting-credential-stuffing-attacks` — Verify ProxyFix + rate limit key function
-9. `analyzing-web-server-logs-for-intrusion` — Setup log monitoring/alerting
+7. ✓ `detecting-supply-chain-attacks-in-ci-cd` — Fix 6.2: GitHub Actions pinned to commit SHA, Dependabot enabled — 2026-05-24
+8. ✓ `hunting-credential-stuffing-attacks` — Fix 2.4/2.7: `equalize_login_timing()` + `GENERIC_AUTH_ERROR` + rate limits — 2026-05-24
+9. ✓ `analyzing-web-server-logs-for-intrusion` — Fix 5.1: log retention 365d script; Fix 5.2: BACKUP_DOWNLOAD audit log — 2026-05-24
 
 ### Roadmap (LOW)
-10. `building-incident-response-playbook` — Viết IR playbook cho tbqc
+10. ✓ `building-incident-response-playbook` — Fix 7.3: `docs/data-breach-response.md` 4-phase procedure (72h NĐ13) — 2026-05-24
 11. CSP hardening — Thêm `Content-Security-Policy-Report-Only`
 12. `conducting-network-penetration-test` — Full web app pentest định kỳ
+
+### Deferred
+- M4 `rate-limiter-redis` — revisit khi scale horizontal (hiện tại memory:// đủ cho 1 Railway instance)
 
 ---
 
@@ -703,4 +708,4 @@ Khi nhận yêu cầu security-related:
 
 ---
 
-*Cập nhật lần cuối: 2026-05-23 | Stack: Flask 3.x · MySQL · Railway deployment*
+*Cập nhật lần cuối: 2026-05-25 | Stack: Flask 3.x · MySQL · Railway deployment*
