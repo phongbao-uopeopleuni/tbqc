@@ -2043,6 +2043,8 @@
           updates[key] = value.trim();
         }
       }
+      // Thêm version cho optimistic locking
+      updates.version = selectedPerson.version || 1;
       
       // Hiển thị loading
       const submitButton = form.querySelector('button[type="submit"]');
@@ -2058,7 +2060,13 @@
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(updates)
       })
-      .then(response => response.json())
+      .then(async response => {
+        const data = await response.json();
+        if (response.status === 409) {
+          throw new Error(data.error || 'Xung đột phiên bản dữ liệu. Vui lòng tải lại trang.');
+        }
+        return data;
+      })
       .then(data => {
         if (data.success) {
           console.log('[API] Đã lưu vào database:', data);

@@ -372,7 +372,7 @@
             const results = await response.json();
             if (results.length === 0) {
               if (searchResults) {
-                searchResults.innerHTML = `<div style="padding: 10px; color: #666;">Không tìm thấy "${query}"</div>`;
+                searchResults.innerHTML = `<div style="padding: 10px; color: #666;">Không tìm thấy "${escapeHtml(query)}"</div>`;
               } else {
                 alert(`Không tìm thấy "${query}"`);
               }
@@ -482,7 +482,7 @@
           } catch (err) {
             console.error('[Genealogy] Search error:', err);
             if (searchResults) {
-              searchResults.innerHTML = `<div style="padding: 10px; color: #d32f2f;">Lỗi: ${err.message}</div>`;
+              searchResults.innerHTML = `<div style="padding: 10px; color: #d32f2f;">Lỗi: ${escapeHtml(err.message)}</div>`;
             } else {
               alert(`Lỗi khi tìm kiếm: ${err.message}`);
             }

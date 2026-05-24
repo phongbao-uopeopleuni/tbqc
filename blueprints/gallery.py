@@ -139,6 +139,7 @@ def api_gallery_anh1():
 
 
 @gallery_bp.route('/api/albums/verify-password', methods=['POST'])
+@rate_limit("10 per minute; 50 per hour")
 def api_verify_album_password():
     return _call_app('api_verify_album_password')
 

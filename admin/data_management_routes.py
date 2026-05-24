@@ -8,10 +8,10 @@ Two register functions are intentionally separate to preserve url_map order:
 """
 
 from flask import jsonify, render_template, request
-from flask_login import current_user, login_required
+from flask_login import current_user
 from mysql.connector import Error
 
-from auth import permission_required
+from auth import permission_required, admin_required
 from folder_py.db_config import get_db_connection
 
 
@@ -29,12 +29,9 @@ def register_admin_data_management_api(app):
     """Register admin data management API routes (db-info, schema, table-stats)."""
 
     @app.route("/admin/api/db-info")
-    @login_required
+    @admin_required
     def admin_api_db_info():
         """API lấy thông tin database."""
-        if not current_user.is_authenticated or getattr(current_user, "role", "") != "admin":
-            return jsonify({"success": False, "error": "Unauthorized"}), 403
-
         connection = get_db_connection()
         if not connection:
             return jsonify({"success": False, "error": "Không thể kết nối database"}), 500
@@ -63,12 +60,9 @@ def register_admin_data_management_api(app):
                 connection.close()
 
     @app.route("/admin/api/schema")
-    @login_required
+    @admin_required
     def admin_api_schema():
         """API lấy toàn bộ schema database (bảng, cột, khóa ngoại) cho developer."""
-        if not current_user.is_authenticated or getattr(current_user, "role", "") != "admin":
-            return jsonify({"success": False, "error": "Unauthorized"}), 403
-
         connection = get_db_connection()
         if not connection:
             return jsonify({"success": False, "error": "Không thể kết nối database"}), 500
@@ -151,12 +145,9 @@ def register_admin_data_management_api(app):
                 connection.close()
 
     @app.route("/admin/api/table-stats")
-    @login_required
+    @admin_required
     def admin_api_table_stats():
         """API lấy số lượng records của một bảng."""
-        if not current_user.is_authenticated or getattr(current_user, "role", "") != "admin":
-            return jsonify({"success": False, "error": "Unauthorized"}), 403
-
         table_name = request.args.get("table")
         if not table_name:
             return jsonify({"success": False, "error": "Table name required"}), 400

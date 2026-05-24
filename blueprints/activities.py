@@ -70,7 +70,6 @@ def activity_detail_page(activity_id):
     """Trang chi tiet bai viet."""
     try:
         from db import get_db_connection
-        from services.activities_service import ensure_activities_table
     except ImportError:
         return render_template(
             'activity_detail.html',
@@ -92,9 +91,6 @@ def activity_detail_page(activity_id):
 
     cursor = connection.cursor(dictionary=True)
     try:
-        ensure_activities_table(cursor)
-        connection.commit()
-
         cursor.execute('SELECT * FROM activities WHERE activity_id = %s', (activity_id,))
         row = cursor.fetchone()
         if not row:
@@ -212,9 +208,6 @@ def api_activities():
 
     cursor = connection.cursor(dictionary=True)
     try:
-        ensure_activities_table(cursor)
-        connection.commit()
-
         # ── GET ──────────────────────────────────────────────
         if request.method == 'GET':
             status_filter = request.args.get('status')      # published / draft / None
@@ -305,9 +298,6 @@ def api_activity_detail(activity_id):
 
     cursor = connection.cursor(dictionary=True)
     try:
-        ensure_activities_table(cursor)
-        connection.commit()
-
         # ── GET ──────────────────────────────────────────────
         if request.method == 'GET':
             cursor.execute('SELECT * FROM activities WHERE activity_id = %s', (activity_id,))

@@ -65,6 +65,8 @@ def documents_page():
 
 
 @main_bp.route('/privacy', strict_slashes=False)
+@main_bp.route('/privacy-policy', strict_slashes=False)
+@main_bp.route('/chinh-sach-bao-mat', strict_slashes=False)
 def privacy_page():
-    """Chính sách bảo mật — template privacy.html"""
+    """Chính sách bảo mật — template privacy.html (Fix 7.1 NĐ13)"""
     return render_template('privacy.html')

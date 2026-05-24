@@ -174,6 +174,7 @@ def test_create_user_emits_audit(db_client, test_db_cursor):
             "full_name": "New User",
             "email": "new.user@example.test",
             "role": "user",
+            "consent_given": True,
         },
     )
     assert response.status_code == 200

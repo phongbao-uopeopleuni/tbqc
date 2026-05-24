@@ -129,9 +129,6 @@ def _record_page_view():
         if not conn:
             return
         _session_timezone_vn(conn)
-        if not _ensure_page_views_table(conn):
-            conn.close()
-            return
         uid = None
         try:
             if current_user.is_authenticated:
@@ -268,7 +265,6 @@ def get_log_stats_payload():
     cur = None
     try:
         _session_timezone_vn(conn)
-        _ensure_page_views_table(conn)
         cur = conn.cursor(dictionary=True, buffered=True)
         cur.execute("SHOW TABLES LIKE 'page_views'")
         if not cur.fetchone():

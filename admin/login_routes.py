@@ -13,12 +13,7 @@ from auth import User, get_user_by_username, verify_password
 from extensions import rate_limit
 from folder_py.db_config import get_db_connection
 from utils.url_safety import safe_redirect_target
-
-
-_DUMMY_BCRYPT_HASH = bcrypt.hashpw(
-    b"admin-login-timing-equalizer",
-    bcrypt.gensalt(12),
-)
+from utils.crypto import equalize_login_timing, GENERIC_AUTH_ERROR
 
 COOKIE_REMEMBER_USERNAME = "tbqc_admin_remember_username"
 COOKIE_REMEMBER_DAYS = 30
@@ -46,7 +41,7 @@ def register_admin_login_routes(app):
         if request.method == "POST":
             username = request.form.get("username", "").strip()
             password = request.form.get("password", "")
-            generic_auth_error = "Sai tài khoản hoặc mật khẩu"
+            generic_auth_error = GENERIC_AUTH_ERROR
 
             if not username or not password:
                 return render_template(
@@ -58,10 +53,7 @@ def register_admin_login_routes(app):
 
             user_data = get_user_by_username(username)
             if not user_data:
-                try:
-                    bcrypt.checkpw(password.encode("utf-8"), _DUMMY_BCRYPT_HASH)
-                except Exception:
-                    pass
+                equalize_login_timing(password)
                 log_login(success=False, username=username)
                 return render_template(
                     "admin/login.html",
@@ -87,11 +79,19 @@ def register_admin_login_routes(app):
                 full_name=user_data.get("full_name"),
                 email=user_data.get("email"),
                 permissions=permissions,
+                password_changed_at=user_data.get("password_changed_at"),
             )
 
             login_user(user, remember=True)
             session.permanent = True
             session.modified = True
+            if user.password_changed_at:
+                import datetime
+                if isinstance(user.password_changed_at, datetime.datetime):
+                    session['pwd_changed_at'] = user.password_changed_at.isoformat()
+                else:
+                    session['pwd_changed_at'] = str(user.password_changed_at)
+            
             log_login(success=True, username=username)
 
             connection = get_db_connection()
@@ -146,4 +146,5 @@ def register_admin_login_routes(app):
     def admin_logout():
         """Admin logout."""
         logout_user()
+        session.clear()
         return redirect(url_for("admin_login"))

@@ -128,6 +128,19 @@ def download_backup(filename):
         backup_file = backup_dir / filename
         if not backup_file.exists():
             return (jsonify({"success": False, "error": "Backup file not found"}), 404)
+        
+        try:
+            file_size = backup_file.stat().st_size
+        except OSError:
+            file_size = None
+        from audit_log import log_activity
+        log_activity(
+            'BACKUP_DOWNLOAD',
+            target_type='Backup',
+            target_id=filename,
+            after_data={'file_size': file_size, 'route': 'members'},
+        )
+        
         return send_from_directory(str(backup_dir), filename, as_attachment=True, mimetype="application/sql")
     except Exception as e:
         logger.error(f"Error downloading backup: {e}", exc_info=True)

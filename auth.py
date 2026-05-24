@@ -8,6 +8,11 @@ Xử lý đăng nhập, phân quyền, session management
 from functools import wraps
 from flask import session, redirect, url_for, request, jsonify
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+try:
+    from audit_log import log_login, log_activity
+except ImportError:
+    log_login = None
+    log_activity = None
 import bcrypt
 import os
 import mysql.connector
@@ -62,13 +67,14 @@ def get_connection():
 
 class User(UserMixin):
     """User class cho Flask-Login với permissions"""
-    def __init__(self, user_id, username, role, full_name=None, email=None, permissions=None):
+    def __init__(self, user_id, username, role, full_name=None, email=None, permissions=None, password_changed_at=None):
         self.id = user_id
         self.username = username
         self.role = role
         self.full_name = full_name
         self.email = email
         self.permissions = permissions or {}
+        self.password_changed_at = password_changed_at
     
     def has_permission(self, permission_name):
         """Kiểm tra user có permission không"""
@@ -109,17 +115,22 @@ def get_user_by_id(user_id):
         # Check if permissions column exists
         cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
         has_permissions = cursor.fetchone() is not None
+        # Check if password_changed_at column exists
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+        has_pwd_changed = cursor.fetchone() is not None
+
+        pwd_col = ", password_changed_at" if has_pwd_changed else ""
         
         # Build SELECT query based on available columns
         if has_permissions:
-            cursor.execute("""
-                SELECT user_id, username, role, full_name, email, permissions 
+            cursor.execute(f"""
+                SELECT user_id, username, role, full_name, email, permissions{pwd_col} 
                 FROM users 
                 WHERE user_id = %s AND is_active = TRUE
             """, (user_id,))
         else:
-            cursor.execute("""
-                SELECT user_id, username, role, full_name, email
+            cursor.execute(f"""
+                SELECT user_id, username, role, full_name, email{pwd_col}
                 FROM users 
                 WHERE user_id = %s AND is_active = TRUE
             """, (user_id,))
@@ -145,7 +156,8 @@ def get_user_by_id(user_id):
                 role=user_data['role'],
                 full_name=user_data.get('full_name'),
                 email=user_data.get('email'),
-                permissions=permissions
+                permissions=permissions,
+                password_changed_at=user_data.get('password_changed_at')
             )
         return None
     except Error as e:
@@ -168,16 +180,22 @@ def get_user_by_username(username):
         cursor.execute("SHOW COLUMNS FROM users LIKE 'permissions'")
         has_permissions = cursor.fetchone() is not None
         
+        # Check if password_changed_at column exists
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+        has_pwd_changed = cursor.fetchone() is not None
+
+        pwd_col = ", password_changed_at" if has_pwd_changed else ""
+        
         # Build SELECT query based on available columns
         if has_permissions:
-            cursor.execute("""
-                SELECT user_id, username, password_hash, role, full_name, email, permissions 
+            cursor.execute(f"""
+                SELECT user_id, username, password_hash, role, full_name, email, permissions{pwd_col} 
                 FROM users 
                 WHERE username = %s AND is_active = TRUE
             """, (username,))
         else:
-            cursor.execute("""
-                SELECT user_id, username, password_hash, role, full_name, email
+            cursor.execute(f"""
+                SELECT user_id, username, password_hash, role, full_name, email{pwd_col}
                 FROM users 
                 WHERE username = %s AND is_active = TRUE
             """, (username,))
@@ -246,7 +264,14 @@ def init_login_manager(app):
         if user_id is None:
             return None
         try:
-            return get_user_by_id(int(user_id))
+            user = get_user_by_id(int(user_id))
+            if user and user.password_changed_at:
+                session_pwd_changed_at = session.get('pwd_changed_at')
+                # Nếu không có pwd_changed_at trong session HOẶC cũ hơn DB -> invalidate
+                if not session_pwd_changed_at or session_pwd_changed_at < user.password_changed_at.isoformat():
+                    _auth_debug("load_user:invalidated_by_password_change")
+                    return None
+            return user
         except (TypeError, ValueError):
             return None
         except Exception:
@@ -266,6 +291,7 @@ def admin_required(f):
             return redirect(url_for('admin_login'))
         if getattr(current_user, "role", None) != 'admin':
             _auth_debug("admin_required:not_admin")
+            if log_activity: log_activity("403_FORBIDDEN", target_type="Route", target_id=request.path, after_data={"error": "Requires admin", "user_id": current_user.id})
             if _is_api_request(request):
                 return jsonify({'success': False, 'error': 'Không có quyền admin'}), 403
             return redirect(url_for('admin_login'))
@@ -280,6 +306,7 @@ def editor_required(f):
         if not current_user.is_authenticated:
             return redirect(url_for('admin_login'))
         if current_user.role not in ['editor', 'admin']:
+            if log_activity: log_activity("403_FORBIDDEN", target_type="Route", target_id=request.path, after_data={"error": "Requires editor/admin", "user_id": current_user.id})
             return jsonify({'error': 'Không có quyền truy cập'}), 403
         return f(*args, **kwargs)
     return decorated_function
@@ -306,6 +333,7 @@ def permission_required(permission_name):
             # Kiểm tra permission (tránh AttributeError nếu current_user không có has_permission)
             has_perm = getattr(current_user, 'has_permission', None)
             if not (has_perm and has_perm(permission_name)):
+                if log_activity: log_activity("403_FORBIDDEN", target_type="Route", target_id=request.path, after_data={"error": f"Requires {permission_name}", "user_id": current_user.id})
                 if _is_api_request(request):
                     return jsonify({'success': False, 'error': f'Không có quyền: {permission_name}'}), 403
                 # Cho non-API requests, có thể redirect hoặc hiển thị lỗi
@@ -326,6 +354,7 @@ def role_required(*allowed_roles):
             if not current_user.is_authenticated:
                 return redirect(url_for('admin_login'))
             if current_user.role not in allowed_roles:
+                if log_activity: log_activity("403_FORBIDDEN", target_type="Route", target_id=request.path, after_data={"error": f"Requires role {allowed_roles}", "user_id": current_user.id})
                 if _is_api_request(request):
                     return jsonify({'error': 'Không có quyền truy cập'}), 403
                 return redirect(url_for('admin_login'))

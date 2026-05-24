@@ -6,9 +6,33 @@ from auth import admin_required, hash_password
 from audit_log import log_activity, log_user_update
 from folder_py.db_config import get_db_connection
 from mysql.connector import Error
+from extensions import rate_limit
 
 logger = logging.getLogger(__name__)
 
+VALID_PERMISSION_KEYS = frozenset({
+    'canViewGenealogy',
+    'canComment',
+    'canCreatePost',
+    'canEditPost',
+    'canDeletePost',
+    'canUploadMedia',
+    'canEditGenealogy',
+    'canManageUsers',
+    'canConfigurePermissions',
+    'canViewDashboard',
+})
+
+
+def _validate_password_strength(password: str):
+    """Trả về error string nếu password yếu, None nếu OK."""
+    if len(password) < 10:
+        return 'Mật khẩu phải có ít nhất 10 ký tự'
+    if not any(c.isdigit() for c in password):
+        return 'Mật khẩu phải chứa ít nhất 1 chữ số'
+    if not any(c.isalpha() for c in password):
+        return 'Mật khẩu phải chứa ít nhất 1 chữ cái'
+    return None
 
 def register_admin_users_routes(app):
 
@@ -51,6 +75,7 @@ def register_admin_users_routes(app):
         full_name = data.get('full_name', '').strip()
         email = data.get('email', '').strip()
         role = data.get('role', 'user')
+        consent_given = bool(data.get('consent_given'))
 
         # Validate
         if not username or not password:
@@ -59,11 +84,16 @@ def register_admin_users_routes(app):
         if password != password_confirm:
             return jsonify({'error': 'Mật khẩu không khớp'}), 400
 
-        if len(password) < 6:
-            return jsonify({'error': 'Mật khẩu phải có ít nhất 6 ký tự'}), 400
+        pwd_error = _validate_password_strength(password)
+        if pwd_error:
+            return jsonify({'error': pwd_error}), 400
 
         if role not in ['admin', 'user', 'editor']:
             return jsonify({'error': 'Role không hợp lệ'}), 400
+
+        # Fix 7.2 — Điều 11 NĐ13: phải xác nhận đồng ý trước khi tạo tài khoản
+        if not consent_given:
+            return jsonify({'error': 'Cần xác nhận thành viên đã đồng ý với chính sách bảo mật'}), 400
 
         # Xử lý permissions nếu có
         permissions = data.get('permissions')
@@ -138,6 +168,15 @@ def register_admin_users_routes(app):
             connection.commit()
             new_user_id = cursor.lastrowid
 
+            # Fix 7.2 — Ghi consent_at nếu column tồn tại (NĐ13 Điều 11)
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'consent_at'")
+            if cursor.fetchone() is not None:
+                cursor.execute(
+                    "UPDATE users SET consent_at = NOW(), consent_version = %s WHERE user_id = %s",
+                    ('2026-05-24-v1', new_user_id),
+                )
+                connection.commit()
+
             # Ghi log activity sau khi create thành công
             try:
                 log_cursor = connection.cursor(dictionary=True)
@@ -163,6 +202,7 @@ def register_admin_users_routes(app):
 
     @app.route('/admin/api/users/<int:user_id>', methods=['PUT'])
     @admin_required
+    @rate_limit("10 per minute; 30 per hour")
     def api_update_user(user_id):
         """API cập nhật user"""
         data = request.get_json()
@@ -221,9 +261,17 @@ def register_admin_users_routes(app):
 
             # Xử lý password nếu có
             if 'password' in data and data['password']:
+                pwd_error = _validate_password_strength(data['password'])
+                if pwd_error:
+                    return jsonify({'error': pwd_error}), 400
                 password_hash = hash_password(data['password'])
                 updates.append("password_hash = %s")
                 params.append(password_hash)
+                
+                cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+                if cursor.fetchone() is not None:
+                    updates.append("password_changed_at = NOW()")
+                    
                 logger.info(f"Password updated for user_id {user_id} (username: {user['username']}) via admin_routes")
 
             # Cập nhật permissions nếu có và cột tồn tại
@@ -231,7 +279,15 @@ def register_admin_users_routes(app):
             has_permissions = cursor.fetchone() is not None
 
             if permissions is not None and has_permissions:
-                permissions_json = json.dumps(permissions, ensure_ascii=False)
+                if not isinstance(permissions, dict):
+                    return jsonify({'error': 'permissions phải là object JSON'}), 400
+                unknown_keys = set(permissions.keys()) - VALID_PERMISSION_KEYS
+                if unknown_keys:
+                    return jsonify({
+                        'error': f"Permission key không hợp lệ: {sorted(unknown_keys)}"
+                    }), 400
+                filtered = {k: bool(v) for k, v in permissions.items() if k in VALID_PERMISSION_KEYS}
+                permissions_json = json.dumps(filtered, ensure_ascii=False)
                 updates.append("permissions = %s")
                 params.append(permissions_json)
 
@@ -319,8 +375,9 @@ def register_admin_users_routes(app):
         if password != password_confirm:
             return jsonify({'error': 'Mật khẩu không khớp'}), 400
 
-        if len(password) < 6:
-            return jsonify({'error': 'Mật khẩu phải có ít nhất 6 ký tự'}), 400
+        pwd_error = _validate_password_strength(password)
+        if pwd_error:
+            return jsonify({'error': pwd_error}), 400
 
         connection = get_db_connection()
         if not connection:
@@ -329,9 +386,13 @@ def register_admin_users_routes(app):
         try:
             cursor = connection.cursor()
             password_hash = hash_password(password)
-            cursor.execute("""
+            
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+            pwd_set = "password_hash = %s, password_changed_at = NOW()" if cursor.fetchone() is not None else "password_hash = %s"
+            
+            cursor.execute(f"""
                 UPDATE users
-                SET password_hash = %s
+                SET {pwd_set}
                 WHERE user_id = %s
             """, (password_hash, user_id))
             connection.commit()

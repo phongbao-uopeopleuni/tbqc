@@ -8,6 +8,18 @@
 
 ## [Unreleased]
 
+### Security (Hardening Phase 1 & 2)
+- Cập nhật kiến trúc bảo mật Database 2-user model (app user & migrator user) với script migration độc lập `scripts/migrate.py`.
+- Thiết lập quyền 0600 cho file backup cơ sở dữ liệu và thêm policy tự động dọn rác (giữ min 7 ngày, max 30 ngày) thông qua `scripts/cleanup_backups.py`.
+- Thêm strict `Cache-Control` headers cho các endpoint API và Admin để chống leak dữ liệu qua cache.
+- Pin cứng version thư viện `bleach==6.2.0` để chặn rủi ro Dependency Confusion/Vulnerability.
+- Chặn crawler (Googlebot, v.v) index các trang nhạy cảm bằng file `robots.txt` tĩnh.
+- Triển khai hàm `escapeHtml` tối giản để bọc các lỗ hổng DOM XSS (innerHTML) tại các component giao diện tìm kiếm và báo lỗi.
+- Xóa triệt để Session Cookie khi logout (thêm `session.clear()`).
+- Tích hợp module Timing Equalizer (`utils/crypto.py`) vào toàn bộ tiến trình đăng nhập và cổng Members Gate để chống tấn công rà quét tài khoản (Login Enumeration).
+- Rate limit 10/min, 50/hour cho endpoint nhập mật khẩu Album.
+- Phủ Audit Log đầy đủ 100% cho mọi truy cập bị từ chối 403 (Unauthorized Access) qua các decorators quyền hạn.
+
 ### Added
 - `admin/data-management`: phan Database Schema nang cap thanh 4 tab - ERD, Class Diagram, Data Flow, Danh sach - render bang Mermaid.js tu schema live (`/admin/api/schema`).
 - Zoom in/out/reset controls tren 3 tab diagram (muc 25%-400%).

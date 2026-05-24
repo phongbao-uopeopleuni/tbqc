@@ -6,6 +6,7 @@ from flask_login import current_user, login_required
 from mysql.connector import Error
 
 from db import get_db_connection
+from auth import admin_required
 from utils.validation import secure_compare
 
 logger = logging.getLogger(__name__)
@@ -14,11 +15,9 @@ logger = logging.getLogger(__name__)
 def register_admin_api_routes(app):
 
     @app.route('/api/admin/users', methods=['GET', 'POST'])
-    @login_required
+    @admin_required
     def api_admin_users():
         """API quản lý users (admin only)"""
-        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-            return (jsonify({'success': False, 'error': 'Không có quyền truy cập'}), 403)
         connection = get_db_connection()
         if not connection:
             return (jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500)
@@ -65,11 +64,9 @@ def register_admin_api_routes(app):
                 connection.close()
 
     @app.route('/api/admin/users/<int:user_id>', methods=['GET', 'PUT', 'DELETE'])
-    @login_required
+    @admin_required
     def api_admin_user_detail(user_id):
         """API chi tiết user (admin only)"""
-        if not current_user.is_authenticated or getattr(current_user, 'role', '') != 'admin':
-            return (jsonify({'success': False, 'error': 'Không có quyền truy cập'}), 403)
         connection = get_db_connection()
         if not connection:
             return (jsonify({'success': False, 'error': 'Không thể kết nối database'}), 500)
@@ -98,10 +95,17 @@ def register_admin_api_routes(app):
                         updates.append('username = %s')
                         params.append(new_username)
                 if 'password' in data and data['password']:
+                    from admin.users_routes import _validate_password_strength
                     from auth import hash_password
+                    pwd_error = _validate_password_strength(data['password'])
+                    if pwd_error:
+                        return jsonify({'success': False, 'error': pwd_error}), 400
                     password_hash = hash_password(data['password'])
                     updates.append('password_hash = %s')
                     params.append(password_hash)
+                    cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+                    if cursor.fetchone() is not None:
+                        updates.append("password_changed_at = NOW()")
                     logger.info(f"Password updated for user_id {user_id} (username: {user.get('username', 'unknown')})")
                 if 'full_name' in data:
                     updates.append('full_name = %s')
@@ -164,16 +168,12 @@ def register_admin_api_routes(app):
     register_admin_logs_api_routes(app)
 
     @app.route('/api/admin/code-graph/rescan', methods=['POST'])
-    @login_required
+    @admin_required
     def api_admin_code_graph_rescan():
         """
         Chạy lại trình quét code-graph (scripts/code-graph/scan.mjs) để cập nhật
         static/data/code-graph.json. Chỉ admin được gọi.
         """
-        if not current_user.is_authenticated:
-            return (jsonify({'success': False, 'error': 'Chưa đăng nhập.'}), 401)
-        if getattr(current_user, 'role', '') != 'admin':
-            return (jsonify({'success': False, 'error': 'Không có quyền truy cập.'}), 403)
         try:
             from services.code_graph_scan import run_scan
         except Exception as import_err:

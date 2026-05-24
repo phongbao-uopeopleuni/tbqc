@@ -47,32 +47,22 @@ def api_sync_tbqc_accounts():
         success_count = 0
         fail_count = 0
         cursor = connection.cursor(dictionary=True)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                user_id INT PRIMARY KEY AUTO_INCREMENT,
-                username VARCHAR(100) NOT NULL UNIQUE,
-                password_hash VARCHAR(255) NOT NULL,
-                role ENUM('admin', 'editor', 'user') NOT NULL DEFAULT 'user',
-                full_name VARCHAR(255),
-                email VARCHAR(255),
-                permissions JSON,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                last_login TIMESTAMP NULL,
-                INDEX idx_username (username),
-                INDEX idx_role (role)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        """)
-        connection.commit()
+        cursor.execute("SHOW TABLES LIKE 'users'")
+        if not cursor.fetchone():
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'error': 'Bảng users không tồn tại. Vui lòng chạy script migration.'}), 404
+        cursor.execute("SHOW COLUMNS FROM users LIKE 'password_changed_at'")
+        has_pwd_changed_col = cursor.fetchone() is not None
         for account in accounts:
             try:
                 password_hash = account.get('password_hash') or hash_password(account['password'])
                 cursor.execute('SELECT user_id, username, role FROM users WHERE username = %s', (account['username'],))
                 existing = cursor.fetchone()
                 if existing:
-                    cursor.execute("""
-                        UPDATE users SET password_hash = %s, role = 'user', full_name = %s, email = %s, is_active = TRUE, updated_at = NOW()
+                    pwd_changed_clause = ", password_changed_at = NOW()" if has_pwd_changed_col else ""
+                    cursor.execute(f"""
+                        UPDATE users SET password_hash = %s, role = 'user', full_name = %s, email = %s, is_active = TRUE, updated_at = NOW(){pwd_changed_clause}
                         WHERE username = %s
                     """, (password_hash, account['full_name'], account['email'], account['username']))
                     action = 'cập nhật'

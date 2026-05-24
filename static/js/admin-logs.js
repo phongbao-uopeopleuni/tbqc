@@ -44,7 +44,7 @@
           // Nếu không parse được JSON, dùng message mặc định
         }
         listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
-          <div style="margin-bottom: 10px;"><strong>Lỗi 401: ${errorMsg}</strong></div>
+          <div style="margin-bottom: 10px;"><strong>Lỗi 401: ${escapeHtml(errorMsg)}</strong></div>
           <a href="/admin/login" class="btn btn-primary" style="text-decoration: none; display: inline-block; padding: 8px 16px;">Đăng nhập lại</a>
         </td></tr>`;
         paginationInfo.textContent = 'Lỗi xác thực';
@@ -64,7 +64,7 @@
           // Nếu không parse được JSON, dùng message mặc định
         }
         listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
-          <div><strong>Lỗi 403: ${errorMsg}</strong></div>
+          <div><strong>Lỗi 403: ${escapeHtml(errorMsg)}</strong></div>
         </td></tr>`;
         paginationInfo.textContent = 'Không có quyền truy cập';
         prevBtn.disabled = true;
@@ -83,7 +83,7 @@
           // Nếu không parse được JSON, dùng message mặc định
         }
         listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">
-          <div><strong>Lỗi 404: ${errorMsg}</strong></div>
+          <div><strong>Lỗi 404: ${escapeHtml(errorMsg)}</strong></div>
           <div style="margin-top: 10px; font-size: 14px; color: var(--admin-text-muted);">Vui lòng kiểm tra database hoặc liên hệ quản trị viên.</div>
         </td></tr>`;
         paginationInfo.textContent = 'Bảng không tồn tại';
@@ -173,7 +173,7 @@
       nextBtn.disabled = offset + limit >= logsTotal;
 
     } catch (err) {
-      listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">Lỗi: ${err.message}</td></tr>`;
+      listEl.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: var(--admin-space-6); color: var(--admin-danger);">Lỗi: ${escapeHtml(err.message)}</td></tr>`;
       paginationInfo.textContent = 'Lỗi khi tải logs';
       prevBtn.disabled = true;
       nextBtn.disabled = true;
