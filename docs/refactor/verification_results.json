@@ -1,0 +1,791 @@
+{
+  "s0_env": {
+    "ok": true,
+    "columns": [
+      "db_name",
+      "mysql_version"
+    ],
+    "rows": [
+      {
+        "db_name": "railway",
+        "mysql_version": "9.5.0"
+      }
+    ]
+  },
+  "sA1_persons": {
+    "ok": true,
+    "columns": [
+      "COLUMN_NAME",
+      "DATA_TYPE",
+      "IS_NULLABLE",
+      "COLUMN_DEFAULT"
+    ],
+    "rows": [
+      {
+        "COLUMN_NAME": "person_id",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "full_name",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "NO",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "alias",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "gender",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "status",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "generation_level",
+        "DATA_TYPE": "int",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "birth_date_solar",
+        "DATA_TYPE": "date",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "birth_date_lunar",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "death_date_solar",
+        "DATA_TYPE": "date",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "death_date_lunar",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "home_town",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "nationality",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "religion",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "place_of_death",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "grave_info",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "contact",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "social",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "occupation",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "education",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "events",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "titles",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "blood_type",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "genetic_disease",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "note",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "father_mother_id",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "created_at",
+        "DATA_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": "CURRENT_TIMESTAMP"
+      },
+      {
+        "COLUMN_NAME": "updated_at",
+        "DATA_TYPE": "timestamp",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": "CURRENT_TIMESTAMP"
+      },
+      {
+        "COLUMN_NAME": "personal_image_url",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "biography",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "academic_rank",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "academic_degree",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "phone",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "email",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      },
+      {
+        "COLUMN_NAME": "branch_id",
+        "DATA_TYPE": "int",
+        "IS_NULLABLE": "YES",
+        "COLUMN_DEFAULT": null
+      }
+    ]
+  },
+  "sA2_rels": {
+    "ok": true,
+    "columns": [
+      "COLUMN_NAME",
+      "DATA_TYPE",
+      "IS_NULLABLE"
+    ],
+    "rows": [
+      {
+        "COLUMN_NAME": "id",
+        "DATA_TYPE": "int",
+        "IS_NULLABLE": "NO"
+      },
+      {
+        "COLUMN_NAME": "parent_id",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "NO"
+      },
+      {
+        "COLUMN_NAME": "child_id",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "NO"
+      },
+      {
+        "COLUMN_NAME": "relation_type",
+        "DATA_TYPE": "enum",
+        "IS_NULLABLE": "NO"
+      },
+      {
+        "COLUMN_NAME": "created_at",
+        "DATA_TYPE": "timestamp",
+        "IS_NULLABLE": "YES"
+      },
+      {
+        "COLUMN_NAME": "updated_at",
+        "DATA_TYPE": "timestamp",
+        "IS_NULLABLE": "YES"
+      }
+    ]
+  },
+  "sA2b_idx": {
+    "ok": true,
+    "columns": [
+      "INDEX_NAME",
+      "COLUMN_NAME",
+      "SEQ_IN_INDEX",
+      "NON_UNIQUE"
+    ],
+    "rows": [
+      {
+        "INDEX_NAME": "idx_child_id",
+        "COLUMN_NAME": "child_id",
+        "SEQ_IN_INDEX": 1,
+        "NON_UNIQUE": 1
+      },
+      {
+        "INDEX_NAME": "idx_parent_id",
+        "COLUMN_NAME": "parent_id",
+        "SEQ_IN_INDEX": 1,
+        "NON_UNIQUE": 1
+      },
+      {
+        "INDEX_NAME": "idx_relation_type",
+        "COLUMN_NAME": "relation_type",
+        "SEQ_IN_INDEX": 1,
+        "NON_UNIQUE": 1
+      },
+      {
+        "INDEX_NAME": "PRIMARY",
+        "COLUMN_NAME": "id",
+        "SEQ_IN_INDEX": 1,
+        "NON_UNIQUE": 0
+      },
+      {
+        "INDEX_NAME": "unique_parent_child_relation",
+        "COLUMN_NAME": "parent_id",
+        "SEQ_IN_INDEX": 1,
+        "NON_UNIQUE": 0
+      },
+      {
+        "INDEX_NAME": "unique_parent_child_relation",
+        "COLUMN_NAME": "child_id",
+        "SEQ_IN_INDEX": 2,
+        "NON_UNIQUE": 0
+      },
+      {
+        "INDEX_NAME": "unique_parent_child_relation",
+        "COLUMN_NAME": "relation_type",
+        "SEQ_IN_INDEX": 3,
+        "NON_UNIQUE": 0
+      }
+    ]
+  },
+  "sA2b_fk": {
+    "ok": true,
+    "columns": [
+      "CONSTRAINT_NAME",
+      "COLUMN_NAME",
+      "REFERENCED_TABLE_NAME",
+      "REFERENCED_COLUMN_NAME",
+      "DELETE_RULE",
+      "UPDATE_RULE"
+    ],
+    "rows": [
+      {
+        "CONSTRAINT_NAME": "PRIMARY",
+        "COLUMN_NAME": "id",
+        "REFERENCED_TABLE_NAME": null,
+        "REFERENCED_COLUMN_NAME": null,
+        "DELETE_RULE": null,
+        "UPDATE_RULE": null
+      },
+      {
+        "CONSTRAINT_NAME": "unique_parent_child_relation",
+        "COLUMN_NAME": "parent_id",
+        "REFERENCED_TABLE_NAME": null,
+        "REFERENCED_COLUMN_NAME": null,
+        "DELETE_RULE": null,
+        "UPDATE_RULE": null
+      },
+      {
+        "CONSTRAINT_NAME": "unique_parent_child_relation",
+        "COLUMN_NAME": "child_id",
+        "REFERENCED_TABLE_NAME": null,
+        "REFERENCED_COLUMN_NAME": null,
+        "DELETE_RULE": null,
+        "UPDATE_RULE": null
+      },
+      {
+        "CONSTRAINT_NAME": "unique_parent_child_relation",
+        "COLUMN_NAME": "relation_type",
+        "REFERENCED_TABLE_NAME": null,
+        "REFERENCED_COLUMN_NAME": null,
+        "DELETE_RULE": null,
+        "UPDATE_RULE": null
+      },
+      {
+        "CONSTRAINT_NAME": "relationships_ibfk_1",
+        "COLUMN_NAME": "parent_id",
+        "REFERENCED_TABLE_NAME": "persons",
+        "REFERENCED_COLUMN_NAME": "person_id",
+        "DELETE_RULE": "CASCADE",
+        "UPDATE_RULE": "CASCADE"
+      },
+      {
+        "CONSTRAINT_NAME": "relationships_ibfk_2",
+        "COLUMN_NAME": "child_id",
+        "REFERENCED_TABLE_NAME": "persons",
+        "REFERENCED_COLUMN_NAME": "person_id",
+        "DELETE_RULE": "CASCADE",
+        "UPDATE_RULE": "CASCADE"
+      }
+    ]
+  },
+  "sA3_marriages": {
+    "ok": true,
+    "columns": [
+      "COLUMN_NAME",
+      "DATA_TYPE",
+      "IS_NULLABLE"
+    ],
+    "rows": [
+      {
+        "COLUMN_NAME": "id",
+        "DATA_TYPE": "int",
+        "IS_NULLABLE": "NO"
+      },
+      {
+        "COLUMN_NAME": "person_id",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "NO"
+      },
+      {
+        "COLUMN_NAME": "spouse_person_id",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "NO"
+      },
+      {
+        "COLUMN_NAME": "status",
+        "DATA_TYPE": "varchar",
+        "IS_NULLABLE": "YES"
+      },
+      {
+        "COLUMN_NAME": "note",
+        "DATA_TYPE": "text",
+        "IS_NULLABLE": "YES"
+      },
+      {
+        "COLUMN_NAME": "created_at",
+        "DATA_TYPE": "timestamp",
+        "IS_NULLABLE": "YES"
+      },
+      {
+        "COLUMN_NAME": "updated_at",
+        "DATA_TYPE": "timestamp",
+        "IS_NULLABLE": "YES"
+      }
+    ]
+  },
+  "sA4_tables": {
+    "ok": true,
+    "columns": [
+      "TABLE_NAME"
+    ],
+    "rows": [
+      {
+        "TABLE_NAME": "birth_records"
+      },
+      {
+        "TABLE_NAME": "branches"
+      },
+      {
+        "TABLE_NAME": "death_records"
+      },
+      {
+        "TABLE_NAME": "generations"
+      },
+      {
+        "TABLE_NAME": "locations"
+      }
+    ]
+  },
+  "sA4_cols": {
+    "ok": true,
+    "columns": [
+      "TABLE_NAME",
+      "COLUMN_NAME",
+      "DATA_TYPE"
+    ],
+    "rows": [
+      {
+        "TABLE_NAME": "birth_records",
+        "COLUMN_NAME": "birth_record_id",
+        "DATA_TYPE": "int"
+      },
+      {
+        "TABLE_NAME": "birth_records",
+        "COLUMN_NAME": "person_id",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "birth_records",
+        "COLUMN_NAME": "birth_date_solar",
+        "DATA_TYPE": "date"
+      },
+      {
+        "TABLE_NAME": "birth_records",
+        "COLUMN_NAME": "birth_date_lunar",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "birth_records",
+        "COLUMN_NAME": "birth_location_id",
+        "DATA_TYPE": "int"
+      },
+      {
+        "TABLE_NAME": "birth_records",
+        "COLUMN_NAME": "notes",
+        "DATA_TYPE": "text"
+      },
+      {
+        "TABLE_NAME": "birth_records",
+        "COLUMN_NAME": "created_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "birth_records",
+        "COLUMN_NAME": "updated_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "branches",
+        "COLUMN_NAME": "branch_id",
+        "DATA_TYPE": "int"
+      },
+      {
+        "TABLE_NAME": "branches",
+        "COLUMN_NAME": "branch_name",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "branches",
+        "COLUMN_NAME": "description",
+        "DATA_TYPE": "text"
+      },
+      {
+        "TABLE_NAME": "branches",
+        "COLUMN_NAME": "created_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "branches",
+        "COLUMN_NAME": "updated_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "death_record_id",
+        "DATA_TYPE": "int"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "person_id",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "death_date_solar",
+        "DATA_TYPE": "date"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "death_date_lunar",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "death_location_id",
+        "DATA_TYPE": "int"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "grave_location",
+        "DATA_TYPE": "text"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "notes",
+        "DATA_TYPE": "text"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "created_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "death_records",
+        "COLUMN_NAME": "updated_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "generations",
+        "COLUMN_NAME": "generation_id",
+        "DATA_TYPE": "int"
+      },
+      {
+        "TABLE_NAME": "generations",
+        "COLUMN_NAME": "generation_number",
+        "DATA_TYPE": "int"
+      },
+      {
+        "TABLE_NAME": "generations",
+        "COLUMN_NAME": "description",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "generations",
+        "COLUMN_NAME": "created_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "generations",
+        "COLUMN_NAME": "updated_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "location_id",
+        "DATA_TYPE": "int"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "location_name",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "location_type",
+        "DATA_TYPE": "enum"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "province",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "district",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "ward",
+        "DATA_TYPE": "varchar"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "full_address",
+        "DATA_TYPE": "text"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "created_at",
+        "DATA_TYPE": "timestamp"
+      },
+      {
+        "TABLE_NAME": "locations",
+        "COLUMN_NAME": "updated_at",
+        "DATA_TYPE": "timestamp"
+      }
+    ]
+  },
+  "sB1_numeric": {
+    "ok": true,
+    "columns": [
+      "numeric_person_ids"
+    ],
+    "rows": [
+      {
+        "numeric_person_ids": 0
+      }
+    ]
+  },
+  "sB2_numeric_list": {
+    "ok": true,
+    "skipped": true,
+    "reason": "numeric_count = 0",
+    "rows": []
+  },
+  "sC0_tables": {
+    "ok": true,
+    "columns": [
+      "TABLE_NAME"
+    ],
+    "rows": [
+      {
+        "TABLE_NAME": "in_law_relationships"
+      },
+      {
+        "TABLE_NAME": "marriages"
+      },
+      {
+        "TABLE_NAME": "personal_details"
+      },
+      {
+        "TABLE_NAME": "persons"
+      },
+      {
+        "TABLE_NAME": "relationships"
+      },
+      {
+        "TABLE_NAME": "spouse_sibling_children"
+      }
+    ]
+  },
+  "sC1_counts": {
+    "ok": true,
+    "columns": [
+      "tbl",
+      "n"
+    ],
+    "rows": [
+      {
+        "tbl": "relationships",
+        "n": 1611
+      },
+      {
+        "tbl": "marriages",
+        "n": 352
+      },
+      {
+        "tbl": "persons",
+        "n": 1188
+      },
+      {
+        "tbl": "spouse_sibling_children",
+        "n": 1165
+      },
+      {
+        "tbl": "in_law_relationships",
+        "n": 0
+      },
+      {
+        "tbl": "personal_details",
+        "n": 0
+      }
+    ]
+  },
+  "sC2_orphaned": {
+    "ok": true,
+    "columns": [
+      "orphaned"
+    ],
+    "rows": [
+      {
+        "orphaned": 0
+      }
+    ]
+  },
+  "sC3_dup_marriages": {
+    "ok": true,
+    "columns": [
+      "person_id",
+      "spouse_person_id",
+      "c"
+    ],
+    "rows": []
+  },
+  "sD_sp_get_ancestors": {
+    "ok": true,
+    "body": "('sp_get_ancestors', 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', \"CREATE DEFINER=`root`@`%` PROCEDURE `sp_get_ancestors`(IN person_id VARCHAR(50), IN max_level INT)\\nBEGIN\\n    WITH RECURSIVE ancestors AS (\\n        -- Base case: người hiện tại\\n        SELECT \\n            p.person_id,\\n            p.full_name,\\n            p.gender,\\n            p.generation_level,\\n            p.father_mother_id,\\n            0 AS level\\n        FROM persons p\\n        WHERE p.person_id COLLATE utf8mb4_unicode_ci = person_id COLLATE utf8mb4_unicode_ci\\n        \\n        UNION ALL\\n        \\n        -- Recursive case: CHA (chỉ theo dòng cha, không lấy mẹ)\\n        -- Ưu tiên 1: Tìm cha theo relationships table (relation_type = 'father') - chính xác nhất\\n        -- Ưu tiên 2: Tìm cha theo father_mother_id (nếu không có trong relationships)\\n        SELECT \\n            COALESCE(parent_by_rel.person_id, parent_by_fm.person_id) AS person_id,\\n            COALESCE(parent_by_rel.full_name, parent_by_fm.full_name) AS full_name,\\n            COALESCE(parent_by_rel.gender, parent_by_fm.gender) AS gender,\\n            COALESCE(parent_by_rel.generation_level, parent_by_fm.generation_level) AS generation_level,\\n            COALESCE(parent_by_rel.father_mother_id, parent_by_fm.father_mother_id) AS father_mother_id,\\n            a.level + 1\\n        FROM ancestors a\\n        INNER JOIN persons child ON a.person_id COLLATE utf8mb4_unicode_ci = child.person_id COLLATE utf8mb4_unicode_ci\\n        -- Ưu tiên 1: Tìm cha theo relationships table (chính xác nhất)\\n        LEFT JOIN relationships r ON (\\n            a.person_id COLLATE utf8mb4_unicode_ci = r.child_id COLLATE utf8mb4_unicode_ci\\n            AND r.relation_type = 'father'\\n        )\\n        LEFT JOIN persons parent_by_rel ON (\\n            r.parent_id COLLATE utf8mb4_unicode_ci = parent_by_rel.person_id COLLATE utf8mb4_unicode_ci\\n        )\\n        -- Ưu tiên 2: Tìm cha theo father_mother_id (fallback nếu không có trong relationships)\\n        -- Logic: Nếu child có father_mother_id, tìm person có cùng father_mother_id, generation_level nhỏ hơn, và gender = 'Nam'\\n        LEFT JOIN persons parent_by_fm ON (\\n            parent_by_rel.person_id IS NULL  -- Chỉ dùng nếu không tìm được qua relationships\\n            AND child.father_mother_id IS NOT NULL \\n            AND child.father_mother_id != ''\\n            AND parent_by_fm.father_mother_id COLLATE utf8mb4_unicode_ci = child.father_mother_id COLLATE utf8mb4_unicode_ci\\n            AND parent_by_fm.generation_level < child.generation_level\\n            AND parent_by_fm.gender = 'Nam'  -- Chỉ lấy cha (Nam)\\n            -- Ưu tiên generation_level gần nhất (lớn nhất trong các generation_level nhỏ hơn child)\\n            AND parent_by_fm.generation_level = (\\n                SELECT MAX(p2.generation_level)\\n                FROM persons p2\\n                WHERE p2.father_mother_id COLLATE utf8mb4_unicode_ci = child.father_mother_id COLLATE utf8mb4_unicode_ci\\n                    AND p2.generation_level < child.generation_level\\n                    AND p2.gender = 'Nam'\\n            )\\n        )\\n        WHERE a.level < max_level\\n            AND (parent_by_rel.person_id IS NOT NULL OR parent_by_fm.person_id IS NOT NULL)\\n    )\\n    -- Chỉ lấy CHA (Nam), loại bỏ vợ/chồng (Nữ) và các bản ghi không hợp lệ\\n    SELECT * FROM ancestors \\n    WHERE level > 0 \\n        AND gender = 'Nam'  -- CHỈ LẤY CHA (NAM), KHÔNG LẤY VỢ/CHỒNG\\n    ORDER BY level, generation_level, full_name;\\nEND\", 'utf8mb4', 'utf8mb4_unicode_ci', 'utf8mb4_0900_ai_ci')"
+  },
+  "sD_sp_get_descendants": {
+    "ok": true,
+    "body": "('sp_get_descendants', 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', 'CREATE DEFINER=`root`@`%` PROCEDURE `sp_get_descendants`(IN person_id VARCHAR(50), IN max_level INT)\\nBEGIN\\n    WITH RECURSIVE descendants AS (\\n        -- Base case: người hiện tại\\n        SELECT \\n            p.person_id,\\n            p.full_name,\\n            p.gender,\\n            p.generation_level,\\n            0 AS level\\n        FROM persons p\\n        WHERE p.person_id COLLATE utf8mb4_unicode_ci = person_id COLLATE utf8mb4_unicode_ci\\n        \\n        UNION ALL\\n        \\n        -- Recursive case: con cái\\n        SELECT \\n            child.person_id,\\n            child.full_name,\\n            child.gender,\\n            child.generation_level,\\n            d.level + 1\\n        FROM descendants d\\n        INNER JOIN relationships r ON d.person_id COLLATE utf8mb4_unicode_ci = r.parent_id COLLATE utf8mb4_unicode_ci\\n        INNER JOIN persons child ON r.child_id COLLATE utf8mb4_unicode_ci = child.person_id COLLATE utf8mb4_unicode_ci\\n        WHERE d.level < max_level\\n    )\\n    SELECT * FROM descendants WHERE level > 0 ORDER BY level, full_name;\\nEND', 'utf8mb4', 'utf8mb4_unicode_ci', 'utf8mb4_0900_ai_ci')"
+  },
+  "sD_routines_meta": {
+    "ok": true,
+    "columns": [
+      "ROUTINE_NAME",
+      "ROUTINE_TYPE",
+      "SQL_DATA_ACCESS",
+      "SECURITY_TYPE",
+      "DEFINER",
+      "LAST_ALTERED"
+    ],
+    "rows": [
+      {
+        "ROUTINE_NAME": "sp_get_ancestors",
+        "ROUTINE_TYPE": "PROCEDURE",
+        "SQL_DATA_ACCESS": "CONTAINS SQL",
+        "SECURITY_TYPE": "DEFINER",
+        "DEFINER": "root@%",
+        "LAST_ALTERED": "2025-12-12 03:35:00"
+      },
+      {
+        "ROUTINE_NAME": "sp_get_descendants",
+        "ROUTINE_TYPE": "PROCEDURE",
+        "SQL_DATA_ACCESS": "CONTAINS SQL",
+        "SECURITY_TYPE": "DEFINER",
+        "DEFINER": "root@%",
+        "LAST_ALTERED": "2025-12-12 03:35:00"
+      }
+    ]
+  },
+  "sD2_triggers": {
+    "ok": true,
+    "columns": [
+      "TRIGGER_NAME",
+      "EVENT_MANIPULATION",
+      "EVENT_OBJECT_TABLE",
+      "ACTION_TIMING",
+      "ACTION_STATEMENT"
+    ],
+    "rows": []
+  },
+  "_meta": {
+    "ran_at": "2026-06-04T06:54:36.642920",
+    "host": "tramway.proxy.rlwy.net",
+    "database": "railway"
+  }
+}
