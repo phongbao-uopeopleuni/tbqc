@@ -123,15 +123,21 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
     
     const father = actualFatherId ? personNodeMap.get(actualFatherId) : null;
     const mother = actualMotherId ? personNodeMap.get(actualMotherId) : null;
-    
+
+    // Nếu cha/mẹ không có trong personNodeMap (vd: married-in, không phải descendant của root),
+    // fallback sang father_name/mother_name từ con đầu tiên trong nhóm
+    const firstChild = childIds.length > 0 ? personNodeMap.get(childIds[0]) : null;
+    const fatherName = father ? father.name : (firstChild?.father_name || null);
+    const motherName = mother ? mother.name : (firstChild?.mother_name || null);
+
     const familyNode = {
       id: familyId,
       spouse1Id: actualFatherId,
       spouse2Id: actualMotherId,
-      spouse1Name: father ? father.name : null,
-      spouse2Name: mother ? mother.name : null,
-      spouse1Gender: father ? father.gender : null,
-      spouse2Gender: mother ? mother.gender : null,
+      spouse1Name: fatherName,
+      spouse2Name: motherName,
+      spouse1Gender: father ? father.gender : (actualFatherId ? 'Nam' : null),
+      spouse2Gender: mother ? mother.gender : (actualMotherId ? 'Nữ' : null),
       marriageOrder: 0, // Default marriage
       generation: father ? father.generation : (mother ? mother.generation : 0),
       children: childIds,

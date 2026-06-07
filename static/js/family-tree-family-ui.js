@@ -868,60 +868,39 @@ function buildFamilyTree(familyGraph, maxGeneration) {
         // Skip nếu đã được xử lý
         if (processedChildIds.has(childId)) return;
         
-        // Tìm family node mà child này là spouse
-        // CHÚ Ý: Một person có thể có nhiều marriages, nên không thể dùng personToFamilyMap.get()
-        // (vì nó chỉ lưu marriage cuối cùng). Phải tìm tất cả family nodes mà child này là spouse.
-        let childFamilyId = null;
-        let childFamily = null;
-        
-        // Tìm tất cả family nodes mà child này là spouse
+        // Tìm tất cả family nodes mà child này là spouse (có thể nhiều — đa thê/đa hôn)
         const candidateFamilies = [];
         for (const [fid, f] of familyNodeMap.entries()) {
           if ((f.spouse1Id === childId || f.spouse2Id === childId) && fid !== familyId) {
             candidateFamilies.push(f);
           }
         }
-        
+
         if (candidateFamilies.length > 0) {
-          // Ưu tiên chọn family có generation <= maxGeneration (để không bị filter bỏ)
-          const validGenerationFamilies = candidateFamilies.filter(f => 
+          // Lọc theo maxGeneration
+          const validFamilies = candidateFamilies.filter(f =>
             !f.generation || f.generation <= maxGeneration
           );
-          
-          if (validGenerationFamilies.length > 0) {
-            // Sắp xếp theo generation tăng dần (generation thấp nhất trước)
-            validGenerationFamilies.sort((a, b) => (a.generation || 999) - (b.generation || 999));
-            
-            // Ưu tiên: chọn family có generation thấp nhất (primary marriage)
-            // Vì đó là family mà child thuộc về ở generation hiện tại
-            // Chỉ khi không có family nào ở generation hợp lệ mới chọn family ở generation cao hơn
-            childFamily = validGenerationFamilies[0];
-            
-            // Nếu có nhiều families cùng generation thấp nhất, ưu tiên family có children
-            const lowestGen = childFamily.generation || 999;
-            const sameGenFamilies = validGenerationFamilies.filter(f => (f.generation || 999) === lowestGen);
-            if (sameGenFamilies.length > 1) {
-              const familyWithChildren = sameGenFamilies.find(f => f.children && f.children.length > 0);
-              if (familyWithChildren) {
-                childFamily = familyWithChildren;
-              }
+          const familiesToAdd = validFamilies.length > 0 ? validFamilies : candidateFamilies;
+
+          // Dedup theo cặp vợ chồng — ưu tiên FG- (sibling-group) hơn FM- (marriage)
+          // để tránh trùng cùng 1 cặp nhưng vẫn giữ TẤT CẢ các cuộc hôn nhân khác nhau
+          const coupleMap = new Map();
+          familiesToAdd.forEach(f => {
+            const key = [f.spouse1Id || 'null', f.spouse2Id || 'null'].join('|');
+            if (!coupleMap.has(key)) {
+              coupleMap.set(key, f);
+            } else if (f.id.startsWith('FG-') && !coupleMap.get(key).id.startsWith('FG-')) {
+              coupleMap.set(key, f);
             }
-          } else {
-            // Nếu không có family nào có generation hợp lệ, chọn family có generation thấp nhất
-            // (có thể sẽ bị filter sau, nhưng ít nhất vẫn chọn đúng primary marriage)
-            candidateFamilies.sort((a, b) => (a.generation || 999) - (b.generation || 999));
-            childFamily = candidateFamilies[0];
-          }
-          childFamilyId = childFamily.id;
-        }
-        
-        if (childFamilyId && childFamily) {
-          // Child có family riêng (là spouse trong family đó) - add to family group
-          if (!childrenByFamily.has(childFamilyId)) {
-            childrenByFamily.set(childFamilyId, new Set());
-          }
-          // Add this child to the family group
-          childrenByFamily.get(childFamilyId).add(childId);
+          });
+
+          coupleMap.forEach(cf => {
+            if (!childrenByFamily.has(cf.id)) {
+              childrenByFamily.set(cf.id, new Set());
+            }
+            childrenByFamily.get(cf.id).add(childId);
+          });
           processedChildIds.add(childId);
         } else {
           // Child không có family riêng (chưa có con hoặc chưa kết hôn)
