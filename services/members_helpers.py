@@ -5,6 +5,8 @@ import re
 import unicodedata
 from datetime import date, datetime
 
+from services.person_helpers import get_preferred_spouse_names
+
 
 def sll_cell_nonempty(val):
     if val is None:
@@ -109,12 +111,7 @@ def sll_base_payload(cursor, person_id, rel_data):
         return None
     pid = person_id
     parent = rel_data["parent_data"].get(pid, {})
-    spouse_names = (
-        rel_data["spouse_data_from_table"].get(pid)
-        or rel_data["spouse_data_from_marriages"].get(pid)
-        or rel_data["spouse_data_from_csv"].get(pid)
-        or []
-    )
+    spouse_names = get_preferred_spouse_names(rel_data, pid)
     children = rel_data["children_map"].get(pid, [])
     siblings = rel_data["siblings_map"].get(pid, [])
 

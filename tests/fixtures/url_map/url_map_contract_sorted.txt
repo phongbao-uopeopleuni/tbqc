@@ -4,7 +4,7 @@ DELETE /admin/api/users/<int:user_id> -> api_delete_user
 DELETE /api/albums/<int:album_id> -> gallery.api_delete_album
 DELETE /api/albums/<int:album_id>/images -> gallery.api_delete_album_images
 DELETE /api/marriages/<int:marriage_id> -> delete_spouse
-DELETE /api/person/<int:person_id> -> persons.delete_person
+DELETE /api/person/<person_id> -> persons.delete_person
 DELETE /api/persons/batch -> persons.delete_persons_batch
 DELETE|GET|PUT /api/activities/<int:activity_id> -> activities.api_activity_detail
 DELETE|GET|PUT /api/admin/users/<int:user_id> -> api_admin_user_detail
@@ -107,8 +107,8 @@ POST /api/login -> auth.api_login
 POST /api/logout -> auth.api_logout
 POST /api/members/bulk-update-branch -> members_portal.bulk_update_members_branch
 POST /api/members/bulk-update-sll -> members_portal.bulk_update_members_sll
-POST /api/person/<int:person_id>/sync -> persons.sync_person
 POST /api/person/<person_id>/spouses -> create_spouse
+POST /api/person/<person_id>/sync -> persons.sync_person
 POST /api/persons -> persons.create_person
 POST /api/upload-image -> gallery.upload_image
 POST /members/request-deletion -> members_portal.members_request_deletion
@@ -118,5 +118,5 @@ PUT /admin/api/members/<person_id> -> update_member_admin
 PUT /admin/api/users/<int:user_id> -> api_update_user
 PUT /api/albums/<int:album_id> -> gallery.api_update_album
 PUT /api/marriages/<int:marriage_id> -> update_spouse
-PUT /api/person/<int:person_id> -> persons.update_person
+PUT /api/person/<person_id> -> persons.update_person
 PUT /api/persons/<person_id> -> persons.update_person_members

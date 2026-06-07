@@ -223,3 +223,69 @@ def test_delete_member_db_fail(flask_app, monkeypatch):
     assert resp.status_code == 500
     body = resp.get_json()
     assert body['success'] is False
+
+
+def test_delete_member_success_no_legacy_table_references(flask_app, monkeypatch):
+    """Happy path: delete succeeds; in_law_relationships and personal_details are
+    no longer referenced (Phase 4 cleanup — tables are empty and covered by FK CASCADE)."""
+    executed_sql: list[str] = []
+
+    class TrackingCursor:
+        _call = 0
+
+        def execute(self, sql, *args):
+            executed_sql.append(sql.strip())
+            self._call += 1
+
+        def fetchone(self):
+            # Call 1 = SELECT person_id (exists check) → return row
+            # Call 2 = SELECT full_name... (before_data) → return row
+            if self._call <= 2:
+                return {'person_id': 'P-1-1', 'full_name': 'Test', 'gender': 'Nam',
+                        'status': 'Con song', 'generation_level': 1,
+                        'birth_date_solar': None, 'death_date_solar': None,
+                        'place_of_death': None}
+            return None
+
+        def fetchall(self):
+            return []
+
+        def close(self):
+            pass
+
+    class TrackingConn:
+        def cursor(self, **kw):
+            return TrackingCursor()
+
+        def commit(self):
+            pass
+
+        def rollback(self):
+            pass
+
+        def is_connected(self):
+            return True
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(members_routes, 'get_db_connection', lambda: TrackingConn())
+    monkeypatch.setattr(members_routes, 'log_activity', lambda *a, **kw: None)
+    client = _patch_admin(monkeypatch, flask_app)
+    resp = client.delete('/admin/api/members/P-1-1')
+
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body['success'] is True
+
+    # Legacy tables must NOT appear in any execute call (Phase 4 cleanup)
+    all_sql = ' '.join(executed_sql).lower()
+    assert 'in_law_relationships' not in all_sql, \
+        "in_law_relationships should not be referenced after Phase 4 cleanup"
+    assert 'personal_details' not in all_sql, \
+        "personal_details should not be referenced after Phase 4 cleanup"
+
+    # Core tables must still be cleaned up before person is deleted
+    assert any('delete from relationships' in s.lower() for s in executed_sql)
+    assert any('delete from marriages' in s.lower() for s in executed_sql)
+    assert any('delete from persons' in s.lower() for s in executed_sql)

@@ -21,6 +21,7 @@ from services.person_helpers import (
     normalize_search_query,
     split_semicolon_values,
     find_person_by_name,
+    get_preferred_spouse_names,
     load_relationship_data,
     get_or_create_location,
     get_or_create_generation,
@@ -37,6 +38,72 @@ from utils.validation import (
 logger = logging.getLogger(__name__)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _split_semicolon_values = split_semicolon_values
+
+
+def _apply_parent_relationship_mutations(cursor, person_id, data):
+    """Apply father/mother mutations.
+
+    Ưu tiên mỗi loại quan hệ:
+    1. father_id / mother_id (person_id trực tiếp) — chính xác nhất
+    2. father_name / mother_name + fm_id hint — name lookup có disambiguation
+    3. Key bị bỏ qua (omitted) → giữ nguyên relation
+
+    Blank value (id hoặc name) → xóa relation.
+    Không tìm được / trùng tên không giải được → raise ValueError (không ghi gì).
+    """
+    # fm_id dùng làm hint disambiguation khi tên bị trùng
+    fm_id = (str(data.get('fm_id') or data.get('father_mother_id') or '')).strip() or None
+
+    for relation_type, name_field, id_field in (
+        ('father', 'father_name', 'father_id'),
+        ('mother', 'mother_name', 'mother_id'),
+    ):
+        has_id_field = id_field in data
+        has_name_field = name_field in data
+
+        if not has_id_field and not has_name_field:
+            continue  # Omitted → giữ nguyên
+
+        if has_id_field:
+            # Ưu tiên 1: person_id trực tiếp
+            direct_id = str(data[id_field]).strip() if data.get(id_field) is not None else ''
+            if not direct_id:
+                cursor.execute(
+                    "DELETE FROM relationships WHERE child_id = %s AND relation_type = %s",
+                    (person_id, relation_type),
+                )
+                continue
+            cursor.execute(
+                "SELECT person_id FROM persons WHERE person_id = %s",
+                (direct_id,),
+            )
+            if not cursor.fetchone():
+                raise ValueError(f'Khong tim thay {id_field}: {direct_id}')
+            parent_id = direct_id
+        else:
+            # Ưu tiên 2: name lookup với fm_id disambiguation
+            raw_value = data.get(name_field)
+            normalized_name = str(raw_value).strip() if raw_value is not None else ''
+            if not normalized_name:
+                cursor.execute(
+                    "DELETE FROM relationships WHERE child_id = %s AND relation_type = %s",
+                    (person_id, relation_type),
+                )
+                continue
+            parent_id = find_person_by_name(cursor, normalized_name, fm_id=fm_id)
+            if not parent_id:
+                raise ValueError(
+                    f'Khong tim thay hoac ten bi trung {name_field}: {normalized_name}'
+                )
+
+        cursor.execute(
+            "DELETE FROM relationships WHERE child_id = %s AND relation_type = %s",
+            (person_id, relation_type),
+        )
+        cursor.execute(
+            "INSERT INTO relationships (child_id, parent_id, relation_type) VALUES (%s, %s, %s)",
+            (person_id, parent_id, relation_type),
+        )
 
 def get_persons():
     """Lấy danh sách tất cả người từ schema mới (person_id VARCHAR, relationships mới)"""
@@ -378,28 +445,13 @@ def get_person(person_id):
             person['spouse_name'] = None
         if relationship_data:
             try:
-                spouse_data_from_table = relationship_data['spouse_data_from_table']
-                spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
-                spouse_data_from_csv = relationship_data['spouse_data_from_csv']
                 if not person.get('spouse') or person.get('spouse') == '':
-                    if person_id in spouse_data_from_table:
-                        spouse_names = spouse_data_from_table[person_id]
-                        spouse_string = '; '.join(spouse_names) if spouse_names else None
+                    spouse_names = get_preferred_spouse_names(relationship_data, person_id)
+                    if spouse_names:
+                        spouse_string = '; '.join(spouse_names)
                         person['spouse'] = spouse_string
                         person['spouse_name'] = spouse_string
-                        logger.info(f'[API /api/person/{person_id}] Loaded spouse from spouse_sibling_children table: {spouse_string}')
-                    elif person_id in spouse_data_from_marriages:
-                        spouse_names = spouse_data_from_marriages[person_id]
-                        spouse_string = '; '.join(spouse_names) if spouse_names else None
-                        person['spouse'] = spouse_string
-                        person['spouse_name'] = spouse_string
-                        logger.info(f'[API /api/person/{person_id}] Loaded spouse from helper marriages: {spouse_string}')
-                    elif person_id in spouse_data_from_csv:
-                        spouse_names = spouse_data_from_csv[person_id]
-                        spouse_string = '; '.join(spouse_names) if spouse_names else None
-                        person['spouse'] = spouse_string
-                        person['spouse_name'] = spouse_string
-                        logger.info(f'[API /api/person/{person_id}] Loaded spouse from CSV: {spouse_string}')
+                        logger.info(f'[API /api/person/{person_id}] Loaded spouse from prioritized relationship data: {spouse_string}')
                 elif not person.get('spouse_name'):
                     person['spouse_name'] = person.get('spouse')
                     logger.info(f"[API /api/person/{person_id}] Set spouse_name from spouse: {person.get('spouse')}")
@@ -751,9 +803,6 @@ def search_persons():
         results = cursor.fetchall()
         logger.debug('Loading all relationship data using shared helper for /api/search...')
         relationship_data = load_relationship_data(cursor)
-        spouse_data_from_table = relationship_data['spouse_data_from_table']
-        spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
-        spouse_data_from_csv = relationship_data['spouse_data_from_csv']
         children_map = relationship_data['children_map']
         siblings_map = relationship_data['siblings_map']
         seen_ids = set()
@@ -762,13 +811,7 @@ def search_persons():
             person_id = row.get('person_id')
             if person_id and person_id not in seen_ids:
                 seen_ids.add(person_id)
-                spouse_names = []
-                if person_id in spouse_data_from_table:
-                    spouse_names = spouse_data_from_table[person_id]
-                elif person_id in spouse_data_from_marriages:
-                    spouse_names = spouse_data_from_marriages[person_id]
-                elif person_id in spouse_data_from_csv:
-                    spouse_names = spouse_data_from_csv[person_id]
+                spouse_names = get_preferred_spouse_names(relationship_data, person_id)
                 children = children_map.get(person_id, [])
                 siblings = siblings_map.get(person_id, [])
                 row['generation_number'] = row.get('generation_level')
@@ -795,7 +838,12 @@ def search_persons():
 def create_edit_request():
     """API tạo yêu cầu chỉnh sửa (không cần đăng nhập)"""
     try:
-        data = request.get_json()
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            data = request.form.to_dict()
+            personal_image_file = request.files.get('personal_image')
+        else:
+            data = request.get_json() or {}
+            personal_image_file = None
         person_id = data.get('person_id')
         person_name = data.get('person_name', '')
         person_generation = data.get('person_generation')
@@ -833,6 +881,10 @@ def delete_person(person_id):
     if not connection:
         return (jsonify({'error': 'Không thể kết nối database'}), 500)
     try:
+        try:
+            person_id = validate_person_id(str(person_id))
+        except ValueError as e:
+            return (jsonify({'error': f'Invalid person_id format: {str(e)}'}), 400)
         data = request.get_json() or {}
         password = data.get('password', '').strip()
         correct_password = os.environ.get('BACKUP_PASSWORD', os.environ.get('ADMIN_PASSWORD', ''))
@@ -842,7 +894,7 @@ def delete_person(person_id):
         if not secure_compare(password, correct_password):
             return (jsonify({'error': 'Mật khẩu không đúng'}), 403)
         cursor = connection.cursor(dictionary=True)
-        cursor.execute('SELECT full_name, generation_number FROM persons WHERE person_id = %s', (person_id,))
+        cursor.execute('SELECT full_name, generation_level FROM persons WHERE person_id = %s', (person_id,))
         person = cursor.fetchone()
         if not person:
             return (jsonify({'error': 'Không tìm thấy người với ID này'}), 404)
@@ -861,7 +913,7 @@ def delete_person(person_id):
                 logger.debug('Cache invalidated after delete_person')
             except Exception as e:
                 logger.warning(f'Cache invalidation error (continuing): {e}')
-        return jsonify({'success': True, 'message': f"Đã xóa người: {person['full_name']} (Đời {person['generation_number']})", 'person_id': person_id})
+        return jsonify({'success': True, 'message': f"Đã xóa người: {person['full_name']} (Đời {person['generation_level']})", 'person_id': person_id})
     except Error as e:
         connection.rollback()
         return (jsonify({'error': f'Lỗi khi xóa: {str(e)}'}), 500)
@@ -873,199 +925,238 @@ def delete_person(person_id):
 @login_required
 def update_person(person_id):
     """
-    Cập nhật thông tin một người - LƯU TẤT CẢ DỮ LIỆU VÀO DATABASE
-    Yêu cầu đăng nhập và quyền admin/editor để chống IDOR
-    
-    Update person information - SAVE ALL DATA TO DATABASE
-    Requires login and admin/editor permissions to prevent IDOR
+    Update person information and persist relationship changes through the
+    normalized members core path.
     """
     if not is_admin_user() and getattr(current_user, 'role', '') != 'editor':
-        return (jsonify({'error': 'Không có quyền cập nhật dữ liệu'}), 403)
+        return (jsonify({'error': 'Khong co quyen cap nhat du lieu'}), 403)
     if not isinstance(person_id, (int, str)):
         return (jsonify({'error': 'Invalid person_id type'}), 400)
+
     connection = get_db_connection()
     if not connection:
-        return (jsonify({'error': 'Không thể kết nối database'}), 500)
+        return (jsonify({'error': 'Khong the ket noi database'}), 500)
+
     try:
-        data = request.get_json()
-        if not data:
-            return (jsonify({'error': 'Không có dữ liệu để cập nhật'}), 400)
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            data = request.form.to_dict()
+            personal_image_file = request.files.get('personal_image')
+        else:
+            data = request.get_json() or {}
+            personal_image_file = None
+
+        if not data and not (personal_image_file and getattr(personal_image_file, 'filename', None)):
+            return (jsonify({'error': 'Khong co du lieu de cap nhat'}), 400)
+
         cursor = connection.cursor(dictionary=True)
+        try:
+            person_id = validate_person_id(str(person_id))
+        except ValueError as e:
+            return (jsonify({'error': f'Invalid person_id format: {str(e)}'}), 400)
+
+        cursor.execute('SELECT person_id FROM persons WHERE person_id = %s', (person_id,))
+        if not cursor.fetchone():
+            return (jsonify({'error': 'Khong tim thay nguoi nay'}), 404)
+
+        cursor.execute(
+            """
+            SELECT full_name, gender, status, generation_level, birth_date_solar,
+                   death_date_solar, place_of_death, biography, academic_rank,
+                   academic_degree, phone, email, occupation
+            FROM persons
+            WHERE person_id = %s
+            """,
+            (person_id,),
+        )
+        before_data = cursor.fetchone()
+
         cursor.execute('SHOW COLUMNS FROM persons LIKE "version"')
         has_version = cursor.fetchone() is not None
-        
-        if has_version:
-            cursor.execute('SELECT person_id, generation_id, version FROM persons WHERE person_id = %s', (person_id,))
-        else:
-            cursor.execute('SELECT person_id, generation_id FROM persons WHERE person_id = %s', (person_id,))
-            
-        person = cursor.fetchone()
-        if not person:
-            return (jsonify({'error': 'Không tìm thấy người này'}), 404)
-            
         if has_version and 'version' in data:
+            cursor.execute('SELECT version FROM persons WHERE person_id = %s', (person_id,))
+            person = cursor.fetchone() or {}
             try:
                 client_version = int(data['version'])
                 db_version = person.get('version', 1) or 1
                 if client_version != db_version:
-                    return (jsonify({'error': f'Xung đột phiên bản dữ liệu (Conflict). Dữ liệu đã bị thay đổi bởi người khác (version hiện tại: {db_version}, của bạn: {client_version}). Vui lòng tải lại trang.'}), 409)
+                    return (
+                        jsonify(
+                            {
+                                'error': (
+                                    f'Xung dot phien ban du lieu (Conflict). '
+                                    f'Du lieu da bi thay doi boi nguoi khac '
+                                    f'(version hien tai: {db_version}, cua ban: {client_version}). '
+                                    'Vui long tai lai trang.'
+                                )
+                            }
+                        ),
+                        409,
+                    )
             except (ValueError, TypeError):
                 pass
-                
-        current_generation_id = person['generation_id']
-        updates = {}
-        if has_version:
-            updates['version'] = (person.get('version') or 1) + 1
-        if 'full_name' in data and data['full_name']:
-            full_name = sanitize_string(data['full_name'], max_length=255, allow_empty=False)
-            updates['full_name'] = full_name
-        if 'gender' in data:
-            gender = data['gender']
-            if gender and gender not in ['M', 'F', 'Male', 'Female', 'Nam', 'Nữ']:
-                return (jsonify({'error': 'Invalid gender value'}), 400)
-            updates['gender'] = gender
-        if 'status' in data:
-            status = data['status']
-            if status and len(str(status)) > 50:
-                status = str(status)[:50]
-            updates['status'] = status
-        if 'nationality' in data:
-            nationality = data['nationality'].strip() if data['nationality'] else 'Việt Nam'
-            if len(nationality) > 100:
-                nationality = nationality[:100]
-            updates['nationality'] = nationality
-        if 'religion' in data:
-            religion = data['religion'].strip() if data['religion'] else None
-            if religion and len(religion) > 100:
-                religion = religion[:100]
-            updates['religion'] = religion
-        if 'generation_number' in data:
-            generation_id = get_or_create_generation(cursor, data['generation_number'])
-            if generation_id:
-                updates['generation_id'] = generation_id
-                current_generation_id = generation_id
-        if 'branch_name' in data:
-            branch_id = get_or_create_branch(cursor, data['branch_name'])
-            updates['branch_id'] = branch_id
-        if 'origin_location' in data:
-            origin_location_id = get_or_create_location(cursor, data['origin_location'], 'Nguyên quán')
-            updates['origin_location_id'] = origin_location_id
-        if updates:
-            set_clause = ', '.join([f'{k} = %s' for k in updates.keys()])
-            values = list(updates.values()) + [person_id]
-            cursor.execute(f'\n                UPDATE persons \n                SET {set_clause}\n                WHERE person_id = %s\n            ', values)
-        birth_location_id = None
-        if 'birth_location' in data:
-            birth_location_id = get_or_create_location(cursor, data['birth_location'], 'Nơi sinh')
-        cursor.execute('SELECT birth_record_id FROM birth_records WHERE person_id = %s', (person_id,))
-        birth_record = cursor.fetchone()
-        if birth_record:
-            cursor.execute('\n                UPDATE birth_records \n                SET birth_date_solar = %s,\n                    birth_date_lunar = %s,\n                    birth_location_id = %s\n                WHERE person_id = %s\n            ', (data.get('birth_date_solar') or None, data.get('birth_date_lunar') or None, birth_location_id, person_id))
-        else:
-            cursor.execute('\n                INSERT INTO birth_records (person_id, birth_date_solar, birth_date_lunar, birth_location_id)\n                VALUES (%s, %s, %s, %s)\n            ', (person_id, data.get('birth_date_solar') or None, data.get('birth_date_lunar') or None, birth_location_id))
-        death_location_id = None
-        if 'death_location' in data:
-            death_location_id = get_or_create_location(cursor, data['death_location'], 'Nơi mất')
-        cursor.execute('SELECT death_record_id FROM death_records WHERE person_id = %s', (person_id,))
-        death_record = cursor.fetchone()
-        if death_record:
-            cursor.execute('\n                UPDATE death_records \n                SET death_date_solar = %s,\n                    death_date_lunar = %s,\n                    death_location_id = %s\n                WHERE person_id = %s\n            ', (data.get('death_date_solar') or None, data.get('death_date_lunar') or None, death_location_id, person_id))
-        else:
-            cursor.execute('\n                INSERT INTO death_records (person_id, death_date_solar, death_date_lunar, death_location_id)\n                VALUES (%s, %s, %s, %s)\n            ', (person_id, data.get('death_date_solar') or None, data.get('death_date_lunar') or None, death_location_id))
-        father_id = None
-        mother_id = None
-        if 'father_name' in data and data['father_name']:
-            father_generation_id = None
-            if current_generation_id:
-                cursor.execute('\n                    SELECT generation_id FROM generations \n                    WHERE generation_number = (SELECT generation_number - 1 FROM generations WHERE generation_id = %s)\n                ', (current_generation_id,))
-                gen_result = cursor.fetchone()
-                if gen_result:
-                    father_generation_id = gen_result[0]
-            father_id = find_person_by_name(cursor, data['father_name'], father_generation_id)
-        if 'mother_name' in data and data['mother_name']:
-            mother_generation_id = None
-            if current_generation_id:
-                cursor.execute('\n                    SELECT generation_id FROM generations \n                    WHERE generation_number = (SELECT generation_number - 1 FROM generations WHERE generation_id = %s)\n                ', (current_generation_id,))
-                gen_result = cursor.fetchone()
-                if gen_result:
-                    mother_generation_id = gen_result[0]
-            mother_id = find_person_by_name(cursor, data['mother_name'], mother_generation_id)
-        cursor.execute('SELECT relationship_id FROM relationships WHERE child_id = %s', (person_id,))
-        relationship = cursor.fetchone()
-        if relationship:
-            cursor.execute('\n                UPDATE relationships \n                SET father_id = %s, mother_id = %s\n                WHERE relationship_id = %s\n            ', (father_id, mother_id, relationship['relationship_id']))
-        else:
-            cursor.execute('\n                INSERT INTO relationships (child_id, father_id, mother_id)\n                VALUES (%s, %s, %s)\n            ', (person_id, father_id, mother_id))
-        connection.commit()
-        return jsonify({'success': True, 'message': 'Đã cập nhật và đồng bộ dữ liệu thành công!', 'updated_fields': list(updates.keys()) + ['birth_records', 'death_records', 'relationships', 'marriages (todo: use normalized table)']})
+
+        ok, err, code = apply_person_members_update_core(
+            connection, cursor, person_id, data, personal_image_file, before_data
+        )
+        if not ok:
+            connection.rollback()
+            return (jsonify({'error': err}), code or 400)
+
+        return jsonify({'success': True, 'message': 'Da cap nhat va dong bo du lieu thanh cong!'})
     except Error as e:
         connection.rollback()
-        return (jsonify({'error': f'Lỗi database: {str(e)}'}), 500)
+        return (jsonify({'error': f'Loi database: {str(e)}'}), 500)
     except Exception as e:
         connection.rollback()
         import traceback
         traceback.print_exc()
-        return (jsonify({'error': f'Lỗi: {str(e)}'}), 500)
+        return (jsonify({'error': f'Loi: {str(e)}'}), 500)
     finally:
         if connection.is_connected():
             cursor.close()
             connection.close()
 
+
 @login_required
 def sync_person(person_id):
-    """
-    Đồng bộ dữ liệu Person sau khi cập nhật.
-    Yêu cầu đăng nhập và quyền admin/editor.
-    - Đồng bộ relationships (cha mẹ, con cái)
-    - Đồng bộ marriages_spouses (vợ/chồng)
-    - Tính lại siblings từ relationships
-    
-    Sync person data after update.
-    Requires login and admin/editor permissions.
-    """
+    """Read back normalized relationships for a person after update."""
     if not is_admin_user() and getattr(current_user, 'role', '') != 'editor':
-        return (jsonify({'success': False, 'error': 'Không có quyền sync dữ liệu'}), 403)
+        return (jsonify({'success': False, 'error': 'Khong co quyen sync du lieu'}), 403)
+
     connection = get_db_connection()
     if not connection:
-        return (jsonify({'error': 'Không thể kết nối database'}), 500)
+        return (jsonify({'error': 'Khong the ket noi database'}), 500)
+
     try:
         cursor = connection.cursor(dictionary=True)
+        try:
+            person_id = validate_person_id(str(person_id))
+        except ValueError as e:
+            return (jsonify({'error': f'Invalid person_id format: {str(e)}'}), 400)
+
         sync_messages = []
-        cursor.execute('\n            SELECT p.person_id, p.csv_id, p.full_name, p.gender,\n                   g.generation_number\n            FROM persons p\n            LEFT JOIN generations g ON p.generation_id = g.generation_id\n            WHERE p.person_id = %s\n        ', (person_id,))
+        cursor.execute(
+            """
+            SELECT person_id, full_name, gender, generation_level
+            FROM persons
+            WHERE person_id = %s
+            """,
+            (person_id,),
+        )
         person = cursor.fetchone()
         if not person:
-            return (jsonify({'error': 'Không tìm thấy người này'}), 404)
-        cursor.execute('\n            SELECT r.father_id, r.mother_id,\n                   f.full_name AS father_name, m.full_name AS mother_name\n            FROM relationships r\n            LEFT JOIN persons f ON r.father_id = f.person_id\n            LEFT JOIN persons m ON r.mother_id = m.person_id\n            WHERE r.child_id = %s\n            LIMIT 1\n        ', (person_id,))
-        current_rel = cursor.fetchone()
-        active_spouses = []
-        cursor.execute('\n            SELECT child.person_id, child.full_name\n            FROM relationships r\n            JOIN persons child ON r.child_id = child.person_id\n            WHERE r.father_id = %s OR r.mother_id = %s\n            ORDER BY child.full_name\n        ', (person_id, person_id))
+            return (jsonify({'error': 'Khong tim thay nguoi nay'}), 404)
+
+        cursor.execute(
+            """
+            SELECT
+                r.relation_type,
+                r.parent_id,
+                parent.full_name AS parent_name
+            FROM relationships r
+            LEFT JOIN persons parent ON parent.person_id = r.parent_id
+            WHERE r.child_id = %s
+              AND r.relation_type IN ('father', 'mother')
+            ORDER BY r.relation_type
+            """,
+            (person_id,),
+        )
+        parent_rows = cursor.fetchall()
+        parent_ids = [row['parent_id'] for row in parent_rows if row.get('parent_id')]
+
+        cursor.execute(
+            """
+            SELECT child.person_id, child.full_name
+            FROM relationships r
+            JOIN persons child ON child.person_id = r.child_id
+            WHERE r.parent_id = %s
+              AND r.relation_type IN ('father', 'mother')
+            GROUP BY child.person_id, child.full_name
+            ORDER BY child.full_name
+            """,
+            (person_id,),
+        )
         current_children = cursor.fetchall()
         current_children_names = [c['full_name'] for c in current_children]
-        sync_messages.append(f'Đã kiểm tra dữ liệu hiện tại:')
-        sync_messages.append(f"- Vợ/Chồng: {len(active_spouses)} người ({(', '.join(active_spouses) if active_spouses else 'Không có')})")
-        sync_messages.append(f"- Con cái: {len(current_children)} người ({(', '.join(current_children_names) if current_children_names else 'Không có')})")
-        if current_rel and (current_rel.get('father_id') or current_rel.get('mother_id')):
-            parent_ids = []
-            if current_rel.get('father_id'):
-                parent_ids.append(current_rel['father_id'])
-            if current_rel.get('mother_id'):
-                parent_ids.append(current_rel['mother_id'])
-            if parent_ids:
-                placeholders = ','.join(['%s'] * len(parent_ids))
-                cursor.execute(f'\n                    SELECT p.person_id, p.full_name\n                    FROM persons p\n                    JOIN relationships r ON p.person_id = r.child_id\n                    WHERE (r.father_id IN ({placeholders}) OR r.mother_id IN ({placeholders}))\n                    AND p.person_id != %s\n                    ORDER BY p.full_name\n                ', parent_ids + parent_ids + [person_id])
-                siblings = cursor.fetchall()
-                siblings_names = [s['full_name'] for s in siblings]
-                sync_messages.append(f"- Anh/Chị/Em: {len(siblings)} người ({(', '.join(siblings_names) if siblings_names else 'Không có')})")
+
+        cursor.execute(
+            """
+            SELECT DISTINCT
+                CASE
+                    WHEN m.person_id = %s THEN m.spouse_person_id
+                    ELSE m.person_id
+                END AS spouse_id,
+                spouse.full_name AS spouse_name
+            FROM marriages m
+            JOIN persons spouse ON spouse.person_id = CASE
+                WHEN m.person_id = %s THEN m.spouse_person_id
+                ELSE m.person_id
+            END
+            WHERE (m.person_id = %s OR m.spouse_person_id = %s)
+              AND COALESCE(m.status, '') != 'Da ly di'
+            ORDER BY spouse.full_name
+            """,
+            (person_id, person_id, person_id, person_id),
+        )
+        active_spouses = [row['spouse_name'] for row in cursor.fetchall() if row.get('spouse_name')]
+
+        siblings = []
+        if parent_ids:
+            placeholders = ','.join(['%s'] * len(parent_ids))
+            cursor.execute(
+                f"""
+                SELECT DISTINCT sibling.person_id, sibling.full_name
+                FROM relationships r
+                JOIN persons sibling ON sibling.person_id = r.child_id
+                WHERE r.parent_id IN ({placeholders})
+                  AND r.relation_type IN ('father', 'mother')
+                  AND sibling.person_id != %s
+                ORDER BY sibling.full_name
+                """,
+                parent_ids + [person_id],
+            )
+            siblings = cursor.fetchall()
+
+        sync_messages.append('Da kiem tra du lieu hien tai:')
+        sync_messages.append(
+            f"- Vo/Chong: {len(active_spouses)} nguoi ({(', '.join(active_spouses) if active_spouses else 'Khong co')})"
+        )
+        sync_messages.append(
+            f"- Con cai: {len(current_children)} nguoi ({(', '.join(current_children_names) if current_children_names else 'Khong co')})"
+        )
+        if parent_rows:
+            parent_names = [row['parent_name'] for row in parent_rows if row.get('parent_name')]
+            sync_messages.append(
+                f"- Cha/Me: {len(parent_names)} nguoi ({(', '.join(parent_names) if parent_names else 'Khong co')})"
+            )
+        if siblings:
+            siblings_names = [row['full_name'] for row in siblings if row.get('full_name')]
+            sync_messages.append(
+                f"- Anh/Chi/Em: {len(siblings)} nguoi ({(', '.join(siblings_names) if siblings_names else 'Khong co')})"
+            )
+
         connection.commit()
         message = '\n'.join(sync_messages)
-        return jsonify({'success': True, 'message': message, 'data': {'spouses_count': len(active_spouses), 'children_count': len(current_children), 'siblings_count': len(siblings) if 'siblings' in locals() else 0}})
+        return jsonify(
+            {
+                'success': True,
+                'message': message,
+                'data': {
+                    'spouses_count': len(active_spouses),
+                    'children_count': len(current_children),
+                    'siblings_count': len(siblings),
+                    'parents_count': len(parent_rows),
+                },
+            }
+        )
     except Error as e:
         connection.rollback()
-        return (jsonify({'error': f'Lỗi khi đồng bộ: {str(e)}'}), 500)
+        return (jsonify({'error': f'Loi khi dong bo: {str(e)}'}), 500)
     finally:
         if connection.is_connected():
             cursor.close()
             connection.close()
+
 
 def _process_children_spouse_siblings(cursor, person_id, data):
     """
@@ -1415,19 +1506,19 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
     columns = [row['COLUMN_NAME'] for row in cursor.fetchall()]
     update_fields = []
     update_values = []
-    if 'full_name' in columns:
+    if 'full_name' in columns and 'full_name' in data:
         full_name = data.get('full_name')
         if full_name:
             full_name = sanitize_string(str(full_name), max_length=255, allow_empty=False)
         update_fields.append('full_name = %s')
         update_values.append(full_name)
-    if 'gender' in columns:
+    if 'gender' in columns and 'gender' in data:
         gender = data.get('gender')
         if gender and gender not in ['M', 'F', 'Male', 'Female', 'Nam', 'Nữ']:
             return (False, 'Invalid gender value', 400)
         update_fields.append('gender = %s')
         update_values.append(gender)
-    if 'status' in columns:
+    if 'status' in columns and 'status' in data:
         update_fields.append('status = %s')
         update_values.append(data.get('status'))
     # Chỉ cập nhật csv_id khi schema hỗ trợ để tương thích DB cũ.
@@ -1453,7 +1544,7 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
         '-1': 'Khác',
     }
 
-    if 'branch_name' in columns:
+    if 'branch_name' in columns and 'branch_name' in data:
         update_fields.append('branch_name = %s')
         v = data.get('branch_name')
         v = str(v).strip() if v is not None else None
@@ -1461,7 +1552,7 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
             v = branch_code_to_name[v]
         update_values.append(v if v else None)
     # Nhánh: map branch_name -> branch_id (tự tạo branch nếu chưa có)
-    if 'branch_id' in columns and data.get('branch_name'):
+    if 'branch_id' in columns and 'branch_name' in data:
         try:
             cursor.execute("\n                    SELECT TABLE_NAME FROM information_schema.TABLES\n                    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'branches'\n                    LIMIT 1\n                ")
             if cursor.fetchone():
@@ -1469,49 +1560,49 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
                 bn = str(bn).strip() if bn is not None else bn
                 if bn in branch_code_to_name:
                     bn = branch_code_to_name[bn]
-                branch_id = get_or_create_branch(cursor, bn)
+                branch_id = get_or_create_branch(cursor, bn) if bn else None
                 update_fields.append('branch_id = %s')
                 update_values.append(branch_id)
         except Exception as e:
             logger.warning(f'Could not set branch_id on update_person_members: {e}')
-    if 'birth_date_solar' in columns:
+    if 'birth_date_solar' in columns and 'birth_date_solar' in data:
         update_fields.append('birth_date_solar = %s')
         birth_date = data.get('birth_date_solar', '').strip() if data.get('birth_date_solar') else ''
         if birth_date and len(birth_date) == 4 and birth_date.isdigit():
             birth_date = f'{birth_date}-01-01'
         update_values.append(birth_date if birth_date else None)
-    if 'death_date_solar' in columns:
+    if 'death_date_solar' in columns and 'death_date_solar' in data:
         update_fields.append('death_date_solar = %s')
         death_date = data.get('death_date_solar', '').strip() if data.get('death_date_solar') else ''
         if death_date and len(death_date) == 4 and death_date.isdigit():
             death_date = f'{death_date}-01-01'
         update_values.append(death_date if death_date else None)
-    if 'place_of_death' in columns:
+    if 'place_of_death' in columns and 'place_of_death' in data:
         update_fields.append('place_of_death = %s')
         update_values.append(data.get('place_of_death'))
-    if 'biography' in columns:
+    if 'biography' in columns and 'biography' in data:
         update_fields.append('biography = %s')
         biography = data.get('biography', '').strip() if data.get('biography') else None
         update_values.append(biography if biography else None)
-    if 'academic_rank' in columns:
+    if 'academic_rank' in columns and 'academic_rank' in data:
         update_fields.append('academic_rank = %s')
         academic_rank = data.get('academic_rank', '').strip() if data.get('academic_rank') else None
         update_values.append(academic_rank if academic_rank else None)
-    if 'academic_degree' in columns:
+    if 'academic_degree' in columns and 'academic_degree' in data:
         update_fields.append('academic_degree = %s')
         academic_degree = data.get('academic_degree', '').strip() if data.get('academic_degree') else None
         update_values.append(academic_degree if academic_degree else None)
-    if 'phone' in columns:
+    if 'phone' in columns and 'phone' in data:
         update_fields.append('phone = %s')
         phone = data.get('phone', '').strip() if data.get('phone') else None
         update_values.append(phone if phone else None)
-    if 'email' in columns:
+    if 'email' in columns and 'email' in data:
         update_fields.append('email = %s')
         email = data.get('email', '').strip() if data.get('email') else None
         if email and '@' not in email:
             return (False, 'Email không hợp lệ', 400)
         update_values.append(email if email else None)
-    if 'occupation' in columns:
+    if 'occupation' in columns and 'occupation' in data:
         update_fields.append('occupation = %s')
         occupation = data.get('occupation', '').strip() if data.get('occupation') else None
         update_values.append(occupation if occupation else None)
@@ -1606,33 +1697,20 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
                 generation_id = cursor.lastrowid
             update_fields.append('generation_id = %s')
             update_values.append(generation_id)
-    if 'father_mother_id' in columns:
+    if 'father_mother_id' in columns and 'fm_id' in data:
         update_fields.append('father_mother_id = %s')
         update_values.append(data.get('fm_id'))
-    elif 'fm_id' in columns:
+    elif 'fm_id' in columns and 'fm_id' in data:
         update_fields.append('fm_id = %s')
         update_values.append(data.get('fm_id'))
     if update_fields:
         update_values.append(person_id)
         update_query = f"UPDATE persons SET {', '.join(update_fields)} WHERE person_id = %s"
         cursor.execute(update_query, update_values)
-    father_id = None
-    mother_id = None
-    if data.get('father_name'):
-        cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (data['father_name'],))
-        father = cursor.fetchone()
-        if father:
-            father_id = father['person_id']
-    if data.get('mother_name'):
-        cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (data['mother_name'],))
-        mother = cursor.fetchone()
-        if mother:
-            mother_id = mother['person_id']
-    cursor.execute("\n            DELETE FROM relationships \n            WHERE child_id = %s AND relation_type IN ('father', 'mother')\n        ", (person_id,))
-    if father_id:
-        cursor.execute("\n                INSERT INTO relationships (child_id, parent_id, relation_type)\n                VALUES (%s, %s, 'father')\n                ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)\n            ", (person_id, father_id))
-    if mother_id:
-        cursor.execute("\n                INSERT INTO relationships (child_id, parent_id, relation_type)\n                VALUES (%s, %s, 'mother')\n                ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id)\n            ", (person_id, mother_id))
+    try:
+        _apply_parent_relationship_mutations(cursor, person_id, data)
+    except ValueError as e:
+        return (False, str(e), 400)
     _process_children_spouse_siblings(cursor, person_id, data)
     connection.commit()
     try:

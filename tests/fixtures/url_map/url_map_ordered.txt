@@ -31,9 +31,9 @@ GET /api/persons -> persons.get_persons
 GET /api/person/<person_id> -> persons.get_person
 GET /api/search -> persons.search_persons
 POST /api/edit-requests -> persons.create_edit_request
-DELETE /api/person/<int:person_id> -> persons.delete_person
-PUT /api/person/<int:person_id> -> persons.update_person
-POST /api/person/<int:person_id>/sync -> persons.sync_person
+DELETE /api/person/<person_id> -> persons.delete_person
+PUT /api/person/<person_id> -> persons.update_person
+POST /api/person/<person_id>/sync -> persons.sync_person
 POST /api/persons -> persons.create_person
 PUT /api/persons/<person_id> -> persons.update_person_members
 GET|POST /api/fix/p-1-1-parents -> persons.fix_p1_1_parents

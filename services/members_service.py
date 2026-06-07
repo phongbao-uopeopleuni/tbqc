@@ -7,6 +7,7 @@ from pathlib import Path
 from flask import jsonify, request, send_from_directory
 
 from audit_log import log_activity
+from services.person_helpers import get_preferred_spouse_names
 from utils.validation import secure_compare
 
 logger = logging.getLogger(__name__)
@@ -237,16 +238,13 @@ def fetch_members_list():
         persons = cursor.fetchall()
         relationship_data = load_relationship_data(cursor)
         parent_data = relationship_data['parent_data']
-        spouse_data_from_table = relationship_data['spouse_data_from_table']
-        spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
-        spouse_data_from_csv = relationship_data['spouse_data_from_csv']
         children_map = relationship_data['children_map']
         siblings_map = relationship_data['siblings_map']
         members = []
         for person in persons:
             person_id = person['person_id']
             rel = parent_data.get(person_id, {'father_name': None, 'mother_name': None})
-            spouse_names = spouse_data_from_table.get(person_id) or spouse_data_from_marriages.get(person_id) or spouse_data_from_csv.get(person_id) or []
+            spouse_names = get_preferred_spouse_names(relationship_data, person_id)
             siblings = siblings_map.get(person_id, [])
             children = children_map.get(person_id, [])
             member = {

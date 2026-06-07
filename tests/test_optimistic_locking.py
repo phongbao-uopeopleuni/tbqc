@@ -20,14 +20,29 @@ def test_optimistic_locking_conflict(flask_app, monkeypatch):
             
     mock_cursor.execute.side_effect = side_effect
     
-    # fetchone returns has_version=True then person={'version': 2}
     mock_cursor.fetchone.side_effect = [
-        {"COLUMN_NAME": "version"},  # SHOW COLUMNS
-        {"person_id": 1, "generation_id": 1, "version": 2} # SELECT person
+        {"person_id": "P-1-1"},
+        {
+            "full_name": "Test Conflict",
+            "gender": "Nam",
+            "status": "active",
+            "generation_level": 1,
+            "birth_date_solar": None,
+            "death_date_solar": None,
+            "place_of_death": None,
+            "biography": None,
+            "academic_rank": None,
+            "academic_degree": None,
+            "phone": None,
+            "email": None,
+            "occupation": None,
+        },
+        {"COLUMN_NAME": "version"},
+        {"version": 2},
     ]
     
     # Payload gửi version = 1 (trong khi DB là 2) -> conflict
-    resp = client.put("/api/person/1", json={
+    resp = client.put("/api/person/P-1-1", json={
         "full_name": "Test Conflict",
         "version": 1
     })
@@ -39,7 +54,7 @@ def test_optimistic_locking_conflict(flask_app, monkeypatch):
     assert "conflict" in error_msg or "phiên bản" in error_msg
 
 def test_optimistic_locking_null_version_no_crash(flask_app, monkeypatch):
-    """Person cũ có version=NULL trong DB → update KHÔNG crash, trả về 200."""
+    """Person c? c? version=NULL trong DB ? update KH?NG crash, tr? v? 200."""
     client = _patch_admin(monkeypatch, flask_app)
 
     mock_conn = MagicMock()
@@ -48,16 +63,33 @@ def test_optimistic_locking_null_version_no_crash(flask_app, monkeypatch):
     mock_conn.is_connected.return_value = True
 
     monkeypatch.setattr(person_service, "get_db_connection", lambda: mock_conn)
+    monkeypatch.setattr(
+        person_service,
+        "apply_person_members_update_core",
+        lambda *_args, **_kwargs: (True, None, None),
+    )
 
     mock_cursor.fetchone.side_effect = [
-        {"COLUMN_NAME": "version"},                         # SHOW COLUMNS → has_version
-        {"person_id": 1, "generation_id": 1, "version": None},  # SELECT → version NULL
-        None, # For birth_record
-        None, # For any other fetchone
-        None,
+        {"person_id": "P-1-1"},
+        {
+            "full_name": "Nguyen Van A",
+            "gender": "Nam",
+            "status": "active",
+            "generation_level": 1,
+            "birth_date_solar": None,
+            "death_date_solar": None,
+            "place_of_death": None,
+            "biography": None,
+            "academic_rank": None,
+            "academic_degree": None,
+            "phone": None,
+            "email": None,
+            "occupation": None,
+        },
+        {"COLUMN_NAME": "version"},
     ]
     mock_cursor.rowcount = 1
 
-    resp = client.put("/api/person/1", json={"full_name": "Nguyen Van A"})
-    # Không có version trong payload → skip conflict check, update bình thường
+    resp = client.put("/api/person/P-1-1", json={"full_name": "Nguyen Van A"})
+    # Kh?ng c? version trong payload ? skip conflict check, update b?nh th??ng
     assert resp.status_code != 500, f"Crashed with: {resp.get_json()}"

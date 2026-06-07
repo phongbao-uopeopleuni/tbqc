@@ -5,6 +5,7 @@ from services.person_helpers import (
     normalize_search_query,
     split_semicolon_values,
     find_person_by_name,
+    get_preferred_spouse_names,
     load_relationship_data,
     get_or_create_location,
     get_or_create_generation,
@@ -79,40 +80,87 @@ def test_find_person_by_name_blank_name_skips_db(mock_cursor):
 def test_find_person_by_name_returns_id_from_dict_row(mock_cursor):
     from services.person_helpers import find_person_by_name
 
-    mock_cursor.fetchone.return_value = {"person_id": 42}
+    mock_cursor.fetchall.return_value = [{"person_id": 42}]
     assert find_person_by_name(mock_cursor, "Nguyễn Văn A") == 42
 
 
 def test_find_person_by_name_returns_id_from_tuple_row(mock_cursor):
     from services.person_helpers import find_person_by_name
 
-    mock_cursor.fetchone.return_value = (99,)
+    mock_cursor.fetchall.return_value = [(99,)]
     assert find_person_by_name(mock_cursor, "Trần Thị B") == 99
 
 
 def test_find_person_by_name_returns_none_when_not_found(mock_cursor):
     from services.person_helpers import find_person_by_name
 
-    mock_cursor.fetchone.return_value = None
+    mock_cursor.fetchall.return_value = []
     assert find_person_by_name(mock_cursor, "Unknown") is None
 
 
 def test_find_person_by_name_includes_generation_filter_in_query(mock_cursor):
     from services.person_helpers import find_person_by_name
 
-    mock_cursor.fetchone.return_value = {"person_id": 7}
-    find_person_by_name(mock_cursor, "Lê Văn C", generation_id=3)
+    mock_cursor.fetchall.return_value = [{"person_id": 7}]
+    find_person_by_name(mock_cursor, "Lê Văn C", generation_level=3)
     sql = mock_cursor.execute.call_args[0][0]
-    assert "generation_id" in sql
+    assert "generation_level" in sql
 
 
 def test_find_person_by_name_no_generation_filter_omits_generation_clause(mock_cursor):
     from services.person_helpers import find_person_by_name
 
-    mock_cursor.fetchone.return_value = {"person_id": 5}
+    mock_cursor.fetchall.return_value = [{"person_id": 5}]
     find_person_by_name(mock_cursor, "Phạm Thị D")
     sql = mock_cursor.execute.call_args[0][0]
-    assert "generation_id" not in sql
+    assert "generation_level" not in sql
+
+
+def test_find_person_by_name_ambiguous_without_fm_id_returns_none(mock_cursor):
+    """Nhiều người trùng tên, không có fm_id → trả None (caller xử lý lỗi)."""
+    from services.person_helpers import find_person_by_name
+
+    mock_cursor.fetchall.return_value = [{"person_id": "P-3-10"}, {"person_id": "P-4-22"}]
+    result = find_person_by_name(mock_cursor, "Nguyễn Văn Trùng")
+    assert result is None
+
+
+def test_find_person_by_name_ambiguous_resolved_by_fm_id(mock_cursor):
+    """Nhiều người trùng tên, fm_id thu hẹp được → trả person_id đúng."""
+    from services.person_helpers import find_person_by_name
+
+    mock_cursor.fetchall.return_value = [{"person_id": "P-3-10"}, {"person_id": "P-4-22"}]
+    mock_cursor.fetchone.return_value = {"person_id": "P-3-10"}
+
+    result = find_person_by_name(mock_cursor, "Nguyễn Văn Trùng", fm_id="fm_99")
+    assert result == "P-3-10"
+
+    # Verify fm_id được truyền vào WHERE clause
+    fm_sql = mock_cursor.execute.call_args[0][0]
+    fm_params = mock_cursor.execute.call_args[0][1]
+    assert "father_mother_id" in fm_sql
+    assert "fm_99" in fm_params
+
+
+def test_find_person_by_name_ambiguous_fm_id_still_ambiguous_returns_none(mock_cursor):
+    """fm_id không thu hẹp được (không tìm thấy row) → trả None."""
+    from services.person_helpers import find_person_by_name
+
+    mock_cursor.fetchall.return_value = [{"person_id": "P-3-10"}, {"person_id": "P-4-22"}]
+    mock_cursor.fetchone.return_value = None  # fm_id lookup không tìm thấy
+
+    result = find_person_by_name(mock_cursor, "Nguyễn Văn Trùng", fm_id="fm_99")
+    assert result is None
+
+
+def test_get_preferred_spouse_names_prefers_marriages():
+    relationship_data = {
+        "spouse_data_from_table": {"P-1": ["Legacy Spouse"]},
+        "spouse_data_from_marriages": {"P-1": ["Normalized Spouse"]},
+        "spouse_data_from_csv": {"P-1": ["Csv Spouse"]},
+    }
+
+    assert get_preferred_spouse_names(relationship_data, "P-1") == ["Normalized Spouse"]
 
 
 def test_person_service_keeps_load_relationship_data_alias():
