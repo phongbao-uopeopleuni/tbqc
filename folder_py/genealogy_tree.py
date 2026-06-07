@@ -22,6 +22,19 @@ def _json_date(val: Any) -> Optional[str]:
     return s if s else None
 
 
+def _derive_family_group_key(
+    father_id: Optional[str],
+    mother_id: Optional[str],
+    fallback_fm_id: Optional[str] = None,
+) -> Optional[str]:
+    """Prefer parent-pair grouping; fall back to legacy father_mother_id when needed."""
+    if father_id or mother_id:
+        return f"{father_id or 'null'}|{mother_id or 'null'}"
+    if fallback_fm_id:
+        return fallback_fm_id
+    return None
+
+
 def build_tree(
     root_id: str,
     persons_by_id: Dict[str, Dict],
@@ -60,6 +73,12 @@ def build_tree(
         "status": person.get("status"),
         "gender": person.get("gender"),
         "home_town": person.get("home_town"),
+        "father_id": person.get("father_id"),
+        "mother_id": person.get("mother_id"),
+        "father_name": person.get("father_name"),
+        "mother_name": person.get("mother_name"),
+        "father_mother_id": person.get("father_mother_id"),
+        "family_group_key": person.get("family_group_key"),
         "birth_date_solar": _json_date(person.get("birth_date_solar")),
         "birth_date_lunar": _json_date(person.get("birth_date_lunar")),
         "death_date_solar": _json_date(person.get("death_date_solar")),
@@ -321,6 +340,9 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
             # Initialize father_name and mother_name as None
             person_data['father_name'] = None
             person_data['mother_name'] = None
+            person_data['father_id'] = None
+            person_data['mother_id'] = None
+            person_data['family_group_key'] = None
             persons_by_id[person_data['person_id']] = person_data
         else:
             # Tuple format
@@ -351,7 +373,10 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
                 'note': row[23],
                 'father_mother_id': row[24],
                 'father_name': None,
-                'mother_name': None
+                'mother_name': None,
+                'father_id': None,
+                'mother_id': None,
+                'family_group_key': None,
             }
     
     # Query 2: Load relationships và map vào persons (GROUP_CONCAT chỉ cho từng child_id)
@@ -360,7 +385,9 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
     cursor.execute("""
         SELECT 
             r.child_id,
+            MAX(CASE WHEN r.relation_type = 'father' THEN r.parent_id END) AS father_id,
             COALESCE(GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'father' AND parent.full_name IS NOT NULL THEN parent.full_name END SEPARATOR ', '), '') AS father_name,
+            MAX(CASE WHEN r.relation_type = 'mother' THEN r.parent_id END) AS mother_id,
             COALESCE(GROUP_CONCAT(DISTINCT CASE WHEN r.relation_type = 'mother' AND parent.full_name IS NOT NULL THEN parent.full_name END SEPARATOR ', '), '') AS mother_name
         FROM relationships r
         LEFT JOIN persons parent ON r.parent_id = parent.person_id
@@ -372,12 +399,16 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
     for row in cursor.fetchall():
         if isinstance(row, dict):
             child_id = row.get('child_id')
+            father_id = row.get('father_id')
             father_name = row.get('father_name', '') or None
+            mother_id = row.get('mother_id')
             mother_name = row.get('mother_name', '') or None
         else:
             child_id = row[0]
-            father_name = (row[1] or '').strip() or None if len(row) > 1 else None
-            mother_name = (row[2] or '').strip() or None if len(row) > 2 else None
+            father_id = row[1] if len(row) > 1 else None
+            father_name = (row[2] or '').strip() or None if len(row) > 2 else None
+            mother_id = row[3] if len(row) > 3 else None
+            mother_name = (row[4] or '').strip() or None if len(row) > 4 else None
         
         # Convert empty string to None (đảm bảo consistency)
         if father_name == '':
@@ -386,8 +417,15 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
             mother_name = None
         
         if child_id and child_id in persons_by_id:
+            persons_by_id[child_id]['father_id'] = father_id
             persons_by_id[child_id]['father_name'] = father_name
+            persons_by_id[child_id]['mother_id'] = mother_id
             persons_by_id[child_id]['mother_name'] = mother_name
+            persons_by_id[child_id]['family_group_key'] = _derive_family_group_key(
+                father_id,
+                mother_id,
+                persons_by_id[child_id].get('father_mother_id'),
+            )
     
     logger.info(f"Loaded {len(persons_by_id)} persons")
     return persons_by_id
