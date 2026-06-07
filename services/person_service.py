@@ -392,41 +392,64 @@ def get_person(person_id):
             siblings_map = relationship_data['siblings_map']
             siblings_list = siblings_map.get(person_id, [])
             person['siblings'] = '; '.join(siblings_list) if siblings_list else None
-            children_map = relationship_data['children_map']
-            children_names = children_map.get(person_id, [])
-            if children_names:
-                placeholders = ','.join(['%s'] * len(children_names))
-                cursor.execute(f'\n                SELECT \n                        p.person_id,\n                        p.full_name AS child_name,\n                        p.generation_level,\n                        p.gender\n                    FROM persons p\n                    WHERE p.full_name IN ({placeholders})\n                    ORDER BY p.full_name\n                ', children_names)
-                children_records = cursor.fetchall()
-                if children_records:
-                    children_list = []
-                    for c in children_records:
-                        if c and c.get('child_name'):
-                            children_list.append({'person_id': c.get('person_id'), 'full_name': c.get('child_name'), 'name': c.get('child_name'), 'generation_level': c.get('generation_level'), 'generation_number': c.get('generation_level'), 'gender': c.get('gender')})
-                    person['children'] = children_list if children_list else []
-                    person['children_string'] = '; '.join(children_names) if children_names else None
-                    logger.info(f"[API /api/person/{person_id}] Loaded {len(children_list)} children: {person['children_string']}")
-                else:
-                    person['children'] = []
-                    person['children_string'] = '; '.join(children_names) if children_names else None
-                    logger.info(f"[API /api/person/{person_id}] Children names from helper: {children_names}, query returned no records, set children_string: {person['children_string']}")
+        except Exception as e:
+            logger.warning(f'Error fetching siblings for {person_id}: {e}')
+            person['siblings'] = None
+        try:
+            cursor.execute(
+                """
+                SELECT p.person_id, p.full_name, p.generation_level, p.gender
+                FROM relationships r
+                JOIN persons p ON r.child_id = p.person_id
+                WHERE r.parent_id = %s
+                ORDER BY p.generation_level, p.full_name
+                """,
+                (person_id,),
+            )
+            children_records = cursor.fetchall()
+            if children_records:
+                children_list = [
+                    {
+                        'person_id': c['person_id'],
+                        'full_name': c['full_name'],
+                        'name': c['full_name'],
+                        'generation_level': c['generation_level'],
+                        'generation_number': c['generation_level'],
+                        'gender': c['gender'],
+                    }
+                    for c in children_records if c.get('full_name')
+                ]
+                person['children'] = children_list
+                person['children_string'] = '; '.join(
+                    c['full_name'] for c in children_records if c.get('full_name')
+                ) or None
+                logger.info(f'[API /api/person/{person_id}] Loaded {len(children_list)} children')
             else:
                 person['children'] = []
                 person['children_string'] = None
-                logger.debug(f'[API /api/person/{person_id}] No children found in helper')
+                logger.debug(f'[API /api/person/{person_id}] No children found')
         except Exception as e:
             logger.warning(f'Error fetching children for {person_id}: {e}')
-            import traceback
-            logger.debug(traceback.format_exc())
-            if relationship_data:
-                children_map = relationship_data.get('children_map', {})
-                children_names = children_map.get(person_id, [])
-                person['children_string'] = '; '.join(children_names) if children_names else None
-            else:
-                person['children_string'] = None
-                person['children'] = []
+            person['children'] = []
+            person['children_string'] = None
         try:
-            cursor.execute('\n                SELECT \n                    m.id AS marriage_id,\n                    CASE \n                        WHEN m.person_id = %s THEN m.spouse_person_id\n                        ELSE m.person_id\n                    END AS spouse_id,\n                    sp.full_name AS spouse_name,\n                    sp.gender AS spouse_gender,\n                    m.status AS marriage_status,\n                    m.note AS marriage_note\n                FROM marriages m\n                LEFT JOIN persons sp ON (\n                    CASE \n                        WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id\n                        ELSE sp.person_id = m.person_id\n                    END\n                )\n                WHERE (m.person_id = %s OR m.spouse_person_id = %s)\n                ORDER BY m.created_at\n            ', (person_id, person_id, person_id, person_id))
+            cursor.execute(
+                """
+                SELECT
+                    m.id AS marriage_id,
+                    CASE WHEN m.person_id = %s THEN m.spouse_person_id ELSE m.person_id END AS spouse_id,
+                    sp.full_name AS spouse_name,
+                    sp.gender AS spouse_gender,
+                    m.status AS marriage_status,
+                    m.note AS marriage_note
+                FROM marriages m
+                LEFT JOIN persons sp
+                    ON sp.person_id = CASE WHEN m.person_id = %s THEN m.spouse_person_id ELSE m.person_id END
+                WHERE m.person_id = %s OR m.spouse_person_id = %s
+                ORDER BY m.created_at
+                """,
+                (person_id, person_id, person_id, person_id),
+            )
             marriages = cursor.fetchall()
             if marriages:
                 person['marriages'] = marriages
@@ -459,133 +482,125 @@ def get_person(person_id):
                 logger.debug(f'Could not load spouse from helper for {person_id}: {e}')
                 import traceback
                 logger.debug(traceback.format_exc())
-        if person.get('children') and isinstance(person.get('children'), list) and (not person.get('children_string')):
-            children_names = []
-            for c in person['children']:
-                if isinstance(c, dict):
-                    child_name = c.get('full_name') or c.get('name')
-                    if child_name:
-                        children_names.append(child_name)
-            if children_names:
-                person['children_string'] = '; '.join(children_names)
+        try:
+            cursor.callproc('sp_get_ancestors', [person_id, 10])
+            ancestors_result = None
+            for result_set in cursor.stored_results():
+                ancestors_result = result_set.fetchall()
+                break
+            if ancestors_result:
+                ancestors = []
+                for row in ancestors_result:
+                    if isinstance(row, dict):
+                        ancestors.append({'person_id': row.get('person_id'), 'full_name': row.get('full_name'), 'gender': row.get('gender'), 'generation_level': row.get('generation_level'), 'level': row.get('level', 0)})
+                    else:
+                        ancestors.append({'person_id': row[0] if len(row) > 0 else None, 'full_name': row[1] if len(row) > 1 else '', 'gender': row[2] if len(row) > 2 else None, 'generation_level': row[3] if len(row) > 3 else None, 'level': row[4] if len(row) > 4 else 0})
+                person['ancestors'] = ancestors
+                ancestors_chain = []
+                for ancestor in ancestors:
+                    level = ancestor.get('level', 0)
+                    level_name = ''
+                    if level == 1:
+                        level_name = 'Cha/Mẹ'
+                    elif level == 2:
+                        level_name = 'Ông/Bà'
+                    elif level == 3:
+                        level_name = 'Cụ'
+                    elif level == 4:
+                        level_name = 'Kỵ'
+                    elif level >= 5:
+                        level_name = f'Tổ tiên cấp {level}'
+                    else:
+                        level_name = f'Cấp {level}'
+                    ancestors_chain.append({'level': level, 'level_name': level_name, 'full_name': ancestor.get('full_name', ''), 'generation_level': ancestor.get('generation_level'), 'gender': ancestor.get('gender'), 'person_id': ancestor.get('person_id')})
+                ancestors_chain.sort(key=lambda x: int(x.get('generation_level', 0) or 0))
+                person['ancestors_chain'] = ancestors_chain
+                ancestors.sort(key=lambda x: int(x.get('generation_level', 0) or 0))
+                person['ancestors'] = ancestors
+                logger.info(f'[API /api/person/{person_id}] Found {len(ancestors_chain)} ancestors via stored procedure')
+            else:
+                person['ancestors'] = []
+                person['ancestors_chain'] = []
+        except Exception as e:
+            logger.warning(f'Error calling sp_get_ancestors for {person_id}: {e}')
+            import traceback
+            logger.debug(traceback.format_exc())
             try:
-                cursor.callproc('sp_get_ancestors', [person_id, 10])
-                ancestors_result = None
-                for result_set in cursor.stored_results():
-                    ancestors_result = result_set.fetchall()
-                    break
-                if ancestors_result:
-                    ancestors = []
-                    for row in ancestors_result:
-                        if isinstance(row, dict):
-                            ancestors.append({'person_id': row.get('person_id'), 'full_name': row.get('full_name'), 'gender': row.get('gender'), 'generation_level': row.get('generation_level'), 'level': row.get('level', 0)})
-                        else:
-                            ancestors.append({'person_id': row[0] if len(row) > 0 else None, 'full_name': row[1] if len(row) > 1 else '', 'gender': row[2] if len(row) > 2 else None, 'generation_level': row[3] if len(row) > 3 else None, 'level': row[4] if len(row) > 4 else 0})
-                    person['ancestors'] = ancestors
-                    ancestors_chain = []
-                    for ancestor in ancestors:
-                        level = ancestor.get('level', 0)
-                        level_name = ''
-                        if level == 1:
-                            level_name = 'Cha/Mẹ'
-                        elif level == 2:
-                            level_name = 'Ông/Bà'
-                        elif level == 3:
-                            level_name = 'Cụ'
-                        elif level == 4:
-                            level_name = 'Kỵ'
-                        elif level >= 5:
-                            level_name = f'Tổ tiên cấp {level}'
-                        else:
-                            level_name = f'Cấp {level}'
-                        ancestors_chain.append({'level': level, 'level_name': level_name, 'full_name': ancestor.get('full_name', ''), 'generation_level': ancestor.get('generation_level'), 'gender': ancestor.get('gender'), 'person_id': ancestor.get('person_id')})
-                    ancestors_chain.sort(key=lambda x: int(x.get('generation_level', 0) or 0))
-                    person['ancestors_chain'] = ancestors_chain
-                    ancestors.sort(key=lambda x: int(x.get('generation_level', 0) or 0))
-                    person['ancestors'] = ancestors
-                    logger.info(f'[API /api/person/{person_id}] Found {len(ancestors_chain)} ancestors via stored procedure')
-                else:
-                    person['ancestors'] = []
-                    person['ancestors_chain'] = []
-                    has_parents = person.get('father_id') or person.get('mother_id')
-                    if has_parents:
-                        logger.warning(f'[API /api/person/{person_id}] Stored procedure returned empty ancestors but person has parent relationships')
-                    else:
-                        logger.debug(f'[API /api/person/{person_id}] Stored procedure returned empty ancestors (no parent relationships - normal)')
-            except Exception as e:
-                logger.warning(f'Error calling sp_get_ancestors for {person_id}: {e}')
-                import traceback
-                logger.debug(traceback.format_exc())
-                try:
-                    ancestors_chain = []
-                    if not father_id and (not mother_id):
-                        cursor.execute("\n                            SELECT \n                                r.parent_id,\n                                r.relation_type,\n                                parent.person_id,\n                                parent.full_name,\n                                parent.gender,\n                                parent.generation_level\n                            FROM relationships r\n                            JOIN persons parent ON r.parent_id = parent.person_id\n                            WHERE r.child_id = %s AND r.relation_type IN ('father', 'mother')\n                        ", (person_id,))
+                ancestors_chain = []
+                if not father_id and (not mother_id):
+                    cursor.execute(
+                        """
+                        SELECT r.parent_id, r.relation_type,
+                               parent.person_id, parent.full_name, parent.gender, parent.generation_level
+                        FROM relationships r
+                        JOIN persons parent ON r.parent_id = parent.person_id
+                        WHERE r.child_id = %s AND r.relation_type IN ('father', 'mother')
+                        """,
+                        (person_id,),
+                    )
+                    parent_rels = cursor.fetchall()
+                    for rel in parent_rels:
+                        if rel.get('relation_type') == 'father':
+                            father_id = rel.get('parent_id')
+                        elif rel.get('relation_type') == 'mother':
+                            mother_id = rel.get('parent_id')
+                if father_id:
+                    cursor.execute(
+                        'SELECT p.person_id, p.full_name, p.gender, p.generation_level FROM persons p WHERE p.person_id = %s',
+                        (father_id,),
+                    )
+                    father = cursor.fetchone()
+                    if father:
+                        ancestors_chain.append({'level': 1, 'level_name': 'Cha/Mẹ', 'full_name': father.get('full_name', ''), 'generation_level': father.get('generation_level'), 'gender': father.get('gender'), 'person_id': father.get('person_id')})
+                if mother_id:
+                    cursor.execute(
+                        'SELECT p.person_id, p.full_name, p.gender, p.generation_level FROM persons p WHERE p.person_id = %s',
+                        (mother_id,),
+                    )
+                    mother = cursor.fetchone()
+                    if mother:
+                        ancestors_chain.append({'level': 1, 'level_name': 'Cha/Mẹ', 'full_name': mother.get('full_name', ''), 'generation_level': mother.get('generation_level'), 'gender': mother.get('gender'), 'person_id': mother.get('person_id')})
+                max_level = 10
+                current_level = 1
+                visited_ids = {person_id}
+                while current_level < max_level:
+                    current_level += 1
+                    level_name = {2: 'Ông/Bà', 3: 'Cụ', 4: 'Kỵ'}.get(current_level, f'Tổ tiên cấp {current_level}')
+                    ancestors_to_process = [a for a in ancestors_chain if a['level'] == current_level - 1 and a.get('person_id')]
+                    if not ancestors_to_process:
+                        break
+                    for ancestor in ancestors_to_process:
+                        ancestor_id = ancestor.get('person_id')
+                        if not ancestor_id or ancestor_id in visited_ids:
+                            continue
+                        visited_ids.add(ancestor_id)
+                        cursor.execute(
+                            """
+                            SELECT r.parent_id, r.relation_type,
+                                   parent.person_id, parent.full_name, parent.gender, parent.generation_level
+                            FROM relationships r
+                            JOIN persons parent ON r.parent_id = parent.person_id
+                            WHERE r.child_id = %s AND r.relation_type IN ('father', 'mother')
+                            """,
+                            (ancestor_id,),
+                        )
                         parent_rels = cursor.fetchall()
-                        for rel in parent_rels:
-                            if rel.get('relation_type') == 'father':
-                                father_id = rel.get('parent_id')
-                            elif rel.get('relation_type') == 'mother':
-                                mother_id = rel.get('parent_id')
-                    if father_id:
-                        cursor.execute('\n                            SELECT p.person_id, p.full_name, p.gender, p.generation_level\n                            FROM persons p\n                            WHERE p.person_id = %s\n                        ', (father_id,))
-                        father = cursor.fetchone()
-                        if father:
-                            ancestors_chain.append({'level': 1, 'level_name': 'Cha/Mẹ', 'full_name': father.get('full_name', ''), 'generation_level': father.get('generation_level'), 'gender': father.get('gender'), 'person_id': father.get('person_id')})
-                    if mother_id:
-                        cursor.execute('\n                            SELECT p.person_id, p.full_name, p.gender, p.generation_level\n                            FROM persons p\n                            WHERE p.person_id = %s\n                        ', (mother_id,))
-                        mother = cursor.fetchone()
-                        if mother:
-                            ancestors_chain.append({'level': 1, 'level_name': 'Cha/Mẹ', 'full_name': mother.get('full_name', ''), 'generation_level': mother.get('generation_level'), 'gender': mother.get('gender'), 'person_id': mother.get('person_id')})
-                    max_level = 10
-                    current_level = 1
-                    visited_ids = {person_id}
-                    while current_level < max_level:
-                        current_level += 1
-                        level_name = ''
-                        if current_level == 2:
-                            level_name = 'Ông/Bà'
-                        elif current_level == 3:
-                            level_name = 'Cụ'
-                        elif current_level == 4:
-                            level_name = 'Kỵ'
-                        else:
-                            level_name = f'Tổ tiên cấp {current_level}'
-                        ancestors_to_process = [a for a in ancestors_chain if a['level'] == current_level - 1 and a.get('person_id')]
-                        if not ancestors_to_process:
-                            break
-                        for ancestor in ancestors_to_process:
-                            ancestor_id = ancestor.get('person_id')
-                            if not ancestor_id or ancestor_id in visited_ids:
-                                continue
-                            visited_ids.add(ancestor_id)
-                            cursor.execute("\n                                SELECT \n                                    r.parent_id,\n                                    r.relation_type,\n                                    parent.person_id,\n                                    parent.full_name,\n                                    parent.gender,\n                                    parent.generation_level\n                                FROM relationships r\n                                JOIN persons parent ON r.parent_id = parent.person_id\n                                WHERE r.child_id = %s AND r.relation_type IN ('father', 'mother')\n                            ", (ancestor_id,))
-                            parent_rels = cursor.fetchall()
-                            for parent_rel in parent_rels:
-                                parent_id = parent_rel.get('person_id')
-                                if parent_id and parent_id not in visited_ids:
-                                    ancestors_chain.append({'level': current_level, 'level_name': level_name, 'full_name': parent_rel.get('full_name', ''), 'generation_level': parent_rel.get('generation_level'), 'gender': parent_rel.get('gender'), 'person_id': parent_id})
-                                    visited_ids.add(parent_id)
-                    ancestors_chain.sort(key=lambda x: int(x.get('generation_level', 0) or 0))
-                    person['ancestors_chain'] = ancestors_chain
-                    person['ancestors'] = ancestors_chain
-                    if len(ancestors_chain) > 0:
-                        logger.info(f'[API /api/person/{person_id}] Found {len(ancestors_chain)} ancestors via manual query')
-                    else:
-                        has_parents = father_id or mother_id
-                        if has_parents:
-                            logger.warning(f'[API /api/person/{person_id}] Manual query found 0 ancestors but person has parent IDs (father_id={father_id}, mother_id={mother_id})')
-                        else:
-                            logger.debug(f'[API /api/person/{person_id}] Manual query found 0 ancestors (no parent relationships - normal)')
-                except Exception as e2:
-                    logger.warning(f'Error fetching ancestors manually for {person_id}: {e2}')
-                    import traceback
-                    logger.debug(traceback.format_exc())
-                    person['ancestors_chain'] = []
-                    person['ancestors'] = []
-            if 'ancestors_chain' not in person:
+                        for parent_rel in parent_rels:
+                            p_id = parent_rel.get('person_id')
+                            if p_id and p_id not in visited_ids:
+                                ancestors_chain.append({'level': current_level, 'level_name': level_name, 'full_name': parent_rel.get('full_name', ''), 'generation_level': parent_rel.get('generation_level'), 'gender': parent_rel.get('gender'), 'person_id': p_id})
+                                visited_ids.add(p_id)
+                ancestors_chain.sort(key=lambda x: int(x.get('generation_level', 0) or 0))
+                person['ancestors_chain'] = ancestors_chain
+                person['ancestors'] = ancestors_chain
+                logger.info(f'[API /api/person/{person_id}] Found {len(ancestors_chain)} ancestors via manual query')
+            except Exception as e2:
+                logger.warning(f'Error fetching ancestors manually for {person_id}: {e2}')
                 person['ancestors_chain'] = []
                 person['ancestors'] = []
-                logger.warning(f'[API /api/person/{person_id}] ancestors_chain not set, initializing empty')
+        if 'ancestors_chain' not in person:
+            person['ancestors_chain'] = []
+            person['ancestors'] = []
         if person:
             from datetime import date, datetime
             try:
