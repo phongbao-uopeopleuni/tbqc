@@ -1,11 +1,13 @@
 # Refactor Plan — June 3rd, 2026
 
-> **Status:** APPROVED — CLEAN-TO-CODE (Claude + Codex đồng thuận 2026-06-03; Phase −1 ready, Phase 0 clean sau khi verify)
+> **Status:** APPROVED — EXECUTION SNAPSHOT UPDATED THROUGH 2026-06-05
 > **Scope:** Database model + Admin data management + Tree graph rendering
 > **Author:** Phong Bao + Claude (Technical Architect role)
-> **Last updated:** 2026-06-03
+> **Last updated:** 2026-06-05
 >
 > **Go/no-go:** Phase −1 = GO. Phase 0 = GO WITH CONDITIONS (Q20=A; Phase −1 verify numeric ID + logs; PR fix converter + SQL cùng lúc; route tests). Xem Section 12.6.
+>
+> **Current execution snapshot:** Phase -1, Phase 0, Phase 1, Phase 4, Phase 5, and the narrow Phase 6 audit scope are done. The original `family_units` plan remains deferred by D2; current runtime uses derived `family_group_key`. See Section 11.7 and `docs/refactor/phase-6/phase-6-closeout-2026-06-05.md`.
 
 ---
 
@@ -380,16 +382,18 @@ Con nuôi:
 
 **Deliverable:** PR `phase-0-emergency-fix` merge vào master.
 
-### Phase 1 — Source of Truth Consolidation (3-5 ngày)
+### Phase 1 ??? Source of Truth Consolidation (3-5 ng??y)
 
-- [ ] `load_relationship_data()`: đưa `marriages` lên priority 1
-- [ ] Xóa CSV fallback (`spouse_sibling_children.csv`) trong load path
-- [ ] Migration script: copy `spouse_sibling_children.spouse_name` → `marriages` (dedup)
-- [ ] API `/api/tree`: embed `father_id`, `mother_id` trong tree nodes
-- [ ] Frontend: bỏ duplicate `/api/members` call trong `loadTreeData`
-- [ ] Test: `test_load_relationship_data_priority` — verify marriages override spouse_sibling_children
+- [x] `load_relationship_data()`: ????a `marriages` l??n priority 1
+- [x] X??a CSV fallback (`spouse_sibling_children.csv`) trong load path
+- [x] Migration script: copy `spouse_sibling_children.spouse_name` ??? `marriages` (dedup)
+- [x] API `/api/tree`: embed `father_id`, `mother_id` trong tree nodes
+- [x] Frontend: b??? duplicate `/api/members` call trong `loadTreeData`
+- [x] Test: `test_load_relationship_data_priority` ??? verify marriages override spouse_sibling_children
 
-**Deliverable:** PR `phase-1-source-of-truth` + migration script `migrate_spouse_to_marriages.sql`.
+**Status update (2026-06-05):** Phase 1 = DONE. Execute migration was a near-no-op backfill: only 1 new canonical marriage pair had to be inserted, confirming `marriages` was already the practical source of truth.
+
+**Deliverable:** completed with runtime changes + Python migration script `scripts/migrate_spouse_sibling_children_to_marriages.py`.
 
 ### Phase 2 — Schema Cleanup (2-3 ngày)
 
@@ -670,6 +674,27 @@ Các câu defer được:
 - Không dùng tên người làm khóa nghiệp vụ cho quan hệ cha/mẹ/hôn phối.
 - Không làm Family Unit manager page trong scope 4 tuần nếu chưa có yêu cầu attach metadata/merge/split family entity rõ ràng.
 - Không chạy migration dựa trên canonical SQL khi chưa verify DB production thật.
+
+### 11.7 Execution status snapshot (2026-06-05)
+
+This subsection records what was actually completed in the codebase so the next continuation
+can compare progress against the original draft without re-auditing from scratch.
+
+- Phase -1: DONE. Production schema, stored procedure fallback, and legacy table inventory were verified in `docs/refactor/VERIFICATION_REPORT.md` and `docs/refactor/verification_results.json`.
+- Phase 0: DONE. Legacy write/read paths were aligned to the canonical `relationships(parent_id, child_id, relation_type)` shape. See `docs/refactor/phase-1/phase-0-phase-1-recheck-2026-06-04.md`.
+- Phase 1: DONE. Runtime spouse resolution is marriages-first, and the spouse backfill migration executed as a near-no-op. See `docs/refactor/phase-1/phase-1-spouse-migration-2026-06-05.md`.
+- Phase 2 and Phase 3 scope: EFFECTIVELY CLOSED FOR THE 4-WEEK PLAN WITHOUT `family_units`. D2 remains the active decision: use derived `family_group_key` instead of introducing a new table now.
+- Phase 4: DONE for the currently approved narrow cleanup scope. Dead deletes for `in_law_relationships` / `personal_details` were removed, the cleanup SQL was prepared, and the empty legacy tables were dropped successfully on 2026-06-07.
+- Phase 5: DONE for the currently approved tree contract scope. `/api/tree` now emits `father_id`, `mother_id`, and `family_group_key`; tree frontend no longer depends on the old double `/api/members` fetch path.
+- Phase 6: DONE for the narrow audit scope. Nguyen Phuoc lineage keywords were externalized and `sp_get_ancestors` fallback via `father_mother_id` was documented without behavior change.
+- Phase 7: still deferred. Do not reopen `family_units` / `unions` work without an explicit new scope decision.
+- Re-verified on 2026-06-07 after the manual Phase 4 cleanup: focused gate `59 passed`, non-DB gate `439 passed, 3 skipped`, DB integration gate `77 passed`.
+
+Recommended restart order:
+
+1. Read this plan from Section 11.2 through Section 11.7.
+2. Read `docs/refactor/phase-6/phase-6-closeout-2026-06-05.md`.
+3. Read the phase-specific log for the phase you intend to continue.
 
 ---
 

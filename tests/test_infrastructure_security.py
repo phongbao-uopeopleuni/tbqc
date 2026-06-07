@@ -69,6 +69,28 @@ def test_crit2_backup_file_has_chmod_600():
     )
 
 
+def test_crit2_backup_script_bootstraps_project_imports():
+    """backup_database.py phải import được khi chạy trực tiếp từ repo root."""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-X",
+            "utf8",
+            "-c",
+            "import runpy; runpy.run_path('scripts/backup_database.py', run_name='__test__')",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(pathlib.Path(__file__).parent.parent),
+        timeout=10,
+    )
+
+    assert result.returncode == 0, (
+        "backup_database.py phải bootstrap sys.path để import được config khi chạy trực tiếp. "
+        f"stdout={result.stdout[:300]!r} stderr={result.stderr[:300]!r}"
+    )
+
+
 def test_crit2_cleanup_protects_min_7_files_when_all_old(tmp_path):
     """Test behavioral: cleanup giữ ít nhất 7 files mới nhất dù TẤT CẢ đều > 30 ngày.
     
