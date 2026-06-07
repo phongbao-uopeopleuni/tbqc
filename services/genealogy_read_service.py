@@ -14,6 +14,20 @@ from services.genealogy_sync import (
 
 logger = logging.getLogger(__name__)
 
+NGUYEN_PHUOC_LINEAGE_KEYWORDS = (
+    'Vua',
+    'Miên',
+    'Hồng',
+    'Hường',
+    'Ưng',
+    'Bửu',
+    'Vĩnh',
+    'Bảo',
+    'Quý',
+    'Nguyễn Phước',
+    'Nguyễn Phúc',
+)
+
 try:
     from folder_py.genealogy_tree import (
         build_tree,
@@ -31,6 +45,12 @@ except ImportError as e:
     build_children_map = None
     build_parent_map = None
     load_persons_data = None
+
+
+def belongs_to_nguyen_phuoc_lineage(person_name):
+    if not person_name:
+        return False
+    return any(keyword in person_name for keyword in NGUYEN_PHUOC_LINEAGE_KEYWORDS)
 
 
 def get_tree():
@@ -221,8 +241,7 @@ def get_ancestors(person_id):
                 cursor.execute('\n                    SELECT full_name\n                    FROM persons\n                    WHERE person_id = %s\n                ', (father_id,))
                 father_info = cursor.fetchone()
                 father_name = father_info.get('full_name', '') if father_info else ''
-                nguyen_phuoc_keywords = ['Vua', 'Miên', 'Hồng', 'Hường', 'Ưng', 'Bửu', 'Vĩnh', 'Bảo', 'Quý', 'Nguyễn Phước', 'Nguyễn Phúc']
-                is_nguyen_phuoc_lineage = any((keyword in father_name for keyword in nguyen_phuoc_keywords))
+                is_nguyen_phuoc_lineage = belongs_to_nguyen_phuoc_lineage(father_name)
                 if is_nguyen_phuoc_lineage:
                     logger.info(f'[API /api/ancestors/{person_id}] Found father: {father_id} ({father_name}), belongs to Nguyen Phuoc lineage, using father for ancestors search')
                     target_person_id = father_id
@@ -270,6 +289,7 @@ def get_ancestors(person_id):
             return (jsonify({'error': f'Database error while checking person: {str(e)}'}), 500)
         ancestors_result = None
         try:
+            # sp_get_ancestors còn fallback qua father_mother_id; xem D4 trong plan, không thay đổi cho tới khi có quyết định rõ ở Phase 6/7.
             cursor.callproc('sp_get_ancestors', [target_person_id, max_level])
             for result_set in cursor.stored_results():
                 ancestors_result = result_set.fetchall()
