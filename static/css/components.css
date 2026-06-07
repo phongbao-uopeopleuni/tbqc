@@ -430,9 +430,27 @@
   .card-list {
     display: none;
   }
-  
+
   .table-responsive {
     display: block;
   }
+}
+
+/* Skip link (shared across all pages) */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 16px;
+  background: #111827;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  z-index: var(--z-modal);
+  transition: top var(--transition-base);
+}
+
+.skip-link:focus {
+  top: 12px;
 }
 

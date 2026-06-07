@@ -63,8 +63,8 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
   const familyGroups = new Map(); // key: "father_id|mother_id" -> [childIds]
   
   personNodes.forEach(person => {
-    const fatherId = person.father_id || null;
-    const motherId = person.mother_id || null;
+    let fatherId = person.father_id || null;
+    let motherId = person.mother_id || null;
     
     // Tìm father_id và mother_id từ parentMap nếu chưa có
     if (!fatherId || !motherId) {
@@ -78,11 +78,15 @@ function buildRenderGraph(persons, relationships = {}, marriagesData = {}) {
           const pNode = personNodeMap.get(p);
           return pNode && pNode.gender === 'Nữ';
         }) || null;
+        fatherId = person.father_id || fatherId;
+        motherId = person.mother_id || motherId;
       }
     }
     
     // Group siblings (cùng father + mother)
-    const familyKey = `${fatherId || 'null'}|${motherId || 'null'}`;
+    const familyKey = (person.family_group_key && person.family_group_key.includes('|'))
+      ? person.family_group_key
+      : `${fatherId || 'null'}|${motherId || 'null'}`;
     if (!familyGroups.has(familyKey)) {
       familyGroups.set(familyKey, []);
     }

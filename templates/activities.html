@@ -77,16 +77,16 @@
       width: 100%;
       height: 200px;
       overflow: hidden;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      background: #FAEBD7;
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-4);
+      background: var(--color-bg);
     }
-    
+
     .activity-thumbnail img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.3s ease;
+      transition: transform var(--transition-slow);
     }
     
     .activity-thumbnail img:hover {
@@ -130,7 +130,7 @@
 
     .activities-actions .btn {
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform var(--transition-base), box-shadow var(--transition-base);
       white-space: nowrap;
     }
 
@@ -150,15 +150,15 @@
       }
       
       .navbar-logo {
-        font-size: 18px;
+        font-size: var(--font-size-lg);
       }
-      
+
       .navbar-menu {
         gap: 15px;
       }
-      
+
       .navbar-menu a {
-        font-size: 14px;
+        font-size: var(--font-size-sm);
         padding: 5px 8px;
       }
     }
@@ -189,7 +189,7 @@
     /* Albums Grid Container */
     .albums-grid-container {
       margin-top: var(--space-8);
-      background: #FFF8DC;
+      background: var(--color-accent-light);
       padding: var(--space-6);
       border-radius: var(--radius-lg);
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
@@ -202,16 +202,16 @@
       align-items: center;
       margin-bottom: var(--space-6);
       padding-bottom: var(--space-5);
-      border-bottom: 2px solid #e8e8e8;
+      border-bottom: 2px solid var(--color-border);
       flex-wrap: wrap;
       gap: var(--space-4);
     }
-    
+
     .albums-grid-title h3 {
       margin: 0;
       font-size: var(--font-size-2xl);
       color: var(--color-primary);
-      font-weight: 700;
+      font-weight: var(--font-weight-bold);
     }
     
     .albums-grid-title p {
@@ -230,13 +230,13 @@
       border: none;
       border-radius: var(--radius-md);
       font-size: var(--font-size-base);
-      font-weight: 600;
+      font-weight: var(--font-weight-semibold);
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       box-shadow: 0 4px 12px rgba(139, 0, 0, 0.25);
       text-decoration: none;
     }
-    
+
     .btn-create-album:hover {
       transform: translateY(-2px);
       box-shadow: 0 6px 16px rgba(139, 0, 0, 0.35);
@@ -263,7 +263,7 @@
     /* Gallery View */
     .gallery-view {
       margin-top: var(--space-8);
-      background: #FFF8DC;
+      background: var(--color-accent-light);
       padding: var(--space-6);
       border-radius: var(--radius-lg);
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
@@ -288,23 +288,23 @@
       gap: var(--space-4);
       margin-bottom: var(--space-6);
       padding-bottom: var(--space-5);
-      border-bottom: 2px solid #e8e8e8;
+      border-bottom: 2px solid var(--color-border);
       flex-wrap: wrap;
     }
-    
+
     .btn-back {
       display: inline-flex;
       align-items: center;
       gap: var(--space-2);
       padding: var(--space-3) var(--space-5);
-      background: #FFF8DC;
+      background: var(--color-accent-light);
       color: var(--color-text);
       border: 2px solid rgba(139, 0, 0, 0.2);
       border-radius: var(--radius-md);
       font-size: var(--font-size-base);
-      font-weight: 600;
+      font-weight: var(--font-weight-semibold);
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: all var(--transition-slow);
       text-decoration: none;
     }
     
@@ -333,7 +333,7 @@
     
     .gallery-view-info p {
       margin: var(--space-2) 0 0 0;
-      color: #666;
+      color: var(--color-text-muted);
       font-size: var(--font-size-base);
     }
 
@@ -387,13 +387,13 @@
     .gallery-item {
       position: relative;
       overflow: hidden;
-      border-radius: 12px;
-      background: #FAEBD7;
+      border-radius: var(--radius-lg);
+      background: var(--color-bg);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       cursor: pointer;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       aspect-ratio: 1;
-      border: 1px solid rgba(139, 0, 0, 0.1);
+      border: 1px solid var(--color-primary-light);
     }
     
     .gallery-item:hover {
@@ -416,13 +416,13 @@
       height: 100%;
       object-fit: cover;
       display: block;
-      transition: transform 0.3s ease;
+      transition: transform var(--transition-slow);
     }
-    
+
     .gallery-item:hover img {
       transform: scale(1.1);
     }
-    
+
     .gallery-item-overlay {
       position: absolute;
       top: 0;
@@ -431,7 +431,7 @@
       bottom: 0;
       background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 50%);
       opacity: 0;
-      transition: opacity 0.3s ease;
+      transition: opacity var(--transition-slow);
       display: flex;
       align-items: flex-start;
       justify-content: flex-end;
@@ -446,9 +446,9 @@
       background: rgba(255, 255, 255, 0.9);
       color: var(--color-primary);
       padding: var(--space-1) var(--space-2);
-      border-radius: 12px;
+      border-radius: var(--radius-lg);
       font-size: var(--font-size-xs);
-      font-weight: 600;
+      font-weight: var(--font-weight-semibold);
     }
 
     .gallery-select-checkbox {
@@ -476,8 +476,8 @@
     
     /* Album Card Styles */
     .album-card {
-      background: #FFF8DC;
-      border-radius: 16px;
+      background: var(--color-accent-light);
+      border-radius: var(--radius-xl);
       overflow: hidden;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
       transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -569,24 +569,24 @@
     }
     
     .album-name {
-      font-weight: 700;
+      font-weight: var(--font-weight-bold);
       font-size: var(--font-size-lg);
-      color: #1a1a1a;
+      color: var(--color-text);
       line-height: 1.4;
       margin: 0;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      transition: color 0.3s ease;
+      transition: color var(--transition-slow);
     }
-    
+
     .album-card:hover .album-name {
       color: var(--color-primary);
     }
-    
+
     .album-theme {
-      color: #666;
+      color: var(--color-text-muted);
       font-size: var(--font-size-sm);
       line-height: 1.5;
       display: -webkit-box;
@@ -600,17 +600,17 @@
       justify-content: space-between;
       align-items: center;
       padding-top: var(--space-4);
-      border-top: 2px solid #f5f5f5;
+      border-top: 2px solid var(--color-border);
       margin-top: auto;
     }
-    
+
     .album-meta {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
       gap: var(--space-3);
       font-size: var(--font-size-xs);
-      color: #888;
+      color: var(--color-text-light);
     }
     
     .album-meta-item {
@@ -648,12 +648,12 @@
       width: 32px;
       height: 32px;
       padding: 0;
-      background: #FFF8DC;
+      background: var(--color-accent-light);
       border: 1px solid rgba(139, 0, 0, 0.2);
-      border-radius: 8px;
+      border-radius: var(--radius-md);
       font-size: var(--font-size-base);
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all var(--transition-base);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -686,7 +686,7 @@
     }
     
     .modal-content {
-      background-color: #FFF8DC;
+      background-color: var(--color-accent-light);
       margin: auto;
       padding: var(--space-6);
       border-radius: var(--radius-lg);
@@ -896,8 +896,9 @@
     </script>
 </head>
 <body>
-  <nav class="navbar">
-    <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
+  <a href="#main-content" class="skip-link">Bỏ qua đến nội dung chính</a>
+  <nav class="navbar" aria-label="Điều hướng chính">
+    <button class="navbar-toggle" onclick="toggleNavbar()" aria-label="Mở menu điều hướng" aria-expanded="false">☰</button>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
@@ -908,7 +909,7 @@
     </ul>
   </nav>
 
-  <div class="container section">
+  <div class="container section" id="main-content">
     <div class="page-header">
       <h1>Hoạt động</h1>
       <p class="page-subtitle">Tin tức và sự kiện của dòng họ Nguyễn Phước Tộc</p>

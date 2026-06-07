@@ -74,17 +74,17 @@ def create_edit_request():
     return _call_app('create_edit_request')
 
 
-@persons_bp.route('/api/person/<int:person_id>', methods=['DELETE'])
+@persons_bp.route('/api/person/<person_id>', methods=['DELETE'])
 def delete_person(person_id):
     return _call_app('delete_person', person_id)
 
 
-@persons_bp.route('/api/person/<int:person_id>', methods=['PUT'])
+@persons_bp.route('/api/person/<person_id>', methods=['PUT'])
 def update_person(person_id):
     return _call_app('update_person', person_id)
 
 
-@persons_bp.route('/api/person/<int:person_id>/sync', methods=['POST'])
+@persons_bp.route('/api/person/<person_id>/sync', methods=['POST'])
 def sync_person(person_id):
     return _call_app('sync_person', person_id)
 

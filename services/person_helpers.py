@@ -45,35 +45,62 @@ def split_semicolon_values(raw_value):
     return [s.strip() for s in str(raw_value).split(";") if s and str(s).strip()]
 
 
-def find_person_by_name(cursor, name, generation_id=None):
-    """Tìm person_id theo tên, có thể lọc theo generation_id."""
+def find_person_by_name(cursor, name, generation_level=None, fm_id=None):
+    """Tìm person_id theo tên với disambiguation.
+
+    Thứ tự ưu tiên:
+    1. Tên khớp duy nhất (+ generation_level nếu có) → trả về person_id
+    2. Tên trùng + fm_id (father_mother_id) → thu hẹp theo fm_id → trả về nếu duy nhất
+    3. Tên trùng không giải được → trả về None (caller xử lý lỗi)
+    """
     if not name or not name.strip():
         return None
     name = name.strip()
-    if generation_id:
-        cursor.execute(
-            """
-            SELECT person_id FROM persons
-            WHERE full_name = %s AND generation_id = %s
-            LIMIT 1
-        """,
-            (name, generation_id),
-        )
-    else:
-        cursor.execute(
-            """
-            SELECT person_id FROM persons
-            WHERE full_name = %s
-            LIMIT 1
-        """,
-            (name,),
-        )
-    result = cursor.fetchone()
-    if not result:
+
+    where_parts = ["full_name = %s"]
+    params: list = [name]
+    if generation_level:
+        where_parts.append("generation_level = %s")
+        params.append(generation_level)
+
+    cursor.execute(
+        f"SELECT person_id FROM persons WHERE {' AND '.join(where_parts)}",
+        params,
+    )
+    rows = cursor.fetchall()
+
+    if not rows:
         return None
-    if isinstance(result, dict):
-        return result.get("person_id")
-    return result[0]
+
+    if len(rows) == 1:
+        row = rows[0]
+        return row.get("person_id") if isinstance(row, dict) else row[0]
+
+    # Nhiều kết quả — thử thu hẹp bằng father_mother_id
+    if fm_id:
+        fm_parts = where_parts + ["father_mother_id = %s"]
+        fm_params = params + [fm_id]
+        cursor.execute(
+            f"SELECT person_id FROM persons WHERE {' AND '.join(fm_parts)} LIMIT 1",
+            fm_params,
+        )
+        fm_row = cursor.fetchone()
+        if fm_row:
+            return fm_row.get("person_id") if isinstance(fm_row, dict) else fm_row[0]
+
+    # Vẫn trùng — trả None để caller báo lỗi rõ ràng
+    return None
+
+
+def get_preferred_spouse_names(relationship_data, person_id):
+    """Prefer marriages data, then fallback to legacy spouse table."""
+    if not relationship_data or not person_id:
+        return []
+    return (
+        relationship_data.get('spouse_data_from_marriages', {}).get(person_id)
+        or relationship_data.get('spouse_data_from_table', {}).get(person_id)
+        or []
+    )
 
 
 def get_or_create_location(cursor, location_name, location_type):
@@ -133,7 +160,6 @@ def load_relationship_data(cursor):
         dict với các keys:
         - spouse_data_from_table: {person_id: [spouse_name1, spouse_name2, ...]}
         - spouse_data_from_marriages: {person_id: [spouse_name1, ...]}
-        - spouse_data_from_csv: {person_id: [spouse_name1, ...]}
         - parent_data: {child_id: {'father_name': ..., 'mother_name': ...}}
         - parent_ids_map: {child_id: [parent_id1, parent_id2, ...]}
         - children_map: {parent_id: [child_name1, child_name2, ...]}
@@ -242,21 +268,6 @@ def load_relationship_data(cursor):
                     result['spouse_data_from_marriages'][person_id_key].append(spouse_name)
     except Exception as e:
         logger.debug(f'Could not load spouse data from marriages: {e}')
-    try:
-        import csv
-        import os
-        csv_file = 'spouse_sibling_children.csv'
-        if os.path.exists(csv_file):
-            with open(csv_file, 'r', encoding='utf-8-sig') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    person_id_key = row.get('person_id', '').strip()
-                    spouse_name_str = row.get('spouse_name', '').strip()
-                    if person_id_key and spouse_name_str:
-                        spouse_names = [s.strip() for s in spouse_name_str.split(';') if s.strip()]
-                        result['spouse_data_from_csv'][person_id_key] = spouse_names
-    except Exception as e:
-        logger.debug(f'Could not load spouse data from CSV: {e}')
     try:
         cursor.execute('\n            SELECT \n                r.child_id,\n                r.parent_id,\n                r.relation_type,\n                parent.full_name AS parent_name,\n                child.full_name AS child_name\n            FROM relationships r\n            LEFT JOIN persons parent ON r.parent_id = parent.person_id\n            LEFT JOIN persons child ON r.child_id = child.person_id\n            WHERE parent.full_name IS NOT NULL AND child.full_name IS NOT NULL\n        ')
         relationships = cursor.fetchall()

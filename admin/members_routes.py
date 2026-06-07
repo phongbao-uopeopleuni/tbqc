@@ -458,10 +458,10 @@ def register_admin_members_routes(app):
 
             cursor.execute("DELETE FROM relationships WHERE parent_id = %s OR child_id = %s", (person_id, person_id))
             cursor.execute("DELETE FROM marriages WHERE person_id = %s OR spouse_person_id = %s", (person_id, person_id))
-            cursor.execute("DELETE FROM in_law_relationships WHERE person_id = %s OR in_law_person_id = %s", (person_id, person_id))
+            # in_law_relationships and personal_details removed (Phase 4):
+            # both tables are empty and covered by FK ON DELETE CASCADE.
             cursor.execute("DELETE FROM birth_records WHERE person_id = %s", (person_id,))
             cursor.execute("DELETE FROM death_records WHERE person_id = %s", (person_id,))
-            cursor.execute("DELETE FROM personal_details WHERE person_id = %s", (person_id,))
 
             cursor.execute("DELETE FROM persons WHERE person_id = %s", (person_id,))
             connection.commit()

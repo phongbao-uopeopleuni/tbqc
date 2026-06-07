@@ -103,46 +103,7 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
       throw new Error('API trả về dữ liệu rỗng');
     }
 
-    // Load fm_id data từ /api/members để group siblings chính xác
-    let membersDataMap = new Map(); // personId -> {fm_id, ...}
-    try {
-      const membersResponse = await fetch(`${API_BASE_URL}/members`, {
-        credentials: 'include'  // Quan trọng: gửi session cookie
-      });
-      if (membersResponse.ok) {
-        const membersData = await membersResponse.json();
-        if (membersData.success && membersData.data) {
-          membersData.data.forEach(member => {
-            if (!member.person_id) return;
-            const prev = membersDataMap.get(member.person_id) || {};
-            membersDataMap.set(member.person_id, {
-              ...prev,
-              fm_id: member.fm_id || prev.fm_id,
-              father_name: member.father_name ?? prev.father_name,
-              mother_name: member.mother_name ?? prev.mother_name,
-              spouses: member.spouses ?? prev.spouses,
-              siblings: member.siblings ?? prev.siblings,
-              children: member.children ?? prev.children,
-              birth_date_solar: member.birth_date_solar || prev.birth_date_solar,
-              birth_date_lunar: member.birth_date_lunar || prev.birth_date_lunar,
-              death_date_solar: member.death_date_solar || prev.death_date_solar,
-              death_date_lunar: member.death_date_lunar || prev.death_date_lunar
-            });
-          });
-          console.log('[Tree] Loaded fm_id data from /api/members:', membersDataMap.size, 'persons');
-        }
-      } else {
-        // Nếu 403, có thể user chưa đăng nhập - không crash, chỉ log warning
-        if (membersResponse.status === 403) {
-          console.warn('[Tree] /api/members requires authentication. Skipping fm_id data load.');
-        } else {
-          console.warn('[Tree] Failed to load fm_id from /api/members:', membersResponse.status, membersResponse.statusText);
-        }
-      }
-    } catch (err) {
-      // Xử lý lỗi, không crash
-      console.warn('[Tree] Could not load fm_id from /api/members:', err);
-    }
+    const membersDataMap = new Map();
 
     // Convert tree data to graph structure for backward compatibility
     if (treeData && treeData.person_id) {
@@ -161,51 +122,7 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
           // Extract persons array from tree
           const persons = extractPersonsFromTree(treeData);
           
-          // Load marriages data từ API (sử dụng cùng database như /api/members)
-          try {
-            const marriagesResponse = await fetch(`${API_BASE_URL}/members`, {
-              credentials: 'include'  // Quan trọng: gửi session cookie
-            });
-            if (marriagesResponse.ok) {
-              const membersData = await marriagesResponse.json();
-              if (membersData.success && membersData.data) {
-                // Extract marriages từ members data
-                membersData.data.forEach(member => {
-                  if (member.spouses) {
-                    const spouseNames = member.spouses.split(';').map(s => s.trim()).filter(s => s);
-                    if (spouseNames.length > 0) {
-                      // Tạo marriages array từ spouse names (có thể là string hoặc object)
-                      const marriages = spouseNames.map((spouseName, index) => {
-                        // Nếu spouseName là object, giữ nguyên; nếu là string, convert thành object
-                        if (typeof spouseName === 'string') {
-                          return {
-                            spouse_name: spouseName,
-                            marriage_order: index,
-                            marriage_type: index === 0 ? 'primary' : 'secondary'
-                          };
-                        }
-                        return spouseName;
-                      });
-                      marriagesDataMap.set(member.person_id, marriages);
-                    }
-                  }
-                });
-                console.log('[Tree] Loaded marriages data from /api/members:', marriagesDataMap.size, 'persons with marriages');
-              }
-            } else {
-              // Nếu 403, có thể user chưa đăng nhập - không crash, chỉ log warning
-              if (marriagesResponse.status === 403) {
-                console.warn('[Tree] /api/members requires authentication. Skipping marriages data load.');
-              } else {
-                console.warn('[Tree] Failed to load marriages from /api/members:', marriagesResponse.status, marriagesResponse.statusText);
-              }
-            }
-          } catch (err) {
-            // Xử lý lỗi, không crash
-            console.warn('[Tree] Could not load marriages from /api/members:', err);
-          }
-          
-          // Merge với marriages từ tree data (marriage_pairs)
+          // Build marriages map từ /api/tree (marriage_pairs)
           if (treeData && treeData.marriage_pairs && Array.isArray(treeData.marriage_pairs)) {
             console.log('[Tree] Merging ' + treeData.marriage_pairs.length + ' marriage pairs from /api/tree');
             treeData.marriage_pairs.forEach(pair => {
@@ -339,9 +256,9 @@ async function loadTreeData(maxGeneration = 5, rootId = 'P-1-1') {
 
 /**
  * Convert tree data từ /api/tree thành graph structure
- * ENHANCED: Extract marriages data và fm_id for family-node graph
+ * ENHANCED: Extract marriages data and derived family group keys for family-node graph
  * @param {Object} treeData - Tree data from API
- * @param {Map} membersDataMap - Map personId -> {fm_id, ...} from /api/members
+ * @param {Map} membersDataMap - Optional supplemental map for backward compatibility
  */
 function convertTreeToGraph(treeData, membersDataMap = new Map()) {
   // Reset maps
@@ -359,9 +276,9 @@ function convertTreeToGraph(treeData, membersDataMap = new Map()) {
   function traverseNode(node) {
     if (!node) return;
     
-    // Get fm_id từ membersDataMap (source of truth từ trang Thành viên)
+    // Prefer backend-derived family grouping from /api/tree.
     const memberData = membersDataMap.get(node.person_id);
-    const fm_id = memberData?.fm_id || node.fm_id || node.father_mother_id || null;
+    const fm_id = memberData?.fm_id || node.family_group_key || node.fm_id || node.father_mother_id || null;
     
     const person = {
       id: node.person_id,
@@ -375,6 +292,7 @@ function convertTreeToGraph(treeData, membersDataMap = new Map()) {
       mother_name: memberData?.mother_name || node.mother_name || null,
       father_id: node.father_id || null,
       mother_id: node.mother_id || null,
+      family_group_key: node.family_group_key || null,
       fm_id: fm_id, // NEW: father_mother_id để group siblings
       marriages: node.marriages || [], // Extract marriages
       birth_date_solar: (memberData?.birth_date_solar || node.birth_date_solar || '').toString().trim() || null,
@@ -540,6 +458,8 @@ function extractPersonsFromTree(treeNode) {
       mother_name: node.mother_name || personFromMap?.mother_name || null,
       father_id: node.father_id || personFromMap?.father_id || null,
       mother_id: node.mother_id || personFromMap?.mother_id || null,
+      family_group_key: node.family_group_key || personFromMap?.family_group_key || null,
+      fm_id: node.fm_id || personFromMap?.fm_id || null,
       marriages: node.marriages || personFromMap?.marriages || marriagesMap.get(node.person_id) || [],
       birth_date_solar: node.birth_date_solar || personFromMap?.birth_date_solar || null,
       birth_date_lunar: node.birth_date_lunar || personFromMap?.birth_date_lunar || null,

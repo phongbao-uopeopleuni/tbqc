@@ -5,6 +5,7 @@ from flask import jsonify, request
 from mysql.connector import Error
 
 from db import get_db_connection
+from services.person_helpers import get_preferred_spouse_names
 from utils.validation import validate_person_id, validate_integer
 from services.person_service import load_relationship_data
 from services.genealogy_sync import (
@@ -13,6 +14,20 @@ from services.genealogy_sync import (
 )
 
 logger = logging.getLogger(__name__)
+
+NGUYEN_PHUOC_LINEAGE_KEYWORDS = (
+    'Vua',
+    'Miên',
+    'Hồng',
+    'Hường',
+    'Ưng',
+    'Bửu',
+    'Vĩnh',
+    'Bảo',
+    'Quý',
+    'Nguyễn Phước',
+    'Nguyễn Phúc',
+)
 
 try:
     from folder_py.genealogy_tree import (
@@ -31,6 +46,12 @@ except ImportError as e:
     build_children_map = None
     build_parent_map = None
     load_persons_data = None
+
+
+def belongs_to_nguyen_phuoc_lineage(person_name):
+    if not person_name:
+        return False
+    return any(keyword in person_name for keyword in NGUYEN_PHUOC_LINEAGE_KEYWORDS)
 
 
 def get_tree():
@@ -221,8 +242,7 @@ def get_ancestors(person_id):
                 cursor.execute('\n                    SELECT full_name\n                    FROM persons\n                    WHERE person_id = %s\n                ', (father_id,))
                 father_info = cursor.fetchone()
                 father_name = father_info.get('full_name', '') if father_info else ''
-                nguyen_phuoc_keywords = ['Vua', 'Miên', 'Hồng', 'Hường', 'Ưng', 'Bửu', 'Vĩnh', 'Bảo', 'Quý', 'Nguyễn Phước', 'Nguyễn Phúc']
-                is_nguyen_phuoc_lineage = any((keyword in father_name for keyword in nguyen_phuoc_keywords))
+                is_nguyen_phuoc_lineage = belongs_to_nguyen_phuoc_lineage(father_name)
                 if is_nguyen_phuoc_lineage:
                     logger.info(f'[API /api/ancestors/{person_id}] Found father: {father_id} ({father_name}), belongs to Nguyen Phuoc lineage, using father for ancestors search')
                     target_person_id = father_id
@@ -270,6 +290,7 @@ def get_ancestors(person_id):
             return (jsonify({'error': f'Database error while checking person: {str(e)}'}), 500)
         ancestors_result = None
         try:
+            # sp_get_ancestors còn fallback qua father_mother_id; xem D4 trong plan, không thay đổi cho tới khi có quyết định rõ ở Phase 6/7.
             cursor.callproc('sp_get_ancestors', [target_person_id, max_level])
             for result_set in cursor.stored_results():
                 ancestors_result = result_set.fetchall()
@@ -336,9 +357,6 @@ def get_ancestors(person_id):
                     ancestors_chain.append({'person_id': person_id_item, 'full_name': row[1] if len(row) > 1 else '', 'gender': row[2] if len(row) > 2 else None, 'generation_level': row[3] if len(row) > 3 else None, 'generation_number': row[3] if len(row) > 3 else None, 'level': row[4] if len(row) > 4 else 0})
         logger.debug(f'Loading relationship data for ancestors chain using shared helper...')
         relationship_data = load_relationship_data(cursor)
-        spouse_data_from_table = relationship_data['spouse_data_from_table']
-        spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
-        spouse_data_from_csv = relationship_data['spouse_data_from_csv']
         parent_data = relationship_data['parent_data']
         children_map = relationship_data['children_map']
         siblings_map = relationship_data['siblings_map']
@@ -352,15 +370,9 @@ def get_ancestors(person_id):
                 rel = parent_data.get(ancestor_id, {'father_name': None, 'mother_name': None})
                 ancestor['father_name'] = rel.get('father_name')
                 ancestor['mother_name'] = rel.get('mother_name')
-                spouse_names = []
-                if ancestor_id in spouse_data_from_table:
-                    spouse_names = spouse_data_from_table[ancestor_id]
-                elif ancestor_id in spouse_data_from_marriages:
-                    spouse_names = spouse_data_from_marriages[ancestor_id]
-                elif ancestor_id in spouse_data_from_csv:
-                    spouse_names = spouse_data_from_csv[ancestor_id]
-                    ancestor['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
-                    ancestor['spouse'] = '; '.join(spouse_names) if spouse_names else None
+                spouse_names = get_preferred_spouse_names(relationship_data, ancestor_id)
+                ancestor['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                ancestor['spouse'] = '; '.join(spouse_names) if spouse_names else None
                 children = children_map.get(ancestor_id, [])
                 ancestor['children'] = '; '.join(children) if children else None
                 ancestor['children_string'] = '; '.join(children) if children else None
@@ -387,15 +399,8 @@ def get_ancestors(person_id):
                     if father_info:
                         rel = parent_data.get(father_to_add_to_chain, {'father_name': None, 'mother_name': None})
                         father_entry = {'person_id': father_info.get('person_id'), 'full_name': father_info.get('full_name', ''), 'gender': father_info.get('gender'), 'generation_level': father_info.get('generation_level'), 'generation_number': father_info.get('generation_level'), 'father_name': rel.get('father_name'), 'mother_name': rel.get('mother_name'), 'level': 999}
-                        if father_to_add_to_chain in spouse_data_from_table:
-                            spouse_names = spouse_data_from_table[father_to_add_to_chain]
-                            father_entry['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
-                        elif father_to_add_to_chain in spouse_data_from_marriages:
-                            spouse_names = spouse_data_from_marriages[father_to_add_to_chain]
-                            father_entry['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
-                        elif father_to_add_to_chain in spouse_data_from_csv:
-                            spouse_names = spouse_data_from_csv[father_to_add_to_chain]
-                            father_entry['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+                        spouse_names = get_preferred_spouse_names(relationship_data, father_to_add_to_chain)
+                        father_entry['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
                         children = children_map.get(father_to_add_to_chain, [])
                         father_entry['children'] = '; '.join(children) if children else None
                         siblings = siblings_map.get(father_to_add_to_chain, [])
@@ -435,15 +440,9 @@ def get_ancestors(person_id):
             rel = parent_data.get(person_id, {'father_name': None, 'mother_name': None})
             person_info['father_name'] = rel.get('father_name')
             person_info['mother_name'] = rel.get('mother_name')
-            spouse_names = []
-            if person_id in spouse_data_from_table:
-                spouse_names = spouse_data_from_table[person_id]
-            elif person_id in spouse_data_from_marriages:
-                spouse_names = spouse_data_from_marriages[person_id]
-            elif person_id in spouse_data_from_csv:
-                spouse_names = spouse_data_from_csv[person_id]
-                person_info['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
-                person_info['spouse'] = '; '.join(spouse_names) if spouse_names else None
+            spouse_names = get_preferred_spouse_names(relationship_data, person_id)
+            person_info['spouse_name'] = '; '.join(spouse_names) if spouse_names else None
+            person_info['spouse'] = '; '.join(spouse_names) if spouse_names else None
             children = children_map.get(person_id, [])
             person_info['children'] = '; '.join(children) if children else None
             person_info['children_string'] = '; '.join(children) if children else None

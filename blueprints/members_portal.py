@@ -12,6 +12,7 @@ from flask import Blueprint, redirect, render_template, request, jsonify, sessio
 
 from audit_log import log_activity
 from extensions import rate_limit
+from services.person_helpers import get_preferred_spouse_names
 from services.members_service import fetch_members_list
 from services.members_helpers import (
     normalize_excel_header as _normalize_excel_header,
@@ -213,9 +214,6 @@ def get_members():
         """)
         persons = cursor.fetchall()
         relationship_data = load_relationship_data(cursor)
-        spouse_data_from_table = relationship_data['spouse_data_from_table']
-        spouse_data_from_marriages = relationship_data['spouse_data_from_marriages']
-        spouse_data_from_csv = relationship_data['spouse_data_from_csv']
         parent_data = relationship_data['parent_data']
         children_map = relationship_data['children_map']
         siblings_map = relationship_data['siblings_map']
@@ -223,7 +221,7 @@ def get_members():
         for person in persons:
             person_id = person['person_id']
             rel = parent_data.get(person_id, {'father_name': None, 'mother_name': None})
-            spouse_names = spouse_data_from_table.get(person_id) or spouse_data_from_marriages.get(person_id) or spouse_data_from_csv.get(person_id) or []
+            spouse_names = get_preferred_spouse_names(relationship_data, person_id)
             siblings = siblings_map.get(person_id, [])
             children = children_map.get(person_id, [])
             member = {
