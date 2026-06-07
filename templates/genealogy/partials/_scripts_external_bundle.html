@@ -25,8 +25,8 @@
           referrerpolicy="no-referrer"></script>
 
   <!-- Load genealogy scripts -->
-  <script src="/static/js/device-detection.js"></script>
-  <script src="/static/js/common.js"></script>
+  <script src="/static/js/device-detection.js?v={{ static_ver }}"></script>
+  <script src="/static/js/common.js?v={{ static_ver }}"></script>
   <!-- D3 (d3.path) for SVG connector rendering; layout unchanged -->
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"
           integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i"
@@ -36,14 +36,14 @@
           integrity="sha384-ZOYffjPUyf23W5DufkQVkrN7uZvIMRRCPo64S2N2S0mFM9+bFZpn2/MQTy2O35gF"
           crossorigin="anonymous"
           referrerpolicy="no-referrer"></script>
-  <script src="/static/js/family-tree-panzoom.js"></script>
-  <script src="/static/js/family-tree-core.js"></script>
-  <script src="/static/js/family-tree-graph-builder.js"></script>
-  <script src="/static/js/family-tree-family-renderer.js"></script>
-  <script src="/static/js/family-tree-ui.js"></script>
-  <script src="/static/js/family-tree-family-ui.js"></script>
-  <script src="/static/js/multilevel-genealogy.js"></script>
-  <script src="/static/js/genealogy-lineage.js"></script>
+  <script src="/static/js/family-tree-panzoom.js?v={{ static_ver }}"></script>
+  <script src="/static/js/family-tree-core.js?v={{ static_ver }}"></script>
+  <script src="/static/js/family-tree-graph-builder.js?v={{ static_ver }}"></script>
+  <script src="/static/js/family-tree-family-renderer.js?v={{ static_ver }}"></script>
+  <script src="/static/js/family-tree-ui.js?v={{ static_ver }}"></script>
+  <script src="/static/js/family-tree-family-ui.js?v={{ static_ver }}"></script>
+  <script src="/static/js/multilevel-genealogy.js?v={{ static_ver }}"></script>
+  <script src="/static/js/genealogy-lineage.js?v={{ static_ver }}"></script>
   <script>
     window.genealogyTreeRootPersonId = window.genealogyTreeRootPersonId || 'P-1-1';
     /** Mặc định "Hiển thị đến đời" khi vào trang Gia phả (trước khi API thống kê đổ dropdown) */

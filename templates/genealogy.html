@@ -5,12 +5,12 @@
 {% include 'genealogy/partials/_main_genealogy_content.html' %}
 {% include 'genealogy/partials/_scripts_external_bundle.html' %}
 {# P0 refactor: các file JS lớn đã tách khỏi partial sang static/js/ (2025-04) #}
-<script src="/static/js/utils.js"></script>
-<script src="/static/js/genealogy-tree-controls.js"></script>
-<script src="/static/js/genealogy-lineage-ui.js"></script>
-<script src="/static/js/genealogy-member-stats.js"></script>
+<script src="/static/js/utils.js?v={{ static_ver }}"></script>
+<script src="/static/js/genealogy-tree-controls.js?v={{ static_ver }}"></script>
+<script src="/static/js/genealogy-lineage-ui.js?v={{ static_ver }}"></script>
+<script src="/static/js/genealogy-member-stats.js?v={{ static_ver }}"></script>
 {% include 'genealogy/partials/_styles_stats_responsive.html' %}
-<script src="/static/js/genealogy-grave-family-view.js"></script>
+<script src="/static/js/genealogy-grave-family-view.js?v={{ static_ver }}"></script>
 {% include 'genealogy/partials/_footer_zalo_and_gate_script.html' %}
 </body>
 </html>

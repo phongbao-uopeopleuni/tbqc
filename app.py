@@ -62,6 +62,19 @@ try:
     CORS(app, origins=allowed_origins, supports_credentials=True)
     init_extensions(app)
 
+    # Cache-busting: dùng git commit SHA làm version cho static files
+    _static_ver = os.environ.get('RAILWAY_GIT_COMMIT_SHA', '')[:8]
+    if not _static_ver:
+        try:
+            import subprocess
+            _static_ver = subprocess.check_output(
+                ['git', 'rev-parse', '--short', 'HEAD'],
+                stderr=subprocess.DEVNULL
+            ).decode().strip()
+        except Exception:
+            _static_ver = 'dev'
+    app.jinja_env.globals['static_ver'] = _static_ver
+
     @app.after_request
     def _add_security_headers(response):
         """Gắn header bảo mật HTTP (defense-in-depth, không đổi hành vi app).
