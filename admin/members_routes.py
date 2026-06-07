@@ -42,6 +42,7 @@ def register_admin_members_routes(app):
                     p.place_of_death,
                     p.grave_info,
                     p.father_mother_id,
+                    p.family_unit_id,
                     father.person_id AS father_id,
                     father.full_name AS father_name,
                     mother.person_id AS mother_id,
@@ -215,6 +216,10 @@ def register_admin_members_routes(app):
                 insert_fields.append('fm_id')
                 insert_values.append(data.get('fm_id'))
 
+            if 'family_unit_id' in columns and data.get('family_unit_id'):
+                insert_fields.append('family_unit_id')
+                insert_values.append(data.get('family_unit_id'))
+
             if 'birth_date_solar' in columns and data.get('birth_date_solar'):
                 insert_fields.append('birth_date_solar')
                 birth_date = data.get('birth_date_solar').strip()
@@ -357,6 +362,10 @@ def register_admin_members_routes(app):
             elif 'fm_id' in columns:
                 update_fields.append('fm_id = %s')
                 update_values.append(data.get('fm_id'))
+
+            if 'family_unit_id' in columns and 'family_unit_id' in data:
+                update_fields.append('family_unit_id = %s')
+                update_values.append(data.get('family_unit_id') or None)
 
             if 'birth_date_solar' in columns:
                 update_fields.append('birth_date_solar = %s')

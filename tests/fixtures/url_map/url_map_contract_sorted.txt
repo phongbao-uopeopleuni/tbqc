@@ -1,4 +1,5 @@
 DELETE /admin/api/csv-data/<sheet_name>/<int:row_index> -> delete_csv_row
+DELETE /admin/api/family-units/<unit_id> -> delete_family_unit
 DELETE /admin/api/members/<person_id> -> delete_member
 DELETE /admin/api/users/<int:user_id> -> api_delete_user
 DELETE /api/albums/<int:album_id> -> gallery.api_delete_album
@@ -15,6 +16,7 @@ GET /admin/activities -> admin_activities_page
 GET /admin/api/backup/download/<filename> -> download_backup_admin
 GET /admin/api/csv-data/<sheet_name> -> get_csv_data
 GET /admin/api/db-info -> admin_api_db_info
+GET /admin/api/family-units -> list_family_units
 GET /admin/api/members -> get_members_admin
 GET /admin/api/schema -> admin_api_schema
 GET /admin/api/table-stats -> admin_api_table_stats
@@ -83,6 +85,7 @@ GET|POST /api/grave-search -> gallery.search_grave
 GET|POST /members/logout -> members_portal.members_logout
 POST /admin/api/backup -> create_backup
 POST /admin/api/csv-data/<sheet_name> -> add_csv_row
+POST /admin/api/family-units -> create_family_unit
 POST /admin/api/members -> create_member_admin
 POST /admin/api/requests/<int:request_id>/process -> api_process_request
 POST /admin/api/users -> api_create_user
@@ -114,6 +117,7 @@ POST /api/upload-image -> gallery.upload_image
 POST /members/request-deletion -> members_portal.members_request_deletion
 POST /members/verify -> members_portal.members_verify
 PUT /admin/api/csv-data/<sheet_name>/<int:row_index> -> update_csv_row
+PUT /admin/api/family-units/<unit_id> -> update_family_unit
 PUT /admin/api/members/<person_id> -> update_member_admin
 PUT /admin/api/users/<int:user_id> -> api_update_user
 PUT /api/albums/<int:album_id> -> gallery.api_update_album

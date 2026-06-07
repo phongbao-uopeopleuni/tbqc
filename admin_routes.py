@@ -21,6 +21,7 @@ from admin.backup_routes import (
     register_admin_backup_admin_route,
 )
 from admin.members_routes import register_admin_members_routes
+from admin.family_units_routes import register_admin_family_units_routes
 from admin.users_routes import register_admin_users_routes
 
 def register_admin_routes(app):
@@ -67,6 +68,7 @@ def register_admin_routes(app):
     register_admin_csv_routes(app)
 
     register_admin_members_routes(app)
+    register_admin_family_units_routes(app)
 
     register_admin_backup_create_route(app)
 

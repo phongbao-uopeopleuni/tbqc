@@ -95,6 +95,10 @@ GET /admin/api/members -> get_members_admin
 POST /admin/api/members -> create_member_admin
 PUT /admin/api/members/<person_id> -> update_member_admin
 DELETE /admin/api/members/<person_id> -> delete_member
+GET /admin/api/family-units -> list_family_units
+POST /admin/api/family-units -> create_family_unit
+PUT /admin/api/family-units/<unit_id> -> update_family_unit
+DELETE /admin/api/family-units/<unit_id> -> delete_family_unit
 POST /admin/api/backup -> create_backup
 GET /admin/api/backup/download/<filename> -> download_backup_admin
 GET /api/admin/log-stats -> api_admin_log_stats

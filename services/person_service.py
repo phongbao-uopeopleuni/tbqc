@@ -116,7 +116,7 @@ def get_persons():
         cursor = connection.cursor(dictionary=True)
         cursor.execute("\n            SELECT COLUMN_NAME \n            FROM information_schema.COLUMNS \n            WHERE TABLE_SCHEMA = DATABASE() \n            AND TABLE_NAME = 'persons'\n            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email')\n        ")
         available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
-        select_fields = ['p.person_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status', 'p.generation_level', 'p.home_town', 'p.nationality', 'p.religion', 'p.birth_date_solar', 'p.birth_date_lunar', 'p.death_date_solar', 'p.death_date_lunar', 'p.place_of_death', 'p.grave_info', 'p.contact', 'p.social', 'p.occupation', 'p.education', 'p.events', 'p.titles', 'p.blood_type', 'p.genetic_disease', 'p.note', 'p.father_mother_id']
+        select_fields = ['p.person_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status', 'p.generation_level', 'p.home_town', 'p.nationality', 'p.religion', 'p.birth_date_solar', 'p.birth_date_lunar', 'p.death_date_solar', 'p.death_date_lunar', 'p.place_of_death', 'p.grave_info', 'p.contact', 'p.social', 'p.occupation', 'p.education', 'p.events', 'p.titles', 'p.blood_type', 'p.genetic_disease', 'p.note', 'p.father_mother_id', 'p.family_unit_id']
         if 'personal_image_url' in available_columns:
             select_fields.append('p.personal_image_url AS personal_image_url')
         elif 'personal_image' in available_columns:
@@ -293,7 +293,7 @@ def get_person(person_id):
         cursor = connection.cursor(dictionary=True)
         cursor.execute("\n            SELECT COLUMN_NAME \n            FROM information_schema.COLUMNS \n            WHERE TABLE_SCHEMA = DATABASE() \n            AND TABLE_NAME = 'persons'\n            AND COLUMN_NAME IN ('personal_image_url', 'personal_image', 'biography', 'academic_rank', 'academic_degree', 'phone', 'email', 'branch_name')\n        ")
         available_columns = {row['COLUMN_NAME'] for row in cursor.fetchall()}
-        select_fields = ['p.person_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status', 'p.generation_level', 'p.birth_date_solar', 'p.birth_date_lunar', 'p.death_date_solar', 'p.death_date_lunar', 'p.home_town', 'p.nationality', 'p.religion', 'p.place_of_death', 'p.grave_info', 'p.contact', 'p.social', 'p.occupation', 'p.education', 'p.events', 'p.titles', 'p.blood_type', 'p.genetic_disease', 'p.note', 'p.father_mother_id']
+        select_fields = ['p.person_id', 'p.full_name', 'p.alias', 'p.gender', 'p.status', 'p.generation_level', 'p.birth_date_solar', 'p.birth_date_lunar', 'p.death_date_solar', 'p.death_date_lunar', 'p.home_town', 'p.nationality', 'p.religion', 'p.place_of_death', 'p.grave_info', 'p.contact', 'p.social', 'p.occupation', 'p.education', 'p.events', 'p.titles', 'p.blood_type', 'p.genetic_disease', 'p.note', 'p.father_mother_id', 'p.family_unit_id']
         if 'personal_image_url' in available_columns:
             select_fields.append('p.personal_image_url AS personal_image_url')
         elif 'personal_image' in available_columns:
@@ -1703,6 +1703,9 @@ def apply_person_members_update_core(connection, cursor, person_id, data, person
     elif 'fm_id' in columns and 'fm_id' in data:
         update_fields.append('fm_id = %s')
         update_values.append(data.get('fm_id'))
+    if 'family_unit_id' in columns and 'family_unit_id' in data:
+        update_fields.append('family_unit_id = %s')
+        update_values.append(data.get('family_unit_id') or None)
     if update_fields:
         update_values.append(person_id)
         update_query = f"UPDATE persons SET {', '.join(update_fields)} WHERE person_id = %s"

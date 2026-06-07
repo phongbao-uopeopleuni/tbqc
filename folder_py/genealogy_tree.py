@@ -26,8 +26,11 @@ def _derive_family_group_key(
     father_id: Optional[str],
     mother_id: Optional[str],
     fallback_fm_id: Optional[str] = None,
+    family_unit_id: Optional[str] = None,
 ) -> Optional[str]:
-    """Prefer parent-pair grouping; fall back to legacy father_mother_id when needed."""
+    """Priority: family_unit_id (explicit) > parent-pair > father_mother_id (legacy fallback)."""
+    if family_unit_id:
+        return family_unit_id
     if father_id or mother_id:
         return f"{father_id or 'null'}|{mother_id or 'null'}"
     if fallback_fm_id:
@@ -328,7 +331,8 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
             p.blood_type,
             p.genetic_disease,
             p.note,
-            p.father_mother_id
+            p.father_mother_id,
+            p.family_unit_id
         FROM persons p
     """)
     
@@ -372,6 +376,7 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
                 'genetic_disease': row[22],
                 'note': row[23],
                 'father_mother_id': row[24],
+                'family_unit_id': row[25] if len(row) > 25 else None,
                 'father_name': None,
                 'mother_name': None,
                 'father_id': None,
@@ -425,6 +430,7 @@ def load_persons_data(cursor) -> Dict[str, Dict]:
                 father_id,
                 mother_id,
                 persons_by_id[child_id].get('father_mother_id'),
+                persons_by_id[child_id].get('family_unit_id'),
             )
     
     logger.info(f"Loaded {len(persons_by_id)} persons")
