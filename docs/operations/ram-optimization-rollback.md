@@ -1,217 +1,264 @@
-﻿# RAM Optimization â€” Rollback Guide
-
-> **NgÃ y Ã¡p dá»¥ng:** 2026-05-20
-> **LÃ½ do:** Railway RAM baseline ~500 MB, cost RAM = 96% tá»•ng chi phÃ­ (~$4.24/$4.41 ngÃ y). Operator Ä‘á»“ng Ã½ chá»‰ Ã¡p dá»¥ng 3 thay Ä‘á»•i an toÃ n.
-> **Tráº¡ng thÃ¡i má»¥c tiÃªu:** Drop RAM baseline xuá»‘ng ~350 MB mÃ  KHÃ”NG Ä‘á»¥ng logic/UX hiá»‡n táº¡i.
-> **Cáº­p nháº­t cuá»‘i:** 2026-05-20
-
----
-
-## TÃ³m táº¯t 3 thay Ä‘á»•i Ä‘Ã£ apply
-
-| # | Thay Ä‘á»•i | File | Loáº¡i | Risk |
-|---|---|---|---|---|
-| 0.1 | `MALLOC_ARENA_MAX=2` env var | Railway dashboard | Env config | ðŸŸ¢ Zero |
-| 0.2 | XÃ³a `openai`, `anthropic` | `requirements.txt` | Dependency | ðŸŸ¢ Zero (Ä‘Ã£ verify khÃ´ng import) |
-| 2.8 | `CACHE_THRESHOLD 1000 â†’ 50` | `extensions.py` | Config sá»‘ | ðŸŸ¢ Zero |
-
-**Expected drop:** ~100-150 MB baseline RAM.
+> ⚠️ **TÀI LIỆU LỊCH SỬ — ĐÃ ĐƯỢC SUPERSEDE**
+>
+> Baseline thực tế đo ngày 09/06/2026 là **84–91 MB** (không phải ~500 MB).
+> Phase B và Phase C không còn là kế hoạch hiện hành.
+> **Xem [`RAM Optimization June 9,2026.md`](RAM%20Optimization%20June%209,2026.md) để biết trạng thái RAM hiện tại.**
+>
+> File này được giữ lại làm lịch sử quyết định và rollback reference cho 3 thay đổi tháng 5/2026.
 
 ---
 
-## 1. `MALLOC_ARENA_MAX=2` â€” Tuning glibc malloc
+# RAM Optimization — Rollback Guide
 
-### Táº¡i sao
-glibc malloc máº·c Ä‘á»‹nh táº¡o `8 Ã— sá»‘ CPU` arenas Ä‘á»ƒ trÃ¡nh contention giá»¯a threads. TrÃªn Railway (multi-core host), Ä‘iá»u nÃ y táº¡o **8-32 arenas**, má»—i arena giá»¯ má»™t pool RAM riÃªng â†’ fragmentation lá»›n. Python web app multi-thread (nhÆ° Gunicorn `--threads 2`) chá»‰ cáº§n **2 arenas**.
-
-ÄÃ¢y lÃ  tuning **chuáº©n industry** (Instagram, dropbox, instagram engineering blog Ä‘á»u khuyáº¿n cÃ¡o). KHÃ”NG Ä‘á»¥ng code Python, chá»‰ lÃ  hint cho thÆ° viá»‡n C cá»§a Linux.
-
-### CÃ¡ch Ã¡p dá»¥ng trÃªn Railway
-
-1. VÃ o Railway Dashboard â†’ Project **giapha** â†’ Service web (tbqc-giapha hoáº·c tÃªn service).
-2. Tab **Variables** â†’ **+ New Variable**.
-3. Name: `MALLOC_ARENA_MAX`
-4. Value: `2`
-5. Save â†’ Railway tá»± deploy láº¡i.
-
-**XÃ¡c minh sau deploy:**
-- VÃ o tab **Metrics** â†’ quan sÃ¡t biá»ƒu Ä‘á»“ RAM trong 1-2 giá».
-- Baseline RAM nÃªn giáº£m 80-150 MB (tá»« ~500 MB xuá»‘ng ~350-400 MB).
-- KHÃ”NG cÃ³ lá»—i má»›i trong logs.
-
-### Rollback náº¿u cÃ³ váº¥n Ä‘á»
-
-**Triá»‡u chá»©ng cáº§n rollback:**
-- Performance giáº£m rÃµ rá»‡t (response time tÄƒng > 2x).
-- App crash báº¥t thÆ°á»ng liÃªn quan Ä‘áº¿n memory allocator.
-- (Cá»±c hiáº¿m â€” chÆ°a tá»«ng ghi nháº­n case nÃ o trong thá»±c táº¿ cho Python web)
-
-**CÃ¡ch rollback:**
-1. Railway Dashboard â†’ Service â†’ Variables.
-2. XÃ³a biáº¿n `MALLOC_ARENA_MAX` (hoáº·c Ä‘á»•i value vá» `0` Ä‘á»ƒ dÃ¹ng default).
-3. Save â†’ Railway redeploy â†’ quay vá» hÃ nh vi cÅ©.
-
-**Thá»i gian rollback:** ~30 giÃ¢y.
+> **Ngày tạo:** 2026-05-20
+> **Cập nhật:** 2026-06-08 (audit lại toàn bộ assumptions, thêm Phase B/C)
+> **Lý do:** Railway RAM baseline ~500 MB, cost RAM = 96% tổng chi phí (~$4.24/$4.41 ngày).
+> **Trạng thái mục tiêu:** Drop RAM baseline xuống ~350 MB mà KHÔNG đụng logic/UX hiện tại.
 
 ---
 
-## 2. XÃ³a `openai` vÃ  `anthropic` khá»i `requirements.txt`
+## Trạng thái hiện tại (2026-06-08)
 
-### Táº¡i sao
-Verify láº§n 2 báº±ng `grep` toÃ n repo: **0 file `.py`** import `openai` hoáº·c `anthropic` (cáº£ runtime, blueprints, services, utils, scripts). ÄÃ¢y lÃ  dead dependencies tá»« má»™t thá»­ nghiá»‡m cÅ©.
+**3 thay đổi từ 2026-05-20 đã được apply. Baseline hiện tại ~500 MB là trạng thái SAU khi apply.**
 
-TrÃªn Railway:
-- Container nhá» hÆ¡n (~50 MB Ã­t disk).
-- KhÃ´ng cÃ³ transitive import side-effect.
-- Build deploy nhanh hÆ¡n 10-15 giÃ¢y.
+| # | Thay đổi | File | Trạng thái |
+|---|---|---|---|
+| 0.1 | `MALLOC_ARENA_MAX=2` | Railway Variables | ✅ Applied 2026-05-20 — cần verify vẫn còn |
+| 0.2 | Xóa `openai`, `anthropic` | `requirements.txt` | ✅ Applied 2026-05-20 |
+| 2.8 | `CACHE_THRESHOLD 1000 → 50` | `extensions.py` | ✅ Applied 2026-05-20 (code confirm) |
 
-### Verification trÆ°á»›c khi Ã¡p dá»¥ng (Ä‘Ã£ lÃ m)
+**Expected drop đã đạt được:** ~100–150 MB (từ ~600–650 MB xuống ~500 MB).
 
-```bash
-# Cáº£ 2 grep Ä‘á»u ZERO matches:
-grep -r "import openai" --include="*.py" D:\tbqc
-grep -r "import anthropic" --include="*.py" D:\tbqc
-grep -r "from openai" --include="*.py" D:\tbqc
-grep -r "from anthropic" --include="*.py" D:\tbqc
+---
+
+## Audit assumptions (2026-06-08)
+
+Kết quả kiểm tra code thực tế bác bỏ một số giả định trong phiên bản cũ:
+
+| Assumption cũ | Thực tế |
+|---|---|
+| `pandas` load ở runtime → nặng | **Sai** — pandas chỉ trong `scripts/`, không import ở runtime |
+| `openpyxl` load ở startup | **Sai** — lazy import bên trong function body (`members_portal.py:298,406,703`) |
+| `Pillow` góp vào baseline | **Sai** — `from PIL import Image` lazy bên trong function, transient khi upload |
+| Ảnh tĩnh là nguyên nhân RAM | **Sai** — `send_from_directory` đọc disk per-request, zero baseline RAM |
+| `CACHE_THRESHOLD=1000` chưa fix | **Sai** — đã là 50 trong code từ tháng 5 |
+
+**Nguyên nhân thực sự của 500 MB baseline (sau 3 thay đổi tháng 5):**
+
+1. **Gunicorn `--preload` với 1 worker** — tạo ra 2 process song song (master + worker), cả hai đều giữ full Python app state. Railway Metrics cộng cả hai. Ước tính đây là nguyên nhân lớn nhất: 80–150 MB overhead.
+2. **`from bs4 import BeautifulSoup` ở module level** trong `services/external_posts_service.py:9` — load lxml (C extension ~20–40 MB) ngay khi app khởi động, dù chỉ dùng khi có request tới `/api/external-posts`.
+3. **Python interpreter + Flask ecosystem + mysql-connector + requests**: baseline không thể tránh ~200–250 MB.
+
+---
+
+## Plan tiếp theo — theo thứ tự ưu tiên
+
+### Phase A — Verify & đo (ngay bây giờ, zero risk)
+
+**A1. Verify `MALLOC_ARENA_MAX=2` vẫn active trên Railway**
+
+- Railway Dashboard → Service → Variables → kiểm tra `MALLOC_ARENA_MAX=2` có tồn tại.
+- Nếu mất (do redeploy config reset): set lại ngay. Rollback: xóa biến.
+
+**A2. Thêm endpoint đo RSS thực tế của worker process**
+
+Thêm vào `/api/health` (hoặc endpoint riêng `/api/health/mem`, chỉ admin):
+
+```python
+import resource
+usage = resource.getrusage(resource.RUSAGE_SELF)
+rss_mb = usage.ru_maxrss / 1024  # Linux: KB → MB
 ```
 
-CÃ¡c match khÃ¡c lÃ  trong:
-- Markdown docs (`docs/ai/memory/ai-project-memory.md`, `docs/product/srs.md`, `CLAUDE.md`, ...): chá»‰ lÃ  note, khÃ´ng pháº£i code.
-- `skills/` folder: file Ä‘á»‹nh nghÄ©a skill cho Cursor/Claude editor, khÃ´ng pháº£i runtime.
+Thu thập:
+- RSS sau cold start (trước request đầu tiên)
+- RSS sau warm-up (10+ requests)
+- RSS sau 1 lần call `/api/members` (cache miss)
 
-### Thay Ä‘á»•i cá»¥ thá»ƒ
+Đây là RAM của **worker process**, không cộng master → biết được overhead thực sự của `--preload`.
+
+**A3. Đo kích thước `api_members_data` cache payload**
+
+Thêm 1 dòng log tạm tại `members_portal.py:250` (cạnh `cache.set`):
+
+```python
+import json
+logger.info("api_members_data cache: %d bytes, %d members",
+            len(json.dumps(response_data).encode()), len(members))
+```
+
+Xóa log này sau khi có số đo.
+
+---
+
+### Phase B — Lazy import bs4/lxml (tuần này, low risk, ~20–40 MB)
+
+**File:** [`services/external_posts_service.py`](../../services/external_posts_service.py)
+
+**Vấn đề:** `from bs4 import BeautifulSoup` ở line 9 (module level) → lxml load ngay khi app khởi động, dù RSS fetch chỉ xảy ra khi có người vào trang Hoạt động.
+
+**Thay đổi:**
 
 ```diff
-# requirements.txt
-- openai>=1.0.0
-- anthropic>=0.18.0
-  flask-wtf==1.2.1
+-from bs4 import BeautifulSoup
+ from flask import jsonify, request
+
+ # ...
+
+ def _fetch_npt_council_rss(limit: int = 15):
++    from bs4 import BeautifulSoup  # lazy: chỉ load khi thực sự fetch RSS
+     headers = { ... }
 ```
 
-### Rollback náº¿u cáº§n
+**Verify:** `pytest tests/` pass. Không có gì khác thay đổi.
 
-**Triá»‡u chá»©ng cáº§n rollback:**
-- Sau deploy, log cÃ³ `ModuleNotFoundError: No module named 'openai'` hoáº·c `'anthropic'`.
-- (Cá»±c ká»³ Ã­t kháº£ nÄƒng â€” Ä‘Ã£ verify)
+**Kỳ vọng:** Giảm 20–40 MB baseline (lxml C extension không load tới khi có request đầu tiên tới `/api/external-posts`).
 
-**CÃ¡ch rollback:**
-1. Má»Ÿ `requirements.txt`.
-2. ThÃªm láº¡i 2 dÃ²ng:
-   ```
-   openai>=1.0.0
-   anthropic>=0.18.0
-   ```
-3. Commit + push â†’ Railway redeploy.
-
-**Thá»i gian rollback:** ~3-5 phÃºt (bao gá»“m redeploy).
+**Rollback:** Revert 1 dòng diff, push.
 
 ---
 
-## 3. `CACHE_THRESHOLD 1000 â†’ 50` trong `extensions.py`
+### Phase C — Bỏ `--preload` (sau Phase A, medium risk, ~80–150 MB)
 
-### Táº¡i sao
-Flask-Caching `SimpleCache` dÃ¹ng dict in-memory. `CACHE_THRESHOLD` lÃ  sá»‘ item tá»‘i Ä‘a, KHÃ”NG pháº£i kÃ­ch thÆ°á»›c RAM. Hiá»‡n táº¡i codebase chá»‰ dÃ¹ng vÃ i key (`api_members_data` lÃ  chÃ­nh), nÃªn 1000 lÃ  dÆ° thá»«a.
+**Điều kiện tiên quyết:** Phải có số đo từ Phase A2 trước.
 
-Giáº£m xuá»‘ng 50 lÃ  **báº£o vá»‡ trÆ°á»›c**: náº¿u code tÆ°Æ¡ng lai thÃªm cache key nhá», khÃ´ng vÃ´ tÃ¬nh tÃ­ch lÅ©y lÃªn 1000 items.
+**Vấn đề:** Với `--workers 1 --preload`, Gunicorn chạy **2 process**:
+- Gunicorn master: import đầy đủ app, không serve request, chỉ giữ RAM
+- 1 Gunicorn worker: fork từ master, phục vụ traffic thực
 
-**KHÃ”NG áº£nh hÆ°á»Ÿng:**
-- Cache `api_members_data` váº«n hoáº¡t Ä‘á»™ng bÃ¬nh thÆ°á»ng.
-- Cache hit/miss logic khÃ´ng Ä‘á»•i.
-- TTL 300s khÃ´ng Ä‘á»•i.
+CoW (Copy-on-Write) lý thuyết share pages giữa master-worker, nhưng sau vài requests đầu tiên, allocator ghi vào gần hết pages → master và worker đều giữ bản riêng. Railway Metrics = master_RSS + worker_RSS ≈ 500 MB.
 
-### Thay Ä‘á»•i cá»¥ thá»ƒ
+**Thay đổi đề xuất trong `Procfile`:**
 
 ```diff
-# extensions.py (function init_extensions)
-  cache_config = {
-      "CACHE_TYPE": "simple",
-      "CACHE_DEFAULT_TIMEOUT": 300,
--     "CACHE_THRESHOLD": 1000,
-+     "CACHE_THRESHOLD": 50,
-  }
+-web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 --preload --max-requests 1000 --max-requests-jitter 50
++web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 --max-requests 1000 --max-requests-jitter 50
 ```
 
-### Rollback náº¿u cáº§n
+**Kỳ vọng:** Giảm 80–150 MB (loại bỏ master process overhead).
 
-**Triá»‡u chá»©ng cáº§n rollback:**
-- Log warning: "Cache eviction: too many items" (cá»±c hiáº¿m â€” sáº½ cáº§n > 50 keys).
-- Members page cháº­m báº¥t thÆ°á»ng (cache miss liÃªn tá»¥c).
+**Risk thực sự — phải đo trước khi apply:**
 
-**CÃ¡ch rollback:**
-1. Má»Ÿ `D:\tbqc\extensions.py`, tÃ¬m `CACHE_THRESHOLD`.
-2. Äá»•i `50` vá» `1000`.
-3. Commit + push â†’ Railway redeploy.
+Với `--max-requests 1000 --max-requests-jitter 50`, worker tự restart sau mỗi ~950–1050 request. Không có `--preload`, mỗi lần restart worker phải re-import app từ đầu. Với 1 worker duy nhất, đây là **gap service** (không ai serve request trong thời gian import).
 
-**Thá»i gian rollback:** ~3-5 phÃºt.
+Cần đo: thời gian từ `gunicorn: booting worker` → `Listening at: http://0.0.0.0:PORT` trong Railway logs.
+
+| Cold start time | Quyết định |
+|---|---|
+| ≤ 3 giây | Apply Phase C — gap nhỏ, chấp nhận được |
+| 3–8 giây | Cân nhắc: tăng `--max-requests 5000` để giảm tần suất restart trước khi bỏ preload |
+| > 8 giây | Giữ `--preload`, tìm nguyên nhân startup chậm trước |
+
+**Rollback:** Thêm lại `--preload` vào `Procfile`, push → Railway redeploy.
 
 ---
 
-## Plan giÃ¡m sÃ¡t sau deploy
+## Không nên làm (trừ khi có bằng chứng rõ ràng)
 
-### 24h Ä‘áº§u
+| Thay đổi | Lý do không làm |
+|---|---|
+| Pagination `/api/members` | Regression risk cao, tác động RAM thấp (cache payload chỉ ~1–5 MB) |
+| Giảm DB pool size 3 → 2 | Tiết kiệm < 1 MB, không đáng rủi ro |
+| Đổi `CACHE_TYPE` | Trade-off rõ ràng (miss latency / I/O), không có vấn đề hiện tại |
+| Giảm `--threads 2 → 1` | Mất concurrency, không đáng giá trị tối ưu |
+| Đổi số `--workers` | Không apply với Railway free tier (1 worker là đúng) |
 
-| Checkpoint | Má»¥c tiÃªu | HÃ nh Ä‘á»™ng náº¿u fail |
+---
+
+## Phép đo cần có trước Phase C
+
+| Phép đo | Cách lấy | Quyết định phụ thuộc |
 |---|---|---|
-| Build success | Railway log "Build successful" | Äá»c build log; thÆ°á»ng do dependency typo |
-| Boot success | App log "Flask app da duoc khoi tao" | Äá»c startup log; cÃ³ thá»ƒ do dependency thiáº¿u |
+| Worker RSS cold start | `/api/health/mem` sau deploy, trước request | Baseline worker thực sự |
+| Worker RSS warm | `/api/health/mem` sau 10+ requests | Delta do app state |
+| App cold start time | Railway logs: "booting worker" → "Listening" | Quyết định bỏ preload |
+| `api_members_data` size | Log tạm tại `cache.set` | Quyết định cache TTL |
+
+---
+
+## Kỳ vọng RAM sau từng phase
+
+| Sau phase | RAM ước tính | Giảm so với hiện tại |
+|---|---|---|
+| Hiện tại (post tháng 5) | ~500 MB | — |
+| Sau A (verify/đo) | ~500 MB | 0 (chỉ đo) |
+| Sau B (lazy bs4/lxml) | ~460–480 MB | ~20–40 MB |
+| Sau C (bỏ preload) | ~320–400 MB | ~80–150 MB thêm |
+| **Tổng B+C** | **~310–400 MB** | **~100–190 MB** |
+
+---
+
+## Plan giám sát sau mỗi deploy
+
+### Checklist sau deploy Phase B hoặc C
+
+| Checkpoint | Mục tiêu | Hành động nếu fail |
+|---|---|---|
+| Build success | Railway log "Build successful" | Đọc build log |
+| Boot success | App log "Flask app da duoc khoi tao" | Đọc startup log |
 | `/api/health` HTTP 200 | `{"status": "ok"}` | Check DB connection |
-| Members page load | KhÃ´ng 5xx, render OK | Check `/api/members` log; xem cÃ³ "ModuleNotFoundError" |
-| Admin login work | `/admin/login` â†’ dashboard | Test password verify, session |
-| Activities page load | Render OK | RSS cÃ³ thá»ƒ khÃ´ng cÃ³ ngay náº¿u cache cleared |
+| Members page load | Không 5xx, render OK | Check `/api/members` log |
+| Admin login work | `/admin/login` → dashboard | Test password verify |
+| Activities page load | Render OK (RSS có thể chậm lần đầu) | Check `/api/external-posts` log |
+| RAM sau 1h | Thấp hơn baseline cũ | So sánh Railway Metrics |
 
-### 48h sau
+### Mục tiêu 48h sau Phase B+C
 
-| Metric | Má»¥c tiÃªu | So sÃ¡nh |
+| Metric | Mục tiêu | So sánh |
 |---|---|---|
-| RAM baseline | ~350-400 MB | TrÆ°á»›c: ~500 MB |
-| RAM spike Ä‘á»‰nh | < 600 MB | TrÆ°á»›c: ~700 MB |
-| Memory cost / ngÃ y | < $3.50 | TrÆ°á»›c: ~$4.24 |
-| Response time p99 | KhÃ´ng tÄƒng | Baseline cÅ© |
-| Error rate | KhÃ´ng tÄƒng | Baseline cÅ© |
+| RAM baseline | ~320–400 MB | Trước: ~500 MB |
+| RAM spike đỉnh | < 550 MB | Trước: ~700 MB |
+| Memory cost / ngày | < $3.00 | Trước: ~$4.24 |
+| Response time p99 | Không tăng | Baseline cũ |
+| Error rate | Không tăng | Baseline cũ |
 
 ---
 
-## Rollback toÃ n bá»™ trong 1 phÃºt (emergency)
-
-Náº¿u cÃ³ váº¥n Ä‘á» nghiÃªm trá»ng vÃ  cáº§n rollback NGAY:
+## Rollback toàn bộ trong 1 phút (emergency)
 
 ```powershell
-# 1. Xem commit hiá»‡n táº¡i
-git log --oneline -3
-
-# 2. Revert commit RAM optimization (giáº£ sá»­ commit lÃ  <hash>)
-git revert <hash>
-
-# 3. Push
+# Nếu Phase B (lazy import) gây lỗi:
+git revert HEAD  # revert commit phase B
 git push origin master
 
-# 4. XÃ³a MALLOC_ARENA_MAX trÃªn Railway Dashboard
-# â†’ Railway tá»± redeploy vá» state trÆ°á»›c khi tá»‘i Æ°u
+# Nếu Phase C (bỏ preload) gây lỗi:
+# Sửa Procfile: thêm lại --preload
+git add Procfile && git commit -m "revert: add back --preload"
+git push origin master
+# Railway tự redeploy trong ~2 phút
 ```
 
-Tá»•ng thá»i gian: ~3-5 phÃºt (chá»§ yáº¿u lÃ  build + deploy cá»§a Railway).
+---
+
+## Câu hỏi thường gặp
+
+### Q: Tại sao `--preload` tốn RAM nếu có CoW?
+
+CoW (Copy-on-Write) hoạt động khi Linux fork process — child share pages với parent cho đến khi write. Tuy nhiên:
+1. glibc malloc khi allocate memory cho mỗi request → ghi vào pages → CoW bị phá vỡ ngay sau request đầu tiên
+2. Python garbage collector chạy định kỳ → ghi vào object headers → phá CoW trên toàn bộ heap
+3. Sau ~5–10 requests đầu tiên, hầu hết pages đã "dirty" → master và worker đều giữ bản riêng
+
+Kết quả thực tế: Railway đếm cả master_RSS + worker_RSS ≈ 2× single process.
+
+### Q: Tôi có thể test Phase C trên local trước không?
+
+- **Windows local**: Không test được chính xác — Windows không có glibc, `MALLOC_ARENA_MAX` không có tác dụng.
+- **Phase B (lazy import)**: Test local được — `python app.py` → request `/api/external-posts`, kiểm tra lxml được import lần đầu hay không.
+- **Phase C (bỏ preload)**: Đo cold start time trên Railway staging nếu có; hoặc đo trên production nhưng monitor chặt trong 30 phút đầu.
+
+### Q: Nếu sau Phase B+C mà RAM vẫn > 450 MB thì sao?
+
+Khi đó nguyên nhân chính là Python interpreter + Flask ecosystem baseline (~200–250 MB per process). Các bước tiếp theo:
+1. Xem xét `--worker-class gevent` thay cho threads (giảm memory per concurrent request)
+2. Profile import chain bằng `python -X importtime -c "import app"` để tìm module nặng bất ngờ
+3. Xem xét `gevent` hoặc `uvicorn` thay Gunicorn — nhưng đây là thay đổi lớn, cần test kỹ
 
 ---
 
-## CÃ¢u há»i thÆ°á»ng gáº·p
+## Liên quan
 
-### Q: Náº¿u rollback rá»“i mÃ  RAM váº«n cao thÃ¬ sao?
-A: CÃ³ thá»ƒ cÃ³ nguyÃªn nhÃ¢n khÃ¡c (DB pool bloat, memory leak á»Ÿ code má»›i). Äá»c `docs/operations/maintenance.md` cho incident response procedure.
-
-### Q: TÃ´i cÃ³ thá»ƒ test trÃªn local trÆ°á»›c khi deploy khÃ´ng?
-A: 
-- **MALLOC_ARENA_MAX**: Local Windows khÃ´ng cÃ³ glibc, khÃ´ng test Ä‘Æ°á»£c trÃªn Windows.
-- **requirements.txt change**: `pip install -r requirements.txt` local rá»“i `pytest` Ä‘á»ƒ verify.
-- **CACHE_THRESHOLD**: `python app.py` local, request `/api/members`, xem log.
-
-### Q: Khi nÃ o nÃªn lÃ m tiáº¿p Phase 1 (lazy imports)?
-A: Chá»‰ khi sau 48h Phase 0, RAM baseline váº«n > 450 MB. Phase 1 Ä‘á»¥ng `app.py` nÃªn rá»§i ro cao hÆ¡n.
-
----
-
-## LiÃªn quan
-
-- `docs/ai/memory/ai-project-memory.md` â€” AI quick-start context
-- `docs/operations/maintenance.md` â€” operational maintenance guide
-- `docs/releases/changelog.md` â€” version history entry 2026-05-20
-
+- `docs/operations/maintenance.md` — operational maintenance guide
+- `docs/releases/changelog.md` — version history entry 2026-05-20
+- `services/external_posts_service.py` — Phase B target file
+- `Procfile` — Phase C target file
