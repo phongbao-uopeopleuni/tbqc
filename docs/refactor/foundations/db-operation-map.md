@@ -14,7 +14,7 @@ Use this file to answer four questions quickly:
 
 Primary references:
 
-1. [Refactor plan June 3rd.md](../../Refactor%20plan%20June%203rd.md)
+1. [refactor-plan-june-3rd.md](../refactor-plan-june-3rd.md)
 2. [VERIFICATION_REPORT.md](../VERIFICATION_REPORT.md)
 3. [phase-6-closeout-2026-06-05.md](../phase-6/phase-6-closeout-2026-06-05.md)
 

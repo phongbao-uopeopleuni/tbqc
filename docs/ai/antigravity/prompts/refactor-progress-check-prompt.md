@@ -8,7 +8,7 @@ You are auditing refactor progress in the local repository at `D:\tbqc`.
 
 Your task is to check the real implementation status against:
 
-- `D:\tbqc\docs\Refactor plan June 3rd.md`
+- `D:\tbqc\docs\refactor\refactor-plan-june-3rd.md`
 - `D:\tbqc\docs\refactor\phase-1\phase-0-phase-1-recheck-2026-06-04.md`
 
 Rules:
@@ -42,7 +42,7 @@ Commands you should use as needed:
 
 ```powershell
 rg -n "relationship_id|father_id|mother_id|<int:person_id>|generation_id" D:\tbqc\services D:\tbqc\blueprints D:\tbqc\folder_py D:\tbqc\static D:\tbqc\tests
-Get-Content 'D:\tbqc\docs\Refactor plan June 3rd.md'
+Get-Content 'D:\tbqc\docs\refactor\refactor-plan-june-3rd.md'
 Get-Content 'D:\tbqc\docs\refactor\phase-1\phase-0-phase-1-recheck-2026-06-04.md'
 python -m pytest -q D:\tbqc\tests\test_person_helpers.py D:\tbqc\tests\test_url_map_contract.py D:\tbqc\tests\test_phase0_phase1_refactor.py D:\tbqc\tests\test_optimistic_locking.py
 python -m pytest -x -q -m db_integration

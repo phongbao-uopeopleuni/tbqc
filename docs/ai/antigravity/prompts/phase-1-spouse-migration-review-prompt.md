@@ -21,7 +21,7 @@ Review only this migration work:
 
 Context documents:
 
-- `D:\tbqc\docs\Refactor plan June 3rd.md`
+- `D:\tbqc\docs\refactor\refactor-plan-june-3rd.md`
 - `D:\tbqc\docs\refactor\VERIFICATION_REPORT.md`
 - `D:\tbqc\docs\refactor\phase-1\phase-0-phase-1-recheck-2026-06-04.md`
 
