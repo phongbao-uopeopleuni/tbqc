@@ -31,8 +31,8 @@ def register_marriage_routes(app):
                 SELECT 
                     m.id AS marriage_id,
                     CASE 
-                        WHEN m.person_id = %s THEN m.spouse_person_id
-                        ELSE m.person_id
+                        WHEN m.husband_id = %s THEN m.wife_id
+                        ELSE m.husband_id
                     END AS spouse_id,
                     sp.full_name AS spouse_name,
                     sp.gender AS spouse_gender,
@@ -41,11 +41,11 @@ def register_marriage_routes(app):
                 FROM marriages m
                 JOIN persons sp ON (
                     CASE 
-                        WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id
-                        ELSE sp.person_id = m.person_id
+                        WHEN m.husband_id = %s THEN sp.person_id = m.wife_id
+                        ELSE sp.person_id = m.husband_id
                     END
                 )
-                WHERE (m.person_id = %s OR m.spouse_person_id = %s)
+                WHERE (m.husband_id = %s OR m.wife_id = %s)
                 ORDER BY m.created_at
             """, (person_id, person_id, person_id, person_id))
             spouses = cursor.fetchall()
@@ -76,8 +76,8 @@ def register_marriage_routes(app):
         try:
             cursor = connection.cursor()
             cursor.execute("""
-                INSERT INTO marriages 
-                (person_id, spouse_person_id, status, note)
+                INSERT INTO marriages
+                (husband_id, wife_id, status, note)
                 VALUES (%s, %s, %s, %s)
             """, (
                 person_id,

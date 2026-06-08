@@ -13,6 +13,7 @@ ENV/
 .idea/
 .vscode/
 .cursor/
+.claude/
 *.swp
 *.swo
 

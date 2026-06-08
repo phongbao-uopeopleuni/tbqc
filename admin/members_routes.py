@@ -94,13 +94,13 @@ def register_admin_members_routes(app):
                 cursor.execute("""
                     SELECT DISTINCT
                         CASE
-                            WHEN m.person_id = %s THEN spouse.full_name
+                            WHEN m.husband_id = %s THEN spouse.full_name
                             ELSE p.full_name
                         END AS spouse_name
                     FROM marriages m
-                    LEFT JOIN persons p ON m.person_id = p.person_id
-                    LEFT JOIN persons spouse ON m.spouse_person_id = spouse.person_id
-                    WHERE (m.person_id = %s OR m.spouse_person_id = %s)
+                    LEFT JOIN persons p ON m.husband_id = p.person_id
+                    LEFT JOIN persons spouse ON m.wife_id = spouse.person_id
+                    WHERE (m.husband_id = %s OR m.wife_id = %s)
                     AND (m.status IS NULL OR m.status != 'Đã ly dị')
                 """, (person_id, person_id, person_id))
                 spouses = cursor.fetchall()
@@ -466,7 +466,7 @@ def register_admin_members_routes(app):
             before_data = cursor.fetchone()
 
             cursor.execute("DELETE FROM relationships WHERE parent_id = %s OR child_id = %s", (person_id, person_id))
-            cursor.execute("DELETE FROM marriages WHERE person_id = %s OR spouse_person_id = %s", (person_id, person_id))
+            cursor.execute("DELETE FROM marriages WHERE husband_id = %s OR wife_id = %s", (person_id, person_id))
             # in_law_relationships and personal_details removed (Phase 4):
             # both tables are empty and covered by FK ON DELETE CASCADE.
             cursor.execute("DELETE FROM birth_records WHERE person_id = %s", (person_id,))

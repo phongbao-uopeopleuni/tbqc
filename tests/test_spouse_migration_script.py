@@ -48,7 +48,7 @@ def _seed_spouse_migration_data(cursor):
     )
     cursor.execute(
         """
-        INSERT INTO marriages (person_id, spouse_person_id, status, note)
+        INSERT INTO marriages (husband_id, wife_id, status, note)
         VALUES ('P-1-8', 'P-1-7', 'Dang ket hon', 'Existing reverse pair')
         """
     )

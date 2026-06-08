@@ -87,6 +87,11 @@ GET /admin/logs -> admin_logs
 GET /admin/api/db-info -> admin_api_db_info
 GET /admin/api/schema -> admin_api_schema
 GET /admin/api/table-stats -> admin_api_table_stats
+GET /admin/api/marriages -> admin_api_marriages_list
+POST /admin/api/marriages -> admin_api_marriages_create
+PUT /admin/api/marriages/<int:marriage_id> -> admin_api_marriages_update
+POST /admin/api/marriages/bulk-create-fu -> admin_api_marriages_bulk_create_fu
+DELETE /admin/api/marriages/<int:marriage_id> -> admin_api_marriages_delete
 GET /admin/api/csv-data/<sheet_name> -> get_csv_data
 POST /admin/api/csv-data/<sheet_name> -> add_csv_row
 PUT /admin/api/csv-data/<sheet_name>/<int:row_index> -> update_csv_row

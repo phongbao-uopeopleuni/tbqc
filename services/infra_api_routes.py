@@ -210,6 +210,59 @@ def register_member_stats_route(app):
                 logger.warning('Could not build branch_counts in /api/stats/members: %s', branch_err)
                 branch_counts = []
 
+            # In-law counts by branch (dâu/rể theo nhánh)
+            in_law_by_branch = []
+            in_law_by_generation = []
+            try:
+                cursor.execute("""
+                    SELECT
+                        COALESCE(NULLIF(TRIM(b.branch_name), ''), 'Không rõ / khác') AS branch_name,
+                        SUM(CASE WHEN m.in_law_role = 'con_dau' THEN 1 ELSE 0 END) AS con_dau,
+                        SUM(CASE WHEN m.in_law_role = 'con_re'  THEN 1 ELSE 0 END) AS con_re
+                    FROM marriages m
+                    JOIN persons ph ON ph.person_id = m.husband_id
+                    JOIN persons pw ON pw.person_id = m.wife_id
+                    LEFT JOIN branches b ON b.branch_id = (
+                        CASE WHEN (ph.father_mother_id IS NULL AND ph.family_unit_id IS NULL)
+                             THEN pw.branch_id ELSE ph.branch_id END
+                    )
+                    WHERE m.in_law_role IS NOT NULL
+                    GROUP BY b.branch_id, branch_name
+                    ORDER BY branch_name
+                """)
+                in_law_by_branch = [
+                    {
+                        'branch_name': r.get('branch_name', ''),
+                        'con_dau': int(r.get('con_dau') or 0),
+                        'con_re':  int(r.get('con_re')  or 0),
+                    }
+                    for r in (cursor.fetchall() or [])
+                ]
+
+                cursor.execute("""
+                    SELECT
+                        CASE WHEN (ph.father_mother_id IS NULL AND ph.family_unit_id IS NULL)
+                             THEN pw.generation_level ELSE ph.generation_level END AS gen_level,
+                        SUM(CASE WHEN m.in_law_role = 'con_dau' THEN 1 ELSE 0 END) AS con_dau,
+                        SUM(CASE WHEN m.in_law_role = 'con_re'  THEN 1 ELSE 0 END) AS con_re
+                    FROM marriages m
+                    JOIN persons ph ON ph.person_id = m.husband_id
+                    JOIN persons pw ON pw.person_id = m.wife_id
+                    WHERE m.in_law_role IS NOT NULL
+                    GROUP BY gen_level
+                    ORDER BY gen_level
+                """)
+                in_law_by_generation = [
+                    {
+                        'generation_level': int(r.get('gen_level') or 0),
+                        'con_dau': int(r.get('con_dau') or 0),
+                        'con_re':  int(r.get('con_re')  or 0),
+                    }
+                    for r in (cursor.fetchall() or [])
+                ]
+            except Exception as inlaw_err:
+                logger.warning('Could not build in_law_counts: %s', inlaw_err)
+
             cursor.execute("""
                 SELECT
                     academic_rank,
@@ -275,7 +328,7 @@ def register_member_stats_route(app):
                     degree_categories['Phó Giáo sư'] += count
                 elif any((kw in rank_lower for kw in ['giáo sư', 'professor', 'gs.', 'gs ', 'giáo sư'])):
                     degree_categories['Giáo sư'] += count
-            return jsonify({'total_members': row.get('total_members', 0), 'male_count': row.get('male_count', 0), 'female_count': row.get('female_count', 0), 'unknown_gender_count': row.get('unknown_gender_count', 0), 'ancestor_count': ancestor_count, 'branch_counts': branch_counts, 'generation_counts': generation_counts, 'academic_rank_stats': academic_rank_stats, 'academic_degree_stats': academic_degree_stats, 'total_with_rank': total_with_rank, 'total_with_degree': total_with_degree, 'degree_categories': degree_categories})
+            return jsonify({'total_members': row.get('total_members', 0), 'male_count': row.get('male_count', 0), 'female_count': row.get('female_count', 0), 'unknown_gender_count': row.get('unknown_gender_count', 0), 'ancestor_count': ancestor_count, 'branch_counts': branch_counts, 'generation_counts': generation_counts, 'in_law_by_branch': in_law_by_branch, 'in_law_by_generation': in_law_by_generation, 'academic_rank_stats': academic_rank_stats, 'academic_degree_stats': academic_degree_stats, 'total_with_rank': total_with_rank, 'total_with_degree': total_with_degree, 'degree_categories': degree_categories})
         except Exception as e:
             print(f'ERROR: Loi khi lay thong ke thanh vien: {e}')
             print(traceback.format_exc())

@@ -125,7 +125,8 @@
           female,
           unknown,
           branchCounts: data.branch_counts || [],
-          ancestorCount: Number(data.ancestor_count) || 0
+          ancestorCount: Number(data.ancestor_count) || 0,
+          inLawByBranch: data.in_law_by_branch || []
         });
 
         // Hiển thị card nhỏ học vị và học hàm
@@ -141,12 +142,25 @@
           populateGenerationFilter(generationCounts);
           
           // Cập nhật số liệu cho từng đời
+          const inLawByGen = data.in_law_by_generation || [];
           for (let i = 1; i <= 8; i++) {
             const genElement = document.getElementById(`gen${i}Count`);
             if (genElement) {
               const genData = generationCounts.find(g => g.generation_level === i);
               const count = genData ? genData.count : 0;
               genElement.textContent = count.toLocaleString('vi-VN');
+            }
+            const inLawEl = document.getElementById(`gen${i}InLaw`);
+            if (inLawEl) {
+              const il = inLawByGen.find(g => g.generation_level === i);
+              if (il && (il.con_dau > 0 || il.con_re > 0)) {
+                inLawEl.innerHTML =
+                  '<span style="color:#e67e22;">' + il.con_dau + ' dâu</span>'
+                  + ' &middot; '
+                  + '<span style="color:#8e44ad;">' + il.con_re + ' rể</span>';
+              } else {
+                inLawEl.textContent = '';
+              }
             }
           }
         } else {
@@ -172,7 +186,7 @@
       return div.innerHTML;
     }
 
-    function renderGenderCharts({ male, female, unknown, branchCounts = [], ancestorCount = 0 }) {
+    function renderGenderCharts({ male, female, unknown, branchCounts = [], ancestorCount = 0, inLawByBranch = [] }) {
       const barCtx = document.getElementById('genderBarChart')?.getContext('2d');
       if (!barCtx || typeof Chart === 'undefined') return;
 
@@ -218,28 +232,42 @@
         });
       }
 
-      // Biểu đồ đơn giản: luôn giữ thứ tự cố định.
+      // Biểu đồ grouped: Thành viên + Dâu/Rể theo thứ tự cố định.
       const barLabels = orderedLabels;
       const barValues = orderedKeys.map((key) => bucket.get(key) || 0);
       const barColors = [
         '#1d4ed8', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd',
         '#22c55e', '#f59e0b', '#ef4444', '#9ca3af'
       ];
+      // Build separate con_dau / con_re buckets theo branch
+      const dauBucket = new Map(orderedKeys.map((k) => [k, 0]));
+      const reBucket  = new Map(orderedKeys.map((k) => [k, 0]));
+      if (Array.isArray(inLawByBranch)) {
+        inLawByBranch.forEach((item) => {
+          const key = normalizeBranchKey(item && item.branch_name);
+          dauBucket.set(key, (dauBucket.get(key) || 0) + (Number(item.con_dau) || 0));
+          reBucket.set(key,  (reBucket.get(key)  || 0) + (Number(item.con_re)  || 0));
+        });
+      }
+      const dauValues = orderedKeys.map((key) => dauBucket.get(key) || 0);
+      const reValues  = orderedKeys.map((key) => reBucket.get(key)  || 0);
 
       const barValueLabelPlugin = {
         id: 'branchBarValueLabelPlugin',
         afterDatasetsDraw(chart) {
           const { ctx } = chart;
-          const meta = chart.getDatasetMeta(0);
-          const values = chart.data.datasets[0].data || [];
           ctx.save();
-          ctx.font = '600 11px Inter, sans-serif';
+          ctx.font = '600 10px Inter, sans-serif';
           ctx.fillStyle = '#111827';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
-          meta.data.forEach((bar, idx) => {
-            const value = Number(values[idx] || 0);
-            ctx.fillText(value.toLocaleString('vi-VN'), bar.x, bar.y - 4);
+          chart.data.datasets.forEach(function(dataset, dIdx) {
+            const meta = chart.getDatasetMeta(dIdx);
+            if (meta.hidden) return;
+            meta.data.forEach(function(bar, idx) {
+              const value = Number((dataset.data || [])[idx] || 0);
+              if (value > 0) ctx.fillText(value.toLocaleString('vi-VN'), bar.x, bar.y - 2);
+            });
           });
           ctx.restore();
         }
@@ -250,27 +278,47 @@
         plugins: [barValueLabelPlugin],
         data: {
           labels: barLabels,
-          datasets: [{
-            label: 'Số lượng',
-            data: barValues,
-            backgroundColor: barColors,
-            borderRadius: 4,
-            maxBarThickness: 34
-          }]
+          datasets: [
+            {
+              label: 'Thành viên',
+              data: barValues,
+              backgroundColor: barColors,
+              borderRadius: 4,
+              maxBarThickness: 22
+            },
+            {
+              label: 'Con dâu',
+              data: dauValues,
+              backgroundColor: '#e67e2299',
+              borderRadius: 4,
+              maxBarThickness: 22
+            },
+            {
+              label: 'Con rể',
+              data: reValues,
+              backgroundColor: '#8e44ad99',
+              borderRadius: 4,
+              maxBarThickness: 22
+            }
+          ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           layout: {
-            padding: { top: 12, bottom: 0, left: 0, right: 4 }
+            padding: { top: 16, bottom: 0, left: 0, right: 4 }
           },
           plugins: {
-            legend: { display: false },
+            legend: {
+              display: true,
+              position: 'top',
+              labels: { font: { size: 11 }, boxWidth: 12, padding: 12 }
+            },
             tooltip: {
               callbacks: {
                 label(context) {
                   const value = Number(context.parsed.y || 0);
-                  return `Số lượng: ${value.toLocaleString('vi-VN')}`;
+                  return `${context.dataset.label}: ${value.toLocaleString('vi-VN')}`;
                 }
               }
             }

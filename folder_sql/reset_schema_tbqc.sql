@@ -70,23 +70,31 @@ CREATE TABLE IF NOT EXISTS relationships (
 
 -- =====================================================
 -- BẢNG 3: MARRIAGES (Hôn nhân)
--- person_id và spouse_person_id đều là VARCHAR(50) từ CSV
+-- husband_id / wife_id thay cho person_id / spouse_person_id (v2)
+-- in_law_family_id + in_law_role cho truy xuất con dâu/rể nhanh
 -- =====================================================
 CREATE TABLE IF NOT EXISTS marriages (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    person_id VARCHAR(50) NOT NULL COMMENT 'ID người thứ nhất',
-    spouse_person_id VARCHAR(50) NOT NULL COMMENT 'ID người thứ hai (vợ/chồng)',
-    status VARCHAR(20) COMMENT 'Đang kết hôn, Đã ly dị, Đã qua đời, Khác',
-    note TEXT COMMENT 'Ghi chú',
+    husband_id   VARCHAR(50) NOT NULL COMMENT 'ID người chồng (FK persons)',
+    wife_id      VARCHAR(50) NOT NULL COMMENT 'ID người vợ (FK persons)',
+    status       VARCHAR(20)  COMMENT 'Đang kết hôn, Đã ly dị, Đã qua đời, Khác',
+    note         TEXT         COMMENT 'Ghi chú',
+    in_law_family_id VARCHAR(50) NULL
+        COMMENT 'fm_id hoặc FU-xxx của gia đình gốc mà người lấy vào (chồng→con dâu, vợ→con rể)',
+    in_law_role  ENUM('con_dau','con_re') NULL
+        COMMENT 'Vai trò người lấy vào: con_dau=vợ lấy vào GĐ chồng, con_re=chồng lấy vào GĐ vợ',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (person_id) REFERENCES persons(person_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (spouse_person_id) REFERENCES persons(person_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    
-    UNIQUE KEY unique_marriage_pair (person_id, spouse_person_id),
-    INDEX idx_person_id (person_id),
-    INDEX idx_spouse_person_id (spouse_person_id),
+
+    CONSTRAINT fk_marriage_husband FOREIGN KEY (husband_id)
+        REFERENCES persons(person_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_marriage_wife FOREIGN KEY (wife_id)
+        REFERENCES persons(person_id) ON DELETE CASCADE ON UPDATE CASCADE,
+
+    UNIQUE KEY unique_marriage_pair (husband_id, wife_id),
+    INDEX idx_husband_id (husband_id),
+    INDEX idx_wife_id (wife_id),
+    INDEX idx_in_law (in_law_family_id, in_law_role),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

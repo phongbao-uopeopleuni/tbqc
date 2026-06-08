@@ -173,10 +173,10 @@ def sync_genealogy_from_members():
                     if isinstance(spouse, dict):
                         spouse_id = spouse.get('spouse_id') or spouse.get('person_id') or spouse.get('id')
                         if spouse_id and spouse_id != person_id:
-                            cursor.execute('\n                                SELECT * FROM marriages \n                                WHERE (person_id = %s AND spouse_person_id = %s)\n                                OR (person_id = %s AND spouse_person_id = %s)\n                            ', (person_id, spouse_id, spouse_id, person_id))
+                            cursor.execute('\n                                SELECT * FROM marriages \n                                WHERE (husband_id = %s AND wife_id = %s)\n                                OR (husband_id = %s AND wife_id = %s)\n                            ', (person_id, spouse_id, spouse_id, person_id))
                             if not cursor.fetchone():
                                 try:
-                                    cursor.execute('\n                                        INSERT INTO marriages (person_id, spouse_person_id)\n                                        VALUES (%s, %s)\n                                    ', (person_id, spouse_id))
+                                    cursor.execute('\n                                        INSERT INTO marriages (husband_id, wife_id)\n                                        VALUES (%s, %s)\n                                    ', (person_id, spouse_id))
                                     inserted_marriages += 1
                                 except Error:
                                     pass
@@ -192,10 +192,10 @@ def sync_genealogy_from_members():
                     spouse_row = cursor.fetchone()
                     if spouse_row:
                         spouse_id = spouse_row['person_id']
-                        cursor.execute('\n                            SELECT * FROM marriages \n                            WHERE (person_id = %s AND spouse_person_id = %s)\n                            OR (person_id = %s AND spouse_person_id = %s)\n                        ', (person_id, spouse_id, spouse_id, person_id))
+                        cursor.execute('\n                            SELECT * FROM marriages \n                            WHERE (husband_id = %s AND wife_id = %s)\n                            OR (husband_id = %s AND wife_id = %s)\n                        ', (person_id, spouse_id, spouse_id, person_id))
                         if not cursor.fetchone():
                             try:
-                                cursor.execute('\n                                    INSERT INTO marriages (person_id, spouse_person_id)\n                                    VALUES (%s, %s)\n                                ', (person_id, spouse_id))
+                                cursor.execute('\n                                    INSERT INTO marriages (husband_id, wife_id)\n                                    VALUES (%s, %s)\n                                ', (person_id, spouse_id))
                                 inserted_marriages += 1
                             except Error:
                                 pass
@@ -271,8 +271,8 @@ def _fetch_marriage_pairs_in_scope(cursor, id_set):
     placeholders = ",".join(["%s"] * len(ids))
     cursor.execute(
         f"""
-        SELECT person_id, spouse_person_id FROM marriages
-        WHERE person_id IN ({placeholders}) AND spouse_person_id IN ({placeholders})
+        SELECT husband_id, wife_id FROM marriages
+        WHERE husband_id IN ({placeholders}) AND wife_id IN ({placeholders})
         """,
         ids + ids,
     )
@@ -281,8 +281,8 @@ def _fetch_marriage_pairs_in_scope(cursor, id_set):
     seen = set()
     for row in rows or []:
         if isinstance(row, dict):
-            a = row.get("person_id")
-            b = row.get("spouse_person_id")
+            a = row.get("husband_id")
+            b = row.get("wife_id")
         else:
             a, b = row[0], row[1]
         if not a or not b or a == b:

@@ -59,7 +59,7 @@ def _seed_contract_data(cursor):
     )
     cursor.execute(
         """
-        INSERT INTO marriages (person_id, spouse_person_id, status, note)
+        INSERT INTO marriages (husband_id, wife_id, status, note)
         VALUES ('P-1-1', 'P-1-2', 'Dang ket hon', 'Seed marriage')
         """
     )

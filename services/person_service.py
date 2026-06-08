@@ -199,7 +199,7 @@ def get_persons():
                 person['siblings'] = '; '.join([s['full_name'] for s in siblings]) if siblings else None
             else:
                 person['siblings'] = None
-            cursor.execute("\n                SELECT DISTINCT \n                    CASE \n                        WHEN m.person_id = %s THEN m.spouse_person_id\n                        ELSE m.person_id\n                    END AS spouse_id,\n                    sp.full_name AS spouse_name\n                FROM marriages m\n                JOIN persons sp ON (\n                    CASE \n                        WHEN m.person_id = %s THEN sp.person_id = m.spouse_person_id\n                        ELSE sp.person_id = m.person_id\n                    END\n                )\n                WHERE (m.person_id = %s OR m.spouse_person_id = %s)\n                AND m.status != 'Đã ly dị'\n            ", (person_id, person_id, person_id, person_id))
+            cursor.execute("\n                SELECT DISTINCT \n                    CASE \n                        WHEN m.husband_id = %s THEN m.wife_id\n                        ELSE m.husband_id\n                    END AS spouse_id,\n                    sp.full_name AS spouse_name\n                FROM marriages m\n                JOIN persons sp ON (\n                    CASE \n                        WHEN m.husband_id = %s THEN sp.person_id = m.wife_id\n                        ELSE sp.person_id = m.husband_id\n                    END\n                )\n                WHERE (m.husband_id = %s OR m.wife_id = %s)\n                AND m.status != 'Đã ly dị'\n            ", (person_id, person_id, person_id, person_id))
             spouses = cursor.fetchall()
             if spouses:
                 spouse_names = [s['spouse_name'] for s in spouses if s.get('spouse_name')]
@@ -437,15 +437,15 @@ def get_person(person_id):
                 """
                 SELECT
                     m.id AS marriage_id,
-                    CASE WHEN m.person_id = %s THEN m.spouse_person_id ELSE m.person_id END AS spouse_id,
+                    CASE WHEN m.husband_id = %s THEN m.wife_id ELSE m.husband_id END AS spouse_id,
                     sp.full_name AS spouse_name,
                     sp.gender AS spouse_gender,
                     m.status AS marriage_status,
                     m.note AS marriage_note
                 FROM marriages m
                 LEFT JOIN persons sp
-                    ON sp.person_id = CASE WHEN m.person_id = %s THEN m.spouse_person_id ELSE m.person_id END
-                WHERE m.person_id = %s OR m.spouse_person_id = %s
+                    ON sp.person_id = CASE WHEN m.husband_id = %s THEN m.wife_id ELSE m.husband_id END
+                WHERE m.husband_id = %s OR m.wife_id = %s
                 ORDER BY m.created_at
                 """,
                 (person_id, person_id, person_id, person_id),
@@ -1098,16 +1098,16 @@ def sync_person(person_id):
             """
             SELECT DISTINCT
                 CASE
-                    WHEN m.person_id = %s THEN m.spouse_person_id
-                    ELSE m.person_id
+                    WHEN m.husband_id = %s THEN m.wife_id
+                    ELSE m.husband_id
                 END AS spouse_id,
                 spouse.full_name AS spouse_name
             FROM marriages m
             JOIN persons spouse ON spouse.person_id = CASE
-                WHEN m.person_id = %s THEN m.spouse_person_id
-                ELSE m.person_id
+                WHEN m.husband_id = %s THEN m.wife_id
+                ELSE m.husband_id
             END
-            WHERE (m.person_id = %s OR m.spouse_person_id = %s)
+            WHERE (m.husband_id = %s OR m.wife_id = %s)
               AND COALESCE(m.status, '') != 'Da ly di'
             ORDER BY spouse.full_name
             """,
@@ -1204,14 +1204,14 @@ def _process_children_spouse_siblings(cursor, person_id, data):
                         relation_type = 'father' if person_gender == 'Nam' else 'mother'
                         cursor.execute('\n                            INSERT INTO relationships (child_id, parent_id, relation_type)\n                            VALUES (%s, %s, %s)\n                            ON DUPLICATE KEY UPDATE parent_id = VALUES(parent_id), relation_type = VALUES(relation_type)\n                        ', (child_id, person_id, relation_type))
         if 'spouse_info' in data:
-            cursor.execute('\n                DELETE FROM marriages \n                WHERE person_id = %s OR spouse_person_id = %s\n            ', (person_id, person_id))
+            cursor.execute('\n                DELETE FROM marriages \n                WHERE husband_id = %s OR wife_id = %s\n            ', (person_id, person_id))
             if spouse_names:
                 for spouse_name in spouse_names:
                     cursor.execute('SELECT person_id FROM persons WHERE full_name = %s LIMIT 1', (spouse_name,))
                     spouse = cursor.fetchone()
                     if spouse:
                         spouse_id = spouse['person_id']
-                        cursor.execute("\n                            INSERT INTO marriages (person_id, spouse_person_id, status)\n                            VALUES (%s, %s, 'active')\n                        ", (person_id, spouse_id))
+                        cursor.execute("\n                            INSERT INTO marriages (husband_id, wife_id, status)\n                            VALUES (%s, %s, 'active')\n                        ", (person_id, spouse_id))
         # Lưu text fallback cho các trường quan hệ để không mất dữ liệu nhập tay.
         try:
             cursor.execute(
@@ -1885,9 +1885,9 @@ def update_genealogy_info():
             cursor.execute('SELECT person_id, full_name FROM persons WHERE full_name LIKE %s LIMIT 1', ('%Nguyễn Thị Viên%',))
             tep_du = cursor.fetchone()
         if tep_du:
-            cursor.execute('\n                SELECT * FROM marriages \n                WHERE (person_id = %s AND spouse_person_id = %s)\n                   OR (person_id = %s AND spouse_person_id = %s)\n            ', (vua_minh_mang['person_id'], tep_du['person_id'], tep_du['person_id'], vua_minh_mang['person_id']))
+            cursor.execute('\n                SELECT * FROM marriages \n                WHERE (husband_id = %s AND wife_id = %s)\n                   OR (husband_id = %s AND wife_id = %s)\n            ', (vua_minh_mang['person_id'], tep_du['person_id'], tep_du['person_id'], vua_minh_mang['person_id']))
             if not cursor.fetchone():
-                cursor.execute('INSERT INTO marriages (person_id, spouse_person_id) VALUES (%s, %s)', (vua_minh_mang['person_id'], tep_du['person_id']))
+                cursor.execute('INSERT INTO marriages (husband_id, wife_id) VALUES (%s, %s)', (vua_minh_mang['person_id'], tep_du['person_id']))
                 results['marriages_added'].append(f"{vua_minh_mang['full_name']} <-> {tep_du['full_name']}")
         cursor.execute('SELECT person_id, full_name FROM persons WHERE full_name LIKE %s LIMIT 1', ('%Vua Gia Long%',))
         vua_gia_long = cursor.fetchone()

@@ -40,6 +40,7 @@ const SPECIAL_FILES = new Set([
   '.db_resolved.json',
 ]);
 const IGNORED_DIRS = new Set([
+  '.claude',
   '.cursor',
   '.git',
   '.idea',

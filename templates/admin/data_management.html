@@ -31,6 +31,22 @@
     <div class="description">Hôn phối, anh chị em, con cái</div>
     <div class="record-count" id="spouseSiblingChildrenCount">-</div>
   </div>
+  <div class="table-card">
+    <h3>marriages</h3>
+    <div class="description">Hôn nhân (vợ / chồng) — bilateral</div>
+    <div class="record-count" id="marriagesCount">-</div>
+    <div class="actions">
+      <a href="#marriagesSection" class="btn btn-sm btn-primary">Xem danh sách</a>
+    </div>
+  </div>
+  <div class="table-card">
+    <h3>family_units</h3>
+    <div class="description">Đơn vị gia đình FK-validated (FU-xxx)</div>
+    <div class="record-count" id="familyUnitsCount">-</div>
+    <div class="actions">
+      <a href="#familyUnitsSection" class="btn btn-sm btn-primary">Quản lý</a>
+    </div>
+  </div>
 </div>
 
 <!-- Supporting Tables -->
@@ -61,6 +77,132 @@
     <div class="actions">
       <a href="/admin/logs" class="btn btn-sm btn-primary">Xem logs</a>
     </div>
+  </div>
+</div>
+
+<!-- Family Units Management -->
+<div class="section-header" id="familyUnitsSection">
+  <h2>Quản lý Family Units</h2>
+  <p>Tạo / xóa đơn vị gia đình (cha + mẹ) với FK validated. Gán <code>family_unit_id</code> cho thành viên qua trang Thành viên.</p>
+</div>
+<div class="admin-card">
+  <div id="fuError" class="message error" style="display:none;margin-bottom:1rem;"></div>
+  <div id="fuSuccess" class="message success" style="display:none;margin-bottom:1rem;"></div>
+
+  <!-- Create form -->
+  <form id="fuCreateForm" style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:flex-end;margin-bottom:1.25rem;">
+    <div style="display:flex;flex-direction:column;gap:0.25rem;">
+      <label style="font-size:0.8rem;color:var(--admin-text-muted);">Father ID</label>
+      <input type="text" id="fuFatherId" placeholder="P-X-Y (tuỳ chọn)" style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:4px;font-size:0.875rem;width:180px;">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.25rem;">
+      <label style="font-size:0.8rem;color:var(--admin-text-muted);">Mother ID</label>
+      <input type="text" id="fuMotherId" placeholder="P-X-Y (tuỳ chọn)" style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:4px;font-size:0.875rem;width:180px;">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.25rem;">
+      <label style="font-size:0.8rem;color:var(--admin-text-muted);">Ghi chú</label>
+      <input type="text" id="fuNote" placeholder="Ghi chú (tuỳ chọn)" style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:4px;font-size:0.875rem;width:220px;">
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary" id="fuCreateBtn">+ Tạo mới</button>
+  </form>
+
+  <!-- List table -->
+  <div id="fuLoading" style="color:var(--admin-text-muted);font-size:0.875rem;">Đang tải...</div>
+  <div id="fuTableWrap" style="display:none;overflow-x:auto;">
+    <table id="fuTable" style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+      <thead>
+        <tr style="border-bottom:2px solid var(--admin-border);">
+          <th style="text-align:left;padding:0.5rem 0.75rem;color:var(--admin-text-muted);font-weight:500;">Unit ID</th>
+          <th style="text-align:left;padding:0.5rem 0.75rem;color:var(--admin-text-muted);font-weight:500;">Cha</th>
+          <th style="text-align:left;padding:0.5rem 0.75rem;color:var(--admin-text-muted);font-weight:500;">Mẹ</th>
+          <th style="text-align:center;padding:0.5rem 0.75rem;color:var(--admin-text-muted);font-weight:500;">Thành viên</th>
+          <th style="text-align:left;padding:0.5rem 0.75rem;color:var(--admin-text-muted);font-weight:500;">Ghi chú</th>
+          <th style="text-align:center;padding:0.5rem 0.75rem;color:var(--admin-text-muted);font-weight:500;">Xóa</th>
+        </tr>
+      </thead>
+      <tbody id="fuTableBody"></tbody>
+    </table>
+    <p id="fuEmpty" style="display:none;color:var(--admin-text-muted);font-size:0.875rem;padding:0.75rem 0;">Chưa có family unit nào.</p>
+  </div>
+</div>
+
+<!-- Marriages Section -->
+<div class="section-header" id="marriagesSection">
+  <h2>Quản lý Hôn phối</h2>
+  <p>Tạo / xóa cặp hôn phối trực tiếp vào database. Kiểm tra danh sách trước khi tạo để tránh trùng.</p>
+</div>
+<div class="admin-card">
+  <div id="mError" class="message error" style="display:none;margin-bottom:1rem;"></div>
+  <div id="mSuccess" class="message success" style="display:none;margin-bottom:1rem;"></div>
+
+  <!-- Create form -->
+  <form id="mCreateForm" style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:flex-end;margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--admin-border);">
+    <div style="display:flex;flex-direction:column;gap:0.25rem;">
+      <label style="font-size:0.8rem;color:var(--admin-text-muted);">Husband ID (Chồng) <span style="color:var(--admin-danger);">*</span></label>
+      <input type="text" id="mPersonId" placeholder="VD: P-2-3" style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:4px;font-size:0.875rem;width:160px;">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.25rem;">
+      <label style="font-size:0.8rem;color:var(--admin-text-muted);">Wife ID (Vợ) <span style="color:var(--admin-danger);">*</span></label>
+      <input type="text" id="mSpouseId" placeholder="VD: P-2-5" style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:4px;font-size:0.875rem;width:160px;">
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.25rem;">
+      <label style="font-size:0.8rem;color:var(--admin-text-muted);">Trạng thái</label>
+      <select id="mStatus" style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:4px;font-size:0.875rem;background:var(--admin-card-bg);">
+        <option value="Đang kết hôn">Đang kết hôn</option>
+        <option value="Đã mất">Đã mất</option>
+        <option value="Ly hôn">Ly hôn</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.25rem;">
+      <label style="font-size:0.8rem;color:var(--admin-text-muted);">Ghi chú</label>
+      <input type="text" id="mNote" placeholder="Tuỳ chọn" style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:4px;font-size:0.875rem;width:200px;">
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary" id="mCreateBtn">+ Tạo mới</button>
+    <button type="button" class="btn btn-sm btn-secondary" id="mBulkFuBtn" onclick="bulkCreateFu()" style="display:none;">
+      Tạo FU tự động (<span id="mMissingFuCount">0</span> cặp chưa có)
+    </button>
+  </form>
+
+  <!-- List -->
+  <div id="mListLoading" style="color:var(--admin-text-muted);font-size:0.875rem;">Đang tải...</div>
+  <div id="mListWrap" style="display:none;overflow-x:auto;">
+    <input type="text" id="mListSearch" placeholder="Lọc theo tên hoặc ID..."
+           oninput="filterMarriages()"
+           style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:4px;font-size:0.875rem;width:280px;margin-bottom:0.75rem;">
+    <!-- Chú thích cột -->
+    <div style="display:flex;gap:1.5rem;margin-bottom:0.75rem;font-size:0.8rem;flex-wrap:wrap;">
+      <span><span style="display:inline-block;width:10px;height:10px;background:var(--admin-primary);border-radius:2px;margin-right:4px;"></span><strong>FU của cặp</strong> — family_unit_id tạo ra từ cặp vợ chồng này (cha+mẹ). Con cái sẽ được gán vào đây.</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#6c757d;border-radius:2px;margin-right:4px;"></span><strong>GĐ gốc</strong> — fm_id hoặc FU-id mà bản thân người đó thuộc về (gia đình cha mẹ của họ).</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+      <thead>
+        <tr style="background:var(--admin-bg);">
+          <th colspan="1" style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--admin-border);color:var(--admin-text-muted);font-size:0.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Hôn phối</th>
+          <th colspan="3" style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--admin-border);border-left:2px solid var(--admin-border);color:#6c757d;font-size:0.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Người 1 — GĐ gốc</th>
+          <th colspan="3" style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--admin-border);border-left:2px solid var(--admin-border);color:#6c757d;font-size:0.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Người 2 — GĐ gốc</th>
+          <th colspan="1" style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--admin-border);border-left:2px solid var(--admin-primary);color:var(--admin-primary);font-size:0.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">FU của cặp</th>
+          <th colspan="2" style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--admin-border);border-left:2px solid #e67e22;color:#e67e22;font-size:0.75rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;">Con dâu / Con rể</th>
+          <th colspan="3" style="text-align:left;padding:0.4rem 0.6rem;border-bottom:1px solid var(--admin-border);color:var(--admin-text-muted);font-size:0.75rem;"></th>
+        </tr>
+        <tr style="border-bottom:2px solid var(--admin-border);">
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">ID</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;border-left:2px solid var(--admin-border);">person_id</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">Tên Người 1</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">fm / FU gốc</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;border-left:2px solid var(--admin-border);">spouse_id</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">Tên Người 2</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">fm / FU gốc</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-primary);font-weight:600;font-size:0.8rem;border-left:2px solid var(--admin-primary);">unit_id</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:#e67e22;font-weight:600;font-size:0.8rem;border-left:2px solid #e67e22;">GĐ lấy vào</th>
+          <th style="display:none;">Trạng thái</th>
+          <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">Ghi chú</th>
+          <th style="text-align:center;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">Hành động</th>
+        </tr>
+      </thead>
+      <tbody id="mListBody"></tbody>
+    </table>
+    <p id="mListEmpty" style="display:none;color:var(--admin-text-muted);font-size:0.875rem;padding:0.75rem 0;">Không có dữ liệu hôn phối.</p>
+    <p id="mListNoMatch" style="display:none;color:var(--admin-text-muted);font-size:0.875rem;padding:0.75rem 0;">Không tìm thấy kết quả.</p>
   </div>
 </div>
 
@@ -235,10 +377,399 @@
       } catch (e) {
         console.error('Error loading activity_logs:', e);
       }
+
+      try {
+        const marriagesRes = await fetch('/admin/api/table-stats?table=marriages', { credentials: 'include' });
+        if (marriagesRes.ok) {
+          const result = await marriagesRes.json();
+          if (result.success) {
+            document.getElementById('marriagesCount').textContent = result.count || '-';
+          }
+        }
+      } catch (e) {
+        console.error('Error loading marriages:', e);
+      }
+
+      try {
+        const fuRes = await fetch('/admin/api/table-stats?table=family_units', { credentials: 'include' });
+        if (fuRes.ok) {
+          const result = await fuRes.json();
+          if (result.success) {
+            document.getElementById('familyUnitsCount').textContent = result.count || '-';
+          }
+        }
+      } catch (e) {
+        console.error('Error loading family_units:', e);
+      }
     } catch (error) {
       console.error('Error loading table stats:', error);
     }
   }
+
+  // --- Family Units CRUD ---
+
+  function _fuShowMsg(type, text) {
+    const errEl = document.getElementById('fuError');
+    const okEl = document.getElementById('fuSuccess');
+    errEl.style.display = 'none';
+    okEl.style.display = 'none';
+    if (type === 'error') { errEl.textContent = text; errEl.style.display = 'block'; }
+    else { okEl.textContent = text; okEl.style.display = 'block'; }
+    setTimeout(function() { errEl.style.display = 'none'; okEl.style.display = 'none'; }, 4000);
+  }
+
+  async function loadFamilyUnits() {
+    document.getElementById('fuLoading').style.display = 'block';
+    document.getElementById('fuTableWrap').style.display = 'none';
+    try {
+      const res = await fetch('/admin/api/family-units', { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        document.getElementById('fuLoading').textContent = 'Lỗi tải danh sách.';
+        return;
+      }
+      document.getElementById('fuLoading').style.display = 'none';
+      document.getElementById('fuTableWrap').style.display = 'block';
+      const rows = data.data || [];
+      const empty = document.getElementById('fuEmpty');
+      const tbody = document.getElementById('fuTableBody');
+      if (rows.length === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      tbody.innerHTML = rows.map(function(r) {
+        const fatherCell = r.father_name
+          ? escapeHtml(r.father_name) + ' <span style="color:var(--admin-text-muted);font-size:0.8rem;">(' + escapeHtml(r.father_id || '') + ')</span>'
+          : (r.father_id ? escapeHtml(r.father_id) : '<span style="color:var(--admin-text-muted);">—</span>');
+        const motherCell = r.mother_name
+          ? escapeHtml(r.mother_name) + ' <span style="color:var(--admin-text-muted);font-size:0.8rem;">(' + escapeHtml(r.mother_id || '') + ')</span>'
+          : (r.mother_id ? escapeHtml(r.mother_id) : '<span style="color:var(--admin-text-muted);">—</span>');
+        const canDelete = (r.members_count || 0) === 0;
+        const deleteBtn = canDelete
+          ? '<button class="btn btn-sm btn-danger fu-delete-btn" data-id="' + escapeHtml(r.unit_id) + '">Xóa</button>'
+          : '<span style="color:var(--admin-text-muted);font-size:0.8rem;">' + r.members_count + ' thành viên</span>';
+        return '<tr style="border-bottom:1px solid var(--admin-border);">'
+          + '<td style="padding:0.5rem 0.75rem;font-family:monospace;">' + escapeHtml(r.unit_id) + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;">' + fatherCell + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;">' + motherCell + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;text-align:center;">' + (r.members_count || 0) + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;color:var(--admin-text-muted);">' + escapeHtml(r.note || '') + '</td>'
+          + '<td style="padding:0.5rem 0.75rem;text-align:center;">' + deleteBtn + '</td>'
+          + '</tr>';
+      }).join('');
+
+      document.querySelectorAll('.fu-delete-btn').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          var uid = btn.dataset.id;
+          if (!confirm('Xóa family unit ' + uid + '?')) return;
+          btn.disabled = true;
+          try {
+            const res2 = await fetch('/admin/api/family-units/' + encodeURIComponent(uid), {
+              method: 'DELETE', credentials: 'include'
+            });
+            const d = await res2.json();
+            if (res2.ok && d.success) {
+              _fuShowMsg('ok', 'Đã xóa ' + uid);
+              loadFamilyUnits();
+              loadTableStats();
+            } else {
+              _fuShowMsg('error', d.error || 'Xóa thất bại');
+              btn.disabled = false;
+            }
+          } catch (e) {
+            _fuShowMsg('error', 'Lỗi kết nối');
+            btn.disabled = false;
+          }
+        });
+      });
+    } catch (e) {
+      document.getElementById('fuLoading').textContent = 'Lỗi: ' + (e.message || '');
+    }
+  }
+
+  document.getElementById('fuCreateForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('fuCreateBtn');
+    const fatherId = document.getElementById('fuFatherId').value.trim() || null;
+    const motherId = document.getElementById('fuMotherId').value.trim() || null;
+    const note = document.getElementById('fuNote').value.trim() || null;
+    if (!fatherId && !motherId) {
+      _fuShowMsg('error', 'Cần ít nhất một trong hai: Father ID hoặc Mother ID');
+      return;
+    }
+    btn.disabled = true;
+    try {
+      const res = await fetch('/admin/api/family-units', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ father_id: fatherId, mother_id: motherId, note: note })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        _fuShowMsg('ok', 'Đã tạo ' + data.unit_id);
+        document.getElementById('fuFatherId').value = '';
+        document.getElementById('fuMotherId').value = '';
+        document.getElementById('fuNote').value = '';
+        loadFamilyUnits();
+        loadTableStats();
+      } else {
+        _fuShowMsg('error', data.error || 'Tạo thất bại');
+      }
+    } catch (err) {
+      _fuShowMsg('error', 'Lỗi kết nối');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // --- Marriages list ---
+
+  var _mListData = null;
+
+  function _mShowMsg(type, text) {
+    var errEl = document.getElementById('mError');
+    var okEl = document.getElementById('mSuccess');
+    errEl.style.display = 'none'; okEl.style.display = 'none';
+    if (type === 'error') { errEl.textContent = text; errEl.style.display = 'block'; }
+    else { okEl.textContent = text; okEl.style.display = 'block'; }
+    setTimeout(function() { errEl.style.display = 'none'; okEl.style.display = 'none'; }, 4000);
+  }
+
+  async function loadMarriagesList() {
+    document.getElementById('mListLoading').style.display = 'block';
+    document.getElementById('mListWrap').style.display = 'none';
+    try {
+      const res = await fetch('/admin/api/marriages', { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        document.getElementById('mListLoading').textContent = 'Lỗi: ' + (data.error || 'Không tải được');
+        return;
+      }
+      _mListData = data.data || [];
+      document.getElementById('mListLoading').style.display = 'none';
+      document.getElementById('mListWrap').style.display = '';
+      renderMarriages(_mListData);
+    } catch (e) {
+      document.getElementById('mListLoading').textContent = 'Lỗi kết nối';
+    }
+  }
+
+  function _inLawRoleLabel(role) {
+    if (role === 'con_dau') return '<span style="color:#e67e22;font-weight:600;">Con dâu</span>';
+    if (role === 'con_re')  return '<span style="color:#8e44ad;font-weight:600;">Con rể</span>';
+    return '<span style="color:#ccc;font-size:0.8rem;">—</span>';
+  }
+
+  /* Trả về HTML tên người — nếu là người lấy vào thì tô màu theo vai trò */
+  function _nameWithRole(name, isInLaw, role) {
+    var text = escapeHtml(name || '—');
+    if (!isInLaw || !role) return text;
+    var color = role === 'con_dau' ? '#e67e22' : '#8e44ad';
+    var label = role === 'con_dau' ? 'con dâu' : 'con rể';
+    return '<span style="color:' + color + ';font-weight:600;">' + text + '</span>'
+         + '&nbsp;<span style="font-size:0.72rem;opacity:0.75;color:' + color + ';">(' + label + ')</span>';
+  }
+
+  function _fmCell(fuId, fmId) {
+    var lines = [];
+    if (fuId) lines.push('<span style="font-family:monospace;color:var(--admin-primary);" title="family_unit_id">FU: ' + escapeHtml(fuId) + '</span>');
+    if (fmId) lines.push('<span style="font-family:monospace;color:var(--admin-text-muted);" title="father_mother_id">fm: ' + escapeHtml(fmId) + '</span>');
+    return lines.length ? lines.join('<br>') : '<span style="color:var(--admin-text-muted);">—</span>';
+  }
+
+  function renderMarriages(rows) {
+    var tbody = document.getElementById('mListBody');
+    var empty = document.getElementById('mListEmpty');
+    var noMatch = document.getElementById('mListNoMatch');
+    empty.style.display = 'none'; noMatch.style.display = 'none';
+    if (!rows.length) {
+      tbody.innerHTML = '';
+      (document.getElementById('mListSearch').value ? noMatch : empty).style.display = 'block';
+      return;
+    }
+    var P = 'padding:0.45rem 0.6rem;vertical-align:top;';
+    var BL = 'border-left:2px solid var(--admin-border);';
+    var BLP = 'border-left:2px solid var(--admin-primary);';
+    tbody.innerHTML = rows.map(function(r) {
+      var couplefu = r.couple_family_unit_id
+        ? '<span style="font-family:monospace;font-weight:600;color:var(--admin-primary);">' + escapeHtml(r.couple_family_unit_id) + '</span>'
+        : '<span style="color:#ccc;font-size:0.8rem;">chưa có</span>';
+      var pIsInLaw  = !!r.in_law_role && !r.person_fm_id  && !r.person_family_unit_id;
+      var spIsInLaw = !!r.in_law_role && !r.spouse_fm_id && !r.spouse_family_unit_id;
+      return '<tr data-row-id="' + r.id + '" style="border-bottom:1px solid var(--admin-border);">'
+        + '<td style="' + P + 'color:var(--admin-text-muted);font-size:0.8rem;">' + escapeHtml(String(r.id)) + '</td>'
+        + '<td style="' + P + BL + 'font-family:monospace;font-size:0.8rem;color:var(--admin-primary);">' + escapeHtml(r.person_id || '') + '</td>'
+        + '<td style="' + P + '">' + _nameWithRole(r.person_name, pIsInLaw, r.in_law_role) + '</td>'
+        + '<td style="' + P + 'font-size:0.8rem;line-height:1.6;">' + _fmCell(r.person_family_unit_id, r.person_fm_id) + '</td>'
+        + '<td style="' + P + BL + 'font-family:monospace;font-size:0.8rem;color:var(--admin-primary);">' + escapeHtml(r.spouse_person_id || '') + '</td>'
+        + '<td style="' + P + '">' + _nameWithRole(r.spouse_name, spIsInLaw, r.in_law_role) + '</td>'
+        + '<td style="' + P + 'font-size:0.8rem;line-height:1.6;">' + _fmCell(r.spouse_family_unit_id, r.spouse_fm_id) + '</td>'
+        + '<td style="' + P + BLP + '">' + couplefu + '</td>'
+        + '<td style="' + P + 'border-left:2px solid #e67e22;font-family:monospace;font-size:0.8rem;color:#e67e22;">' + escapeHtml(r.in_law_family_id || '—') + '</td>'
+        + '<td data-cell="status" style="display:none;">' + escapeHtml(r.status || '') + '</td>'
+        + '<td data-cell="note" style="' + P + 'color:var(--admin-text-muted);font-size:0.8rem;">' + escapeHtml(r.note || '') + '</td>'
+        + '<td data-cell="actions" style="' + P + 'text-align:center;white-space:nowrap;">'
+          + '<button class="btn btn-sm btn-secondary m-edit-btn" data-id="' + r.id + '" style="margin-right:4px;">Sửa</button>'
+          + '<button class="btn btn-sm btn-danger m-del-btn" data-id="' + r.id + '">Xóa</button>'
+        + '</td>'
+        + '</tr>';
+    }).join('');
+
+    // Cập nhật nút bulk-create
+    var missing = rows.filter(function(r) { return !r.couple_family_unit_id; }).length;
+    var bulkBtn = document.getElementById('mBulkFuBtn');
+    document.getElementById('mMissingFuCount').textContent = missing;
+    bulkBtn.style.display = missing > 0 ? 'inline-block' : 'none';
+    bulkBtn.disabled = false;
+
+    document.querySelectorAll('.m-del-btn').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        var mid = btn.dataset.id;
+        if (!confirm('Xóa hôn phối ID ' + mid + '?')) return;
+        btn.disabled = true;
+        try {
+          var res2 = await fetch('/admin/api/marriages/' + mid, { method: 'DELETE', credentials: 'include' });
+          var d = await res2.json();
+          if (res2.ok && d.success) {
+            _mShowMsg('ok', 'Đã xóa hôn phối #' + mid);
+            loadMarriagesList(); loadTableStats();
+          } else {
+            _mShowMsg('error', d.error || 'Xóa thất bại');
+            btn.disabled = false;
+          }
+        } catch (e) { _mShowMsg('error', 'Lỗi kết nối'); btn.disabled = false; }
+      });
+    });
+
+    document.querySelectorAll('.m-edit-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        editMarriage(btn.dataset.id);
+      });
+    });
+  }
+
+  function editMarriage(id) {
+    var row = document.querySelector('tr[data-row-id="' + id + '"]');
+    if (!row) return;
+    var r = (_mListData || []).find(function(x) { return String(x.id) === String(id); });
+    if (!r) return;
+    var statusCell = row.querySelector('[data-cell="status"]');
+    var noteCell = row.querySelector('[data-cell="note"]');
+    var actCell = row.querySelector('[data-cell="actions"]');
+    var statuses = ['Đang kết hôn', 'Đã mất', 'Ly hôn'];
+    statusCell.innerHTML = '<select style="font-size:0.8rem;padding:2px 6px;border:1px solid var(--admin-border);border-radius:4px;">'
+      + statuses.map(function(s) {
+          return '<option value="' + s + '"' + (r.status === s ? ' selected' : '') + '>' + s + '</option>';
+        }).join('')
+      + '</select>';
+    noteCell.innerHTML = '<input type="text" value="' + escapeHtml(r.note || '') + '" placeholder="Ghi chú..." style="font-size:0.8rem;width:100%;min-width:120px;box-sizing:border-box;padding:2px 6px;border:1px solid var(--admin-border);border-radius:4px;">';
+    actCell.innerHTML = '<button class="btn btn-sm btn-primary m-save-btn" data-id="' + id + '" style="margin-right:4px;">Lưu</button>'
+      + '<button class="btn btn-sm btn-secondary m-cancel-btn">Hủy</button>';
+    actCell.querySelector('.m-save-btn').addEventListener('click', function() { saveMarriage(id); });
+    actCell.querySelector('.m-cancel-btn').addEventListener('click', function() { renderMarriages(_mListData); });
+  }
+
+  async function saveMarriage(id) {
+    var row = document.querySelector('tr[data-row-id="' + id + '"]');
+    if (!row) return;
+    var status = row.querySelector('[data-cell="status"] select').value;
+    var note = row.querySelector('[data-cell="note"] input').value.trim();
+    if (!confirm('Lưu thay đổi cho hôn phối #' + id + '?')) return;
+    var saveBtn = row.querySelector('.m-save-btn');
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+      var res = await fetch('/admin/api/marriages/' + id, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status, note: note })
+      });
+      var d = await res.json();
+      if (res.ok && d.success) {
+        _mShowMsg('ok', 'Đã cập nhật hôn phối #' + id);
+        loadMarriagesList();
+      } else {
+        _mShowMsg('error', d.error || 'Cập nhật thất bại');
+        if (saveBtn) saveBtn.disabled = false;
+      }
+    } catch (e) {
+      _mShowMsg('error', 'Lỗi kết nối');
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+
+  function filterMarriages() {
+    if (!_mListData) return;
+    var q = document.getElementById('mListSearch').value.trim().toLowerCase();
+    if (!q) { renderMarriages(_mListData); return; }
+    renderMarriages(_mListData.filter(function(r) {
+      return (r.person_name || '').toLowerCase().includes(q)
+          || (r.spouse_name || '').toLowerCase().includes(q)
+          || (r.person_id || '').toLowerCase().includes(q)
+          || (r.spouse_person_id || '').toLowerCase().includes(q)
+          || (r.person_family_unit_id || '').toLowerCase().includes(q)
+          || (r.person_fm_id || '').toLowerCase().includes(q)
+          || (r.spouse_family_unit_id || '').toLowerCase().includes(q)
+          || (r.spouse_fm_id || '').toLowerCase().includes(q)
+          || (r.couple_family_unit_id || '').toLowerCase().includes(q);
+    }));
+  }
+
+  async function bulkCreateFu() {
+    var missingCount = (_mListData || []).filter(function(r) { return !r.couple_family_unit_id; }).length;
+    if (!missingCount) { _mShowMsg('ok', 'Tất cả cặp đã có FU rồi.'); return; }
+    if (!confirm('Tạo FU tự động cho ' + missingCount + ' cặp chưa có?\n\nfm_id sẽ được giữ nguyên, chỉ tạo thêm FU-xxx mới.')) return;
+    var btn = document.getElementById('mBulkFuBtn');
+    btn.disabled = true;
+    try {
+      var res = await fetch('/admin/api/marriages/bulk-create-fu', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      var data = await res.json();
+      if (res.ok && data.success) {
+        _mShowMsg('ok', 'Đã tạo ' + data.created + ' FU mới: ' + (data.units || []).slice(0, 3).join(', ') + (data.created > 3 ? '...' : ''));
+        loadMarriagesList();
+        loadFamilyUnits();
+        loadTableStats();
+      } else {
+        _mShowMsg('error', data.error || 'Tạo thất bại');
+        btn.disabled = false;
+      }
+    } catch (e) { _mShowMsg('error', 'Lỗi kết nối'); btn.disabled = false; }
+  }
+
+  document.getElementById('mCreateForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var btn = document.getElementById('mCreateBtn');
+    var personId = document.getElementById('mPersonId').value.trim();
+    var spouseId = document.getElementById('mSpouseId').value.trim();
+    var status = document.getElementById('mStatus').value;
+    var note = document.getElementById('mNote').value.trim() || null;
+    if (!personId || !spouseId) { _mShowMsg('error', 'Person ID và Spouse ID là bắt buộc'); return; }
+    btn.disabled = true;
+    try {
+      var res = await fetch('/admin/api/marriages', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ husband_id: personId, wife_id: spouseId, status: status, note: note })
+      });
+      var data = await res.json();
+      if (res.ok && data.success) {
+        _mShowMsg('ok', 'Đã tạo hôn phối #' + data.id + ' (' + personId + ' ↔ ' + spouseId + ')');
+        document.getElementById('mPersonId').value = '';
+        document.getElementById('mSpouseId').value = '';
+        document.getElementById('mNote').value = '';
+        loadMarriagesList(); loadTableStats();
+      } else {
+        _mShowMsg('error', data.error || 'Tạo thất bại');
+      }
+    } catch (err) { _mShowMsg('error', 'Lỗi kết nối'); }
+    finally { btn.disabled = false; }
+  });
 
   // --- Tab switching ---
   document.querySelectorAll('.schema-tab').forEach(function(btn) {
@@ -435,6 +966,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     loadTableStats();
     loadSchema();
+    loadFamilyUnits();
+    loadMarriagesList();
   });
 </script>
 {% endblock %}

@@ -257,7 +257,7 @@ def load_relationship_data(cursor):
     except Exception as e:
         logger.debug(f'Could not load spouse data from table: {e}')
     try:
-        cursor.execute('\n            SELECT \n                m.person_id,\n                m.spouse_person_id,\n                sp_spouse.full_name AS spouse_name\n            FROM marriages m\n            LEFT JOIN persons sp_spouse ON sp_spouse.person_id = m.spouse_person_id\n            WHERE sp_spouse.full_name IS NOT NULL\n            \n            UNION\n            \n            SELECT \n                m.spouse_person_id AS person_id,\n                m.person_id AS spouse_person_id,\n                sp_person.full_name AS spouse_name\n            FROM marriages m\n            LEFT JOIN persons sp_person ON sp_person.person_id = m.person_id\n            WHERE sp_person.full_name IS NOT NULL\n        ')
+        cursor.execute('\n            SELECT \n                m.husband_id AS person_id,\n                m.wife_id AS spouse_person_id,\n                sp_spouse.full_name AS spouse_name\n            FROM marriages m\n            LEFT JOIN persons sp_spouse ON sp_spouse.person_id = m.wife_id\n            WHERE sp_spouse.full_name IS NOT NULL\n            \n            UNION\n            \n            SELECT \n                m.wife_id AS person_id,\n                m.husband_id AS spouse_person_id,\n                sp_person.full_name AS spouse_name\n            FROM marriages m\n            LEFT JOIN persons sp_person ON sp_person.person_id = m.husband_id\n            WHERE sp_person.full_name IS NOT NULL\n        ')
         for row in cursor.fetchall():
             person_id_key = row.get('person_id')
             spouse_name = row.get('spouse_name')

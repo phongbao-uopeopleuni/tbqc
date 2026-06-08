@@ -87,11 +87,11 @@ def _get_table_columns(cursor, table_name: str) -> set[str]:
 
 
 def _fetch_existing_marriage_pairs(cursor) -> set[tuple[str, str]]:
-    cursor.execute("SELECT person_id, spouse_person_id FROM marriages")
+    cursor.execute("SELECT husband_id, wife_id FROM marriages")
     return {
-        canonicalize_pair(row["person_id"], row["spouse_person_id"])
+        canonicalize_pair(row["husband_id"], row["wife_id"])
         for row in cursor.fetchall()
-        if row.get("person_id") and row.get("spouse_person_id")
+        if row.get("husband_id") and row.get("wife_id")
     }
 
 
@@ -139,8 +139,8 @@ def get_marriage_integrity_stats(cursor) -> dict[str, int]:
         """
         SELECT COUNT(*) AS orphaned_count
         FROM marriages m
-        LEFT JOIN persons p1 ON p1.person_id = m.person_id
-        LEFT JOIN persons p2 ON p2.person_id = m.spouse_person_id
+        LEFT JOIN persons p1 ON p1.person_id = m.husband_id
+        LEFT JOIN persons p2 ON p2.person_id = m.wife_id
         WHERE p1.person_id IS NULL OR p2.person_id IS NULL
         """
     )
@@ -150,11 +150,11 @@ def get_marriage_integrity_stats(cursor) -> dict[str, int]:
         """
         SELECT COUNT(*) AS duplicate_count
         FROM (
-            SELECT LEAST(person_id, spouse_person_id) AS left_id,
-                   GREATEST(person_id, spouse_person_id) AS right_id,
+            SELECT LEAST(husband_id, wife_id) AS left_id,
+                   GREATEST(husband_id, wife_id) AS right_id,
                    COUNT(*) AS c
             FROM marriages
-            GROUP BY LEAST(person_id, spouse_person_id), GREATEST(person_id, spouse_person_id)
+            GROUP BY LEAST(husband_id, wife_id), GREATEST(husband_id, wife_id)
             HAVING c > 1
         ) dup
         """
@@ -342,14 +342,14 @@ def apply_migration_plan(
         for row in planned_inserts:
             cursor.execute(
                 """
-                INSERT INTO marriages (person_id, spouse_person_id, status, note)
+                INSERT INTO marriages (husband_id, wife_id, status, note)
                 SELECT %s, %s, %s, %s
                 FROM DUAL
                 WHERE NOT EXISTS (
                     SELECT 1
                     FROM marriages
-                    WHERE (person_id = %s AND spouse_person_id = %s)
-                       OR (person_id = %s AND spouse_person_id = %s)
+                    WHERE (husband_id = %s AND wife_id = %s)
+                       OR (husband_id = %s AND wife_id = %s)
                 )
                 """,
                 (
