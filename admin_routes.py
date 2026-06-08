@@ -8,6 +8,7 @@ Routes cho trang quản trị
 from flask import render_template, jsonify, session
 from flask_login import current_user
 from admin.dashboard_routes import register_admin_dashboard_routes
+from admin.announcements_routes import register_admin_announcements_routes
 from admin.data_management_routes import (
     register_admin_data_management_page,
     register_admin_data_management_api,
@@ -30,6 +31,7 @@ def register_admin_routes(app):
     register_admin_login_routes(app)
 
     register_admin_dashboard_routes(app)
+    register_admin_announcements_routes(app)
 
     @app.route('/admin/activities')
     def admin_activities_page():

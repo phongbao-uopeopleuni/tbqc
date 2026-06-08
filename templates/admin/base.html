@@ -46,6 +46,7 @@
         <li><a href="/">Trang chủ</a></li>
         {% else %}
         <li><a href="/admin/dashboard" {% if request.path == '/admin/dashboard' %}class="active"{% endif %}>Dashboard</a></li>
+        <li><a href="/admin/announcements" {% if request.path == '/admin/announcements' %}class="active"{% endif %}>Thông báo</a></li>
         <li><a href="/admin/data-management" {% if request.path == '/admin/data-management' %}class="active"{% endif %}>Quản lý dữ liệu</a></li>
         <li><a href="/admin/logs" {% if request.path == '/admin/logs' %}class="active"{% endif %}>Log</a></li>
         <li><a href="/admin/users" {% if request.path == '/admin/users' %}class="active"{% endif %}>Tài khoản</a></li>

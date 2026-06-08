@@ -1,6 +1,8 @@
 from flask import Blueprint, render_template, request, jsonify
 import os
 
+from services.site_announcements import get_active_announcements, get_memorial_settings
+
 # Khởi tạo Blueprint 'main'
 main_bp = Blueprint('main', __name__)
 
@@ -17,7 +19,11 @@ def index():
     
     Homepage - renders the index.html template
     """
-    return render_template('index.html')
+    return render_template(
+        'index.html',
+        announcement_lines=get_active_announcements(),
+        memorials=get_memorial_settings(),
+    )
 
 @main_bp.route('/api/genealogy/verify-passphrase', methods=['POST'])
 def verify_genealogy_passphrase():

@@ -30,6 +30,141 @@
   <style>
     .img-placeholder { min-height: 140px; background: #e8e8e8; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px; border-radius: 8px; }
     .hero-image-container .img-placeholder { min-height: 280px; }
+
+    /* ── News Ticker ── */
+    :root { --ticker-height: 36px; }
+    /* Đẩy nội dung trang xuống để không bị ticker che */
+    body { padding-top: calc(var(--navbar-height) + var(--ticker-height)); }
+    .news-ticker {
+      position: fixed;
+      top: var(--navbar-height);
+      left: 0;
+      right: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      height: var(--ticker-height);
+      background: linear-gradient(90deg, #6b0000 0%, #8b1a00 60%, #6b0000 100%);
+      border-bottom: 1px solid rgba(160, 82, 30, 0.6);
+      color: #ffd700;
+      font-size: 0.8rem;
+      font-family: 'Noto Serif TC', serif;
+      overflow: hidden;
+      letter-spacing: 0.025em;
+    }
+    .news-ticker__badge {
+      flex-shrink: 0;
+      padding: 0 12px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      background: rgba(0,0,0,0.3);
+      border-right: 1px solid rgba(255,215,0,0.25);
+      font-weight: 700;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+    .news-ticker__wrap {
+      flex: 1;
+      overflow: hidden;
+    }
+    /* Duplicate content → seamless loop: từ 0 đến -50% = đúng 1 bản nội dung */
+    .news-ticker__track {
+      display: inline-flex;
+      white-space: nowrap;
+      animation: news-ticker-scroll 40s linear infinite;
+      will-change: transform;
+    }
+    .news-ticker__track:hover { animation-play-state: paused; cursor: default; }
+    .news-ticker__copy { padding-right: 80px; }
+    .news-ticker__sep { margin: 0 16px; opacity: 0.45; }
+    .news-ticker__hl  { color: #ffe066; font-weight: 700; }
+    .history-accordion {
+      margin: 0 0 32px;
+      border: 1px solid rgba(139, 0, 0, 0.14);
+      border-radius: 18px;
+      background: linear-gradient(180deg, #fffdf8 0%, #fff8ef 100%);
+      box-shadow: 0 12px 30px rgba(80, 32, 12, 0.08);
+      overflow: hidden;
+    }
+    .history-accordion summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 22px;
+      cursor: pointer;
+      list-style: none;
+    }
+    .history-accordion summary::-webkit-details-marker { display: none; }
+    .history-accordion__summary-main {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .history-accordion__summary-title {
+      color: #7d140d;
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.4;
+    }
+    .history-accordion__summary-text {
+      color: #6b5c53;
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+    .history-accordion__icon {
+      flex-shrink: 0;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid rgba(139, 0, 0, 0.18);
+      background: rgba(139, 0, 0, 0.06);
+      position: relative;
+      transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+    .history-accordion__icon::before,
+    .history-accordion__icon::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 2px;
+      background: #8b0000;
+      transform: translate(-50%, -50%);
+      border-radius: 999px;
+    }
+    .history-accordion__icon::after {
+      transform: translate(-50%, -50%) rotate(90deg);
+      transition: opacity 0.2s ease;
+    }
+    .history-accordion[open] .history-accordion__icon {
+      background: rgba(139, 0, 0, 0.1);
+    }
+    .history-accordion[open] .history-accordion__icon::after {
+      opacity: 0;
+    }
+    .history-accordion__content {
+      padding: 0 22px 22px;
+    }
+    .history-accordion__content > :first-child {
+      margin-top: 0;
+    }
+    .history-accordion__content .about-image:first-child {
+      margin-top: 8px;
+    }
+    @keyframes news-ticker-scroll {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    @media (max-width: 480px) {
+      .news-ticker__badge { padding: 0 8px; font-size: 0.62rem; }
+      .news-ticker { font-size: 0.75rem; }
+      :root { --ticker-height: 32px; }
+    }
   </style>
 
     <!-- Global CSRF Fetch Interceptor -->
@@ -76,6 +211,50 @@
 
   <!-- Main Content Area -->
   <main id="main-content">
+
+  <!-- ── News Ticker ─────────────────────────────── -->
+  <div class="news-ticker" role="marquee" aria-label="Thông báo sự kiện">
+    {% set custom_announcements = announcement_lines or [] %}
+    {% set xuan_memorial = (memorials or {}).get('xuan', {}) %}
+    {% set thu_memorial = (memorials or {}).get('thu', {}) %}
+    <span class="news-ticker__badge">Thông báo</span>
+    <div class="news-ticker__wrap">
+      <!-- Track có 2 bản giống nhau → animation -50% tạo loop liền mạch -->
+      <div class="news-ticker__track">
+        <span class="news-ticker__copy">
+          <span class="news-ticker__hl">{{ xuan_memorial.title or 'GIỖ XUÂN 2026' }}</span> — {{ xuan_memorial.lunar_label or '07/2 ÂL' }}, nhằm ngày {{ xuan_memorial.display_date or '25/03/2026' }} — <span class="nt-xuan" data-target-date="{{ xuan_memorial.date or '2026-03-25' }}">Đã qua</span>
+          <span class="news-ticker__sep">◆</span>
+          <span class="news-ticker__hl">{{ thu_memorial.title or 'GIỖ THU 2026' }}</span> — {{ thu_memorial.lunar_label or '03/7 ÂL' }}, nhằm ngày {{ thu_memorial.display_date or '15/08/2026' }} — <span class="nt-thu" data-target-date="{{ thu_memorial.date or '2026-08-15' }}">đang tải...</span>
+          <span class="news-ticker__sep">◆</span>
+          {% if custom_announcements %}
+            {% for line in custom_announcements %}
+          {{ line }}
+          <span class="news-ticker__sep">◆</span>
+            {% endfor %}
+          {% else %}
+          Gia Phả Nguyễn Phước Tộc — Phòng Tuy Biên Quận Công — Hậu duệ Vua Minh Mạng
+          <span class="news-ticker__sep">◆</span>
+          {% endif %}
+        </span>
+        <span class="news-ticker__copy" aria-hidden="true">
+          <span class="news-ticker__hl">{{ xuan_memorial.title or 'GIỖ XUÂN 2026' }}</span> — {{ xuan_memorial.lunar_label or '07/2 ÂL' }}, nhằm ngày {{ xuan_memorial.display_date or '25/03/2026' }} — <span class="nt-xuan" data-target-date="{{ xuan_memorial.date or '2026-03-25' }}">Đã qua</span>
+          <span class="news-ticker__sep">◆</span>
+          <span class="news-ticker__hl">{{ thu_memorial.title or 'GIỖ THU 2026' }}</span> — {{ thu_memorial.lunar_label or '03/7 ÂL' }}, nhằm ngày {{ thu_memorial.display_date or '15/08/2026' }} — <span class="nt-thu" data-target-date="{{ thu_memorial.date or '2026-08-15' }}">đang tải...</span>
+          <span class="news-ticker__sep">◆</span>
+          {% if custom_announcements %}
+            {% for line in custom_announcements %}
+          {{ line }}
+          <span class="news-ticker__sep">◆</span>
+            {% endfor %}
+          {% else %}
+          Gia Phả Nguyễn Phước Tộc — Phòng Tuy Biên Quận Công — Hậu duệ Vua Minh Mạng
+          <span class="news-ticker__sep">◆</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+  </div>
+
   <!-- Section: Home -->
   <section id="home">
     <div class="hero-content">
@@ -124,172 +303,212 @@
           </p>
 
           <h3 id="de-he-thi">Từ Tầm Nhìn Của Vua Minh Mạng Đến Bài Thơ "Đế Hệ Thi"</h3>
-          
-          <p>
-            Vua Minh Mạng không chỉ là một nhà chính trị quyết đoán mà còn là một học giả uyên thâm Nho học, thấu hiểu sâu sắc quy luật vận hành của xã hội và gia tộc. Với khát vọng để dòng dõi hoàng gia "trăm đời truyền nối, muôn năm không dứt", vào năm 1823, nhà vua đã ngự soạn bài thơ nổi tiếng mang tên <strong>Đế Hệ Thi</strong>.
-          </p>
-          
-          <p>
-            Bài thơ không đơn thuần là một tác phẩm văn chương, mà là một hệ thống quy tắc đặt tên mang tính khoa học, chặt chẽ và lâu dài. Hai mươi chữ trong bài thơ được quy định làm chữ lót cho các thế hệ hậu duệ kể từ sau vua Minh Mạng, qua đó xác lập trật tự tôn ti, phân định rõ ràng thứ bậc trong nội tộc, tránh sự nhầm lẫn về vai vế, thân – sơ trong hoàng phái.
-          </p>
-          
-          <blockquote>
-            <strong>Bốn câu thơ ngũ ngôn tứ tuyệt:</strong><br><br>
-            <em>Miên Hồng Ưng Bửu Vĩnh</em><br>
-            <em>Bảo Quý Định Long Trường</em><br>
-            <em>Hiền Năng Khang Kế Thuật</em><br>
-            <em>Thế Thụy Quốc Gia Xương</em>
-          </blockquote>
-          
-          <div class="about-image">
-            <img src="/static/images/3-kim-sach-de-he-thi.jpg" alt="Kim sách Đế Hệ Thi" loading="lazy">
-          </div>
-          
-          <p>
-            Hệ thống này đã giúp Nguyễn Phước Tộc duy trì được sự mạch lạc, chuẩn mực trong suốt nhiều thế hệ, đúng như lời vua Minh Mạng từng kỳ vọng: <em>"Thế thứ rõ ràng mà không lẫn, thân sơ phân biệt mà ai cũng có thể biết."</em>
-          </p>
-          
-          <div class="about-image">
-            <img src="/static/images/4-kinh-thanh-hue.jpg" alt="Kinh thành Huế" loading="lazy">
-          </div>
+          <details class="history-accordion">
+            <summary>
+              <span class="history-accordion__summary-main">
+                <span class="history-accordion__summary-title">Xem thêm về Đế Hệ Thi</span>
+                <span class="history-accordion__summary-text">Bài thơ đặt tên đời, xác lập trật tự tôn ti và ý nghĩa truyền thừa trong hoàng tộc Nguyễn Phước.</span>
+              </span>
+              <span class="history-accordion__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="history-accordion__content">
+              <p>
+                Vua Minh Mạng không chỉ là một nhà chính trị quyết đoán mà còn là một học giả uyên thâm Nho học, thấu hiểu sâu sắc quy luật vận hành của xã hội và gia tộc. Với khát vọng để dòng dõi hoàng gia "trăm đời truyền nối, muôn năm không dứt", vào năm 1823, nhà vua đã ngự soạn bài thơ nổi tiếng mang tên <strong>Đế Hệ Thi</strong>.
+              </p>
+              
+              <p>
+                Bài thơ không đơn thuần là một tác phẩm văn chương, mà là một hệ thống quy tắc đặt tên mang tính khoa học, chặt chẽ và lâu dài. Hai mươi chữ trong bài thơ được quy định làm chữ lót cho các thế hệ hậu duệ kể từ sau vua Minh Mạng, qua đó xác lập trật tự tôn ti, phân định rõ ràng thứ bậc trong nội tộc, tránh sự nhầm lẫn về vai vế, thân – sơ trong hoàng phái.
+              </p>
+              
+              <blockquote>
+                <strong>Bốn câu thơ ngũ ngôn tứ tuyệt:</strong><br><br>
+                <em>Miên Hồng Ưng Bửu Vĩnh</em><br>
+                <em>Bảo Quý Định Long Trường</em><br>
+                <em>Hiền Năng Khang Kế Thuật</em><br>
+                <em>Thế Thụy Quốc Gia Xương</em>
+              </blockquote>
+              
+              <div class="about-image">
+                <img src="/static/images/3-kim-sach-de-he-thi.jpg" alt="Kim sách Đế Hệ Thi" loading="lazy">
+              </div>
+              
+              <p>
+                Hệ thống này đã giúp Nguyễn Phước Tộc duy trì được sự mạch lạc, chuẩn mực trong suốt nhiều thế hệ, đúng như lời vua Minh Mạng từng kỳ vọng: <em>"Thế thứ rõ ràng mà không lẫn, thân sơ phân biệt mà ai cũng có thể biết."</em>
+              </p>
+              
+              <div class="about-image">
+                <img src="/static/images/4-kinh-thanh-hue.jpg" alt="Kinh thành Huế" loading="lazy">
+              </div>
+            </div>
+          </details>
 
           <h3 id="tuy-bien-quan-cong">Ngài Tuy Biên Quận Công – Khởi Nguồn Một Nhánh Diệp Chi</h3>
-          
-          <p>
-            Trong hệ thống tôn phả đồ sộ của hoàng tộc Nguyễn Phước, mỗi phòng hệ đều mang trong mình một dấu ấn riêng, phản ánh vai trò, công đức và vị thế của người khai phòng. <strong>Nguyễn Phúc Miên Sủng (1831–1865)</strong> – hoàng tử thứ 53 của vua Minh Mạng – chính là vị khai phong của Phòng Tuy Biên Quận Công, mở đầu cho một nhánh diệp chi độc lập, có danh xưng, quy ước và truyền thống riêng trong đại gia đình Nguyễn Phước.
-          </p>
-          
-          <p>
-            Ngài sinh ngày mùng 8 tháng 4 năm Tân Mão (1831), là trưởng nam của Lục giai Tiệp dư Nguyễn Thị Viên – một phi tần nổi tiếng đoan trang, tiết hạnh trong nội đình. Ngay từ thuở thiếu thời, hoàng tử Miên Sủng đã được nuôi dạy theo khuôn phép nghiêm cẩn của hoàng gia, sớm bộc lộ tư chất điềm đạm, cẩn trọng, hiếu học và trọng lễ nghi. Trong sinh hoạt thường nhật cũng như học tập, ngài luôn giữ phong thái mực thước, không phô trương, không thiên lệch, đúng với chuẩn mực của một bậc vương tôn được kỳ vọng lâu dài.
-          </p>
-          
-          <p>
-            Năm Canh Tý (1840), dưới triều vua Minh Mạng, ngài được sách phong <strong>Tuy Nhân Quận Công</strong> – một tước hiệu thể hiện sự tín nhiệm của triều đình đối với phẩm hạnh và tư chất của hoàng tử. Tuy nhiên, đến năm Nhâm Dần (1842), dưới triều vua Thiệu Trị, do chữ "Nhân" trùng với thụy hiệu của Tiên đế Minh Mạng, triều đình đã chuẩn y cải phong tước hiệu thành <strong>Tuy Biên Quận Công</strong>. Từ đây, danh xưng Tuy Biên chính thức gắn liền với ngài và trở thành định danh vĩnh viễn của toàn bộ hậu duệ phòng hệ.
-          </p>
-          
-          <p>
-            Trên phương diện tôn thất, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng không chỉ là một hoàng tử được phong tước, mà còn là người đặt nền móng tổ chức cho một phòng hệ hoàn chỉnh: từ nghi lễ thờ tự, quy ước nội phòng, đến trật tự xưng danh của hậu duệ. Dù không nổi bật trên chính trường hay quân vụ, ngài được ghi nhận là bậc hoàng thân lấy đức làm gốc, giữ tròn bổn phận với triều đình, hòa mục với tôn thất, và nêu gương chuẩn mực cho con cháu.
-          </p>
-          
-          <p>
-            Năm Ất Sửu (1865), ngài qua đời, hưởng dương 35 tuổi. Triều đình truy ban thụy hiệu <strong>Cẩn Mục</strong> – một thụy hiệu mang ý nghĩa sâu sắc:
-          </p>
-          
-          <ul>
-            <li><strong>"Cẩn":</strong> cẩn trọng, nghiêm túc, giữ lễ không sai lệch</li>
-            <li><strong>"Mục":</strong> nhu hòa, đôn hậu, lấy đức để cảm hóa</li>
-          </ul>
-          
-          <p>
-            Sau khi ngài mất, tẩm mộ và phủ thờ của Tuy Biên Quận Công trở thành nơi con cháu các đời về phụng tế, tưởng niệm, không chỉ như một vị tổ khai phòng, mà còn như biểu tượng của nếp nhà lấy lễ – đức – kỷ cương làm trọng.
-          </p>
-          
-          <p>
-            Để định danh rõ ràng và tạo sự thống nhất cho hậu duệ phòng Tuy Biên, vua Minh Mạng đã ban riêng bộ chữ <strong>"Phong" (風 – nghĩa là gió)</strong> làm chữ lót đặt tên cho các công tử trong phòng. Việc ban chữ này không chỉ mang ý nghĩa quản lý tôn phả, mà còn hàm chứa tư tưởng biểu trưng: "Phong" – gió tuy vô hình nhưng lan tỏa bền bỉ, mềm mại mà không suy, linh hoạt mà vẫn có quy luật.
-          </p>
-          
-          <p>
-            Chính từ đây, Phòng Tuy Biên Quận Công được xác lập như một nhánh diệp chi riêng biệt, có:
-          </p>
-          
-          <ul>
-            <li>Tổ khai phòng rõ ràng</li>
-            <li>Tước hệ ổn định</li>
-            <li>Quy ước đặt tên đặc thù</li>
-            <li>Truyền thống gia phong xuyên suốt qua nhiều thế hệ</li>
-          </ul>
-          
-          <p>
-            Trong đại tộc Nguyễn Phước, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng vì thế không chỉ được nhớ đến với tư cách một hoàng tử, mà còn là người đặt nền móng cho một dòng hậu duệ có căn cơ, danh phận và bản sắc riêng, góp phần làm phong phú và bền vững cho cấu trúc toàn thể của hoàng tộc triều Nguyễn.
-          </p>
+          <details class="history-accordion">
+            <summary>
+              <span class="history-accordion__summary-main">
+                <span class="history-accordion__summary-title">Xem thêm về Tuy Biên Quận Công</span>
+                <span class="history-accordion__summary-text">Tiểu sử, tước hiệu, thụy hiệu và vai trò của vị khai phòng đối với toàn bộ nhánh hậu duệ.</span>
+              </span>
+              <span class="history-accordion__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="history-accordion__content">
+              <p>
+                Trong hệ thống tôn phả đồ sộ của hoàng tộc Nguyễn Phước, mỗi phòng hệ đều mang trong mình một dấu ấn riêng, phản ánh vai trò, công đức và vị thế của người khai phòng. <strong>Nguyễn Phúc Miên Sủng (1831–1865)</strong> – hoàng tử thứ 53 của vua Minh Mạng – chính là vị khai phong của Phòng Tuy Biên Quận Công, mở đầu cho một nhánh diệp chi độc lập, có danh xưng, quy ước và truyền thống riêng trong đại gia đình Nguyễn Phước.
+              </p>
+              
+              <p>
+                Ngài sinh ngày mùng 8 tháng 4 năm Tân Mão (1831), là trưởng nam của Lục giai Tiệp dư Nguyễn Thị Viên – một phi tần nổi tiếng đoan trang, tiết hạnh trong nội đình. Ngay từ thuở thiếu thời, hoàng tử Miên Sủng đã được nuôi dạy theo khuôn phép nghiêm cẩn của hoàng gia, sớm bộc lộ tư chất điềm đạm, cẩn trọng, hiếu học và trọng lễ nghi. Trong sinh hoạt thường nhật cũng như học tập, ngài luôn giữ phong thái mực thước, không phô trương, không thiên lệch, đúng với chuẩn mực của một bậc vương tôn được kỳ vọng lâu dài.
+              </p>
+              
+              <p>
+                Năm Canh Tý (1840), dưới triều vua Minh Mạng, ngài được sách phong <strong>Tuy Nhân Quận Công</strong> – một tước hiệu thể hiện sự tín nhiệm của triều đình đối với phẩm hạnh và tư chất của hoàng tử. Tuy nhiên, đến năm Nhâm Dần (1842), dưới triều vua Thiệu Trị, do chữ "Nhân" trùng với thụy hiệu của Tiên đế Minh Mạng, triều đình đã chuẩn y cải phong tước hiệu thành <strong>Tuy Biên Quận Công</strong>. Từ đây, danh xưng Tuy Biên chính thức gắn liền với ngài và trở thành định danh vĩnh viễn của toàn bộ hậu duệ phòng hệ.
+              </p>
+              
+              <p>
+                Trên phương diện tôn thất, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng không chỉ là một hoàng tử được phong tước, mà còn là người đặt nền móng tổ chức cho một phòng hệ hoàn chỉnh: từ nghi lễ thờ tự, quy ước nội phòng, đến trật tự xưng danh của hậu duệ. Dù không nổi bật trên chính trường hay quân vụ, ngài được ghi nhận là bậc hoàng thân lấy đức làm gốc, giữ tròn bổn phận với triều đình, hòa mục với tôn thất, và nêu gương chuẩn mực cho con cháu.
+              </p>
+              
+              <p>
+                Năm Ất Sửu (1865), ngài qua đời, hưởng dương 35 tuổi. Triều đình truy ban thụy hiệu <strong>Cẩn Mục</strong> – một thụy hiệu mang ý nghĩa sâu sắc:
+              </p>
+              
+              <ul>
+                <li><strong>"Cẩn":</strong> cẩn trọng, nghiêm túc, giữ lễ không sai lệch</li>
+                <li><strong>"Mục":</strong> nhu hòa, đôn hậu, lấy đức để cảm hóa</li>
+              </ul>
+              
+              <p>
+                Sau khi ngài mất, tẩm mộ và phủ thờ của Tuy Biên Quận Công trở thành nơi con cháu các đời về phụng tế, tưởng niệm, không chỉ như một vị tổ khai phòng, mà còn như biểu tượng của nếp nhà lấy lễ – đức – kỷ cương làm trọng.
+              </p>
+              
+              <p>
+                Để định danh rõ ràng và tạo sự thống nhất cho hậu duệ phòng Tuy Biên, vua Minh Mạng đã ban riêng bộ chữ <strong>"Phong" (風 – nghĩa là gió)</strong> làm chữ lót đặt tên cho các công tử trong phòng. Việc ban chữ này không chỉ mang ý nghĩa quản lý tôn phả, mà còn hàm chứa tư tưởng biểu trưng: "Phong" – gió tuy vô hình nhưng lan tỏa bền bỉ, mềm mại mà không suy, linh hoạt mà vẫn có quy luật.
+              </p>
+              
+              <p>
+                Chính từ đây, Phòng Tuy Biên Quận Công được xác lập như một nhánh diệp chi riêng biệt, có:
+              </p>
+              
+              <ul>
+                <li>Tổ khai phòng rõ ràng</li>
+                <li>Tước hệ ổn định</li>
+                <li>Quy ước đặt tên đặc thù</li>
+                <li>Truyền thống gia phong xuyên suốt qua nhiều thế hệ</li>
+              </ul>
+              
+              <p>
+                Trong đại tộc Nguyễn Phước, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng vì thế không chỉ được nhớ đến với tư cách một hoàng tử, mà còn là người đặt nền móng cho một dòng hậu duệ có căn cơ, danh phận và bản sắc riêng, góp phần làm phong phú và bền vững cho cấu trúc toàn thể của hoàng tộc triều Nguyễn.
+              </p>
+            </div>
+          </details>
 
           <h3 id="phu-he-to-he">Phụ Hệ và Tổ Hệ của Tuy Biên Quận Công Nguyễn Phúc Miên Sủng</h3>
-          
-          <p>
-            Về phụ hệ trực tiếp, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng xuất thân từ dòng chính thống của hoàng tộc triều Nguyễn, kế thừa liên tục từ các đời chúa Nguyễn đến hoàng đế khai sáng vương triều.
-          </p>
-          
-          <p>
-            <strong>Cha của ngài là vua Minh Mạng</strong> – Nguyễn Phúc Đảm (阮福膽, 1791–1841), vị hoàng đế thứ hai của triều Nguyễn, trị vì từ năm 1820 đến 1841. Minh Mạng hoàng đế nổi tiếng là bậc minh quân có tầm nhìn sâu rộng, củng cố nền hành chính trung ương tập quyền, hoàn chỉnh thể chế quốc gia và đặc biệt chú trọng việc định danh, sắp xếp và quản lý tôn thất. <strong>Mẹ của Tuy Biên Quận Công là Lục giai Tiệp dư Nguyễn Thị Viên</strong>, người được ghi nhận với đức hạnh đoan trang, nề nếp, góp phần hình thành nhân cách cẩn trọng và khuôn phép của hoàng tử Miên Sủng.
-          </p>
-          
-          <p>
-            <strong>Ông nội của ngài là vua Gia Long</strong> – Nguyễn Phúc Ánh (阮福暎, 1762–1820), vị hoàng đế khai sáng triều Nguyễn, trị vì từ năm 1802 đến 1820. Gia Long là người thống nhất sơn hà sau nhiều thập niên binh biến, đặt nền móng cho triều đại kéo dài hơn một thế kỷ trong lịch sử Việt Nam.
-          </p>
-          
-          <p>
-            Lên một đời nữa, <strong>ông cố của ngài là Nguyễn Phúc Luân</strong> (阮福㫻, 1733–1765), được tôn xưng là Đức Hưng Tổ. Dù không trực tiếp trị vì, Nguyễn Phúc Luân giữ vai trò đặc biệt quan trọng trong việc truyền thừa chính thống của dòng chúa Nguyễn, là thân phụ của vua Gia Long.
-          </p>
-          
-          <p>
-            Trước đó, <strong>ông sơ của ngài là Nguyễn Phúc Khoát</strong> (阮福濶, 1714–1765), được tôn hiệu Vũ Vương (武王), trị vì Đàng Trong từ năm 1738 đến 1765. Thời kỳ của Vũ Vương đánh dấu sự phát triển ổn định về chính trị, văn hóa và lễ chế, đặt tiền đề cho việc hình thành vương quyền về sau.
-          </p>
-          
-          <h4 id="to-tien-dong-chua-nguyen">Tổ Tiên Dòng Chúa Nguyễn và Cao Tổ Đại Tộc</h4>
-          
-          <p>
-            Từ Nguyễn Phúc Khoát trở ngược lên, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng thuộc về chuỗi truyền thừa liên tục của các đời chúa Nguyễn, bắt đầu từ thời Nguyễn Hoàng vào Thuận Hóa:
-          </p>
-          
-          <ul>
-            <li><strong>Nguyễn Phúc Thụ</strong> (1697–1738) – Ninh Vương (寧王), trị vì giai đoạn 1725–1738</li>
-            <li><strong>Nguyễn Phúc Chu</strong> (阮福淍, 1675–1725) – Chúa Minh, người mở mang văn hóa, Phật giáo và giáo dục Đàng Trong</li>
-            <li><strong>Nguyễn Phúc Thái</strong> (阮福溙, 1649–1691) – Chúa Nghĩa</li>
-            <li><strong>Nguyễn Phúc Tần</strong> (阮福瀕, 1620–1687) – Chúa Hiền, củng cố quân sự và phòng thủ phương Nam</li>
-            <li><strong>Nguyễn Phúc Lan</strong> (阮福瀾, 1601–1648) – Chúa Thượng (上王)</li>
-            <li><strong>Nguyễn Phúc Nguyên</strong> (阮福源, 1563–1635) – Chúa Sãi, người đặt nền móng cai trị ổn định tại Thuận – Quảng</li>
-            <li><strong>Nguyễn Hoàng</strong> (阮潢, 1525–1613) – Chúa Tiên, vị tổ khai sáng cơ nghiệp các chúa Nguyễn tại Đàng Trong</li>
-          </ul>
-          
-          <p>
-            Trước thời các chúa Nguyễn, dòng họ tiếp tục nối dài qua các bậc công thần và danh tướng thời Lê – Trần, tiêu biểu như:
-          </p>
-          
-          <ul>
-            <li><strong>Nguyễn Kim</strong> (阮淦, 1468–1545) – Triệu Tổ, người trung hưng nhà Lê</li>
-            <li><strong>Nguyễn Văn Lựu</strong> (阮文溜) – Trừng Quốc Công</li>
-            <li><strong>Nguyễn Như Trác</strong> (阮如琢) – Phó Quốc Công</li>
-            <li><strong>Nguyễn Công Duẩn</strong> (阮公笋) – Thái Bảo Hoằng Quốc Công</li>
-            <li><strong>Nguyễn Sừ</strong> (阮儲) – Chiêu Quang Hầu</li>
-            <li><strong>Nguyễn Chiêm</strong> (阮佔) – Quản Nội</li>
-            <li><strong>Nguyễn Biện</strong> (阮忭) – Phụ Đạo Huệ Quốc Công</li>
-          </ul>
-          
-          <p>
-            Xa hơn nữa, tổ hệ của dòng Nguyễn Phước được truy nguyên đến các nhân vật thời Trần – Đinh:
-          </p>
-          
-          <ul>
-            <li><strong>Nguyễn Minh Du</strong> (阮明俞, 1330–1390) – Du Cần Công</li>
-            <li><strong>Nguyễn Công Luật</strong> (阮公律) – Hữu Hiểu Điểm</li>
-            <li><strong>Nguyễn Nạp Hoa</strong> (阮納和) – Bình Man Đại Tướng Quân</li>
-            <li><strong>Nguyễn Thế Tứ</strong> (阮世賜) – Đô Hiệu Kiểm</li>
-            <li><strong>Nguyễn Nộn</strong> (阮嫩) – Hoài Đạo Hiếu Vũ Vương</li>
-            <li><strong>Nguyễn Phụng</strong> (阮奉) – Tả Đô Đốc</li>
-            <li><strong>Nguyễn Viễn</strong> (阮遠) – Tả Quốc Công</li>
-            <li><strong>Nguyễn Đê</strong> (阮低) – Đức Đô Hiệu Kiểm</li>
-          </ul>
-          
-          <p>
-            Khởi nguyên của toàn bộ dòng tộc là <strong>Nguyễn Bặc</strong> (阮匐, 924–979) – Đức Định Quốc Công, khai quốc công thần triều Đinh, người được tôn làm Thủy tổ của đại tộc Nguyễn, từ đó mở ra dòng truyền thừa kéo dài hơn một thiên niên kỷ trong lịch sử Việt Nam.
-          </p>
+          <details class="history-accordion">
+            <summary>
+              <span class="history-accordion__summary-main">
+                <span class="history-accordion__summary-title">Xem thêm về phụ hệ và tổ hệ</span>
+                <span class="history-accordion__summary-text">Chuỗi truyền thừa từ vua Minh Mạng, Gia Long, các đời chúa Nguyễn cho đến cao tổ đại tộc.</span>
+              </span>
+              <span class="history-accordion__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="history-accordion__content">
+              <p>
+                Về phụ hệ trực tiếp, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng xuất thân từ dòng chính thống của hoàng tộc triều Nguyễn, kế thừa liên tục từ các đời chúa Nguyễn đến hoàng đế khai sáng vương triều.
+              </p>
+              
+              <p>
+                <strong>Cha của ngài là vua Minh Mạng</strong> – Nguyễn Phúc Đảm (阮福膽, 1791–1841), vị hoàng đế thứ hai của triều Nguyễn, trị vì từ năm 1820 đến 1841. Minh Mạng hoàng đế nổi tiếng là bậc minh quân có tầm nhìn sâu rộng, củng cố nền hành chính trung ương tập quyền, hoàn chỉnh thể chế quốc gia và đặc biệt chú trọng việc định danh, sắp xếp và quản lý tôn thất. <strong>Mẹ của Tuy Biên Quận Công là Lục giai Tiệp dư Nguyễn Thị Viên</strong>, người được ghi nhận với đức hạnh đoan trang, nề nếp, góp phần hình thành nhân cách cẩn trọng và khuôn phép của hoàng tử Miên Sủng.
+              </p>
+              
+              <p>
+                <strong>Ông nội của ngài là vua Gia Long</strong> – Nguyễn Phúc Ánh (阮福暎, 1762–1820), vị hoàng đế khai sáng triều Nguyễn, trị vì từ năm 1802 đến 1820. Gia Long là người thống nhất sơn hà sau nhiều thập niên binh biến, đặt nền móng cho triều đại kéo dài hơn một thế kỷ trong lịch sử Việt Nam.
+              </p>
+              
+              <p>
+                Lên một đời nữa, <strong>ông cố của ngài là Nguyễn Phúc Luân</strong> (阮福㫻, 1733–1765), được tôn xưng là Đức Hưng Tổ. Dù không trực tiếp trị vì, Nguyễn Phúc Luân giữ vai trò đặc biệt quan trọng trong việc truyền thừa chính thống của dòng chúa Nguyễn, là thân phụ của vua Gia Long.
+              </p>
+              
+              <p>
+                Trước đó, <strong>ông sơ của ngài là Nguyễn Phúc Khoát</strong> (阮福濶, 1714–1765), được tôn hiệu Vũ Vương (武王), trị vì Đàng Trong từ năm 1738 đến 1765. Thời kỳ của Vũ Vương đánh dấu sự phát triển ổn định về chính trị, văn hóa và lễ chế, đặt tiền đề cho việc hình thành vương quyền về sau.
+              </p>
+              
+              <h4 id="to-tien-dong-chua-nguyen">Tổ Tiên Dòng Chúa Nguyễn và Cao Tổ Đại Tộc</h4>
+              
+              <p>
+                Từ Nguyễn Phúc Khoát trở ngược lên, Tuy Biên Quận Công Nguyễn Phúc Miên Sủng thuộc về chuỗi truyền thừa liên tục của các đời chúa Nguyễn, bắt đầu từ thời Nguyễn Hoàng vào Thuận Hóa:
+              </p>
+              
+              <ul>
+                <li><strong>Nguyễn Phúc Thụ</strong> (1697–1738) – Ninh Vương (寧王), trị vì giai đoạn 1725–1738</li>
+                <li><strong>Nguyễn Phúc Chu</strong> (阮福淍, 1675–1725) – Chúa Minh, người mở mang văn hóa, Phật giáo và giáo dục Đàng Trong</li>
+                <li><strong>Nguyễn Phúc Thái</strong> (阮福溙, 1649–1691) – Chúa Nghĩa</li>
+                <li><strong>Nguyễn Phúc Tần</strong> (阮福瀕, 1620–1687) – Chúa Hiền, củng cố quân sự và phòng thủ phương Nam</li>
+                <li><strong>Nguyễn Phúc Lan</strong> (阮福瀾, 1601–1648) – Chúa Thượng (上王)</li>
+                <li><strong>Nguyễn Phúc Nguyên</strong> (阮福源, 1563–1635) – Chúa Sãi, người đặt nền móng cai trị ổn định tại Thuận – Quảng</li>
+                <li><strong>Nguyễn Hoàng</strong> (阮潢, 1525–1613) – Chúa Tiên, vị tổ khai sáng cơ nghiệp các chúa Nguyễn tại Đàng Trong</li>
+              </ul>
+              
+              <p>
+                Trước thời các chúa Nguyễn, dòng họ tiếp tục nối dài qua các bậc công thần và danh tướng thời Lê – Trần, tiêu biểu như:
+              </p>
+              
+              <ul>
+                <li><strong>Nguyễn Kim</strong> (阮淦, 1468–1545) – Triệu Tổ, người trung hưng nhà Lê</li>
+                <li><strong>Nguyễn Văn Lựu</strong> (阮文溜) – Trừng Quốc Công</li>
+                <li><strong>Nguyễn Như Trác</strong> (阮如琢) – Phó Quốc Công</li>
+                <li><strong>Nguyễn Công Duẩn</strong> (阮公笋) – Thái Bảo Hoằng Quốc Công</li>
+                <li><strong>Nguyễn Sừ</strong> (阮儲) – Chiêu Quang Hầu</li>
+                <li><strong>Nguyễn Chiêm</strong> (阮佔) – Quản Nội</li>
+                <li><strong>Nguyễn Biện</strong> (阮忭) – Phụ Đạo Huệ Quốc Công</li>
+              </ul>
+              
+              <p>
+                Xa hơn nữa, tổ hệ của dòng Nguyễn Phước được truy nguyên đến các nhân vật thời Trần – Đinh:
+              </p>
+              
+              <ul>
+                <li><strong>Nguyễn Minh Du</strong> (阮明俞, 1330–1390) – Du Cần Công</li>
+                <li><strong>Nguyễn Công Luật</strong> (阮公律) – Hữu Hiểu Điểm</li>
+                <li><strong>Nguyễn Nạp Hoa</strong> (阮納和) – Bình Man Đại Tướng Quân</li>
+                <li><strong>Nguyễn Thế Tứ</strong> (阮世賜) – Đô Hiệu Kiểm</li>
+                <li><strong>Nguyễn Nộn</strong> (阮嫩) – Hoài Đạo Hiếu Vũ Vương</li>
+                <li><strong>Nguyễn Phụng</strong> (阮奉) – Tả Đô Đốc</li>
+                <li><strong>Nguyễn Viễn</strong> (阮遠) – Tả Quốc Công</li>
+                <li><strong>Nguyễn Đê</strong> (阮低) – Đức Đô Hiệu Kiểm</li>
+              </ul>
+              
+              <p>
+                Khởi nguyên của toàn bộ dòng tộc là <strong>Nguyễn Bặc</strong> (阮匐, 924–979) – Đức Định Quốc Công, khai quốc công thần triều Đinh, người được tôn làm Thủy tổ của đại tộc Nguyễn, từ đó mở ra dòng truyền thừa kéo dài hơn một thiên niên kỷ trong lịch sử Việt Nam.
+              </p>
+            </div>
+          </details>
 
           <h3 id="so-hoa-gia-pha">Số Hóa Gia Phả – Kết Nối Quá Khứ Đến Tương Lai</h3>
-          
-          <p>
-            Trải qua bao biến thiên của lịch sử, con cháu Phòng Tuy Biên Quận Công ngày nay đã tản cư, sinh sống và lập nghiệp ở nhiều vùng miền trong nước cũng như khắp năm châu. Trong bối cảnh ấy, việc bảo tồn những trang <strong>Ngọc phả</strong>, vốn được lưu giữ bằng kim sách hoặc bản in giấy truyền thống, đang đối mặt với thách thức lớn từ thời gian, môi trường và sự đứt gãy thế hệ.
-          </p>
-          
-          <p>
-            Xuất phát từ nhận thức đó, <strong>dự án xây dựng hệ thống tra cứu gia phả điện tử</strong> được hình thành như một nhịp cầu hiện đại, kết nối quá khứ hào hùng với tương lai bền vững. Dự án mang lại những giá trị cốt lõi:
-          </p>
-          
-          <ul>
-            <li><strong>Bảo tồn vĩnh cửu:</strong> Toàn bộ dữ liệu thế phả được chuyển đổi sang định dạng số, giảm thiểu tối đa nguy cơ mai một, thất lạc hay hư hỏng theo năm tháng.</li>
-            <li><strong>Tra cứu thuận tiện:</strong> Con cháu dù ở bất cứ nơi đâu cũng có thể dễ dàng tìm hiểu về nguồn gốc, vai thứ và hành trạng của tổ tiên; từ đó hiểu rõ ý nghĩa các chữ lót như <em>Miên, Hồng, Ưng, Bửu…</em> trong chính tên gọi của mình.</li>
-            <li><strong>Kết nối huyết thống:</strong> Hệ thống tạo ra một không gian chung để các thành viên trong dòng họ giao lưu, chia sẻ, hỗ trợ lẫn nhau, góp phần thắt chặt tình cốt nhục – giá trị nền tảng của Nguyễn Phước Tộc.</li>
-            <li><strong>Lưu trữ bền vững:</strong> Thông tin về các thế hệ mới được cập nhật liên tục, bảo đảm dòng chảy của Phòng Tuy Biên Quận Công luôn được ghi chép đầy đủ, liền mạch cho mai sau.</li>
-          </ul>
+          <details class="history-accordion">
+            <summary>
+              <span class="history-accordion__summary-main">
+                <span class="history-accordion__summary-title">Xem thêm về dự án số hóa gia phả</span>
+                <span class="history-accordion__summary-text">Lý do hình thành hệ thống, các giá trị cốt lõi và cách dự án kết nối hậu duệ trong thời đại số.</span>
+              </span>
+              <span class="history-accordion__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="history-accordion__content">
+              <p>
+                Trải qua bao biến thiên của lịch sử, con cháu Phòng Tuy Biên Quận Công ngày nay đã tản cư, sinh sống và lập nghiệp ở nhiều vùng miền trong nước cũng như khắp năm châu. Trong bối cảnh ấy, việc bảo tồn những trang <strong>Ngọc phả</strong>, vốn được lưu giữ bằng kim sách hoặc bản in giấy truyền thống, đang đối mặt với thách thức lớn từ thời gian, môi trường và sự đứt gãy thế hệ.
+              </p>
+              
+              <p>
+                Xuất phát từ nhận thức đó, <strong>dự án xây dựng hệ thống tra cứu gia phả điện tử</strong> được hình thành như một nhịp cầu hiện đại, kết nối quá khứ hào hùng với tương lai bền vững. Dự án mang lại những giá trị cốt lõi:
+              </p>
+              
+              <ul>
+                <li><strong>Bảo tồn vĩnh cửu:</strong> Toàn bộ dữ liệu thế phả được chuyển đổi sang định dạng số, giảm thiểu tối đa nguy cơ mai một, thất lạc hay hư hỏng theo năm tháng.</li>
+                <li><strong>Tra cứu thuận tiện:</strong> Con cháu dù ở bất cứ nơi đâu cũng có thể dễ dàng tìm hiểu về nguồn gốc, vai thứ và hành trạng của tổ tiên; từ đó hiểu rõ ý nghĩa các chữ lót như <em>Miên, Hồng, Ưng, Bửu…</em> trong chính tên gọi của mình.</li>
+                <li><strong>Kết nối huyết thống:</strong> Hệ thống tạo ra một không gian chung để các thành viên trong dòng họ giao lưu, chia sẻ, hỗ trợ lẫn nhau, góp phần thắt chặt tình cốt nhục – giá trị nền tảng của Nguyễn Phước Tộc.</li>
+                <li><strong>Lưu trữ bền vững:</strong> Thông tin về các thế hệ mới được cập nhật liên tục, bảo đảm dòng chảy của Phòng Tuy Biên Quận Công luôn được ghi chép đầy đủ, liền mạch cho mai sau.</li>
+              </ul>
+            </div>
+          </details>
 
           <h3 id="ket-tu">Kết Từ</h3>
           
@@ -340,78 +559,108 @@
             <img src="/static/images/6-trong-nha-tho.jpg" alt="Hình ảnh bên trong nhà thờ Phòng Tuy Biên Quận Công" class="js-hide-on-error" data-image-name="6-trong-nha-tho.jpg">
           </div>
 
-          <h3 class="temple-heading">1️⃣ Hoành phi ở chính giữa (phía trên)</h3>
-          
-          <div class="temple-card">
-            <p class="temple-card-title-lg">
+          <h3 class="temple-heading" id="hoanh-phi-chinh-giua">1️⃣ Hoành phi ở chính giữa (phía trên)</h3>
+          <details class="history-accordion">
+            <summary>
+              <span class="history-accordion__summary-main">
+                <span class="history-accordion__summary-title">Xem chi tiết hoành phi</span>
+                <span class="history-accordion__summary-text">Nội dung Hán tự, cách đọc Hán–Việt và ý nghĩa biểu trưng của hoành phi trung tâm.</span>
+              </span>
+              <span class="history-accordion__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="history-accordion__content">
+              <div class="temple-card">
+                <p class="temple-card-title-lg">
 繼述郡公祠
-            </p>
-            
-            <p class="temple-text"><strong>Đọc Hán–Việt:</strong> Kế Thuật Quận Công Từ</p>
-            
-            <p class="temple-text"><strong>Ý nghĩa:</strong></p>
-            <ul class="temple-list">
-              <li><strong>繼述 (Kế thuật):</strong> nối tiếp, kế thừa công đức – sự nghiệp của tiền nhân</li>
-              <li><strong>郡公 (Quận công):</strong> tước vị quý tộc cao (thường phong cho công thần, hoàng thân)</li>
-              <li><strong>祠 (Từ):</strong> đền thờ, từ đường</li>
-            </ul>
-            
-            <p class="temple-note">
-              <strong>Toàn bộ có thể hiểu là:</strong><br>
-              "Đền thờ Quận Công – nơi kế thừa và tôn vinh công đức của bậc tiền nhân."
-            </p>
-          </div>
+                </p>
+                
+                <p class="temple-text"><strong>Đọc Hán–Việt:</strong> Kế Thuật Quận Công Từ</p>
+                
+                <p class="temple-text"><strong>Ý nghĩa:</strong></p>
+                <ul class="temple-list">
+                  <li><strong>繼述 (Kế thuật):</strong> nối tiếp, kế thừa công đức – sự nghiệp của tiền nhân</li>
+                  <li><strong>郡公 (Quận công):</strong> tước vị quý tộc cao (thường phong cho công thần, hoàng thân)</li>
+                  <li><strong>祠 (Từ):</strong> đền thờ, từ đường</li>
+                </ul>
+                
+                <p class="temple-note">
+                  <strong>Toàn bộ có thể hiểu là:</strong><br>
+                  "Đền thờ Quận Công – nơi kế thừa và tôn vinh công đức của bậc tiền nhân."
+                </p>
+              </div>
+            </div>
+          </details>
 
-          <h3 class="temple-heading">2️⃣ Câu đối bên trái (nhìn từ ngoài vào)</h3>
-          
-          <div class="temple-card">
-            <p class="temple-card-title-md">
+          <h3 class="temple-heading" id="cau-doi-ben-trai">2️⃣ Câu đối bên trái (nhìn từ ngoài vào)</h3>
+          <details class="history-accordion">
+            <summary>
+              <span class="history-accordion__summary-main">
+                <span class="history-accordion__summary-title">Xem chi tiết câu đối bên trái</span>
+                <span class="history-accordion__summary-text">Giải nghĩa từng cụm Hán văn, đặc điểm bố cục và ý nghĩa cát tường dành cho dòng tộc.</span>
+              </span>
+              <span class="history-accordion__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="history-accordion__content">
+              <div class="temple-card">
+                <p class="temple-card-title-md">
 九勳重書延定喜肇王芝季
-            </p>
-            
-            <p class="temple-text"><strong>Đặc điểm:</strong></p>
-            <ul class="temple-list">
-              <li>Là câu đối Hán văn cổ, bố cục dọc</li>
-              <li>Có các từ khóa mang tính vinh danh – phúc thọ – dòng tộc</li>
-            </ul>
-            
-            <p class="temple-text"><strong>Phân tích ý nghĩa (theo cụm):</strong></p>
-            <ul class="temple-list">
-              <li><strong>九勳:</strong> chín công lao lớn (ám chỉ đại công thần)</li>
-              <li><strong>重書:</strong> ghi chép, lưu danh nhiều lần</li>
-              <li><strong>延定:</strong> kéo dài sự ổn định, bền vững</li>
-              <li><strong>喜肇:</strong> khởi đầu tốt lành</li>
-              <li><strong>王芝季:</strong> tên húy / pháp danh / thụy hiệu của nhân vật được thờ (thường không dịch nghĩa)</li>
-            </ul>
-            
-            <p class="temple-note">
-              <strong>Ý chung:</strong><br>
-              Ca ngợi công lao lớn, lưu danh muôn đời, mang lại nền tảng ổn định và khởi đầu cát tường cho dòng tộc.
-            </p>
-          </div>
+                </p>
+                
+                <p class="temple-text"><strong>Đặc điểm:</strong></p>
+                <ul class="temple-list">
+                  <li>Là câu đối Hán văn cổ, bố cục dọc</li>
+                  <li>Có các từ khóa mang tính vinh danh – phúc thọ – dòng tộc</li>
+                </ul>
+                
+                <p class="temple-text"><strong>Phân tích ý nghĩa (theo cụm):</strong></p>
+                <ul class="temple-list">
+                  <li><strong>九勳:</strong> chín công lao lớn (ám chỉ đại công thần)</li>
+                  <li><strong>重書:</strong> ghi chép, lưu danh nhiều lần</li>
+                  <li><strong>延定:</strong> kéo dài sự ổn định, bền vững</li>
+                  <li><strong>喜肇:</strong> khởi đầu tốt lành</li>
+                  <li><strong>王芝季:</strong> tên húy / pháp danh / thụy hiệu của nhân vật được thờ (thường không dịch nghĩa)</li>
+                </ul>
+                
+                <p class="temple-note">
+                  <strong>Ý chung:</strong><br>
+                  Ca ngợi công lao lớn, lưu danh muôn đời, mang lại nền tảng ổn định và khởi đầu cát tường cho dòng tộc.
+                </p>
+              </div>
+            </div>
+          </details>
 
-          <h3 class="temple-heading">3️⃣ Câu đối bên phải</h3>
-          
-          <div class="temple-card">
-            <p class="temple-card-title-md">
+          <h3 class="temple-heading" id="cau-doi-ben-phai">3️⃣ Câu đối bên phải</h3>
+          <details class="history-accordion">
+            <summary>
+              <span class="history-accordion__summary-main">
+                <span class="history-accordion__summary-title">Xem chi tiết câu đối bên phải</span>
+                <span class="history-accordion__summary-text">Nội dung Hán–Việt và lớp nghĩa chúc tụng về quốc vận, phúc thọ và cát khánh lâu bền.</span>
+              </span>
+              <span class="history-accordion__icon" aria-hidden="true"></span>
+            </summary>
+            <div class="history-accordion__content">
+              <div class="temple-card">
+                <p class="temple-card-title-md">
 國運昌隆壽福合慶萬年
-            </p>
-            
-            <p class="temple-text"><strong>Đọc Hán–Việt:</strong> Quốc vận xương long, thọ phúc hợp khánh vạn niên</p>
-            
-            <p class="temple-text"><strong>Ý nghĩa từng phần:</strong></p>
-            <ul class="temple-list">
-              <li><strong>國運昌隆:</strong> vận nước hưng thịnh</li>
-              <li><strong>壽福:</strong> trường thọ và phúc đức</li>
-              <li><strong>合慶:</strong> hội tụ điều lành</li>
-              <li><strong>萬年:</strong> muôn năm</li>
-            </ul>
-            
-            <p class="temple-note">
-              <strong>Câu này mang ý nghĩa chúc tụng rất rõ:</strong><br>
-              "Vận nước hưng thịnh, phúc thọ viên mãn, cát khánh hội tụ muôn đời."
-            </p>
-          </div>
+                </p>
+                
+                <p class="temple-text"><strong>Đọc Hán–Việt:</strong> Quốc vận xương long, thọ phúc hợp khánh vạn niên</p>
+                
+                <p class="temple-text"><strong>Ý nghĩa từng phần:</strong></p>
+                <ul class="temple-list">
+                  <li><strong>國運昌隆:</strong> vận nước hưng thịnh</li>
+                  <li><strong>壽福:</strong> trường thọ và phúc đức</li>
+                  <li><strong>合慶:</strong> hội tụ điều lành</li>
+                  <li><strong>萬年:</strong> muôn năm</li>
+                </ul>
+                
+                <p class="temple-note">
+                  <strong>Câu này mang ý nghĩa chúc tụng rất rõ:</strong><br>
+                  "Vận nước hưng thịnh, phúc thọ viên mãn, cát khánh hội tụ muôn đời."
+                </p>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
       </div>
@@ -529,31 +778,8 @@
         </div>
       </div>
       
-      <div class="countdown-section">
-        <div class="countdown-item">
-          <div class="countdown-label">Giỗ Xuân 2026</div>
-          <div class="countdown-date">07/2 ÂL - Nhằm ngày 25/03/2026</div>
-          <div class="countdown-timer" id="countdown-xuan">
-            <span class="countdown-value">--</span> ngày 
-            <span class="countdown-value">--</span> giờ 
-            <span class="countdown-value">--</span> phút 
-            <span class="countdown-value">--</span> giây
-          </div>
-        </div>
-        <div class="countdown-item">
-          <div class="countdown-label">Giỗ Thu 2026</div>
-          <div class="countdown-date">03/7 ÂL - Nhằm ngày 15/08/2026</div>
-          <div class="countdown-timer" id="countdown-thu">
-            <span class="countdown-value">--</span> ngày 
-            <span class="countdown-value">--</span> giờ 
-            <span class="countdown-value">--</span> phút 
-            <span class="countdown-value">--</span> giây
-          </div>
-        </div>
-      </div>
-      
       <div class="footer-bottom">
-        <p class="footer-copyright">&copy; 2026 Phòng Tuy Biên Quận Công - Gia Phả Nguyễn Phước Tộc. Web Design by Bảo Phong</p>
+        <p class="footer-copyright">&copy; 2026 Phòng Tuy Biên Quận Công - Gia Phả Nguyễn Phước Tộc. Web Design by <a href="https://www.facebook.com/pbao280/" target="_blank" rel="noopener noreferrer">Bảo Phong</a></p>
       </div>
     </div>
   </footer>
@@ -570,68 +796,37 @@
       
       function updateCountdown() {
         try {
-          // Ngày Giỗ Xuân 2026: 07/2 ÂL - Nhằm ngày 25/03/2026
-          const xuanDate = new Date('2026-03-25T00:00:00+07:00');
-          
-          // Ngày Giỗ Thu 2026: 03/7 ÂL - Nhằm ngày 15/08/2026
-          const thuDate = new Date('2026-08-15T00:00:00+07:00');
-          
           const now = new Date();
-          
-          // Tính toán cho Giỗ Xuân
-          const xuanTimer = document.getElementById('countdown-xuan');
-          if (xuanTimer) {
-            const xuanDiff = xuanDate.getTime() - now.getTime();
-            if (xuanDiff < 0) {
-              xuanTimer.innerHTML = '<span class="countdown-expired">Đã qua</span>';
-            } else {
-              const xuanDays = Math.floor(xuanDiff / (1000 * 60 * 60 * 24));
-              const xuanHours = Math.floor((xuanDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-              const xuanMinutes = Math.floor((xuanDiff % (1000 * 60 * 60)) / (1000 * 60));
-              const xuanSeconds = Math.floor((xuanDiff % (1000 * 60)) / 1000);
-              
-              xuanTimer.innerHTML = 
-                '<span class="countdown-value">' + xuanDays + '</span> ngày ' +
-                '<span class="countdown-value">' + padZero(xuanHours) + '</span> giờ ' +
-                '<span class="countdown-value">' + padZero(xuanMinutes) + '</span> phút ' +
-                '<span class="countdown-value">' + padZero(xuanSeconds) + '</span> giây';
-            }
+
+          var xuanNodes = Array.from(document.querySelectorAll('.nt-xuan'));
+          var thuNodes = Array.from(document.querySelectorAll('.nt-thu'));
+          if (xuanNodes.length === 0 || thuNodes.length === 0) {
+            return;
           }
-          
-          // Tính toán cho Giỗ Thu
-          const thuTimer = document.getElementById('countdown-thu');
-          if (thuTimer) {
-            const thuDiff = thuDate.getTime() - now.getTime();
-            if (thuDiff < 0) {
-              thuTimer.innerHTML = '<span class="countdown-expired">Đã qua</span>';
-            } else {
-              const thuDays = Math.floor(thuDiff / (1000 * 60 * 60 * 24));
-              const thuHours = Math.floor((thuDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-              const thuMinutes = Math.floor((thuDiff % (1000 * 60 * 60)) / (1000 * 60));
-              const thuSeconds = Math.floor((thuDiff % (1000 * 60)) / 1000);
-              
-              thuTimer.innerHTML = 
-                '<span class="countdown-value">' + thuDays + '</span> ngày ' +
-                '<span class="countdown-value">' + padZero(thuHours) + '</span> giờ ' +
-                '<span class="countdown-value">' + padZero(thuMinutes) + '</span> phút ' +
-                '<span class="countdown-value">' + padZero(thuSeconds) + '</span> giây';
-            }
-          }
+
+          const xuanDate = new Date((xuanNodes[0].dataset.targetDate || '2026-03-25') + 'T00:00:00+07:00');
+          const thuDate = new Date((thuNodes[0].dataset.targetDate || '2026-08-15') + 'T00:00:00+07:00');
+          const xuanDiff = xuanDate.getTime() - now.getTime();
+          const thuDiff = thuDate.getTime() - now.getTime();
+
+          // Cập nhật ticker bar (cả 2 bản copy)
+          var xuanText  = xuanDiff < 0 ? 'Đã qua' :
+            'còn ' + Math.floor(xuanDiff / 864e5) + ' ngày ' + padZero(Math.floor(xuanDiff % 864e5 / 36e5)) + ' giờ';
+          xuanNodes.forEach(function(el) { el.textContent = xuanText; });
+
+          var thuText = thuDiff < 0 ? 'Đã qua' :
+            'còn ' + Math.floor(thuDiff / 864e5) + ' ngày ' +
+            padZero(Math.floor(thuDiff % 864e5 / 36e5)) + ' giờ ' +
+            padZero(Math.floor(thuDiff % 36e5 / 6e4)) + ' phút';
+          thuNodes.forEach(function(el) { el.textContent = thuText; });
         } catch (error) {
           console.error('Error updating countdown:', error);
         }
       }
       
       function initCountdown() {
-        const xuanTimer = document.getElementById('countdown-xuan');
-        const thuTimer = document.getElementById('countdown-thu');
-        
-        if (xuanTimer && thuTimer) {
-          updateCountdown();
-          setInterval(updateCountdown, 1000);
-        } else {
-          setTimeout(initCountdown, 100);
-        }
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
       }
       
       // Chạy khi DOM ready

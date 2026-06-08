@@ -1,0 +1,474 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Quản lý Thông báo - Admin - Gia Phả Nguyễn Phước Tộc{% endblock %}
+
+{% block extra_css %}
+<style>
+  .announcement-grid {
+    display: grid;
+    gap: var(--admin-space-4);
+  }
+
+  .announcement-row {
+    display: grid;
+    grid-template-columns: 72px 1fr;
+    gap: var(--admin-space-4);
+    align-items: center;
+  }
+
+  .announcement-index {
+    color: var(--admin-primary);
+    font-weight: var(--admin-font-weight-bold);
+    font-size: 0.95rem;
+    text-align: center;
+    padding: 12px 10px;
+    border-radius: var(--admin-radius);
+    background: rgba(var(--admin-primary-rgb), 0.08);
+    border: 1px solid rgba(var(--admin-primary-rgb), 0.16);
+  }
+
+  .announcement-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--admin-space-4);
+    flex-wrap: wrap;
+    margin-top: var(--admin-space-5);
+  }
+
+  .announcement-meta {
+    color: var(--admin-text-muted);
+    font-size: 0.92rem;
+  }
+
+  .announcement-preview-list {
+    margin: var(--admin-space-4) 0 0;
+    padding-left: 22px;
+    color: var(--admin-text);
+    line-height: 1.7;
+  }
+
+  .announcement-preview-empty {
+    color: var(--admin-text-muted);
+    margin-top: var(--admin-space-4);
+  }
+
+  .memorial-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--admin-space-5);
+    margin-top: 1.25rem;
+  }
+
+  .memorial-card {
+    border: 1px solid var(--admin-border);
+    border-radius: var(--admin-radius);
+    padding: var(--admin-space-5);
+    background: #fffdf9;
+  }
+
+  .memorial-card.memorial-card--locked {
+    background: #f8fafc;
+    border-color: #d9dee7;
+  }
+
+  .memorial-card.memorial-card--locked input {
+    background: #f3f4f6;
+    color: var(--admin-text-muted);
+    cursor: not-allowed;
+  }
+
+  .memorial-card h3 {
+    color: var(--admin-primary);
+    margin-bottom: var(--admin-space-2);
+  }
+
+  .memorial-card p {
+    color: var(--admin-text-muted);
+    margin-bottom: var(--admin-space-4);
+  }
+
+  .memorial-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--admin-space-4);
+    margin-top: var(--admin-space-4);
+  }
+
+  .memorial-preview-item {
+    padding: var(--admin-space-4);
+    border-radius: var(--admin-radius);
+    border: 1px solid rgba(var(--admin-primary-rgb), 0.18);
+    background: rgba(var(--admin-primary-rgb), 0.05);
+  }
+
+  .memorial-preview-item strong {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--admin-primary);
+  }
+
+  .memorial-preview-item span {
+    display: block;
+    color: var(--admin-text-muted);
+    line-height: 1.65;
+  }
+
+  .memorial-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--admin-space-4);
+    flex-wrap: wrap;
+    margin-top: var(--admin-space-5);
+  }
+
+  .memorial-lock-note {
+    color: var(--admin-text-muted);
+    font-size: 0.92rem;
+  }
+
+  @media (max-width: 640px) {
+    .announcement-row {
+      grid-template-columns: 1fr;
+    }
+
+    .announcement-index {
+      text-align: left;
+    }
+
+    .memorial-grid,
+    .memorial-preview-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="section-header">
+  <h1>Quản lý Thông báo</h1>
+  <p>Nhập tối đa {{ max_announcements }} dòng thông báo để chạy ở thanh <strong>Thông báo</strong> ngoài trang chủ. Dòng trống sẽ tự bỏ qua.</p>
+</div>
+
+<div class="admin-card">
+  <h2>Thông báo Trang chủ</h2>
+  <p class="text-muted">Mỗi ô là một dòng ticker. Nên viết ngắn gọn để hiển thị đẹp trên desktop và mobile.</p>
+
+  <div id="announcementSuccess" class="message success" style="display:none;margin-top:1rem;"></div>
+  <div id="announcementError" class="message error" style="display:none;margin-top:1rem;"></div>
+
+  <form id="announcementForm" style="margin-top:1.25rem;">
+    <h3 style="margin-bottom:0.75rem;color:var(--admin-primary);">Giỗ Xuân và Giỗ Thu</h3>
+    <p class="text-muted" style="margin-bottom:1rem;">Các mốc này hiển thị cố định ở đầu ticker. Bạn có thể chỉnh tiêu đề, nhãn âm lịch và ngày dương lịch để countdown tự tính lại.</p>
+    <div class="memorial-grid">
+      <div class="memorial-card" data-memorial-card>
+        <h3>Giỗ Xuân</h3>
+        <p>Dùng cho mục đầu tiên trong thanh Thông báo.</p>
+        <div class="form-group">
+          <label for="xuanTitle">Tiêu đề hiển thị</label>
+          <input type="text" id="xuanTitle" value="{{ memorials.xuan.title }}" maxlength="80" data-memorial-input>
+        </div>
+        <div class="form-group">
+          <label for="xuanLunarLabel">Nhãn âm lịch</label>
+          <input type="text" id="xuanLunarLabel" value="{{ memorials.xuan.lunar_label }}" maxlength="80" placeholder="Ví dụ: 07/2 ÂL" data-memorial-input>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="xuanDate">Ngày dương lịch để countdown</label>
+          <input type="date" id="xuanDate" value="{{ memorials.xuan.date }}" data-memorial-input>
+        </div>
+      </div>
+
+      <div class="memorial-card" data-memorial-card>
+        <h3>Giỗ Thu</h3>
+        <p>Dùng cho mục thứ hai trong thanh Thông báo.</p>
+        <div class="form-group">
+          <label for="thuTitle">Tiêu đề hiển thị</label>
+          <input type="text" id="thuTitle" value="{{ memorials.thu.title }}" maxlength="80" data-memorial-input>
+        </div>
+        <div class="form-group">
+          <label for="thuLunarLabel">Nhãn âm lịch</label>
+          <input type="text" id="thuLunarLabel" value="{{ memorials.thu.lunar_label }}" maxlength="80" placeholder="Ví dụ: 03/7 ÂL" data-memorial-input>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="thuDate">Ngày dương lịch để countdown</label>
+          <input type="date" id="thuDate" value="{{ memorials.thu.date }}" data-memorial-input>
+        </div>
+      </div>
+    </div>
+
+    <div class="memorial-actions">
+      <div class="memorial-lock-note" id="memorialLockNote">Ngày giỗ đang được khóa. Bấm Update để chỉnh lại.</div>
+      <div class="form-actions" style="margin-top:0;">
+        <button type="button" class="btn btn-secondary" id="memorialEditBtn">Update</button>
+        <button type="button" class="btn btn-primary" id="memorialSaveBtn">Lưu</button>
+      </div>
+    </div>
+
+    <h3 style="margin:1.5rem 0 0.75rem;color:var(--admin-primary);">10 dòng thông báo tùy chỉnh</h3>
+    <div class="announcement-grid">
+      {% for line in announcement_slots %}
+      <div class="announcement-row">
+        <div class="announcement-index">Dòng {{ loop.index }}</div>
+        <div class="form-group" style="margin-bottom:0;">
+          <input
+            type="text"
+            class="announcement-input"
+            value="{{ line }}"
+            maxlength="180"
+            placeholder="Ví dụ: Họp mặt hậu duệ ngày 15/09/2026 tại Huế"
+          >
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="announcement-toolbar">
+      <div class="announcement-meta">
+        Đang có <strong id="activeAnnouncementCount">{{ active_count }}</strong> dòng hoạt động trên trang chủ.
+      </div>
+      <div class="form-actions" style="margin-top:0;">
+        <button type="button" class="btn btn-secondary" id="announcementClearBtn">Xóa trắng 10 dòng</button>
+        <button type="submit" class="btn btn-primary" id="announcementSaveBtn">Lưu thông báo</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="admin-card">
+  <h2>Preview Nội dung đang chạy</h2>
+  <p class="text-muted">Kiểm tra nhanh cả 2 mốc ngày giỗ và các dòng tùy chỉnh đang được đưa ra thanh ticker.</p>
+  <div class="memorial-preview-grid" id="memorialPreviewGrid">
+    <div class="memorial-preview-item">
+      <strong id="previewXuanTitle">{{ memorials.xuan.title }}</strong>
+      <span id="previewXuanMeta">{{ memorials.xuan.lunar_label }} — nhằm ngày {{ memorials.xuan.display_date }}</span>
+    </div>
+    <div class="memorial-preview-item">
+      <strong id="previewThuTitle">{{ memorials.thu.title }}</strong>
+      <span id="previewThuMeta">{{ memorials.thu.lunar_label }} — nhằm ngày {{ memorials.thu.display_date }}</span>
+    </div>
+  </div>
+  <div id="announcementPreview">
+    {% set active_lines = announcement_slots | select | list %}
+    {% if active_lines %}
+    <ol class="announcement-preview-list" id="announcementPreviewList">
+      {% for line in active_lines %}
+      <li>{{ line }}</li>
+      {% endfor %}
+    </ol>
+    <p class="announcement-preview-empty" id="announcementPreviewEmpty" style="display:none;">Chưa có thông báo tùy chỉnh nào.</p>
+    {% else %}
+    <ol class="announcement-preview-list" id="announcementPreviewList" style="display:none;"></ol>
+    <p class="announcement-preview-empty" id="announcementPreviewEmpty">Chưa có thông báo tùy chỉnh nào.</p>
+    {% endif %}
+  </div>
+  <div class="form-actions">
+    <a href="/" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">Mở trang chủ</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const form = document.getElementById('announcementForm');
+    const saveBtn = document.getElementById('announcementSaveBtn');
+    const clearBtn = document.getElementById('announcementClearBtn');
+    const successBox = document.getElementById('announcementSuccess');
+    const errorBox = document.getElementById('announcementError');
+    const countEl = document.getElementById('activeAnnouncementCount');
+    const previewList = document.getElementById('announcementPreviewList');
+    const previewEmpty = document.getElementById('announcementPreviewEmpty');
+    const previewXuanTitle = document.getElementById('previewXuanTitle');
+    const previewXuanMeta = document.getElementById('previewXuanMeta');
+    const previewThuTitle = document.getElementById('previewThuTitle');
+    const previewThuMeta = document.getElementById('previewThuMeta');
+    const memorialEditBtn = document.getElementById('memorialEditBtn');
+    const memorialSaveBtn = document.getElementById('memorialSaveBtn');
+    const memorialLockNote = document.getElementById('memorialLockNote');
+    const memorialInputs = Array.from(document.querySelectorAll('[data-memorial-input]'));
+    const memorialCards = Array.from(document.querySelectorAll('[data-memorial-card]'));
+    let memorialLocked = true;
+
+    function getInputs() {
+      return Array.from(document.querySelectorAll('.announcement-input'));
+    }
+
+    function getLines() {
+      return getInputs().map((input) => input.value.trim());
+    }
+
+    function getMemorials() {
+      return {
+        xuan: {
+          title: document.getElementById('xuanTitle').value.trim(),
+          lunar_label: document.getElementById('xuanLunarLabel').value.trim(),
+          date: document.getElementById('xuanDate').value
+        },
+        thu: {
+          title: document.getElementById('thuTitle').value.trim(),
+          lunar_label: document.getElementById('thuLunarLabel').value.trim(),
+          date: document.getElementById('thuDate').value
+        }
+      };
+    }
+
+    function formatDisplayDate(isoDate) {
+      if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
+        return isoDate || '';
+      }
+      const parts = isoDate.split('-');
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function setLines(lines) {
+      const normalized = Array.isArray(lines) ? lines : [];
+      getInputs().forEach((input, index) => {
+        input.value = normalized[index] || '';
+      });
+      renderPreview(normalized);
+    }
+
+    function setMemorials(memorials) {
+      const xuan = memorials && memorials.xuan ? memorials.xuan : {};
+      const thu = memorials && memorials.thu ? memorials.thu : {};
+
+      document.getElementById('xuanTitle').value = xuan.title || '';
+      document.getElementById('xuanLunarLabel').value = xuan.lunar_label || '';
+      document.getElementById('xuanDate').value = xuan.date || '';
+      document.getElementById('thuTitle').value = thu.title || '';
+      document.getElementById('thuLunarLabel').value = thu.lunar_label || '';
+      document.getElementById('thuDate').value = thu.date || '';
+
+      renderMemorialPreview(memorials);
+    }
+
+    function renderMemorialPreview(memorials) {
+      const xuan = memorials && memorials.xuan ? memorials.xuan : {};
+      const thu = memorials && memorials.thu ? memorials.thu : {};
+      const xuanDisplayDate = xuan.display_date || formatDisplayDate(xuan.date);
+      const thuDisplayDate = thu.display_date || formatDisplayDate(thu.date);
+
+      previewXuanTitle.textContent = xuan.title || 'GIỖ XUÂN';
+      previewXuanMeta.textContent = `${xuan.lunar_label || ''} — nhằm ngày ${xuanDisplayDate || ''}`.trim();
+      previewThuTitle.textContent = thu.title || 'GIỖ THU';
+      previewThuMeta.textContent = `${thu.lunar_label || ''} — nhằm ngày ${thuDisplayDate || ''}`.trim();
+    }
+
+    function setMemorialLocked(locked) {
+      memorialLocked = locked;
+      memorialInputs.forEach((input) => {
+        input.disabled = locked;
+      });
+      memorialCards.forEach((card) => {
+        card.classList.toggle('memorial-card--locked', locked);
+      });
+      memorialEditBtn.disabled = !locked;
+      memorialSaveBtn.disabled = locked;
+      memorialLockNote.textContent = locked
+        ? 'Ngày giỗ đang được khóa. Bấm Update để chỉnh lại.'
+        : 'Đang mở chỉnh sửa. Sau khi cập nhật xong, bấm Lưu để khóa lại.';
+    }
+
+    function renderPreview(lines) {
+      const active = (Array.isArray(lines) ? lines : []).filter(Boolean);
+      countEl.textContent = String(active.length);
+      previewList.innerHTML = '';
+
+      if (!active.length) {
+        previewList.style.display = 'none';
+        previewEmpty.style.display = '';
+        return;
+      }
+
+      active.forEach((line) => {
+        const li = document.createElement('li');
+        li.textContent = line;
+        previewList.appendChild(li);
+      });
+
+      previewList.style.display = '';
+      previewEmpty.style.display = 'none';
+    }
+
+    function showMessage(element, text) {
+      element.textContent = text;
+      element.style.display = '';
+    }
+
+    function hideMessages() {
+      successBox.style.display = 'none';
+      errorBox.style.display = 'none';
+    }
+
+    clearBtn.addEventListener('click', function() {
+      setLines([]);
+      hideMessages();
+    });
+
+    async function submitAnnouncementSettings(options) {
+      hideMessages();
+      const button = options && options.button ? options.button : saveBtn;
+      button.disabled = true;
+
+      try {
+        const response = await fetch('/admin/api/announcements', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            lines: getLines(),
+            memorials: getMemorials()
+          })
+        });
+
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.error || 'Không thể lưu thông báo');
+        }
+
+        setLines(payload.lines || []);
+        setMemorials(payload.memorials || {});
+        if (options && options.lockMemorials) {
+          setMemorialLocked(true);
+        }
+        showMessage(successBox, payload.message || 'Đã lưu thông báo');
+      } catch (error) {
+        showMessage(errorBox, error.message || 'Có lỗi xảy ra khi lưu');
+      } finally {
+        if (button === memorialSaveBtn) {
+          button.disabled = memorialLocked;
+        } else {
+          button.disabled = false;
+        }
+      }
+    }
+
+    memorialEditBtn.addEventListener('click', function() {
+      hideMessages();
+      setMemorialLocked(false);
+    });
+
+    memorialSaveBtn.addEventListener('click', function() {
+      submitAnnouncementSettings({
+        button: memorialSaveBtn,
+        lockMemorials: true
+      });
+    });
+
+    form.addEventListener('submit', async function(event) {
+      event.preventDefault();
+      await submitAnnouncementSettings({
+        button: saveBtn,
+        lockMemorials: true
+      });
+    });
+
+    setMemorialLocked(true);
+    renderMemorialPreview(getMemorials());
+    renderPreview(getLines());
+  })();
+</script>
+{% endblock %}

@@ -3447,7 +3447,7 @@ async function renderAlbums(albumsList) {
       document.getElementById('albumThemeInput').value = '';
       document.getElementById('albumCreatedByInput').value = '';
       document.getElementById('albumError').style.display = 'none';
-      showPasswordModal();
+      showAlbumPasswordModal();
     }
     
     function showUpdateAlbumModal(albumId) {
@@ -3461,7 +3461,7 @@ async function renderAlbums(albumsList) {
       document.getElementById('albumThemeInput').value = album.theme || '';
       document.getElementById('albumCreatedByInput').value = album.created_by || '';
       document.getElementById('albumError').style.display = 'none';
-      showPasswordModal();
+      showAlbumPasswordModal();
     }
     
     function showDeleteAlbumConfirm(albumId) {
@@ -3471,11 +3471,11 @@ async function renderAlbums(albumsList) {
       if (confirm(`Bạn có chắc chắn muốn xóa album "${album.name}"?`)) {
         pendingAction = 'delete';
         currentAlbumEditId = albumId;
-        showPasswordModal();
+        showAlbumPasswordModal();
       }
     }
     
-    function showPasswordModal() {
+    function showAlbumPasswordModal() {
       const modal = document.getElementById('passwordModal');
       const input = document.getElementById('passwordInput');
       const errorEl = document.getElementById('passwordError');
@@ -3492,7 +3492,7 @@ async function renderAlbums(albumsList) {
     // Hai body khác nhau (style.display vs classList.active) — chắc chắn phục vụ modal khác.
     // Giữ nguyên để không đổi runtime; cần hợp nhất/đổi tên khi dọn album-UI.
     // eslint-disable-next-line no-redeclare
-    function closePasswordModal() {
+    function closeAlbumPasswordModal() {
       const modal = document.getElementById('passwordModal');
       if (modal) {
         modal.classList.remove('active');
@@ -3501,11 +3501,11 @@ async function renderAlbums(albumsList) {
 
     function cancelAlbumAction() {
       closeAlbumModal();
-      closePasswordModal();
+      closeAlbumPasswordModal();
       resetAlbumState();
     }
     
-    async function handlePasswordSubmit() {
+    async function handleAlbumPasswordSubmit() {
       const input = document.getElementById('passwordInput');
       const errorEl = document.getElementById('passwordError');
       const password = input.value.trim();
@@ -3518,7 +3518,7 @@ async function renderAlbums(albumsList) {
       
       try {
         authenticatedPassword = password;
-        closePasswordModal();
+        closeAlbumPasswordModal();
         
         if (pendingAction === 'create') {
           showAlbumModal();
@@ -3572,7 +3572,7 @@ async function renderAlbums(albumsList) {
         errorEl.style.display = 'block';
         closeAlbumModal();
         resetAlbumState();
-        showPasswordModal();
+        showAlbumPasswordModal();
         return;
       }
       
@@ -3637,7 +3637,7 @@ async function renderAlbums(albumsList) {
             errorEl.style.display = 'block';
             closeAlbumModal();
             resetAlbumState();
-            showPasswordModal();
+            showAlbumPasswordModal();
           } else {
             errorEl.textContent = result.error || 'Có lỗi xảy ra';
             errorEl.style.display = 'block';
@@ -4323,6 +4323,58 @@ async function renderAlbums(albumsList) {
         // Setup click handlers cho TOC links
         setupTOCLinks();
       }
+
+      function getDetailsElementForHeadingTarget(target) {
+        if (!target || !target.tagName) return null;
+
+        if (target.tagName.toLowerCase() === 'details') {
+          return target;
+        }
+
+        let current = target.parentElement;
+        while (current) {
+          if (current.tagName && current.tagName.toLowerCase() === 'details') {
+            return current;
+          }
+          current = current.parentElement;
+        }
+
+        const next = target.nextElementSibling;
+        if (next && next.tagName && next.tagName.toLowerCase() === 'details') {
+          return next;
+        }
+
+        return null;
+      }
+
+      function expandDetailsAncestors(target) {
+        let current = getDetailsElementForHeadingTarget(target);
+
+        while (current) {
+          if (current.tagName && current.tagName.toLowerCase() === 'details') {
+            current.open = true;
+          }
+          current = current.parentElement;
+        }
+      }
+
+      function scrollToHeadingTarget(target, href) {
+        expandDetailsAncestors(target);
+
+        requestAnimationFrame(() => {
+          const navbarHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70;
+          const targetPosition = target.getBoundingClientRect().top + window.scrollY - navbarHeight - 20;
+
+          window.scrollTo({
+            top: targetPosition,
+            behavior: 'smooth'
+          });
+
+          if (href && window.history && window.history.replaceState) {
+            window.history.replaceState(null, '', href);
+          }
+        });
+      }
       
       // Setup click handlers cho TOC links
       function setupTOCLinks() {
@@ -4337,15 +4389,8 @@ async function renderAlbums(albumsList) {
             const target = document.getElementById(targetId);
             
             if (target) {
-              // Smooth scroll
-              const navbarHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 70;
-              const targetPosition = target.getBoundingClientRect().top + window.scrollY - navbarHeight - 20;
-              
-              window.scrollTo({
-                top: targetPosition,
-                behavior: 'smooth'
-              });
-              
+              scrollToHeadingTarget(target, href);
+               
               // Đóng mobile TOC nếu đang mở
               const tocSidebar = document.getElementById('tocSidebar');
               const tocToggle = document.getElementById('tocToggleMobile');
@@ -4355,6 +4400,17 @@ async function renderAlbums(albumsList) {
             }
           });
         });
+      }
+
+      function expandHashTargetOnLoad() {
+        if (!window.location.hash) return;
+
+        const targetId = decodeURIComponent(window.location.hash.substring(1));
+        const target = document.getElementById(targetId);
+
+        if (!target) return;
+
+        scrollToHeadingTarget(target, window.location.hash);
       }
       
       // IntersectionObserver để highlight active heading
@@ -4433,6 +4489,7 @@ async function renderAlbums(albumsList) {
       // Initialize on DOMContentLoaded
       document.addEventListener('DOMContentLoaded', function() {
         buildPostTOC();
+        expandHashTargetOnLoad();
         setupActiveTracking();
         
         // Mobile TOC toggle
@@ -4458,4 +4515,3 @@ async function renderAlbums(albumsList) {
         });
       });
     })();
-
