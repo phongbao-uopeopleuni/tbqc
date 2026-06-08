@@ -4298,9 +4298,11 @@
       /* Layout styles are defined above, this is just for animation */
     }
 
-    /* Reduce animations on mobile for performance */
+    /* Reduce only non-essential motion on mobile without breaking marquee timing */
     @media (max-width: 768px) {
-      * {
+      section,
+      section:nth-child(even),
+      .hero-content {
         animation-duration: 0.3s !important;
       }
     }
@@ -4330,7 +4332,7 @@
         0 4px 12px rgba(139, 0, 0, 0.2),
         0 0 20px rgba(139, 0, 0, 0.15),
         inset 0 0 30px rgba(255, 215, 0, 0.1);
-      animation: borderGlow 3s ease-in-out infinite;
+      animation: none;
     }
     
     @keyframes borderGlow {
@@ -4471,7 +4473,7 @@
         transparent 100%);
       border-radius: 2px;
       z-index: 0;
-      animation: decorativeGlow 3s ease-in-out infinite;
+      animation: none;
     }
     
     @keyframes decorativeGlow {

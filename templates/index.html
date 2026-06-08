@@ -160,9 +160,13 @@
       from { transform: translateX(0); }
       to   { transform: translateX(-50%); }
     }
+    @media (max-width: 768px) {
+      .news-ticker__track { animation-duration: 56s; }
+    }
     @media (max-width: 480px) {
       .news-ticker__badge { padding: 0 8px; font-size: 0.62rem; }
       .news-ticker { font-size: 0.75rem; }
+      .news-ticker__track { animation-duration: 68s; }
       :root { --ticker-height: 32px; }
     }
   </style>
