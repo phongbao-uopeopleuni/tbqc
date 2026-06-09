@@ -25,6 +25,20 @@ ENV/
 # Sau khi verify ~2 tuan, co the xoa folder nay hoac move khoi repo
 static/images/_duplicates_quarantine/
 
+# Uploaded media — lưu trên Railway Volume trong production, không thuộc source code.
+# Các pattern dưới đây ngăn uploads mới bị git track.
+# Để stop-track file cũ đã commit, chạy sau khi verify Volume ổn định:
+#   git rm --cached -r static/images/activity_* static/images/anh1 \
+#     "static/images/dọn dẹp vệ sinh mộ gia tộc" static/images/_thumbs
+static/images/activity_*
+static/images/anh1/
+static/images/dọn*/
+static/images/don-dep*/
+static/images/_thumbs/
+static/images/album_*/
+static/images/graves/
+static/images/personal/
+
 # Environment & Config files with sensitive data
 .env
 .env.*
