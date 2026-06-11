@@ -1113,22 +1113,22 @@
             const date = p.created_at ? formatDate(p.created_at) : '';
             const summary = p.summary || p.description || '';
             // Get thumbnail - check thumbnail field first, then first image from images array
-            let thumbnail = p.thumbnail;
+            let thumbnail = p.thumbnail_url || p.thumbnail;
             if (!thumbnail && p.images && Array.isArray(p.images) && p.images.length > 0) {
               // If images is array of strings, use first one
               thumbnail = typeof p.images[0] === 'string' ? p.images[0] : p.images[0];
             }
             // Handle thumbnail path - remove /static/images/ prefix if present
-            if (thumbnail) {
+            if (thumbnail && !thumbnail.startsWith('/')) {
               thumbnail = thumbnail.replace(/^\/static\/images\//, '').replace(/^static\/images\//, '');
             }
-            const thumbnailUrl = thumbnail ? `/static/images/${thumbnail}` : null;
+            const thumbnailUrl = thumbnail ? (thumbnail.startsWith('/') ? thumbnail : `/static/images/${thumbnail}`) : null;
             return `
               <a href="/activities/${p.id || p.activity_id || ''}" class="activity-card">
                 <div class="card">
                   ${thumbnailUrl ? `
                     <div class="activity-thumbnail">
-                      <img src="${escapeHtml(thumbnailUrl)}" alt="${escapeHtml(p.title || 'Ảnh minh họa')}" 
+                      <img src="${escapeHtml(thumbnailUrl)}" alt="${escapeHtml(p.title || 'Ảnh minh họa')}" loading="lazy"
                            onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'padding: 20px; text-align: center; color: #999;\\'>Ảnh minh họa</div>';">
                     </div>
                   ` : `
@@ -1220,34 +1220,14 @@
         return;
       }
       
-      // Load thumbnail cho mỗi album (chỉ lấy ảnh đầu tiên)
-      const albumsWithThumbnails = await Promise.all(albumsList.map(async (album) => {
-        try {
-          const response = await fetch(`/api/albums/${album.album_id}/images`);
-          const data = await response.json();
-          if (data.success && data.images && data.images.length > 0) {
-            album.thumbnail = data.images[0].url; // Lấy ảnh đầu tiên làm thumbnail
-            album.imageCount = data.images.length;
-          } else {
-            album.thumbnail = null;
-            album.imageCount = 0;
-          }
-        } catch (error) {
-          console.error(`Error loading thumbnail for album ${album.album_id}:`, error);
-          album.thumbnail = null;
-          album.imageCount = 0;
-        }
-        return album;
-      }));
-      
-      const html = albumsWithThumbnails.map(album => {
+      const html = albumsList.map(album => {
         const isSelected = selectedAlbumId === album.album_id;
         const dateStr = album.created_at ? formatDate(album.created_at) : '';
         return `
           <div class="album-card ${isSelected ? 'selected' : ''}" data-album-id="${album.album_id}" onclick="selectAlbum(${album.album_id})">
             <div class="album-card-thumbnail">
-              ${album.thumbnail ? `
-                <img src="${escapeHtml(album.thumbnail)}" alt="${escapeHtml(album.name || 'Album')}" loading="lazy">
+              ${album.thumbnail_url ? `
+                <img src="${escapeHtml(album.thumbnail_url)}" alt="${escapeHtml(album.name || 'Album')}" loading="lazy">
               ` : `
                 <div class="album-card-thumbnail-placeholder">Ảnh</div>
               `}
@@ -1262,9 +1242,9 @@
               </div>
               <div class="album-card-footer">
                 <div class="album-meta">
-                  ${album.imageCount > 0 ? `
+                  ${album.image_count > 0 ? `
                     <div class="album-image-count">
-                      ${album.imageCount} ảnh
+                      ${album.image_count} ảnh
                     </div>
                   ` : ''}
                   ${dateStr ? `
@@ -1615,6 +1595,7 @@
             galleryImages = data.images.map(img => ({
               image_id: img.image_id,
               url: img.url,
+              thumbnail_url: img.thumbnail_url || img.url,
               filename: img.filename
             }));
             renderGallery(galleryImages);
@@ -1676,7 +1657,7 @@
                   aria-label="Chọn ảnh ${index + 1}"
                 >
               ` : ''}
-              <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.filename)}" loading="lazy"
+              <img src="${escapeHtml(image.thumbnail_url || image.url)}" alt="${escapeHtml(image.filename)}" loading="lazy"
                    onerror="this.parentElement.style.display='none';">
               <div class="gallery-item-overlay">
                 <span class="gallery-item-number">${index + 1}</span>

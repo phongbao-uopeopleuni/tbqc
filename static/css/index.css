@@ -524,6 +524,11 @@
       text-align: center;
       margin: 40px 0;
     }
+
+    .about-image picture,
+    .hero-image-container picture {
+      display: block;
+    }
     
     @media (max-width: 768px) {
       .about-image {

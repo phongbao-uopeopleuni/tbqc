@@ -2868,6 +2868,9 @@
 
     // Helper function để lấy thumbnail
     function getThumbnail(activity) {
+      if (activity.thumbnail_url) {
+        return activity.thumbnail_url;
+      }
       if (activity.thumbnail) {
         return activity.thumbnail.startsWith('/') ? activity.thumbnail : `/static/images/${activity.thumbnail}`;
       }
@@ -3325,34 +3328,14 @@ async function renderAlbums(albumsList) {
         return;
       }
       
-      // Load thumbnail cho mỗi album (chỉ lấy ảnh đầu tiên)
-      const albumsWithThumbnails = await Promise.all(albumsList.map(async (album) => {
-        try {
-          const response = await fetch(`/api/albums/${album.album_id}/images`);
-          const data = await response.json();
-          if (data.success && data.images && data.images.length > 0) {
-            album.thumbnail = data.images[0].url; // Lấy ảnh đầu tiên làm thumbnail
-            album.imageCount = data.images.length;
-          } else {
-            album.thumbnail = null;
-            album.imageCount = 0;
-          }
-        } catch (error) {
-          console.error(`Error loading thumbnail for album ${album.album_id}:`, error);
-          album.thumbnail = null;
-          album.imageCount = 0;
-        }
-        return album;
-      }));
-      
-      const html = albumsWithThumbnails.map(album => {
+      const html = albumsList.map(album => {
         const isSelected = selectedAlbumId === album.album_id;
         const dateStr = album.created_at ? formatDate(album.created_at) : '';
         return `
           <div class="album-card ${isSelected ? 'selected' : ''}" data-album-id="${album.album_id}">
             <div class="album-card-thumbnail">
-              ${album.thumbnail ? `
-                <img src="${escapeHtml(album.thumbnail)}" alt="${escapeHtml(album.name || 'Album')}" loading="lazy">
+              ${album.thumbnail_url ? `
+                <img src="${escapeHtml(album.thumbnail_url)}" alt="${escapeHtml(album.name || 'Album')}" loading="lazy">
               ` : `
                 <div class="album-card-thumbnail-placeholder">📷</div>
               `}
@@ -3367,9 +3350,9 @@ async function renderAlbums(albumsList) {
               </div>
               <div class="album-card-footer">
                 <div class="album-meta">
-                  ${album.imageCount > 0 ? `
+                  ${album.image_count > 0 ? `
                     <div class="album-image-count">
-                      📷 ${album.imageCount}
+                      📷 ${album.image_count}
                     </div>
                   ` : ''}
                   ${dateStr ? `
@@ -3695,6 +3678,7 @@ async function renderAlbums(albumsList) {
           if (data.success && data.images && data.images.length > 0) {
             galleryImages = data.images.map(img => ({
               url: img.url,
+              thumbnail_url: img.thumbnail_url || img.url,
               filename: img.filename
             }));
             renderGallery(galleryImages, { mode: 'album', container: galleryContainer });
@@ -3752,6 +3736,7 @@ async function renderAlbums(albumsList) {
         if (imagesData.success && imagesData.images && imagesData.images.length > 0) {
           galleryImages = imagesData.images.map(img => ({
             url: img.url,
+            thumbnail_url: img.thumbnail_url || img.url,
             filename: img.filename,
             albumName: fallbackAlbum.name,
             albumTheme: fallbackAlbum.theme
@@ -3813,7 +3798,7 @@ async function renderAlbums(albumsList) {
         <div class="gallery-grid">
           ${images.map((image, index) => `
             <div class="gallery-item" data-gallery-index="${index}">
-              <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.filename)}" loading="lazy" class="${imageClass}">
+              <img src="${escapeHtml(image.thumbnail_url || image.url)}" alt="${escapeHtml(image.filename)}" loading="lazy" class="${imageClass}">
               ${showOverlay ? `
                 <div class="gallery-item-overlay">
                   <span class="gallery-item-number">${index + 1}</span>
