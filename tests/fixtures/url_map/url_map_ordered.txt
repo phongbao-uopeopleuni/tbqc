@@ -72,6 +72,9 @@ POST /api/admin/sync-tbqc-accounts -> admin.api_sync_tbqc_accounts
 GET|POST /admin/login -> admin_login
 GET /admin/logout -> admin_logout
 GET /admin/dashboard -> admin_dashboard
+GET /admin/announcements -> admin_announcements_page
+GET /admin/api/announcements -> admin_announcements_get
+POST /admin/api/announcements -> admin_announcements_save
 GET /admin/activities -> admin_activities_page
 GET /api/activities/can-post -> api_activities_can_post
 GET /admin/requests -> admin_requests
