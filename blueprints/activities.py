@@ -11,9 +11,11 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 from flask_login import current_user
 
 from utils.html_sanitize import sanitize_activity_html
+from utils.image_thumbnails import get_thumbnail_url, image_reference_exists, normalize_public_image_url
 
 logger = logging.getLogger(__name__)
 activities_bp = Blueprint('activities', __name__)
+DEFAULT_ACTIVITY_FALLBACK_URL = '/static/images/6-trong-nha-tho.webp'
 
 
 # ─────────────────────────────────────────────
@@ -42,6 +44,20 @@ def _activity_to_json(row):
                 images = img_val
         except Exception:
             images = []
+    raw_thumbnail = row.get('thumbnail')
+    fallback_image = next((img for img in images if image_reference_exists(img)), None)
+    thumbnail_url = None
+
+    if raw_thumbnail and image_reference_exists(raw_thumbnail):
+        thumbnail_url = get_thumbnail_url(raw_thumbnail, create_if_missing=True, fallback_to_original=True)
+    elif fallback_image:
+        thumbnail_url = get_thumbnail_url(fallback_image, create_if_missing=True, fallback_to_original=True)
+
+    if not thumbnail_url and (raw_thumbnail or images):
+        thumbnail_url = DEFAULT_ACTIVITY_FALLBACK_URL
+    elif not thumbnail_url:
+        thumbnail_url = normalize_public_image_url(raw_thumbnail) or normalize_public_image_url(fallback_image)
+
     return {
         'id': row.get('activity_id'),
         'title': row.get('title'),
@@ -49,7 +65,8 @@ def _activity_to_json(row):
         'category': row.get('category'),
         'content': row.get('content'),
         'status': row.get('status'),
-        'thumbnail': row.get('thumbnail'),
+        'thumbnail': raw_thumbnail,
+        'thumbnail_url': thumbnail_url,
         'images': images,
         'created_at': row['created_at'].isoformat() if row.get('created_at') else None,
         'updated_at': row['updated_at'].isoformat() if row.get('updated_at') else None,

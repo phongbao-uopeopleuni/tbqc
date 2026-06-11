@@ -20,9 +20,56 @@ from services.gallery_helpers import (
     ensure_album_images_table,
     _delete_album_image_file,
 )
+from utils.image_thumbnails import ensure_thumbnail_for_image, get_thumbnail_url
 
 logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _hydrate_album_image_thumbnail(cursor, image_row):
+    if not image_row:
+        return image_row
+
+    thumb_url = get_thumbnail_url(
+        image_row.get("thumbnail_url") or image_row.get("url"),
+        source_path=image_row.get("thumbnail_filepath") or image_row.get("filepath"),
+        create_if_missing=not image_row.get("thumbnail_url"),
+    )
+    if thumb_url and thumb_url != image_row.get("thumbnail_url"):
+        image_row["thumbnail_url"] = thumb_url
+        if image_row.get("image_id") and thumb_url.startswith("/static/images/"):
+            _, thumb_filepath = ensure_thumbnail_for_image(image_row.get("url"), source_path=image_row.get("filepath"))
+            if thumb_filepath:
+                image_row["thumbnail_filepath"] = thumb_filepath
+                try:
+                    cursor.execute(
+                        """
+                        UPDATE album_images
+                        SET thumbnail_url = %s, thumbnail_filepath = %s
+                        WHERE image_id = %s
+                        """,
+                        (thumb_url, thumb_filepath, image_row["image_id"]),
+                    )
+                except Exception as exc:
+                    logger.warning("Could not persist album thumbnail metadata for image %s: %s", image_row.get("image_id"), exc)
+    elif not image_row.get("thumbnail_url"):
+        image_row["thumbnail_url"] = image_row.get("url")
+
+    return image_row
+
+
+def _load_album_cover(cursor, album_id):
+    cursor.execute(
+        """
+        SELECT image_id, filepath, url, thumbnail_filepath, thumbnail_url
+        FROM album_images
+        WHERE album_id = %s
+        ORDER BY uploaded_at DESC
+        LIMIT 1
+        """,
+        (album_id,),
+    )
+    return cursor.fetchone()
 
 
 def get_geoapify_api_key():
@@ -400,6 +447,8 @@ def upload_image():
             return (jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401)
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        ensure_album_images_table(cursor)
         cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
         album = cursor.fetchone()
         cursor.close()
@@ -460,15 +509,29 @@ def upload_image():
             image_url = f'/static/images/album_{album_id}/{safe_filename}'
         else:
             image_url = f'/static/images/{safe_filename}'
+        thumbnail_url, thumbnail_filepath = ensure_thumbnail_for_image(image_url, source_path=filepath)
         if album_id:
             conn = get_db_connection()
             cursor = conn.cursor(dictionary=True)
-            cursor.execute('\n                INSERT INTO album_images (album_id, filename, filepath, url)\n                VALUES (%s, %s, %s, %s)\n            ', (album_id, safe_filename, filepath, image_url))
+            ensure_album_images_table(cursor)
+            cursor.execute(
+                '\n                INSERT INTO album_images (album_id, filename, filepath, url, thumbnail_filepath, thumbnail_url)\n                VALUES (%s, %s, %s, %s, %s, %s)\n            ',
+                (album_id, safe_filename, filepath, image_url, thumbnail_filepath, thumbnail_url),
+            )
             conn.commit()
             image_id = cursor.lastrowid
             cursor.close()
             conn.close()
-        return jsonify({'success': True, 'url': image_url, 'filename': safe_filename, 'filepath': filepath, 'images_dir': images_dir, 'album_id': album_id if album_id else None})
+        return jsonify({
+            'success': True,
+            'url': image_url,
+            'thumbnail_url': thumbnail_url or image_url,
+            'filename': safe_filename,
+            'filepath': filepath,
+            'thumbnail_filepath': thumbnail_filepath,
+            'images_dir': images_dir,
+            'album_id': album_id if album_id else None,
+        })
     except Exception as e:
         logger.error(f'Error uploading image: {e}')
         return (jsonify({'success': False, 'error': f'Lỗi khi upload ảnh: {str(e)}'}), 500)
@@ -653,25 +716,56 @@ def api_get_albums():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        ensure_album_images_table(cursor)
         conn.commit()
         if _is_gallery_authorized():
-            cursor.execute('''
-                SELECT album_id, name, theme, created_at, created_by, is_public
-                FROM albums
-                ORDER BY created_at DESC
-            ''')
+            cursor.execute(
+                '''
+                SELECT
+                    a.album_id,
+                    a.name,
+                    a.theme,
+                    a.created_at,
+                    a.created_by,
+                    a.is_public,
+                    COUNT(ai.image_id) AS image_count
+                FROM albums a
+                LEFT JOIN album_images ai ON ai.album_id = a.album_id
+                GROUP BY a.album_id, a.name, a.theme, a.created_at, a.created_by, a.is_public
+                ORDER BY a.created_at DESC
+                '''
+            )
         else:
-            cursor.execute('''
-                SELECT album_id, name, theme, created_at, created_by, is_public
-                FROM albums
-                WHERE is_public = TRUE
-                ORDER BY created_at DESC
-            ''')
+            cursor.execute(
+                '''
+                SELECT
+                    a.album_id,
+                    a.name,
+                    a.theme,
+                    a.created_at,
+                    a.created_by,
+                    a.is_public,
+                    COUNT(ai.image_id) AS image_count
+                FROM albums a
+                LEFT JOIN album_images ai ON ai.album_id = a.album_id
+                WHERE a.is_public = TRUE
+                GROUP BY a.album_id, a.name, a.theme, a.created_at, a.created_by, a.is_public
+                ORDER BY a.created_at DESC
+                '''
+            )
         albums = cursor.fetchall()
         for album in albums:
-            if album.get('created_at'):
-                if isinstance(album['created_at'], datetime):
-                    album['created_at'] = album['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if album.get('created_at') and isinstance(album['created_at'], datetime):
+                album['created_at'] = album['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            album['image_count'] = int(album.get('image_count') or 0)
+            album['thumbnail_url'] = None
+            if album['image_count'] > 0:
+                cover = _load_album_cover(cursor, album['album_id'])
+                if cover:
+                    _hydrate_album_image_thumbnail(cursor, cover)
+                    album['thumbnail_url'] = cover.get('thumbnail_url') or cover.get('url')
+        conn.commit()
         cursor.close()
         conn.close()
         return jsonify({'success': True, 'albums': albums})
@@ -750,6 +844,8 @@ def api_update_album(album_id):
             return (jsonify({'success': False, 'error': 'Mật khẩu không đúng'}), 401)
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        ensure_album_images_table(cursor)
         cursor.execute('SELECT album_id FROM albums WHERE album_id = %s', (album_id,))
         if not cursor.fetchone():
             cursor.close()
@@ -831,6 +927,8 @@ def api_get_album_images(album_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+        ensure_albums_table(cursor)
+        ensure_album_images_table(cursor)
         cursor.execute('SELECT album_id, is_public FROM albums WHERE album_id = %s', (album_id,))
         album = cursor.fetchone()
         if not album:
@@ -842,12 +940,16 @@ def api_get_album_images(album_id):
             cursor.close()
             conn.close()
             return (jsonify({'success': False, 'error': 'Không có quyền truy cập album này'}), 403)
-        cursor.execute('\n            SELECT image_id, album_id, filename, filepath, url, uploaded_at\n            FROM album_images\n            WHERE album_id = %s\n            ORDER BY uploaded_at DESC\n        ', (album_id,))
+        cursor.execute('\n            SELECT image_id, album_id, filename, filepath, url, thumbnail_filepath, thumbnail_url, uploaded_at\n            FROM album_images\n            WHERE album_id = %s\n            ORDER BY uploaded_at DESC\n        ', (album_id,))
         images = cursor.fetchall()
         for image in images:
+            _hydrate_album_image_thumbnail(cursor, image)
             if image.get('uploaded_at'):
                 if isinstance(image['uploaded_at'], datetime):
                     image['uploaded_at'] = image['uploaded_at'].strftime('%Y-%m-%d %H:%M:%S')
+            if not image.get('thumbnail_url'):
+                image['thumbnail_url'] = image.get('url')
+        conn.commit()
         cursor.close()
         conn.close()
         return jsonify({'success': True, 'images': images})
@@ -892,7 +994,7 @@ def api_delete_album_images(album_id):
         placeholders = ','.join(['%s'] * len(image_ids))
         cursor.execute(
             f'''
-                SELECT image_id, filepath
+                SELECT image_id, filepath, thumbnail_filepath
                 FROM album_images
                 WHERE album_id = %s AND image_id IN ({placeholders})
             ''',
@@ -914,7 +1016,7 @@ def api_delete_album_images(album_id):
         deleted_files = 0
         for image in images:
             try:
-                if _delete_album_image_file(image.get('filepath')):
+                if _delete_album_image_file(image.get('filepath'), image.get('thumbnail_filepath')):
                     deleted_files += 1
             except Exception as e:
                 logger.warning('Could not delete album image file %s: %s', image.get('filepath'), e)
