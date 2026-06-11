@@ -38,6 +38,7 @@ static/images/_thumbs/
 static/images/album_*/
 static/images/graves/
 static/images/personal/
+static/images/Gemini_Generated_Image_*.png
 
 # Environment & Config files with sensitive data
 .env
