@@ -8,6 +8,9 @@
 
 ## [Unreleased]
 
+### Removed
+- Xoa cau hinh env mau va tai lieu van hanh con sot lai cua Facebook API vi project khong con su dung tich hop nay.
+
 ### Changed (UI/UX — 2026-05-29)
 - Tách toàn bộ inline `<style>` (~540 dòng) trong `members.html` ra file riêng `static/css/members.css`; chuẩn hoá hardcoded hex colors về CSS custom properties từ `tokens.css`.
 - Thêm `.skip-link` vào `components.css` (shared toàn site) — trước đây chỉ có ở `index.css`.
@@ -77,7 +80,7 @@
 - `scripts/backup_database.py`: fallback Python exporter khong con dump view nhu table; restore drill local pass va an toan hon.
 
 ### Removed
-- Bang `facebook_tokens` (migration note `docs/refactor/migrations/2026-05-20-drop-facebook-tokens.md`) - dead table, 0 code reference; app da dung `FB_PAGE_ID`/`FB_ACCESS_TOKEN` env var.
+- Bang `facebook_tokens` (migration note `docs/refactor/migrations/2026-05-20-drop-facebook-tokens.md`) - dead table, 0 code reference.
 
 ---
 

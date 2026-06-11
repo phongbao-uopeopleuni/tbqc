@@ -133,7 +133,6 @@ Biến quan trọng khác:
 - `ALBUM_PASSWORD`
 - `GRAVE_IMAGE_DELETE_PASSWORD`
 - `GEOAPIFY_API_KEY`
-- `FB_PAGE_ID`, `FB_ACCESS_TOKEN`
 - `COOKIE_DOMAIN`
 - `CORS_ALLOWED_ORIGINS`
 - `RAILWAY_VOLUME_MOUNT_PATH`
@@ -240,7 +239,7 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120
 ### Quarterly
 
 - Rotate `ADMIN_PASSWORD`, `BACKUP_PASSWORD`, `MEMBERS_PASSWORD`.
-- Kiểm tra lại API key Geoapify/Facebook nếu dùng.
+- Kiểm tra lại API key Geoapify nếu dùng.
 - Chạy script kiểm tra secret:
 
 ```bash

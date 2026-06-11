@@ -35,7 +35,7 @@
 ### Hang quy
 
 - [ ] Rotate `ADMIN_PASSWORD`, `BACKUP_PASSWORD`, `MEMBERS_PASSWORD`
-- [ ] Kiem tra API key Geoapify/Facebook neu con dung
+- [ ] Kiem tra API key Geoapify neu con dung
 - [ ] Chay `python scripts/verify_no_secret_files_tracked.py`
 - [ ] Review `docs/qa/project-audit.md` neu boundary he thong thay doi lon
 - [ ] Review `docs/operations/incident-log.md` va dong cac muc da giai quyet xong
