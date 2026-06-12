@@ -188,8 +188,9 @@
 </head>
 <body class="has-mobile-contact-bar">
   <!-- Navbar -->
-  <nav class="navbar">
-    <button class="navbar-toggle" onclick="toggleMenu()">☰</button>
+  <nav class="navbar" aria-label="Điều hướng chính">
+    <button class="navbar-toggle" onclick="toggleNavbar()" aria-label="Mở menu điều hướng" aria-expanded="false">☰</button>
+    <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
@@ -463,25 +464,7 @@
     </div>
   </main>
 
-  <script>
-    // Toggle menu for mobile
-    function toggleMenu() {
-      const menu = document.getElementById('navbarMenu');
-      menu.classList.toggle('active');
-    }
-
-    // Close menu when clicking outside
-    document.addEventListener('click', function(event) {
-      const navbar = document.querySelector('.navbar');
-      const menu = document.getElementById('navbarMenu');
-      const toggle = document.querySelector('.navbar-toggle');
-      
-      if (menu.classList.contains('active') && 
-          !navbar.contains(event.target)) {
-        menu.classList.remove('active');
-      }
-    });
-  </script>
+  <script src="/static/js/common.js"></script>
 
   <!-- Floating Zalo Button -->
   {% if public_zalo_url %}

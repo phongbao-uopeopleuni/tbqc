@@ -14,6 +14,11 @@ function toggleNavbar() {
   }
 }
 
+// Backward-compatible alias for older templates.
+function toggleMenu() {
+  toggleNavbar();
+}
+
 // Close mobile menu when clicking outside
 document.addEventListener('click', function(event) {
   const navbar = document.querySelector('.navbar');
@@ -40,7 +45,7 @@ function setActiveMenuItem() {
     item.classList.remove('active');
     const href = item.getAttribute('href');
     
-    if (currentPath === '/' && href === '#home') {
+    if (currentPath === '/' && (href === '#home' || href === '/')) {
       item.classList.add('active');
     } else if (currentPath.startsWith('/activities') && href === '/activities') {
       item.classList.add('active');
@@ -49,6 +54,10 @@ function setActiveMenuItem() {
     } else if (currentPath === '/login' && href === '/login') {
       item.classList.add('active');
     } else if (currentPath.startsWith('/genealogy') && href === '/genealogy') {
+      item.classList.add('active');
+    } else if (currentPath.startsWith('/contact') && href === '/contact') {
+      item.classList.add('active');
+    } else if (currentPath.startsWith('/documents') && href === '/documents') {
       item.classList.add('active');
     }
   });

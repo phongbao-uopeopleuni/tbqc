@@ -139,9 +139,9 @@
       height: var(--navbar-height);
       background: #111827;
       color: white;
-      padding: 0 var(--space-4);
+      padding: 0 clamp(16px, 2.8vw, 32px);
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       z-index: 1000;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -149,7 +149,18 @@
       min-width: 0;
     }
 
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      margin-right: clamp(12px, 2vw, 28px);
+      min-width: 0;
+      flex-shrink: 0;
+    }
+
     .navbar-logo {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
       font-size: clamp(14px, 4vw, 18px);
       font-weight: 700;
       color: #FFD700;
@@ -163,11 +174,12 @@
 
     .navbar-menu {
       display: flex;
-      gap: 15px;
+      gap: clamp(4px, 0.9vw, 14px);
       list-style: none;
       align-items: center;
       flex-wrap: nowrap;
       overflow: visible;
+      margin-left: auto;
     }
 
     .navbar-menu li {
@@ -180,7 +192,7 @@
       font-size: clamp(14px, 1.5vw, 16px);
       font-weight: 500;
       transition: color 0.3s;
-      padding: 5px 8px;
+      padding: 10px 14px;
       border-radius: 4px;
       white-space: nowrap;
     }
@@ -205,7 +217,7 @@
 
     @media (max-width: 768px) {
       .navbar {
-        padding: 0 var(--space-2);
+        padding: 0 var(--space-3);
       }
 
       .navbar-menu {
@@ -243,7 +255,9 @@
       }
 
       .navbar-toggle {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
     }
 
@@ -3552,8 +3566,8 @@
       .scroll-to-top {
         width: 44px;
         height: 44px;
-        bottom: 20px;
-        right: 20px;
+        bottom: calc(102px + env(safe-area-inset-bottom, 0px));
+        right: 16px;
         font-size: 20px;
       }
     }
@@ -5026,20 +5040,21 @@
     @media (min-width: 769px) {
       .mobile-contact-bar {
         position: fixed;
-        right: 24px;
+        right: 20px;
         bottom: 24px;
         z-index: 1200;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
+        align-items: flex-end;
       }
 
       .mobile-contact-bar__link {
         display: flex;
         align-items: center;
         justify-content: center;
-        min-width: 130px;
-        padding: 12px 20px;
+        min-width: 116px;
+        padding: 11px 18px;
         border-radius: 999px;
         color: #fff;
         font-size: 14px;
@@ -5053,6 +5068,22 @@
         transform: translateY(-2px);
         box-shadow: 0 10px 24px rgba(15, 23, 42, 0.3);
         color: #fff;
+      }
+
+      body.has-mobile-contact-bar .scroll-to-top {
+        right: 156px;
+        bottom: 24px;
+      }
+    }
+
+    @media (min-width: 769px) and (max-width: 1100px) {
+      .mobile-contact-bar__link {
+        min-width: 108px;
+        padding: 10px 16px;
+      }
+
+      body.has-mobile-contact-bar .scroll-to-top {
+        right: 144px;
       }
     }
 

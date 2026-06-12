@@ -96,35 +96,6 @@
       transform: scale(1.05);
     }
     
-    /* Fix navbar text overflow */
-    .navbar {
-      overflow: visible !important;
-    }
-    
-    .navbar-logo {
-      white-space: nowrap;
-      overflow: visible;
-      text-overflow: clip;
-      max-width: none;
-      flex-shrink: 0;
-    }
-    
-    .navbar-menu {
-      flex-wrap: nowrap;
-      overflow: visible;
-    }
-    
-    .navbar-menu li {
-      white-space: nowrap;
-      overflow: visible;
-    }
-    
-    .navbar-menu a {
-      white-space: nowrap;
-      overflow: visible;
-      text-overflow: clip;
-    }
-    
     .activities-actions {
       display: flex;
       justify-content: flex-end;
@@ -150,19 +121,6 @@
       .activities-actions .btn {
         width: 100%;
         justify-content: center;
-      }
-      
-      .navbar-logo {
-        font-size: var(--font-size-lg);
-      }
-
-      .navbar-menu {
-        gap: 15px;
-      }
-
-      .navbar-menu a {
-        font-size: var(--font-size-sm);
-        padding: 5px 8px;
       }
     }
     
@@ -902,6 +860,7 @@
   <a href="#main-content" class="skip-link">Bỏ qua đến nội dung chính</a>
   <nav class="navbar" aria-label="Điều hướng chính">
     <button class="navbar-toggle" onclick="toggleNavbar()" aria-label="Mở menu điều hướng" aria-expanded="false">☰</button>
+    <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
