@@ -4,7 +4,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="description" content="Theo dõi các hoạt động, bài viết và album ảnh mới của Phòng Tuy Biên Quận Công và dòng họ Nguyễn Phước Tộc.">
   <title>Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% include 'partials/_site_schema.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -895,17 +898,16 @@
       });
     </script>
 </head>
-<body>
+<body class="has-mobile-contact-bar">
   <a href="#main-content" class="skip-link">Bỏ qua đến nội dung chính</a>
   <nav class="navbar" aria-label="Điều hướng chính">
     <button class="navbar-toggle" onclick="toggleNavbar()" aria-label="Mở menu điều hướng" aria-expanded="false">☰</button>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
-      <li style="display: none;"><a href="/activities" class="active">Hoạt động</a></li>
+      <li><a href="/activities" class="active">Hoạt động</a></li>
       <li><a href="/members">Thành viên</a></li>
       <li><a href="/contact">Liên hệ</a></li>
-      <li><a href="/admin/login">Admin</a></li>
     </ul>
   </nav>
 
@@ -1962,6 +1964,9 @@
   </script>
   
   <!-- Floating Zalo Button -->
-  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  {% if public_zalo_url %}
+    <a href="{{ public_zalo_url }}" target="_blank" rel="noopener noreferrer" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  {% endif %}
+  {% include 'partials/_mobile_contact_bar.html' %}
 </body>
 </html>

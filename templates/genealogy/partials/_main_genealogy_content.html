@@ -6,25 +6,57 @@
     </div>
 
     <div class="genealogy-layout">
+      <section class="card genealogy-mobile-intro" aria-labelledby="genealogyMobileIntroHeading">
+        <div class="genealogy-mobile-intro__header">
+          <h2 id="genealogyMobileIntroHeading">Tra cứu gia phả dễ hơn trên điện thoại</h2>
+          <p>Ưu tiên thao tác đơn giản trước. Các chức năng kỹ thuật vẫn có đủ trong mục tùy chọn nâng cao.</p>
+        </div>
+        <div class="genealogy-mobile-intro__actions">
+          <a href="#searchInput" class="btn btn-primary">Tìm người trong gia phả</a>
+          <a href="#treeContainer" class="btn btn-secondary">Xem cây gia phả</a>
+          <a href="/contact" class="btn btn-secondary">Liên hệ hỗ trợ</a>
+        </div>
+        <div class="genealogy-mobile-intro__steps">
+          <strong>Cách tra cứu gia phả:</strong>
+          <ol>
+            <li>Nhập tên người cần tìm</li>
+            <li>Bấm “Tìm kiếm”</li>
+            <li>Bấm vào tên trong cây để xem thông tin chi tiết</li>
+          </ol>
+        </div>
+      </section>
+
       <!-- Phần trên: Cây tương tác -->
       <div class="tree-section">
         <div class="tree-panel">
           <div class="card tree-controls">
             <div class="tree-controls-row">
-              <label>
-                <span>Hiển thị đến đời:</span>
-                <select id="genFilter" class="select">
-                  <!-- Options will be populated dynamically by JavaScript -->
-                </select>
-              </label>
-              
-              <div class="input-group" style="flex: 1; min-width: 300px;">
-                <input type="text" class="input" id="searchInput" placeholder="Vui lòng nhập tên cần tìm kiếm">
+              <div class="tree-controls-primary">
+                <div class="input-group tree-controls-search">
+                  <label class="sr-only" for="searchInput">Tìm người trong gia phả</label>
+                  <input type="text" class="input" id="searchInput" placeholder="Vui lòng nhập tên cần tìm kiếm">
+                </div>
+                <button id="searchBtn" class="btn btn-primary">Tìm kiếm</button>
+                <a href="/contact" class="btn btn-secondary tree-help-btn">Liên hệ hỗ trợ</a>
               </div>
-              <button id="searchBtn" class="btn btn-primary">Tìm kiếm</button>
-              <button id="syncBtn" class="btn btn-secondary" title="Đồng bộ / làm mới từ database mới nhất (trang Thành viên)">Đồng bộ</button>
-              <button id="updateInfoBtn" class="btn btn-secondary" title="Cập nhật thông tin hôn phối và tổ tiên">Cập nhật thông tin</button>
-              <button id="exportPdfBtn" class="btn btn-secondary" title="Xuất Family Tree ra file PDF">Xuất PDF</button>
+              <details class="mobile-advanced-controls" id="genealogyAdvancedControls">
+                <summary>Tùy chọn nâng cao</summary>
+                <div class="mobile-advanced-controls__body">
+                  <label>
+                    <span>Hiển thị đến đời:</span>
+                    <select id="genFilter" class="select">
+                      <!-- Options will be populated dynamically by JavaScript -->
+                    </select>
+                  </label>
+                  <div class="mobile-advanced-controls__buttons">
+                    <button id="syncBtn" class="btn btn-secondary" title="Đồng bộ / làm mới từ database mới nhất (trang Thành viên)">Đồng bộ</button>
+                    <button id="updateInfoBtn" class="btn btn-secondary" title="Cập nhật thông tin hôn phối và tổ tiên">Cập nhật thông tin</button>
+                    <button id="exportPdfBtn" class="btn btn-secondary" title="Xuất Family Tree ra file PDF">Xuất PDF</button>
+                    <a href="#generationTabs" class="btn btn-secondary">Thống kê</a>
+                    <a href="#graveSearchSection" class="btn btn-secondary">Tìm mộ phần</a>
+                  </div>
+                </div>
+              </details>
             </div>
             
             <!-- Search Results -->
@@ -32,15 +64,18 @@
           </div>
 
           <div class="tree-zoom-toolbar-wrap">
-            <div class="card lineage-card tree-zoom-toolbar-card">
-              <div class="tree-zoom-toolbar" role="toolbar" aria-label="Thu phóng và toàn màn hình cây gia phả">
-                <button type="button" id="zoomOutBtn" class="btn btn-secondary tree-zoom-btn-text" title="Thu nhỏ cây gia phả" onclick="if(typeof window.zoomOut === 'function') window.zoomOut();">Thu nhỏ</button>
-                <button type="button" id="resetZoomBtn" class="btn btn-secondary tree-zoom-btn-text" title="Đặt lại zoom mặc định" onclick="if(typeof window.resetZoom === 'function') window.resetZoom();">Đặt lại</button>
-                <button type="button" id="fitToViewBtn" class="btn btn-secondary tree-zoom-btn-text" title="Vừa khung — tự căn để xem toàn bộ cây" onclick="if(typeof window.fitTreeToView === 'function') window.fitTreeToView();">Vừa khung</button>
-                <button type="button" id="zoomInBtn" class="btn btn-secondary tree-zoom-btn-text" title="Phóng to cây gia phả" onclick="if(typeof window.zoomIn === 'function') window.zoomIn();">Phóng to</button>
-                <button type="button" id="fullscreenBtn" class="btn btn-secondary tree-zoom-btn-text" title="Xem toàn màn hình" onclick="toggleFullscreen()">Toàn màn hình</button>
+            <details class="card lineage-card tree-zoom-toolbar-card mobile-advanced-controls">
+              <summary>Điều khiển cây gia phả</summary>
+              <div class="mobile-advanced-controls__body">
+                <div class="tree-zoom-toolbar" role="toolbar" aria-label="Thu phóng và toàn màn hình cây gia phả">
+                  <button type="button" id="zoomOutBtn" class="btn btn-secondary tree-zoom-btn-text" title="Thu nhỏ cây gia phả" onclick="if(typeof window.zoomOut === 'function') window.zoomOut();">Thu nhỏ</button>
+                  <button type="button" id="resetZoomBtn" class="btn btn-secondary tree-zoom-btn-text" title="Đặt lại zoom mặc định" onclick="if(typeof window.resetZoom === 'function') window.resetZoom();">Đặt lại</button>
+                  <button type="button" id="fitToViewBtn" class="btn btn-secondary tree-zoom-btn-text" title="Vừa khung — tự căn để xem toàn bộ cây" onclick="if(typeof window.fitTreeToView === 'function') window.fitTreeToView();">Vừa khung</button>
+                  <button type="button" id="zoomInBtn" class="btn btn-secondary tree-zoom-btn-text" title="Phóng to cây gia phả" onclick="if(typeof window.zoomIn === 'function') window.zoomIn();">Phóng to</button>
+                  <button type="button" id="fullscreenBtn" class="btn btn-secondary tree-zoom-btn-text" title="Xem toàn màn hình" onclick="toggleFullscreen()">Toàn màn hình</button>
+                </div>
               </div>
-            </div>
+            </details>
           </div>
           
           <!-- Tree Container -->

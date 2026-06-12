@@ -7,7 +7,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="Liên hệ Phòng Tuy Biên Quận Công để bổ sung thông tin gia phả, nhận hỗ trợ tra cứu và gửi thông tin cập nhật cho dòng họ Nguyễn Phước Tộc.">
   <title>Liên hệ - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% include 'partials/_site_schema.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -157,21 +160,20 @@
       });
     </script>
 </head>
-<body>
+<body class="has-mobile-contact-bar">
   <nav class="navbar">
     <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
     <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
-      <li style="display: none;"><a href="/activities">Hoạt động</a></li>
+      <li><a href="/activities">Hoạt động</a></li>
       <li><a href="/members">Thành viên</a></li>
       <li><a href="/contact" class="active">Liên hệ</a></li>
-      <li><a href="/admin/login">Admin</a></li>
     </ul>
   </nav>
 
-  <div class="container contact-page">
+  <main class="container contact-page" id="main-content" role="main">
     <div class="page-header">
       <h1>Liên Hệ</h1>
       <p class="page-subtitle">Gửi yêu cầu hoặc thông tin cập nhật về gia phả</p>
@@ -212,12 +214,47 @@
         <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: var(--space-5); font-size: var(--font-size-base);">
           Bạn cũng có thể liên hệ trực tiếp với chúng tôi qua Facebook
         </p>
-        <a href="https://www.facebook.com/PhongTuyBienQuanCong" 
-           target="_blank" 
-           rel="noopener noreferrer"
-           style="display: inline-block; background: #1877f2; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: var(--font-size-lg); transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          Facebook Phòng Tuy Biên Quận Công
-        </a>
+        {% if public_facebook_url %}
+          <a href="{{ public_facebook_url }}"
+             target="_blank"
+             rel="noopener noreferrer"
+             style="display: inline-block; background: #1877f2; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: var(--font-size-lg); transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            Facebook Phòng Tuy Biên Quận Công
+          </a>
+        {% endif %}
+      </div>
+
+      <div class="card" style="margin-bottom: var(--space-6); padding: var(--space-6);">
+        <h2 style="font-size: var(--font-size-xl); color: var(--color-primary); margin-bottom: var(--space-3); text-align: center;">
+          Liên hệ nhanh
+        </h2>
+        <p style="text-align: center; color: var(--color-text-muted); margin-bottom: var(--space-5);">
+          Ưu tiên cách liên hệ dễ dùng nhất với cô/chú và bà con.
+        </p>
+        <div class="contact-actions-grid">
+          {% if public_phone_href %}
+            <a href="tel:{{ public_phone_href }}" class="contact-action-card contact-action-card--call">
+              <strong>Gọi điện</strong>
+              <span>{{ public_phone_display }}</span>
+            </a>
+          {% endif %}
+          {% if public_zalo_url %}
+            <a href="{{ public_zalo_url }}" target="_blank" rel="noopener noreferrer" class="contact-action-card contact-action-card--zalo">
+              <strong>Nhắn Zalo</strong>
+              <span>Tham gia nhóm hỗ trợ dòng họ</span>
+            </a>
+          {% endif %}
+          {% if public_facebook_url %}
+            <a href="{{ public_facebook_url }}" target="_blank" rel="noopener noreferrer" class="contact-action-card contact-action-card--facebook">
+              <strong>Nhắn Facebook</strong>
+              <span>Gửi câu hỏi hoặc thông tin cần bổ sung</span>
+            </a>
+          {% endif %}
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSfRKJ0tN2xu857J7EM1jFQhh7g2ckvDF4UKLR5aZudqqKqizg/viewform" target="_blank" rel="noopener noreferrer" class="contact-action-card contact-action-card--form">
+            <strong>Mở biểu mẫu gửi thông tin</strong>
+            <span>Mở Google Form ở tab riêng để điền dễ hơn trên điện thoại</span>
+          </a>
+        </div>
       </div>
       
       <!-- Google Form Section -->
@@ -230,18 +267,23 @@
             frameborder="0" 
             marginheight="0" 
             marginwidth="0"
+            loading="lazy"
+            title="Biểu mẫu liên hệ và bổ sung thông tin gia phả"
             style="display: block; border: none; min-height: 2045px;">
             Loading…
           </iframe>
         </div>
       </div>
     </div>
-  </div>
+  </main>
 
   <script src="/static/js/common.js">  </script>
   
   <!-- Floating Zalo Button -->
-  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  {% if public_zalo_url %}
+    <a href="{{ public_zalo_url }}" target="_blank" rel="noopener noreferrer" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  {% endif %}
+  {% include 'partials/_mobile_contact_bar.html' %}
   <script src="/static/js/device-detection.js"></script>
 </body>
 </html>

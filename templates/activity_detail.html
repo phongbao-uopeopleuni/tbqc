@@ -4,7 +4,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <meta name="description" content="{% if activity and activity.summary %}{{ activity.summary[:160] }}{% else %}Chi tiết hoạt động và bài viết của Phòng Tuy Biên Quận Công thuộc dòng họ Nguyễn Phước Tộc.{% endif %}">
   <title>{% if activity %}{{ activity.title }} - {% endif %}Hoạt động - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% include 'partials/_site_schema.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -204,16 +207,15 @@
       });
     </script>
 </head>
-<body>
+<body class="has-mobile-contact-bar">
   <nav class="navbar">
     <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
-      <li style="display: none;"><a href="/activities" class="active">Hoạt động</a></li>
+      <li><a href="/activities" class="active">Hoạt động</a></li>
       <li><a href="/members">Thành viên</a></li>
       <li><a href="/contact">Liên hệ</a></li>
-      <li><a href="/admin/login">Admin</a></li>
     </ul>
   </nav>
 
@@ -242,7 +244,7 @@
           <div class="article-content">
             {% if activity.thumbnail %}
               <div class="article-thumbnail">
-                <img src="{{ activity.thumbnail }}" alt="{{ activity.title }}" onclick="window.open(this.src, '_blank')">
+                <img src="{{ activity.thumbnail }}" alt="{{ activity.title }}" loading="eager" onclick="window.open(this.src, '_blank')">
               </div>
             {% endif %}
             
@@ -257,7 +259,7 @@
                   {% for img_url in images_list %}
                     {% if img_url %}
                       <div class="image-item">
-                        <img src="{{ img_url }}" alt="Ảnh minh họa {{ loop.index }}" 
+                        <img src="{{ img_url }}" alt="Ảnh minh họa {{ loop.index }}" loading="lazy"
                              onerror="console.error('Failed to load image:', this.src); this.style.display='none';" 
                              onclick="window.open(this.src, '_blank')">
                       </div>
@@ -312,6 +314,7 @@
   </div>
   
   <script src="/static/js/common.js"></script>
+  {% include 'partials/_mobile_contact_bar.html' %}
 </body>
 </html>
 

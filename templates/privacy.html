@@ -7,7 +7,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="Chính sách bảo mật và nguyên tắc xử lý dữ liệu cá nhân trên website Phòng Tuy Biên Quận Công.">
   <title>Chính sách bảo mật - Gia Phả Tuy Biên Quận Công</title>
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% include 'partials/_site_schema.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -76,21 +79,20 @@
     }
   </style>
 </head>
-<body>
+<body class="has-mobile-contact-bar">
   <nav class="navbar">
     <button class="navbar-toggle" onclick="toggleNavbar()">☰</button>
     <div class="navbar-brand"><a href="/" class="navbar-logo">Gia Phả TBQC</a></div>
     <ul class="navbar-menu" id="navbarMenu">
       <li><a href="/">Trang chủ</a></li>
       <li><a href="/genealogy">Gia phả</a></li>
-      <li style="display: none;"><a href="/activities">Hoạt động</a></li>
+      <li><a href="/activities">Hoạt động</a></li>
       <li><a href="/members">Thành viên</a></li>
       <li><a href="/contact">Liên hệ</a></li>
-      <li><a href="/admin/login">Admin</a></li>
     </ul>
   </nav>
 
-  <div class="container privacy-page">
+  <main class="container privacy-page" id="main-content" role="main">
     <div class="page-header">
       <h1>Chính sách bảo mật</h1>
       <p class="page-updated"><strong>Nguyễn Phước Tộc — Phòng Tuy Biên Quậng Công</strong> — Cập nhật lần cuối: 24/5/2026 (v2)</p>
@@ -108,7 +110,10 @@
         </p>
         <p>
           <strong>Bên kiểm soát dữ liệu:</strong> Nguyễn Phước Tộc — Phòng Tuy Biên Quậng Công<br>
-          <strong>Kênh liên hệ:</strong> <a href=”https://www.facebook.com/PhongTuyBienQuanCong” target=”_blank” rel=”noopener noreferrer”>Facebook — Phòng Tuy Biên Quận Công</a>
+          <strong>Kênh liên hệ:</strong>
+          {% if public_facebook_url %}
+            <a href="{{ public_facebook_url }}" target="_blank" rel="noopener noreferrer">Facebook — Phòng Tuy Biên Quận Công</a>
+          {% endif %}
         </p>
 
         <h2>2. Phạm vi áp dụng</h2>
@@ -156,15 +161,20 @@
         <p>Mọi câu hỏi về chính sách bảo mật, yêu cầu thực hiện quyền của chủ thể dữ liệu, hoặc báo cáo sự cố liên quan đến <strong>Nguyễn Phước Tộc — Phòng Tuy Biên Quậng Công</strong>, vui lòng liên hệ qua:</p>
         <ul>
           <li><strong>Trang web liên hệ:</strong> <a href="/contact">Liên hệ</a></li>
-          <li><strong>Facebook:</strong> <a href="https://www.facebook.com/PhongTuyBienQuanCong" target="_blank" rel="noopener noreferrer">facebook.com/PhongTuyBienQuanCong</a></li>
+          {% if public_facebook_url %}
+            <li><strong>Facebook:</strong> <a href="{{ public_facebook_url }}" target="_blank" rel="noopener noreferrer">facebook.com/PhongTuyBienQuanCong</a></li>
+          {% endif %}
         </ul>
         <p>Chúng tôi sẽ phản hồi yêu cầu trong vòng <strong>30 ngày</strong> kể từ ngày nhận được (hoặc sớm hơn nếu có thể).</p>
       </div>
     </div>
-  </div>
+  </main>
 
   <script src="/static/js/common.js"></script>
-  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" rel="noopener noreferrer" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  {% if public_zalo_url %}
+    <a href="{{ public_zalo_url }}" target="_blank" class="floating-zalo-button" rel="noopener noreferrer" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  {% endif %}
+  {% include 'partials/_mobile_contact_bar.html' %}
   <script src="/static/js/device-detection.js"></script>
 </body>
 </html>

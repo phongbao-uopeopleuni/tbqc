@@ -7,7 +7,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="Tra cứu cây gia phả Phòng Tuy Biên Quận Công, tìm người trong gia phả và xem thông tin dòng họ Nguyễn Phước Tộc trên điện thoại hoặc máy tính.">
   <title>Gia Phả - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% include 'partials/_site_schema.html' %}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -38,19 +41,19 @@
     /* Mobile overrides */
     @media (max-width: 768px) {
       :root {
-        --font-size-base: 14px;
-        --font-size-sm: 12px;
-        --font-size-lg: 16px;
-        --font-size-xl: 18px;
-        --font-size-2xl: 20px;
-        --font-size-3xl: 24px;
-        --font-size-4xl: 28px;
+        --font-size-base: 16px;
+        --font-size-sm: 14px;
+        --font-size-lg: 18px;
+        --font-size-xl: 20px;
+        --font-size-2xl: 22px;
+        --font-size-3xl: 26px;
+        --font-size-4xl: 30px;
         
         --space-1: 3px;
         --space-2: 6px;
-        --space-3: 10px;
-        --space-4: 12px;
-        --space-5: 16px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
         --space-6: 20px;
         --space-8: 24px;
         --space-10: 32px;
@@ -91,7 +94,7 @@
 
     @media (max-width: 768px) {
       p, li {
-        line-height: 1.5;
+        line-height: 1.65;
       }
     }
 
@@ -165,6 +168,18 @@
       }
     }
 
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
     /* Page-specific styles */
     .genealogy-page {
       padding-top: var(--space-8);
@@ -211,6 +226,73 @@
       font-size: var(--font-size-lg);
       color: var(--color-text-muted);
       line-height: var(--line-height-relaxed);
+    }
+
+    .genealogy-mobile-intro {
+      display: none;
+    }
+
+    .tree-controls-primary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+      align-items: center;
+      width: 100%;
+    }
+
+    .tree-controls-search {
+      flex: 1 1 320px;
+      min-width: min(100%, 260px);
+      margin: 0;
+    }
+
+    .tree-help-btn {
+      display: none;
+    }
+
+    .mobile-advanced-controls {
+      width: 100%;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .mobile-advanced-controls > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: var(--space-3) var(--space-4);
+      font-weight: var(--font-weight-semibold);
+      color: var(--color-primary);
+    }
+
+    .mobile-advanced-controls > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .mobile-advanced-controls__body {
+      padding: 0 var(--space-4) var(--space-4);
+      display: grid;
+      gap: var(--space-3);
+    }
+
+    .mobile-advanced-controls__buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-3);
+    }
+
+    @media (min-width: 769px) {
+      .mobile-advanced-controls > summary {
+        display: none;
+      }
+
+      .mobile-advanced-controls:not([open]) > .mobile-advanced-controls__body {
+        display: grid;
+      }
+
+      .tree-zoom-toolbar-card.mobile-advanced-controls:not([open]) .tree-zoom-toolbar {
+        display: flex;
+      }
     }
     
     /* Layout dọc: Cây trên, Tra cứu dưới */
@@ -686,6 +768,50 @@
     @media (max-width: 768px) {
       .tree-panel {
         gap: var(--space-2, 8px);
+      }
+
+      .genealogy-mobile-intro {
+        display: block;
+        padding: var(--space-4);
+      }
+
+      .genealogy-mobile-intro__header p {
+        margin-bottom: var(--space-4);
+      }
+
+      .genealogy-mobile-intro__actions {
+        display: grid;
+        gap: var(--space-3);
+        margin-bottom: var(--space-4);
+      }
+
+      .genealogy-mobile-intro__steps {
+        font-size: var(--font-size-sm);
+        color: var(--color-text-muted);
+      }
+
+      .genealogy-mobile-intro__steps ol {
+        margin: var(--space-2) 0 0;
+        padding-left: var(--space-5);
+      }
+
+      .tree-controls-primary {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .tree-controls-search {
+        width: 100%;
+      }
+
+      .tree-help-btn {
+        display: inline-flex;
+        justify-content: center;
+      }
+
+      .mobile-advanced-controls__buttons {
+        display: grid;
+        grid-template-columns: 1fr;
       }
 
       .tree-container-wrapper {
