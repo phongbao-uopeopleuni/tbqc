@@ -8,6 +8,17 @@
 
 ## [Unreleased]
 
+### Added (Mobile/Performance/UX/SEO — 2026-06-12, branch `feature/mobile-performance-ux-seo-foundation`)
+- SEO foundation: route `/sitemap.xml` (XML thật), canonical URL qua context processor, JSON-LD partial (`templates/partials/_site_schema.html`), meta description trên các trang công khai, `robots.txt` thêm `Sitemap:` + `Disallow: /login`.
+- `noindex, nofollow` trên login, admin/base, admin/login, admin/activities_gate, members_gate; gỡ link admin khỏi nav công khai.
+- Mobile contact bar dùng chung (`templates/partials/_mobile_contact_bar.html`); config tập trung `PUBLIC_SITE_URL`, `PUBLIC_PHONE_NUMBER`, `PUBLIC_FACEBOOK_URL`, `PUBLIC_ZALO_URL` trong `config.py`.
+- 12 biến thể ảnh responsive mobile/desktop (WebP + JPG) cho hero và 3 ảnh lớn homepage; markup `<picture>` + `srcset` + `sizes` + intrinsic dimensions.
+- Pipeline minify dev-only: `npm run build:assets` (esbuild) sinh `index.min.js`/`common.min.js`/`index.min.css` — file `.min` commit vào git vì Railway không chạy npm build. Script kiểm tra: `scripts/verify_min_assets.py`.
+
+### Changed (Performance homepage — 2026-06-12)
+- `templates/index.html` trỏ sang asset `.min` với `?v={{ static_ver }}`.
+- Xóa ~3.500 dòng dead code khỏi `static/js/index.js` (175KB → 35KB nguồn; min 112KB → 21.6KB): lineage search + modals, genealogy tree + vis-network, countdown cũ, albums/gallery/lightbox — toàn bộ DOM id không tồn tại trên homepage. Audit trail: `scripts/strip_dead_homepage_js.py`. Chi tiết: `docs/qa/mobile-upgrade-implementation-2026-06-12.md` (Phase 4–5).
+
 ### Changed
 - Dong bo lai nhom tai lieu canonical (`runbook`, `maintenance`, `system-context`, `ai-project-memory`, `external-integration`) de phan anh dung runtime hien tai va inventory external integrations.
 

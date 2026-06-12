@@ -297,3 +297,101 @@ Comparison against the earlier local rerun baseline:
 ### Validation note
 
 Lighthouse CLI on Windows continued to emit intermittent temporary-directory cleanup errors (`EPERM`) after report generation. The JSON outputs above were still written successfully and used for verification.
+
+## Phase 4 - Homepage Asset Minification
+
+Executed locally after the image pass, before deployment.
+
+### Scope
+
+- Minify homepage runtime assets without changing behavior.
+- No build pipeline exists at deploy time (Railway runs `pip install` only), so minified files are committed to git.
+
+### Implementation
+
+- Added `esbuild` as devDependency and npm script `build:assets` in `package.json`:
+  - `static/js/index.js` -> `static/js/index.min.js`
+  - `static/js/common.js` -> `static/js/common.min.js`
+  - `static/css/index.css` -> `static/css/index.min.css`
+- JS minification uses `--minify-whitespace --minify-syntax` ONLY — identifier names are preserved so the shared global scope and any cross-file/template references stay intact.
+- `templates/index.html` now references the `.min` assets with `?v={{ static_ver }}` cache busting (git commit SHA).
+- Other pages keep using source `common.js` — change is homepage-scoped.
+- Added `scripts/verify_min_assets.py` — Flask test client check that `/` references all three `.min` assets and each serves HTTP 200.
+
+### Size results
+
+| Asset | Before | After |
+| --- | ---: | ---: |
+| `index.js` | 175.8 KB | 112.8 KB (min) |
+| `index.css` | 114.1 KB | 70.6 KB (min) |
+| `common.js` | 4.1 KB | 2.5 KB (min) |
+
+### Operational rule
+
+After editing `static/js/index.js`, `static/js/common.js`, or `static/css/index.css`, run:
+
+```bash
+npm run build:assets
+```
+
+and commit the regenerated `.min` files. Reminder comments exist next to the `<script>`/`<link>` tags in `templates/index.html`.
+
+### Validation
+
+- `node --check` on both minified JS files: pass.
+- Function-name spot check in minified output (`getThumbnail`, `renderAlbums`, `toggleMenu`, `formatDate`): preserved.
+- `python scripts/verify_min_assets.py`: all three assets referenced and served 200.
+- `pytest`: 544 passed, 3 skipped.
+- `npm run lint`: 0 errors (ESLint and Prettier already ignore `**/*.min.js`).
+
+Commit: `14f5e57`.
+
+## Phase 5 - Homepage Dead Code Removal (index.js)
+
+Executed locally after Phase 4. `index.js` is loaded ONLY by `templates/index.html`, so any code whose DOM targets do not exist on the homepage is provably dead.
+
+### Analysis method
+
+1. Extracted every `getElementById` target from `index.js` (70+ ids) and every `id="..."` in `templates/index.html`.
+2. Only 8 ids overlap: `navbarMenu`, `nptCouncilList`, `readingProgress`, `scrollToTop`, `tocList`, `tocOverlayMobile`, `tocSidebar`, `tocToggleMobile`.
+3. Confirmed inline `<script>` blocks in `index.html` are self-contained (no calls into `index.js`).
+4. Confirmed the single `window.*` export (`window.initLineageModule`) is only consumed by `family-tree-ui.js` on `/genealogy` behind a `typeof === 'function'` guard — and `index.js` never loads there.
+
+### Removed blocks (~3,500 lines)
+
+- LINEAGE SEARCH + person detail panel + edit/delete/password/request modals (`lineageName`, `infoPanel`, `passwordModal`, `requestEditModal`... absent).
+- INTERACTIVE GENEALOGY TREE + vis-network injection (`treeContainer` absent; feature lives on `/genealogy`).
+- `initCountdownTimer` (`countdown-xuan`/`countdown-thu` absent; the homepage ticker uses its own inline script).
+- Albums/gallery/lightbox/upload (`albumsList`, `galleryView`, `lightboxModal`... absent).
+- Four delegated handler initializers wired to the removed features, plus two orphan renderers (`renderFeaturedPosts`, `renderCategories`) that were never called even before this change.
+
+### Kept (verified byte-identical to previous HEAD)
+
+Navbar, TOC overlay + post TOC, NPT council sidebar (`loadExternalPosts` -> `renderNptCouncilSidebar`), news feed loader (early-returns on missing container), scroll-to-top, reading progress, `initImageErrorHandlers` (used by `js-hide-on-error` images).
+
+### Tooling
+
+- `scripts/strip_dead_homepage_js.py` — marker-based range deletion with content assertions and a leak check (names declared in deleted regions still referenced by kept code). The leak check caught the delegated-handler block on the first dry run, which was then added to the removal set.
+
+### Size results
+
+| Asset | Before | After |
+| --- | ---: | ---: |
+| `index.js` (source) | 175.8 KB / 4,515 lines | 35.4 KB / 997 lines |
+| `index.min.js` | 112.8 KB | 21.6 KB |
+
+Total homepage JS payload is now about 24 KB (`index.min.js` + `common.min.js`).
+
+### Validation
+
+- ESLint: 0 errors; warnings dropped 69 -> 51 (dead code carried 18 warnings).
+- `node --check`: pass. `pytest`: 544 passed, 3 skipped.
+- Browser preview (real Chromium against local Flask): console shows 0 errors (only the pre-existing `hotNewsList element not found` warning), NPT council renders 6 items, menu toggle works, hero image loads, TOC builds 14 items, countdown ticker text renders with dates.
+
+Commit: `e272e07`.
+
+### Remaining opportunities (intentionally deferred)
+
+- `index.min.css` is still ~70 KB with ~82 KB unused rules reported by Lighthouse. CSS purging is riskier than JS removal (dynamic selectors, responsive states) and was deferred to avoid over-engineering.
+- Remaining mobile LCP is now dominated by server/HTML response time and font loading rather than asset size.
+- Reminder: restart the local Flask server before re-running Lighthouse (Jinja caches templates when debug is off).

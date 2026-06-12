@@ -184,6 +184,14 @@ npm run lint
 npm run format:check
 ```
 
+Minify asset homepage (BẮT BUỘC sau khi sửa `static/js/index.js`, `static/js/common.js`, hoặc `static/css/index.css`):
+
+```bash
+npm run build:assets
+```
+
+Lệnh này sinh lại `index.min.js`, `common.min.js`, `index.min.css` — homepage tham chiếu các file `.min` này. File `.min` phải commit vào git vì Railway không chạy npm build. Kiểm tra nhanh: `python scripts/verify_min_assets.py`.
+
 ---
 
 ## 7. Deploy production
@@ -205,6 +213,7 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120
 - Xác minh `.env` hoặc Railway dashboard đã có đủ biến môi trường.
 - Chạy `pytest`.
 - Nếu sửa `static/js/**`, chạy `npm run lint`.
+- Nếu sửa `index.js`/`common.js`/`index.css`, chạy `npm run build:assets` và commit file `.min` sinh ra.
 - Kiểm tra `GET /api/health` trả 200.
 - Smoke test: trang chủ, `/members`, `/genealogy`, `/admin/login`.
 
