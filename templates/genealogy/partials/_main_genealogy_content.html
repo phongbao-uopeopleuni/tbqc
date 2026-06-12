@@ -39,7 +39,10 @@
                 <button id="searchBtn" class="btn btn-primary">Tìm kiếm</button>
                 <a href="/contact" class="btn btn-secondary tree-help-btn">Liên hệ hỗ trợ</a>
               </div>
-              <details class="mobile-advanced-controls" id="genealogyAdvancedControls">
+              <!-- `open` mặc định: desktop ẩn summary nên body phải hiển thị sẵn
+                   (CSS không thể mở <details> đóng trên Chrome mới — content-visibility nội bộ).
+                   Script cuối trang sẽ đóng lại trên mobile để giữ UX thu gọn. -->
+              <details class="mobile-advanced-controls" id="genealogyAdvancedControls" open>
                 <summary>Tùy chọn nâng cao</summary>
                 <div class="mobile-advanced-controls__body">
                   <label>
@@ -64,7 +67,7 @@
           </div>
 
           <div class="tree-zoom-toolbar-wrap">
-            <details class="card lineage-card tree-zoom-toolbar-card mobile-advanced-controls">
+            <details class="card lineage-card tree-zoom-toolbar-card mobile-advanced-controls" open>
               <summary>Điều khiển cây gia phả</summary>
               <div class="mobile-advanced-controls__body">
                 <div class="tree-zoom-toolbar" role="toolbar" aria-label="Thu phóng và toàn màn hình cây gia phả">
@@ -77,7 +80,17 @@
               </div>
             </details>
           </div>
-          
+          <script>
+            // Mobile: thu gọn các khối nâng cao (desktop giữ `open` vì summary bị ẩn bằng CSS)
+            (function() {
+              if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
+                document.querySelectorAll('details.mobile-advanced-controls[open]').forEach(function(d) {
+                  d.removeAttribute('open');
+                });
+              }
+            })();
+          </script>
+
           <!-- Tree Container -->
           <div class="tree-container-wrapper">
             <div class="fullscreen-hint">Nhấn <kbd>Esc</kbd> để thoát chế độ toàn màn hình</div>

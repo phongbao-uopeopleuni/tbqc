@@ -31,7 +31,13 @@ static/images/_duplicates_quarantine/
 #   git rm --cached -r static/images/activity_* static/images/anh1 \
 #     "static/images/dọn dẹp vệ sinh mộ gia tộc" static/images/_thumbs
 static/images/activity_*
-static/images/anh1/
+# anh1/: uploaded media tren Volume, NGOAI TRU cac bien the hero responsive
+# (UI asset gan voi templates/index.html — phai ship qua git de Railway co file)
+static/images/anh1/*
+!static/images/anh1/anhhome-mobile.jpg
+!static/images/anh1/anhhome-mobile.webp
+!static/images/anh1/anhhome-desktop.jpg
+!static/images/anh1/anhhome-desktop.webp
 static/images/dọn*/
 static/images/don-dep*/
 static/images/_thumbs/

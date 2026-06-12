@@ -282,16 +282,10 @@
     }
 
     @media (min-width: 769px) {
+      /* Desktop: ẩn summary, <details> luôn có `open` từ server (CSS không thể
+         tự mở <details> đóng trên Chrome mới — xem _main_genealogy_content.html) */
       .mobile-advanced-controls > summary {
         display: none;
-      }
-
-      .mobile-advanced-controls:not([open]) > .mobile-advanced-controls__body {
-        display: grid;
-      }
-
-      .tree-zoom-toolbar-card.mobile-advanced-controls:not([open]) .tree-zoom-toolbar {
-        display: flex;
       }
     }
     
