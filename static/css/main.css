@@ -119,6 +119,57 @@
   }
 }
 
+/* Desktop: floating CTA dọc góc phải dưới (đồng bộ với index.css) */
+@media (min-width: 769px) {
+  .mobile-contact-bar {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobile-contact-bar__link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 130px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .mobile-contact-bar__link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.3);
+    color: #fff;
+  }
+
+  .mobile-contact-bar__link--call {
+    background: #15803d;
+  }
+
+  .mobile-contact-bar__link--zalo {
+    background: #017ac1;
+  }
+
+  .mobile-contact-bar__link--facebook {
+    background: #1877f2;
+  }
+
+  /* Tránh trùng nút Zalo floating cũ trên contact/genealogy */
+  body.has-mobile-contact-bar .floating-zalo-button {
+    display: none !important;
+  }
+}
+
 /* ============================================
    FLOATING CHAT BUTTON
    ============================================ */

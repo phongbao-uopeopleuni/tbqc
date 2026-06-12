@@ -1,3 +1,4 @@
+import mimetypes
 import os
 from flask import Flask, Response, jsonify, render_template, request
 from blueprints import register_blueprints
@@ -9,6 +10,10 @@ from app_errors import register_error_handlers
 from config import Config, load_env
 from extensions import init_extensions, rate_limit
 logger = logging.getLogger(__name__)
+
+# Container Railway thiếu webp trong mimetypes DB → send_from_directory trả
+# application/octet-stream cho .webp. Đăng ký tường minh để serve đúng image/webp.
+mimetypes.add_type('image/webp', '.webp')
 
 # Load .env first so DB_*, SECRET_KEY, etc. are available before db_config and the rest of the app
 load_env()
