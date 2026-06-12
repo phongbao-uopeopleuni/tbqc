@@ -95,6 +95,11 @@ Thumbs.db
 *.tmp
 *.bak
 
+# Lighthouse raw JSON reports (ket qua da ghi vao docs/qa/)
+lighthouse-*.json
+lh-*.json
+desktop-mobile-*.json
+
 # Admin creation scripts (contain sensitive credentials)
 create_*_admin.py
 create_*_admin_user.py
