@@ -1,5 +1,10 @@
 ﻿# AI Project Memory
 
+> **Archive status:** superseded by `docs/ai/memory/ai-project-memory.md`.
+> **Do not treat this file as current source of truth.**
+> **Do not merge this file back into the canonical quick-start memory wholesale.**
+> Use it only when you explicitly need older maintainer context, legacy decisions, or historical wording that was intentionally trimmed from the canonical file.
+>
 > **Maintained for:** all AI coding agents working on this repository.  
 > **Last updated:** 2026-05-16  
 > **Rule:** Read this file fully before making changes. After meaningful work, append to sections 6â€“9; do not delete history without marking deprecated.
@@ -516,4 +521,3 @@ Unknown / not confirmed in repo.
 **After completing meaningful work, update this file** with new entries in Â§6 (issues), Â§7 (decisions), Â§8 (change log), and Â§9 (open tasks). Mark outdated items as **Deprecated** rather than deleting them.
 
 **Related docs:** `README.md`, `CLAUDE.md`, `CLEANUP_LOG.md`, `PROJECT_AUDIT.md`, `MAINTENANCE.md`, `CHANGELOG.md`, `SECURITY.md`, `SRS.md`, `GENEALOGY_QA_CHECKLIST.md`.
-

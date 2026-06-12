@@ -78,6 +78,7 @@ GET /members/template/Template_updatetbqc.xlsx -> members_portal.download_templa
 GET /privacy -> main.privacy_page
 GET /privacy-policy -> main.privacy_page
 GET /robots.txt -> serve_robots
+GET /sitemap.xml -> serve_sitemap
 GET /static/<path:filename> -> static
 GET /static/images/<path:filename> -> gallery.serve_image_static
 GET|POST /admin/login -> admin_login

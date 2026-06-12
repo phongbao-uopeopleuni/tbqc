@@ -132,3 +132,4 @@ GET /api/stats/members -> api_member_stats
 GET /api/tree -> api_tree
 GET /api/generations -> api_generations
 GET /robots.txt -> serve_robots
+GET /sitemap.xml -> serve_sitemap

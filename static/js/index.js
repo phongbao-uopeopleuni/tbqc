@@ -2301,18 +2301,18 @@
     // INTERACTIVE GENEALOGY TREE
     // ============================================
     
-    // Load vis-network from CDN
-    const visScript = document.createElement('script');
-    visScript.src = 'https://unpkg.com/vis-network@latest/standalone/umd/vis-network.min.js';
-    visScript.onload = () => {
-      console.log('[Tree] vis-network loaded, initializing tree...');
-      try {
-        // initGenealogyTree(); // Đã di chuyển sang /genealogy
-      } catch (err) {
-        console.error('[Tree] Error initializing tree:', err);
-        const container = document.getElementById('treeContainer');
-        if (container) {
-          container.innerHTML = `
+    const treeContainer = document.getElementById('treeContainer');
+    if (treeContainer) {
+      // Load vis-network only on pages that actually render the tree.
+      const visScript = document.createElement('script');
+      visScript.src = 'https://unpkg.com/vis-network@10.1.0/standalone/umd/vis-network.min.js';
+      visScript.onload = () => {
+        console.log('[Tree] vis-network loaded, initializing tree...');
+        try {
+          // initGenealogyTree(); // Đã di chuyển sang /genealogy
+        } catch (err) {
+          console.error('[Tree] Error initializing tree:', err);
+          treeContainer.innerHTML = `
             <div class="tree-error">
               <h3>Lỗi khi khởi tạo cây gia phả</h3>
               <p>${err.message}</p>
@@ -2322,26 +2322,23 @@
             </div>
           `;
         }
-      }
-    };
-    visScript.onerror = () => {
-      console.error('[Tree] Failed to load vis-network');
-      const container = document.getElementById('treeContainer');
-      if (container) {
-        container.innerHTML = `
+      };
+      visScript.onerror = () => {
+        console.error('[Tree] Failed to load vis-network');
+        treeContainer.innerHTML = `
           <div class="tree-error">
             <h3>Không thể tải thư viện vis-network</h3>
             <p>Vui lòng kiểm tra kết nối internet và thử lại.</p>
           </div>
         `;
-      }
-    };
-    document.head.appendChild(visScript);
-    
-    const visStyle = document.createElement('link');
-    visStyle.rel = 'stylesheet';
-    visStyle.href = 'https://unpkg.com/vis-network@latest/styles/vis-network.min.css';
-    document.head.appendChild(visStyle);
+      };
+      document.head.appendChild(visScript);
+      
+      const visStyle = document.createElement('link');
+      visStyle.rel = 'stylesheet';
+      visStyle.href = 'https://unpkg.com/vis-network@10.1.0/styles/vis-network.min.css';
+      document.head.appendChild(visStyle);
+    }
 
     let network = null;
     let currentRootId = 'P-1-1'; // Default: Vua Minh Mạng (phải là string, không phải số)
@@ -3232,6 +3229,13 @@
 
 // Countdown timer cho Giỗ Xuân và Giỗ Thu
 function initCountdownTimer() {
+  const xuanTimer = document.getElementById('countdown-xuan');
+  const thuTimer = document.getElementById('countdown-thu');
+
+  if (!xuanTimer || !thuTimer) {
+    return;
+  }
+
   function padZero(num) {
     return num < 10 ? '0' + num : num.toString();
   }
@@ -3247,62 +3251,41 @@ function initCountdownTimer() {
       const now = new Date();
       
       // Tính toán cho Giỗ Xuân
-      const xuanTimer = document.getElementById('countdown-xuan');
-      if (xuanTimer) {
-        const xuanDiff = xuanDate.getTime() - now.getTime();
-        if (xuanDiff < 0) {
-          xuanTimer.innerHTML = '<span class="countdown-expired">Đã qua</span>';
-        } else {
-          const xuanDays = Math.floor(xuanDiff / (1000 * 60 * 60 * 24));
-          const xuanHours = Math.floor((xuanDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const xuanMinutes = Math.floor((xuanDiff % (1000 * 60 * 60)) / (1000 * 60));
-          const xuanSeconds = Math.floor((xuanDiff % (1000 * 60)) / 1000);
-          
-          xuanTimer.innerHTML = 
-            '<span class="countdown-value">' + xuanDays + '</span> ngày ' +
-            '<span class="countdown-value">' + padZero(xuanHours) + '</span> giờ ' +
-            '<span class="countdown-value">' + padZero(xuanMinutes) + '</span> phút ' +
-            '<span class="countdown-value">' + padZero(xuanSeconds) + '</span> giây';
-        }
+      const xuanDiff = xuanDate.getTime() - now.getTime();
+      if (xuanDiff < 0) {
+        xuanTimer.innerHTML = '<span class="countdown-expired">Đã qua</span>';
       } else {
-        console.warn('countdown-xuan element not found');
+        const xuanDays = Math.floor(xuanDiff / (1000 * 60 * 60 * 24));
+        const xuanHours = Math.floor((xuanDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const xuanMinutes = Math.floor((xuanDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const xuanSeconds = Math.floor((xuanDiff % (1000 * 60)) / 1000);
+        
+        xuanTimer.innerHTML = 
+          '<span class="countdown-value">' + xuanDays + '</span> ngày ' +
+          '<span class="countdown-value">' + padZero(xuanHours) + '</span> giờ ' +
+          '<span class="countdown-value">' + padZero(xuanMinutes) + '</span> phút ' +
+          '<span class="countdown-value">' + padZero(xuanSeconds) + '</span> giây';
       }
       
       // Tính toán cho Giỗ Thu
-      const thuTimer = document.getElementById('countdown-thu');
-      if (thuTimer) {
-        const thuDiff = thuDate.getTime() - now.getTime();
-        if (thuDiff < 0) {
-          thuTimer.innerHTML = '<span class="countdown-expired">Đã qua</span>';
-        } else {
-          const thuDays = Math.floor(thuDiff / (1000 * 60 * 60 * 24));
-          const thuHours = Math.floor((thuDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-          const thuMinutes = Math.floor((thuDiff % (1000 * 60 * 60)) / (1000 * 60));
-          const thuSeconds = Math.floor((thuDiff % (1000 * 60)) / 1000);
-          
-          thuTimer.innerHTML = 
-            '<span class="countdown-value">' + thuDays + '</span> ngày ' +
-            '<span class="countdown-value">' + padZero(thuHours) + '</span> giờ ' +
-            '<span class="countdown-value">' + padZero(thuMinutes) + '</span> phút ' +
-            '<span class="countdown-value">' + padZero(thuSeconds) + '</span> giây';
-        }
+      const thuDiff = thuDate.getTime() - now.getTime();
+      if (thuDiff < 0) {
+        thuTimer.innerHTML = '<span class="countdown-expired">Đã qua</span>';
       } else {
-        console.warn('countdown-thu element not found');
+        const thuDays = Math.floor(thuDiff / (1000 * 60 * 60 * 24));
+        const thuHours = Math.floor((thuDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const thuMinutes = Math.floor((thuDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const thuSeconds = Math.floor((thuDiff % (1000 * 60)) / 1000);
+        
+        thuTimer.innerHTML = 
+          '<span class="countdown-value">' + thuDays + '</span> ngày ' +
+          '<span class="countdown-value">' + padZero(thuHours) + '</span> giờ ' +
+          '<span class="countdown-value">' + padZero(thuMinutes) + '</span> phút ' +
+          '<span class="countdown-value">' + padZero(thuSeconds) + '</span> giây';
       }
     } catch (error) {
       console.error('Error updating countdown:', error);
     }
-  }
-  
-  // Kiểm tra elements có tồn tại không
-  const xuanTimer = document.getElementById('countdown-xuan');
-  const thuTimer = document.getElementById('countdown-thu');
-  
-  if (!xuanTimer || !thuTimer) {
-    console.error('Countdown elements not found. Xuan:', !!xuanTimer, 'Thu:', !!thuTimer);
-    // Retry sau 500ms
-    setTimeout(initCountdownTimer, 500);
-    return;
   }
   
   // Cập nhật ngay lập tức
@@ -3310,14 +3293,40 @@ function initCountdownTimer() {
   
   // Cập nhật mỗi giây
   setInterval(updateCountdown, 1000);
-  
-  console.log('Countdown timer initialized successfully');
 }
 
 // Fallback: Chạy ngay cả khi DOMContentLoaded đã fire
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   setTimeout(initCountdownTimer, 100);
 }
+
+// Legacy album UI state. Homepage does not always render album-management DOM,
+// so keep these defaults explicit and gate any initialization on element presence.
+let albums = [];
+let selectedAlbumId = null;
+let currentAlbumEditId = null;
+let authenticatedPassword = null;
+let pendingAction = null;
+
+async function loadAlbums() {
+      const albumsListEl = document.getElementById('albumsList');
+      if (!albumsListEl) return;
+
+      try {
+        const response = await fetch('/api/albums');
+        const data = await response.json();
+
+        if (data.success && data.albums) {
+          albums = data.albums;
+          renderAlbums(albums);
+        } else {
+          albumsListEl.innerHTML = '<div class="gallery-error">Khong the tai danh sach album</div>';
+        }
+      } catch (error) {
+        console.error('Error loading albums:', error);
+        albumsListEl.innerHTML = '<div class="gallery-error">Loi khi tai danh sach album</div>';
+      }
+    }
 
 async function renderAlbums(albumsList) {
       const albumsListEl = document.getElementById('albumsList');
@@ -3966,8 +3975,10 @@ async function renderAlbums(albumsList) {
           });
         }
         
-        // Tự động load và hiển thị tất cả albums khi trang load
-        loadAlbums();
+        // Chỉ khởi tạo album-management khi trang thực sự có giao diện album.
+        if (document.getElementById('albumsList')) {
+          loadAlbums();
+        }
       });
 
     // ============================================
@@ -4148,7 +4159,9 @@ async function renderAlbums(albumsList) {
       initAlbumHandlers();
       initGlobalActionHandlers();
       initImageErrorHandlers();
-      loadGallery();
+      if (document.getElementById('photoGallery') || document.getElementById('galleryContainer')) {
+        loadGallery();
+      }
     });
 
     // ============================================

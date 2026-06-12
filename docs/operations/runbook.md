@@ -361,6 +361,7 @@ Chi tiết chính sách bảo mật: `docs/security/security.md`.
 - Lịch sử thay đổi: cập nhật `docs/releases/changelog.md` trước mỗi lần push lên `master`.
 - Incident, hotfix, rollback, secret rotation: cập nhật `docs/operations/incident-log.md`.
 - Tiến độ refactor: cập nhật `docs/refactor/history/changelog-refactor.md` sau mỗi phase.
+- Khi thay đổi runtime truth, external integration, hoặc risk map cho maintainer/AI: cập nhật thêm `docs/operations/system-context.md`, `docs/ai/memory/ai-project-memory.md`, và nếu có contract outbound/inbound thì cập nhật `docs/refactor/foundations/external-integration.md`.
 - Không tạo thêm file Markdown mới ngoài taxonomy hiện có nếu chưa thật sự cần.
 - Nếu thay đổi lớn về nghiệp vụ hoặc vận hành, thêm mục mới trực tiếp vào tài liệu này.
 

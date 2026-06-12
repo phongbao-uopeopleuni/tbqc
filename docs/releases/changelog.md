@@ -8,6 +8,9 @@
 
 ## [Unreleased]
 
+### Changed
+- Dong bo lai nhom tai lieu canonical (`runbook`, `maintenance`, `system-context`, `ai-project-memory`, `external-integration`) de phan anh dung runtime hien tai va inventory external integrations.
+
 ### Removed
 - Xoa cau hinh env mau va tai lieu van hanh con sot lai cua Facebook API vi project khong con su dung tich hop nay.
 

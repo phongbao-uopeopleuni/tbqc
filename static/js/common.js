@@ -5,8 +5,12 @@
 // Navbar toggle for mobile
 function toggleNavbar() {
   const menu = document.getElementById('navbarMenu');
+  const toggle = document.querySelector('.navbar-toggle');
   if (menu) {
-    menu.classList.toggle('active');
+    const isActive = menu.classList.toggle('active');
+    if (toggle) {
+      toggle.setAttribute('aria-expanded', isActive ? 'true' : 'false');
+    }
   }
 }
 
@@ -20,6 +24,9 @@ document.addEventListener('click', function(event) {
     const isClickInsideNavbar = navbar.contains(event.target);
     if (!isClickInsideNavbar && menu.classList.contains('active')) {
       menu.classList.remove('active');
+      if (toggle) {
+        toggle.setAttribute('aria-expanded', 'false');
+      }
     }
   }
 });
