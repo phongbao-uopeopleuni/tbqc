@@ -1,0 +1,19 @@
+{% if public_phone_href or public_zalo_url or public_facebook_url %}
+  <div class="mobile-contact-bar" aria-label="Liên hệ nhanh">
+    {% if public_phone_href %}
+      <a href="tel:{{ public_phone_href }}" class="mobile-contact-bar__link mobile-contact-bar__link--call">
+        Gọi
+      </a>
+    {% endif %}
+    {% if public_zalo_url %}
+      <a href="{{ public_zalo_url }}" target="_blank" rel="noopener noreferrer" class="mobile-contact-bar__link mobile-contact-bar__link--zalo">
+        Zalo
+      </a>
+    {% endif %}
+    {% if public_facebook_url %}
+      <a href="{{ public_facebook_url }}" target="_blank" rel="noopener noreferrer" class="mobile-contact-bar__link mobile-contact-bar__link--facebook">
+        Facebook
+      </a>
+    {% endif %}
+  </div>
+{% endif %}

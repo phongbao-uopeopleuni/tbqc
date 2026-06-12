@@ -1,0 +1,16 @@
+{% set website_schema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Gia Phả Nguyễn Phước Tộc - Phòng Tuy Biên Quận Công",
+  "url": site_url
+} %}
+<script type="application/ld+json">{{ website_schema | tojson }}</script>
+{% set same_as_links = [public_facebook_url, public_zalo_url] | select | list %}
+{% set organization_schema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": public_organization_name,
+  "url": site_url,
+  "sameAs": same_as_links
+} %}
+<script type="application/ld+json">{{ organization_schema | tojson }}</script>
