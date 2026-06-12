@@ -8,10 +8,12 @@
     "lint": "eslint \"static/js/**/*.js\"",
     "lint:fix": "eslint \"static/js/**/*.js\" --fix",
     "format:check": "prettier --check \"static/js/**/*.js\"",
-    "format:write": "prettier --write \"static/js/**/*.js\""
+    "format:write": "prettier --write \"static/js/**/*.js\"",
+    "build:assets": "esbuild static/js/index.js --outfile=static/js/index.min.js --minify-whitespace --minify-syntax --charset=utf8 && esbuild static/js/common.js --outfile=static/js/common.min.js --minify-whitespace --minify-syntax --charset=utf8 && esbuild static/css/index.css --outfile=static/css/index.min.css --minify --charset=utf8"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "esbuild": "^0.28.1",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "globals": "^15.14.0",

@@ -28,7 +28,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/index.css">
+  <!-- index.min.css sinh từ index.css — sau khi sửa index.css phải chạy: npm run build:assets -->
+  <link rel="stylesheet" href="/static/css/index.min.css?v={{ static_ver }}">
   <style>
     .img-placeholder { min-height: 140px; background: #e8e8e8; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px; border-radius: 8px; }
     .hero-image-container .img-placeholder { min-height: 280px; }
@@ -850,8 +851,9 @@
 
   {% include 'partials/_mobile_contact_bar.html' %}
 
-  <script src="/static/js/common.js"></script>
-  <script src="/static/js/index.js?v=20260415xss" defer></script>
+  <!-- *.min.js sinh từ common.js / index.js — sau khi sửa nguồn phải chạy: npm run build:assets -->
+  <script src="/static/js/common.min.js?v={{ static_ver }}"></script>
+  <script src="/static/js/index.min.js?v={{ static_ver }}" defer></script>
   <script>
     (function() {
       'use strict';
