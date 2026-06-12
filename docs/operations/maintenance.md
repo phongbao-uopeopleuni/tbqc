@@ -2,7 +2,7 @@
 
 > **Muc dich:** Huong dan van hanh va bao tri dinh ky de he thong on dinh lau dai.  
 > **Ap dung cho:** Developer, DevOps, Admin van hanh.  
-> **Cap nhat lan cuoi:** 2026-05-27  
+> **Cap nhat lan cuoi:** 2026-06-11
 > **Doc cung:** `docs/operations/system-context.md`, `docs/operations/runbook.md`, `docs/operations/incident-log.md`, `docs/security/security.md`, `docs/operations/debugger.md`
 
 ---
@@ -29,13 +29,14 @@
 - [ ] Xac minh backup gan nhat van doc duoc va restore duoc
 - [ ] Review log loi thang: `Unauthorized`, `5xx`, `database error`
 - [ ] Kiem tra dung luong `static/images/`
+- [ ] Kiem tra `/api/external-posts` van fetch duoc RSS `nguyenphuoctoc.info` va khong co timeout/lxml error bat thuong
 - [ ] Chay `python scripts/cleanup_activity_logs.py`
 - [ ] Xac nhan `MALLOC_ARENA_MAX=2` van ton tai tren Railway va `CACHE_THRESHOLD` trong `extensions.py` van la `50`
 
 ### Hang quy
 
 - [ ] Rotate `ADMIN_PASSWORD`, `BACKUP_PASSWORD`, `MEMBERS_PASSWORD`
-- [ ] Kiem tra API key Geoapify/Facebook neu con dung
+- [ ] Kiem tra API key Geoapify va contract RSS `nguyenphuoctoc.info` neu con dung
 - [ ] Chay `python scripts/verify_no_secret_files_tracked.py`
 - [ ] Review `docs/qa/project-audit.md` neu boundary he thong thay doi lon
 - [ ] Review `docs/operations/incident-log.md` va dong cac muc da giai quyet xong

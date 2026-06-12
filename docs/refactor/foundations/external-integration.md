@@ -4,7 +4,7 @@
 
 ## Status
 
-- **Updated:** 2026-05-21
+- **Updated:** 2026-06-11
 - **Scope:** code inventory + user-confirmed production sign-off cho Phase 0d
 - **Operational sign-off:** user xac nhan production hien tai khong co cron, webhook, consumer, hoac external caller dac biet nao ngoai inventory ben duoi
 
@@ -12,7 +12,7 @@
 
 | Type | Source | Target | Current contract | Evidence |
 |---|---|---|---|---|
-| RSS fetch | `GET /api/external-posts`, `GET /api/external-posts-live` | `https://nguyenphuoctoc.info/rss/hoat-dong-hoi-dong-npt-vn/` | Read-only HTTP GET, timeout 30s, custom User-Agent `PhongTuyBienQuanCong/1.0` | `app.py` `NPT_COUNCIL_RSS_URL`, `_fetch_npt_council_rss()` |
+| RSS fetch | `GET /api/external-posts`, `POST /api/external-posts/clear-cache`, `GET|POST /api/external-posts/refresh` | `https://nguyenphuoctoc.info/rss/hoat-dong-hoi-dong-npt-vn/` | Read-only HTTP GET ra ngoai, timeout 30s, custom User-Agent `PhongTuyBienQuanCong/1.0`; cache mutation route noi bo co token optional | `services/external_posts_service.py`, tests url-map |
 | Self-call sync source | `POST /api/genealogy/sync` | `https://www.phongtuybienquancong.info/api/members` | Read-only HTTP GET, timeout 60s, JSON contract phai la list hoac `{success,data}` | `app.py` `sync_genealogy_from_members()` |
 
 ## Browser/client-facing integrations
@@ -20,7 +20,13 @@
 | Type | Entry point | External dependency | Current contract | Evidence |
 |---|---|---|---|---|
 | Map key bootstrap | `GET /api/geoapify-key` | `api.geoapify.com` duoc browser goi sau khi nhan key | Server chi phat hanh API key; front-end map contract khong duoc doi path | `blueprints/gallery.py:get_geoapify_api_key` |
+| Embedded map | `/` | `www.google.com/maps/embed` | Public homepage co iframe embed co dinh; neu thay doi phai kiem tra UI va privacy/referrer policy | `templates/index.html` |
 | Social/SEO crawler | `/`, `/static/images/<path>`, `/images/<path>` | Facebook, Zalo, search crawler cache URL public | Public URL contract frozen; neu doi phai co PR `[chore]` + redirect | `FROZEN_FILE_POLICY.md`, plan §21.4 |
+
+## Explicitly not in current runtime contract
+
+- Khong co Facebook API env var hoac HTTP integration nao con duoc runtime su dung.
+- Cac link `facebook.com/...` con lai trong template/noi dung la link lien he cong khai, khong phai API contract.
 
 ## Platform integrations
 
@@ -34,6 +40,7 @@
 1. Workspace plan/log retention da verify tren Railway dashboard: `Hobby`, `7-Day Log History`.
 2. User da xac nhan production hien tai khong co webhook, cron, consumer, hoac external integration nao khac ngoai inventory code-level trong file nay.
 3. Access-log crawler user-agent chi tiet chua duoc snapshot trong repo, nhung khong phat hien them runtime contract nao can freeze ngoai danh sach hien tai.
+4. Inventory da duoc doi chieu lai voi code ngay 2026-06-11: khong co route `/api/external-posts-live`, khong co Facebook API runtime/config.
 
 ## Refactor rules
 

@@ -21,7 +21,7 @@ This checklist is for:
 
 Primary references:
 
-1. [Refactor plan June 3rd.md](../../Refactor%20plan%20June%203rd.md)
+1. [refactor-plan-june-3rd.md](../refactor-plan-june-3rd.md)
 2. [phase-6-closeout-2026-06-05.md](./phase-6-closeout-2026-06-05.md)
 3. [phase-1-spouse-migration-2026-06-05.md](../phase-1/phase-1-spouse-migration-2026-06-05.md)
 4. [VERIFICATION_REPORT.md](../VERIFICATION_REPORT.md)
@@ -46,7 +46,7 @@ Interpretation:
 
 Before merging anything, confirm these are the canonical progress files:
 
-- [Refactor plan June 3rd.md](../../Refactor%20plan%20June%203rd.md)
+- [refactor-plan-june-3rd.md](../refactor-plan-june-3rd.md)
 - [phase-6-closeout-2026-06-05.md](./phase-6-closeout-2026-06-05.md)
 
 Acceptance:

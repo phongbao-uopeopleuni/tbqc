@@ -418,22 +418,40 @@
       text-align: center;
     }
 
+    .hero-cta-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+    }
+
     .cta-button {
-      display: block;
-      width: fit-content;
-      margin: 0 auto;
-      padding: clamp(6px, 1.5vw, 7.5px) clamp(16px, 4vw, 20px);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      min-width: 200px;
+      margin: 0;
+      padding: 12px 22px;
       background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
       color: #8B0000;
       text-decoration: none;
       border-radius: 25px;
-      font-size: clamp(8px, 2vw, 9px);
+      font-size: clamp(14px, 1.6vw, 17px);
       font-weight: 700;
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
       position: relative;
       overflow: hidden;
       text-align: center;
+    }
+
+    .cta-button-secondary {
+      background: linear-gradient(135deg, #fff7ed 0%, #fde7c4 100%);
+      color: #7a1f12;
+      border: 1px solid rgba(139, 0, 0, 0.18);
+      box-shadow: 0 4px 15px rgba(122, 31, 18, 0.16);
     }
 
     .cta-button::before {
@@ -455,6 +473,11 @@
       transform: translateY(-3px);
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
       background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%);
+    }
+
+    .cta-button-secondary:hover {
+      background: linear-gradient(135deg, #fff1dc 0%, #f7d9a4 100%);
+      box-shadow: 0 6px 18px rgba(122, 31, 18, 0.22);
     }
 
     /* ============================================
@@ -523,6 +546,11 @@
     .about-image {
       text-align: center;
       margin: 40px 0;
+    }
+
+    .about-image picture,
+    .hero-image-container picture {
+      display: block;
     }
     
     @media (max-width: 768px) {
@@ -1937,7 +1965,7 @@
     /* New info badge - blinking red with yellow contrast */
     .new-info-badge {
       display: inline-block;
-      color: #b91c1c;
+      color: #7f1d1d;
       font-size: 0.85em;
       font-weight: 700;
       margin-left: 6px;
@@ -1949,12 +1977,12 @@
     
     @keyframes blink-contrast {
       0%, 100% {
-        color: #b91c1c;
+        color: #7f1d1d;
         background-color: transparent;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       }
       50% {
-        color: #b91c1c;
+        color: #7f1d1d;
         background-color: #FFD700;
         text-shadow: 0 1px 3px rgba(185, 28, 28, 0.3);
         box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
@@ -4518,6 +4546,15 @@
     @media (max-width: 768px) {
       .hero-image {
         border-radius: 6px;
+      }
+
+      .hero-cta-group {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .cta-button {
+        width: min(100%, 320px);
       }
     }
     

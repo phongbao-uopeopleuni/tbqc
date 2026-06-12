@@ -22,11 +22,14 @@
   <meta name="description" content="Gia Phả Nguyễn Phước Tộc - Phòng Tuy Biên Quận Công, Hậu duệ Vua Minh Mạng. Tra cứu, lưu trữ và quản lý gia phả dòng họ Nguyễn Phước Tộc.">
   <meta name="keywords" content="gia phả, Nguyễn Phước Tộc, Tuy Biên Quận Công, Minh Mạng, dòng họ">
   <title>Phòng Tuy Biên Quận Công - Gia Phả Nguyễn Phước Tộc</title>
+  <link rel="canonical" href="{{ canonical_url }}">
+  {% include 'partials/_site_schema.html' %}
   <!-- Preload critical fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/index.css">
+  <!-- index.min.css sinh từ index.css — sau khi sửa index.css phải chạy: npm run build:assets -->
+  <link rel="stylesheet" href="/static/css/index.min.css?v={{ static_ver }}">
   <style>
     .img-placeholder { min-height: 140px; background: #e8e8e8; display: flex; align-items: center; justify-content: center; color: #666; font-size: 14px; border-radius: 8px; }
     .hero-image-container .img-placeholder { min-height: 280px; }
@@ -194,7 +197,7 @@
       });
     </script>
 </head>
-<body>
+<body class="has-mobile-contact-bar" data-page="home">
   <a href="#main-content" class="skip-link">Bỏ qua đến nội dung chính</a>
 
   <!-- Site Header -->
@@ -205,10 +208,9 @@
       <ul class="navbar-menu" id="navbarMenu">
         <li><a href="/">Trang chủ</a></li>
         <li><a href="/genealogy">Gia phả</a></li>
-        <li class="nav-item-hidden"><a href="/activities">Hoạt động</a></li>
+        <li><a href="/activities">Hoạt động</a></li>
         <li><a href="/members">Thành viên</a></li>
         <li><a href="/contact">Liên hệ</a></li>
-        <li><a href="/admin/login">Admin</a></li>
       </ul>
     </nav>
   </header>
@@ -217,7 +219,7 @@
   <main id="main-content">
 
   <!-- ── News Ticker ─────────────────────────────── -->
-  <div class="news-ticker" role="marquee" aria-label="Thông báo sự kiện">
+  <div class="news-ticker" aria-label="Thông báo sự kiện">
     {% set custom_announcements = announcement_lines or [] %}
     {% set xuan_memorial = (memorials or {}).get('xuan', {}) %}
     {% set thu_memorial = (memorials or {}).get('thu', {}) %}
@@ -265,11 +267,19 @@
       <div class="hero-text-content">
         <h1>Gia Phả Nguyễn Phước Tộc<br>Phòng Tuy Biên Quận Công<br>Hậu duệ Vua Minh Mạng</h1>
         <p>Nhằm tra cứu, lưu trữ và quản lý gia phả dòng họ Nguyễn Phước Tộc - Tuy Biên Phòng</p>
-        <a href="/genealogy" class="cta-button">Xem Gia Phả</a>
+        <div class="hero-cta-group">
+          <a href="/genealogy" class="cta-button">Tra cứu gia phả</a>
+          <a href="/contact" class="cta-button cta-button-secondary">Liên hệ hỗ trợ</a>
+        </div>
       </div>
       <div class="hero-image-container">
         <!-- ?v= bắt trình duyệt tải lại sau khi thay ảnh thật (tránh cache bản minh họa cũ) -->
-        <img src="/static/images/anh1/anhhome.jpg?v=20260328" alt="Phòng Tuy Biên Quận Công" class="hero-image" loading="eager" fetchpriority="high" width="1746" height="1440" decoding="async">
+        <picture>
+          <source media="(max-width: 768px)" srcset="/static/images/anh1/anhhome-mobile.webp?v=20260612mobile" type="image/webp">
+          <source media="(max-width: 768px)" srcset="/static/images/anh1/anhhome-mobile.jpg?v=20260612mobile">
+          <source srcset="/static/images/anh1/anhhome-desktop.webp?v=20260612imgset2" type="image/webp">
+          <img src="/static/images/anh1/anhhome.jpg?v=20260609imgopt" srcset="/static/images/anh1/anhhome-mobile.jpg?v=20260612mobile 768w, /static/images/anh1/anhhome.jpg?v=20260609imgopt 1746w" sizes="(max-width: 768px) 92vw, (max-width: 1200px) 48vw, 46vw" alt="Phòng Tuy Biên Quận Công" class="hero-image" loading="eager" fetchpriority="high" width="1746" height="1440" decoding="async">
+        </picture>
       </div>
     </div>
   </section>
@@ -291,7 +301,10 @@
           </p>
           
           <div class="about-image about-image--compact">
-            <img src="/static/images/1-vua-gia-long.jpg" alt="Vua Gia Long" loading="lazy">
+            <picture>
+              <source srcset="/static/images/1-vua-gia-long.webp?v=20260609imgopt" type="image/webp">
+              <img src="/static/images/1-vua-gia-long.jpg?v=20260609imgopt" alt="Vua Gia Long" loading="lazy" width="717" height="1024">
+            </picture>
           </div>
           
           <p>
@@ -299,7 +312,10 @@
           </p>
           
           <div class="about-image about-image--compact-sm">
-            <img src="/static/images/2-vua-minh-mang.jpg" alt="Vua Minh Mạng" loading="lazy">
+            <picture>
+              <source srcset="/static/images/2-vua-minh-mang.webp?v=20260609imgopt" type="image/webp">
+              <img src="/static/images/2-vua-minh-mang.jpg?v=20260609imgopt" alt="Vua Minh Mạng" loading="lazy" width="359" height="480">
+            </picture>
           </div>
           
           <p>
@@ -333,7 +349,10 @@
               </blockquote>
               
               <div class="about-image">
-                <img src="/static/images/3-kim-sach-de-he-thi.jpg" alt="Kim sách Đế Hệ Thi" loading="lazy">
+                <picture>
+                  <source srcset="/static/images/3-kim-sach-de-he-thi.webp?v=20260609imgopt" type="image/webp">
+                  <img src="/static/images/3-kim-sach-de-he-thi.jpg?v=20260609imgopt" alt="Kim sách Đế Hệ Thi" loading="lazy" width="546" height="378">
+                </picture>
               </div>
               
               <p>
@@ -341,7 +360,20 @@
               </p>
               
               <div class="about-image">
-                <img src="/static/images/4-kinh-thanh-hue.jpg" alt="Kinh thành Huế" loading="lazy">
+                <picture>
+                  <source
+                    srcset="/static/images/4-kinh-thanh-hue-mobile.webp?v=20260612imgset 768w, /static/images/4-kinh-thanh-hue-desktop.webp?v=20260612imgset2 1400w"
+                    sizes="(max-width: 768px) 92vw, (max-width: 1200px) min(92vw, 860px), 860px"
+                    type="image/webp">
+                  <img
+                    src="/static/images/4-kinh-thanh-hue-desktop.jpg?v=20260612imgset2"
+                    srcset="/static/images/4-kinh-thanh-hue-mobile.jpg?v=20260612imgset 768w, /static/images/4-kinh-thanh-hue-desktop.jpg?v=20260612imgset2 1400w"
+                    sizes="(max-width: 768px) 92vw, (max-width: 1200px) min(92vw, 860px), 860px"
+                    alt="Kinh thành Huế"
+                    loading="lazy"
+                    width="1400"
+                    height="811">
+                </picture>
               </div>
             </div>
           </details>
@@ -524,9 +556,22 @@
             <strong>Gốc có sâu thì chí mới vững, chí có vững thì cành lá mới sum suê, xanh tốt muôn đời.</strong>
           </blockquote>
           
-          <div class="about-image">
-            <img src="/static/images/5-phu-tuy-bien.jpg" alt="Phủ Tuy Biên" loading="lazy">
-          </div>
+           <div class="about-image">
+             <picture>
+               <source
+                 srcset="/static/images/5-phu-tuy-bien-mobile.webp?v=20260612imgset 768w, /static/images/5-phu-tuy-bien-desktop.webp?v=20260612imgset2 1100w"
+                 sizes="(max-width: 768px) 92vw, (max-width: 1200px) min(92vw, 860px), 860px"
+                 type="image/webp">
+               <img
+                 src="/static/images/5-phu-tuy-bien-desktop.jpg?v=20260612imgset2"
+                 srcset="/static/images/5-phu-tuy-bien-mobile.jpg?v=20260612imgset 768w, /static/images/5-phu-tuy-bien-desktop.jpg?v=20260612imgset2 1100w"
+                 sizes="(max-width: 768px) 92vw, (max-width: 1200px) min(92vw, 860px), 860px"
+                 alt="Phủ Tuy Biên"
+                 loading="lazy"
+                  width="1100"
+                  height="825">
+             </picture>
+           </div>
           
           <!-- Google Maps -->
           <div class="about-map">
@@ -559,9 +604,24 @@
             Bên trong nhà thờ Phòng Tuy Biên Quận Công, nơi thờ tự trang nghiêm với những hoành phi và câu đối mang đậm giá trị văn hóa truyền thống. Các văn tự Hán cổ không chỉ là trang trí mà còn chứa đựng những ý nghĩa sâu sắc về công đức, phúc thọ và sự kế thừa của dòng tộc.
           </p>
           
-          <div class="about-image">
-            <img src="/static/images/6-trong-nha-tho.jpg" alt="Hình ảnh bên trong nhà thờ Phòng Tuy Biên Quận Công" class="js-hide-on-error" data-image-name="6-trong-nha-tho.jpg">
-          </div>
+           <div class="about-image">
+             <picture>
+               <source
+                 srcset="/static/images/6-trong-nha-tho-mobile.webp?v=20260612imgset 768w, /static/images/6-trong-nha-tho-desktop.webp?v=20260612imgset2 1100w"
+                 sizes="(max-width: 768px) 92vw, (max-width: 1200px) min(92vw, 860px), 860px"
+                 type="image/webp">
+               <img
+                 src="/static/images/6-trong-nha-tho-desktop.jpg?v=20260612imgset2"
+                 srcset="/static/images/6-trong-nha-tho-mobile.jpg?v=20260612imgset 768w, /static/images/6-trong-nha-tho-desktop.jpg?v=20260612imgset2 1100w"
+                 sizes="(max-width: 768px) 92vw, (max-width: 1200px) min(92vw, 860px), 860px"
+                 alt="Hình ảnh bên trong nhà thờ Phòng Tuy Biên Quận Công"
+                 class="js-hide-on-error"
+                 data-image-name="6-trong-nha-tho.jpg"
+                 loading="lazy"
+                 width="1100"
+                 height="825">
+             </picture>
+           </div>
 
           <h3 class="temple-heading" id="hoanh-phi-chinh-giua">1️⃣ Hoành phi ở chính giữa (phía trên)</h3>
           <details class="history-accordion">
@@ -733,7 +793,6 @@
   </main>
 
   <script src="/static/js/device-detection.js"></script>
-  <script src="/static/js/genealogy-lineage.js"></script>
 
   <!-- Footer -->
   <footer class="footer">
@@ -751,9 +810,11 @@
           <h3>Liên Hệ</h3>
           <ul>
             <li>
-              <a href="https://www.facebook.com/PhongTuyBienQuanCong" target="_blank" rel="noopener noreferrer">
-                Facebook Phòng Tuy Biên Quận Công
-              </a>
+              {% if public_facebook_url %}
+                <a href="{{ public_facebook_url }}" target="_blank" rel="noopener noreferrer">
+                  Facebook Phòng Tuy Biên Quận Công
+                </a>
+              {% endif %}
             </li>
             <li>
               <a href="/contact">
@@ -775,8 +836,8 @@
             <li><a href="/privacy">Chính sách bảo mật</a></li>
           </ul>
           <div class="footer-login">
-            <a href="/admin/activities" class="btn-footer-login">
-              Đăng nhập bài đăng
+            <a href="/contact" class="btn-footer-login">
+              Liên hệ hỗ trợ
             </a>
           </div>
         </div>
@@ -788,8 +849,11 @@
     </div>
   </footer>
 
-  <script src="/static/js/common.js"></script>
-  <script src="/static/js/index.js?v=20260415xss" defer></script>
+  {% include 'partials/_mobile_contact_bar.html' %}
+
+  <!-- *.min.js sinh từ common.js / index.js — sau khi sửa nguồn phải chạy: npm run build:assets -->
+  <script src="/static/js/common.min.js?v={{ static_ver }}"></script>
+  <script src="/static/js/index.min.js?v={{ static_ver }}" defer></script>
   <script>
     (function() {
       'use strict';
@@ -846,7 +910,7 @@
     ↑
   </button>
 
-  <div id="readingProgress" class="reading-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+  <div id="readingProgress" class="reading-progress" role="progressbar" aria-label="Tiến độ đọc trang" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
     <div class="reading-progress-fill"></div>
   </div>
 

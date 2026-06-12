@@ -1,6 +1,6 @@
 {# Gia phả — trang ghép từ partials để dễ bảo trì. Không đổi URL / route. #}
 {% include 'genealogy/partials/_head.html' %}
-<body>
+<body class="has-mobile-contact-bar">
 {% include 'genealogy/partials/_body_nav_gate.html' %}
 {% include 'genealogy/partials/_main_genealogy_content.html' %}
 {% include 'genealogy/partials/_scripts_external_bundle.html' %}
@@ -12,5 +12,6 @@
 {% include 'genealogy/partials/_styles_stats_responsive.html' %}
 <script src="/static/js/genealogy-grave-family-view.js?v={{ static_ver }}"></script>
 {% include 'genealogy/partials/_footer_zalo_and_gate_script.html' %}
+{% include 'partials/_mobile_contact_bar.html' %}
 </body>
 </html>

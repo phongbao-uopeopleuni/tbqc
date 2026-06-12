@@ -2,9 +2,9 @@
 
 Purpose: Fast context for Cursor/Codex/Claude before changing code.  
 Audience: AI coding agents and maintainers.  
-Last reviewed: 2026-05-27  
+Last reviewed: 2026-06-11
 Canonical: yes  
-Detailed historical version: `docs/archive/ai/ai-project-memory-legacy-2026-05-27.md`
+Archived long-form snapshot: `docs/archive/ai/ai-project-memory-legacy-2026-05-27.md` (archive-only, not canonical, do not merge back blindly)
 
 Use this file as a quick-start map. Do not turn it into a full history log. Long-form history belongs in:
 
@@ -40,6 +40,9 @@ Read these first when the task touches the corresponding area:
 - Security baseline: `docs/security/security.md`
 - Release history: `docs/releases/changelog.md`
 - Refactor working notes: `docs/refactor/README.md`
+- Full route topology and conflict map: `docs/refactor/foundations/route-inventory.md`
+- Frontend script/window global load map: `docs/refactor/foundations/js-load-graph.md`
+- Current code graph snapshot: `static/data/code-graph.json`
 
 Non-canonical but useful:
 
@@ -98,6 +101,7 @@ Important:
 
 - canonical docs live under `docs/product`, `docs/operations`, `docs/security`, `docs/qa`, `docs/releases`
 - refactor-only material lives under `docs/refactor`
+- deep topology / graph artefacts live in `docs/refactor/foundations/` and `static/data/code-graph.json`
 
 ---
 
@@ -166,6 +170,18 @@ Use this to find the right starting point quickly.
 - `render.yaml`
 - `Procfile`
 
+Current active integrations:
+
+- Geoapify key bootstrap for grave/map flows
+- RSS fetch from `nguyenphuoctoc.info` for external posts
+- self-sync read from `/api/members` on the canonical production host
+- Google Maps embed on the public homepage
+
+Not active anymore:
+
+- Facebook API is no longer part of runtime or env configuration
+- public Facebook links may still appear in templates/content, but they are content links only
+
 ### Backup / migration / operational scripts
 
 - `admin/backup_routes.py`
@@ -175,7 +191,96 @@ Use this to find the right starting point quickly.
 
 ---
 
-## 6. Critical Flows
+## 6. Route And Code Graph Contract
+
+Use this section when expanding the project structure, adding routes, or reorganizing modules.
+
+### Runtime route topology
+
+- Deep source of truth: `docs/refactor/foundations/route-inventory.md`
+- Current verified snapshot in that document:
+  - 114 unique `URL + method` runtime routes
+  - 117 runtime endpoints including 3 duplicate/conflict registrations
+- Important intentional conflicts still live:
+  - `/api/activities/can-post` is registered twice
+  - `/api/tree` has blueprint route + late `app.add_url_rule()` fallback
+  - `/api/generations` has blueprint route + late `app.add_url_rule()` fallback
+
+Implication:
+
+- do not assume one URL maps to one handler
+- route registration order in `app.py` is part of runtime behavior
+- when adding or moving routes, re-check `route-inventory.md`, `tests/test_url_map_contract.py`, and `app.url_map`
+
+### Knowledge / code graph
+
+- Current data artifact: `static/data/code-graph.json`
+- Generator: `scripts/code-graph/scan.mjs`
+- Server-side runner: `services/code_graph_scan.py`
+- Admin rescan endpoint: `POST /api/admin/code-graph/rescan`
+- Admin UI consumers:
+  - `templates/admin/dashboard.html`
+  - `static/js/admin-code-graph.js`
+  - `static/css/admin-code-graph.css`
+- Guardrails:
+  - `tests/test_admin_page_golden.py`
+  - `tests/test_url_map_contract.py`
+
+Current snapshot metadata from `static/data/code-graph.json`:
+
+- `generatedAt`: `2026-06-08T15:42:24.845Z`
+- `graphVersion`: `2`
+- `nodeCount`: `1866`
+- `edgeCount`: `3960`
+- overview:
+  - `totalFiles`: `258`
+  - `totalFunctions`: `1494`
+  - `totalApiRoutes`: `78`
+  - `highRiskCount`: `948`
+  - `orphanCount`: `35`
+
+Treat these counts as snapshot numbers, not permanent invariants. They should change when the codebase changes and the graph is regenerated.
+
+### Code graph operational rules
+
+- Do not hand-edit `static/data/code-graph.json` except for emergency inspection.
+- The real source of truth is the scanner pipeline: `scan.mjs` -> `static/data/code-graph.json` -> admin dashboard.
+- `services/code_graph_scan.py` requires:
+  - `node` available on PATH
+  - `scripts/code-graph/node_modules/` present
+- The scanner reads broad repo structure, not only frontend JS:
+  - Python
+  - JS
+  - HTML
+  - CSS
+  - config/deploy files
+- The dashboard supports multiple views over the same artifact:
+  - file dependency
+  - function view
+  - API flow
+  - security review
+  - learning view
+
+### Frontend load graph
+
+- Deep source of truth: `docs/refactor/foundations/js-load-graph.md`
+- Use it before changing:
+  - script tag order
+  - inline-to-external JS extraction
+  - `window.*` globals on genealogy/admin/index pages
+- This matters because the project still depends on:
+  - large inline scripts
+  - cross-file `window.*` contracts
+  - order-sensitive genealogy bundles
+
+Implication:
+
+- if you split JS files or move script tags, update `js-load-graph.md`
+- if you change code graph dashboard assets, keep admin dashboard golden fixture in sync
+
+---
+
+## 7. Critical Flows
 
 ### App bootstrap
 
@@ -203,13 +308,15 @@ Deploy uses `Procfile`/`render.yaml` -> app starts via `app.py` -> `/api/health`
 
 ---
 
-## 7. High-Risk Areas
+## 8. High-Risk Areas
 
 - `admin_routes.py`
   - large legacy surface
   - broad blast radius
 - route registration order in `app.py`
   - duplicates or late registration can change behavior unexpectedly
+- duplicate/fallback route topology
+  - `/api/tree`, `/api/generations`, `/api/activities/can-post`
 - `render.yaml` vs `Procfile`
   - keep aligned
 - DB-backed tests in `tests/conftest.py`
@@ -220,15 +327,22 @@ Deploy uses `Procfile`/`render.yaml` -> app starts via `app.py` -> `/api/health`
   - filesystem and path-safety risk
 - caching/rate limiting
   - `memory://` and in-process cache assumptions matter if worker count changes
+- genealogy/frontend load order
+  - script order and `window.*` globals are still a real runtime contract
+- code graph pipeline
+  - scanner, JSON snapshot, admin dashboard, and golden HTML can drift if changed casually
 
 ---
 
-## 8. Test Map by Change Type
+## 9. Test Map By Change Type
 
 - General Python/backend change:
   - `pytest`
 - Route/bootstrap/surface contract:
   - `python -m pytest -x -q tests/test_url_map_contract.py tests/test_bootstrap_snapshot.py tests/test_frontend_cdn_versions.py`
+- Code graph/dashboard change:
+  - `python -m pytest -x -q tests/test_admin_page_golden.py tests/test_url_map_contract.py`
+  - if scanner behavior changed, rescan and verify `static/data/code-graph.json` metadata/shape
 - JS change in `static/js/**`:
   - `npm run lint`
 - DB-backed feature change:
@@ -246,7 +360,7 @@ Rule:
 
 ---
 
-## 9. Working Rules for AI Agents
+## 10. Working Rules For AI Agents
 
 1. Read this file, then inspect `git status`, then open `docs/operations/system-context.md` and the canonical docs relevant to the task.
 2. Do not trust stale assumptions over current repo state.
@@ -255,13 +369,20 @@ Rule:
 5. Prefer small, reversible edits.
 6. Match existing patterns before introducing new abstractions.
 7. If touching a risky area, say so and run the relevant verification.
+8. If touching route structure, update or at least re-check `docs/refactor/foundations/route-inventory.md`.
+9. If touching script load order, inline JS extraction, or `window.*` globals, update or re-check `docs/refactor/foundations/js-load-graph.md`.
+10. If touching the knowledge graph pipeline, keep `scan.mjs`, `services/code_graph_scan.py`, `static/data/code-graph.json`, admin dashboard UI, and golden fixture aligned.
 
 ---
 
-## 10. Recent Significant Changes
+## 11. Recent Significant Changes
 
 Keep only architecture- or maintenance-relevant changes here. Move older detail to changelog/refactor/archive.
 
+- 2026-06-11
+  - active docs and env reference were refreshed to remove Facebook API leftovers
+  - canonical integration inventory was corrected to the current runtime state
+  - route topology / code graph / JS load graph contracts were linked into this quick-start memory
 - 2026-05-27
   - docs taxonomy reorganized under `docs/`
   - this file was rewritten as quick-start memory
@@ -274,16 +395,19 @@ Keep only architecture- or maintenance-relevant changes here. Move older detail 
 
 ---
 
-## 11. Current Open Risks and Next Actions
+## 12. Current Open Risks And Next Actions
 
 - Confirm runtime alignment between `Procfile` and `render.yaml` whenever deploy config changes.
 - Be careful with `admin_routes.py` until legacy admin routing is fully reduced.
 - Treat DB-backed changes as higher-cost tasks because they require Docker-backed verification.
 - Improve schema/migration reproducibility around `folder_sql/` in a future dedicated task.
+- Reduce dependency on duplicate routes and late fallback registrations in `app.py` only with explicit route-contract verification.
+- Keep `code-graph.json` regenerated when architecture/topology meaningfully changes, otherwise admin dashboard drifts from reality.
+- Keep `js-load-graph.md` updated before major frontend extraction/splitting work, especially genealogy/member/admin pages.
 
 ---
 
-## 12. Review Triggers
+## 13. Review Triggers
 
 Update this file when:
 
@@ -293,5 +417,8 @@ Update this file when:
 - test gates or required commands change
 - a new high-risk area appears
 - a significant architectural or operational decision is made
+- route topology or duplicate-route resolution changes
+- code graph scanner/UI/data contract changes
+- major frontend load-order or `window.*` contract changes
 
 Do not update this file for every small bugfix. Keep it short enough that an AI can read it quickly and start work.

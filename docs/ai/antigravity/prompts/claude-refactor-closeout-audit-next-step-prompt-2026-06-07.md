@@ -27,7 +27,7 @@ Bạn phải làm việc theo nguyên tắc:
 
 ### Plan + closeout
 
-- `D:\tbqc\docs\Refactor plan June 3rd.md`
+- `D:\tbqc\docs\refactor\refactor-plan-june-3rd.md`
 - `D:\tbqc\docs\refactor\phase-6\phase-6-closeout-2026-06-05.md`
 - `D:\tbqc\docs\refactor\phase-6\phase-6-release-checklist-2026-06-07.md`
 - `D:\tbqc\docs\refactor\foundations\db-operation-map.md`
@@ -112,7 +112,7 @@ Kỳ vọng operational artifact:
 
 ### A. Audit plan compliance
 
-Đối chiếu `docs/Refactor plan June 3rd.md` với:
+Đối chiếu `docs/refactor/refactor-plan-june-3rd.md` với:
 
 - code thật
 - DB state thật

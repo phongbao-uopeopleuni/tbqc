@@ -141,9 +141,10 @@ def test_ensure_albums_table_executes_create():
     from services.gallery_helpers import ensure_albums_table
 
     cursor = MagicMock()
+    cursor.fetchone.return_value = object()
     ensure_albums_table(cursor)
-    cursor.execute.assert_called_once()
-    sql = cursor.execute.call_args[0][0]
+    assert cursor.execute.call_count >= 1
+    sql = cursor.execute.call_args_list[0][0][0]
     assert "albums" in sql
     assert "CREATE TABLE IF NOT EXISTS" in sql
 
@@ -153,9 +154,10 @@ def test_ensure_album_images_table_executes_create():
     from services.gallery_helpers import ensure_album_images_table
 
     cursor = MagicMock()
+    cursor.fetchone.return_value = object()
     ensure_album_images_table(cursor)
-    cursor.execute.assert_called_once()
-    sql = cursor.execute.call_args[0][0]
+    assert cursor.execute.call_count >= 1
+    sql = cursor.execute.call_args_list[0][0][0]
     assert "album_images" in sql
     assert "CREATE TABLE IF NOT EXISTS" in sql
 

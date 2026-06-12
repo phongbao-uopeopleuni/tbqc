@@ -2,7 +2,7 @@
 
 > **Mục đích:** Verify production DB schema + route reachability + runtime dependencies TRƯỚC khi viết code Phase 0.
 > **Nguyên tắc:** Không code, không migration. Chỉ query + đọc + ghi kết quả.
-> **Liên kết:** [Refactor plan June 3rd.md](../Refactor%20plan%20June%203rd.md) — Section 12.
+> **Liên kết:** [refactor-plan-june-3rd.md](./refactor-plan-june-3rd.md) — Section 12.
 > **Người chạy:** Cowork agent · **Ngày chạy:** 2026-06-04 · **DB target:** `railway` (production)
 
 ---

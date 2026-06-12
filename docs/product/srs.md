@@ -666,7 +666,6 @@ flowchart TB
 | Album/Má»™ | `ALBUM_PASSWORD`, `GRAVE_IMAGE_DELETE_PASSWORD` | âŒ | Tuá»³ chá»n |
 | Backup | `BACKUP_DIR`, `BACKUP_PASSWORD` | âœ… (prod) | ThÆ° má»¥c + máº­t kháº©u backup |
 | Map | `GEOAPIFY_API_KEY` | âŒ | Báº£n Ä‘á»“ má»™ pháº§n |
-| Social | `FB_PAGE_ID`, `FB_ACCESS_TOKEN` | âŒ | NhÃºng Facebook (náº¿u báº­t) |
 | Cookie | `COOKIE_DOMAIN`, `CORS_ALLOWED_ORIGINS` | âŒ | Äa subdomain |
 | Volume | `RAILWAY_VOLUME_MOUNT_PATH` | âŒ | Mount áº£nh/backup |
 

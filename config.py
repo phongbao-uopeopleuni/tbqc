@@ -238,6 +238,37 @@ class Config:
 
         app.config["CORS_ALLOWED_ORIGINS"] = allowed_origins
 
+        app.config["PUBLIC_SITE_URL"] = (
+            os.environ.get("PUBLIC_SITE_URL", "https://www.phongtuybienquancong.info").strip()
+            or "https://www.phongtuybienquancong.info"
+        ).rstrip("/")
+        app.config["PUBLIC_ORGANIZATION_NAME"] = (
+            os.environ.get("PUBLIC_ORGANIZATION_NAME", "Phòng Tuy Biên Quận Công").strip()
+            or "Phòng Tuy Biên Quận Công"
+        )
+        app.config["PUBLIC_FACEBOOK_URL"] = (
+            os.environ.get(
+                "PUBLIC_FACEBOOK_URL",
+                "https://www.facebook.com/PhongTuyBienQuanCong",
+            ).strip()
+            or "https://www.facebook.com/PhongTuyBienQuanCong"
+        )
+        app.config["PUBLIC_ZALO_URL"] = (
+            os.environ.get(
+                "PUBLIC_ZALO_URL",
+                "https://zalo.me/g/ajmmkc064",
+            ).strip()
+            or "https://zalo.me/g/ajmmkc064"
+        )
+        app.config["PUBLIC_PHONE_NUMBER"] = (
+            os.environ.get("PUBLIC_PHONE_NUMBER", "0775753003").strip()
+            or "0775753003"
+        )
+        app.config["PUBLIC_PHONE_DISPLAY"] = (
+            os.environ.get("PUBLIC_PHONE_DISPLAY", "").strip()
+            or app.config["PUBLIC_PHONE_NUMBER"]
+        )
+
         # CSRF (Flask-WTF): bật mặc định; form/fetch gửi X-CSRFToken (meta csrf-token trong template).
         app.config.setdefault("WTF_CSRF_ENABLED", True)
 

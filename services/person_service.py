@@ -519,8 +519,8 @@ def get_person(person_id):
                 person['ancestors'] = ancestors
                 logger.info(f'[API /api/person/{person_id}] Found {len(ancestors_chain)} ancestors via stored procedure')
             else:
-                person['ancestors'] = []
-                person['ancestors_chain'] = []
+                # SP succeeded but returned 0 rows — fall through to manual fallback below
+                raise LookupError("sp_get_ancestors returned empty result set")
         except Exception as e:
             logger.warning(f'Error calling sp_get_ancestors for {person_id}: {e}')
             import traceback

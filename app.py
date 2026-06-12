@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, Response, jsonify, render_template, request
 from blueprints import register_blueprints
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_cors import CORS
@@ -74,6 +74,37 @@ try:
         except Exception:
             _static_ver = 'dev'
     app.jinja_env.globals['static_ver'] = _static_ver
+
+    def _normalize_phone_href(phone_number: str) -> str:
+        phone_number = (phone_number or '').strip()
+        if not phone_number:
+            return ''
+        cleaned = []
+        for index, char in enumerate(phone_number):
+            if char.isdigit():
+                cleaned.append(char)
+            elif char == '+' and index == 0:
+                cleaned.append(char)
+        return ''.join(cleaned)
+
+    @app.context_processor
+    def inject_public_site_meta():
+        site_url = (app.config.get('PUBLIC_SITE_URL') or '').rstrip('/') or 'https://www.phongtuybienquancong.info'
+        path = request.path if request.path.startswith('/') else f'/{request.path}'
+        canonical_url = f'{site_url}{path}'
+        public_phone_number = (app.config.get('PUBLIC_PHONE_NUMBER') or '').strip()
+        public_phone_display = (app.config.get('PUBLIC_PHONE_DISPLAY') or public_phone_number).strip()
+        public_phone_href = _normalize_phone_href(public_phone_number)
+        return {
+            'site_url': site_url,
+            'canonical_url': canonical_url,
+            'public_organization_name': app.config.get('PUBLIC_ORGANIZATION_NAME') or 'Phòng Tuy Biên Quận Công',
+            'public_facebook_url': app.config.get('PUBLIC_FACEBOOK_URL') or 'https://www.facebook.com/PhongTuyBienQuanCong',
+            'public_zalo_url': app.config.get('PUBLIC_ZALO_URL') or 'https://zalo.me/g/ajmmkc064',
+            'public_phone_number': public_phone_number,
+            'public_phone_display': public_phone_display,
+            'public_phone_href': public_phone_href,
+        }
 
     @app.after_request
     def _add_security_headers(response):
@@ -280,6 +311,21 @@ register_error_handlers(app)
 def serve_robots():
     import flask
     return flask.send_from_directory(app.static_folder, request.path[1:])
+
+
+@app.route('/sitemap.xml')
+def serve_sitemap():
+    site_url = (app.config.get('PUBLIC_SITE_URL') or 'https://www.phongtuybienquancong.info').rstrip('/')
+    urls = [
+        f'{site_url}/',
+        f'{site_url}/genealogy',
+        f'{site_url}/activities',
+        f'{site_url}/contact',
+        f'{site_url}/documents',
+        f'{site_url}/privacy',
+    ]
+    xml = render_template('sitemap.xml', urls=urls)
+    return Response(xml, mimetype='application/xml')
 
 def run_smoke_tests():
     """Basic smoke tests for key endpoints using Flask test client."""

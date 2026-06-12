@@ -4,6 +4,7 @@
 <meta name="csrf-token" content="__CSRF_TOKEN__">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="robots" content="noindex, nofollow">
 <title>Quản lý Dữ liệu - Admin - Gia Phả Nguyễn Phước Tộc</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,6 +40,7 @@ return originalFetch(url, options);
 <div class="admin-navbar-left">
 <ul class="admin-navbar-menu">
 <li><a href="/admin/dashboard" >Dashboard</a></li>
+<li><a href="/admin/announcements" >Thông báo</a></li>
 <li><a href="/admin/data-management" class="active">Quản lý dữ liệu</a></li>
 <li><a href="/admin/logs" >Log</a></li>
 <li><a href="/admin/users" >Tài khoản</a></li>
@@ -239,8 +241,7 @@ style="padding:0.4rem 0.6rem;border:1px solid var(--admin-border);border-radius:
 <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">fm / FU gốc</th>
 <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-primary);font-weight:600;font-size:0.8rem;border-left:2px solid var(--admin-primary);">unit_id</th>
 <th style="text-align:left;padding:0.4rem 0.6rem;color:#e67e22;font-weight:600;font-size:0.8rem;border-left:2px solid #e67e22;">GĐ lấy vào</th>
-<th style="text-align:left;padding:0.4rem 0.6rem;color:#e67e22;font-weight:500;font-size:0.8rem;">Vai trò</th>
-<th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">Trạng thái</th>
+<th style="display:none;">Trạng thái</th>
 <th style="text-align:left;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">Ghi chú</th>
 <th style="text-align:center;padding:0.4rem 0.6rem;color:var(--admin-text-muted);font-weight:500;font-size:0.8rem;">Hành động</th>
 </tr>
@@ -602,6 +603,16 @@ if (role === 'con_re')  return '<span style="color:#8e44ad;font-weight:600;">Con
 return '<span style="color:#ccc;font-size:0.8rem;">—</span>';
 }
 
+/* Trả về HTML tên người — nếu là người lấy vào thì tô màu theo vai trò */
+function _nameWithRole(name, isInLaw, role) {
+var text = escapeHtml(name || '—');
+if (!isInLaw || !role) return text;
+var color = role === 'con_dau' ? '#e67e22' : '#8e44ad';
+var label = role === 'con_dau' ? 'con dâu' : 'con rể';
+return '<span style="color:' + color + ';font-weight:600;">' + text + '</span>'
++ '&nbsp;<span style="font-size:0.72rem;opacity:0.75;color:' + color + ';">(' + label + ')</span>';
+}
+
 function _fmCell(fuId, fmId) {
 var lines = [];
 if (fuId) lines.push('<span style="font-family:monospace;color:var(--admin-primary);" title="family_unit_id">FU: ' + escapeHtml(fuId) + '</span>');
@@ -626,18 +637,19 @@ tbody.innerHTML = rows.map(function(r) {
 var couplefu = r.couple_family_unit_id
 ? '<span style="font-family:monospace;font-weight:600;color:var(--admin-primary);">' + escapeHtml(r.couple_family_unit_id) + '</span>'
 : '<span style="color:#ccc;font-size:0.8rem;">chưa có</span>';
+var pIsInLaw  = !!r.in_law_role && !r.person_fm_id  && !r.person_family_unit_id;
+var spIsInLaw = !!r.in_law_role && !r.spouse_fm_id && !r.spouse_family_unit_id;
 return '<tr data-row-id="' + r.id + '" style="border-bottom:1px solid var(--admin-border);">'
 + '<td style="' + P + 'color:var(--admin-text-muted);font-size:0.8rem;">' + escapeHtml(String(r.id)) + '</td>'
 + '<td style="' + P + BL + 'font-family:monospace;font-size:0.8rem;color:var(--admin-primary);">' + escapeHtml(r.person_id || '') + '</td>'
-+ '<td style="' + P + '">' + escapeHtml(r.person_name || '—') + '</td>'
++ '<td style="' + P + '">' + _nameWithRole(r.person_name, pIsInLaw, r.in_law_role) + '</td>'
 + '<td style="' + P + 'font-size:0.8rem;line-height:1.6;">' + _fmCell(r.person_family_unit_id, r.person_fm_id) + '</td>'
 + '<td style="' + P + BL + 'font-family:monospace;font-size:0.8rem;color:var(--admin-primary);">' + escapeHtml(r.spouse_person_id || '') + '</td>'
-+ '<td style="' + P + '">' + escapeHtml(r.spouse_name || '—') + '</td>'
++ '<td style="' + P + '">' + _nameWithRole(r.spouse_name, spIsInLaw, r.in_law_role) + '</td>'
 + '<td style="' + P + 'font-size:0.8rem;line-height:1.6;">' + _fmCell(r.spouse_family_unit_id, r.spouse_fm_id) + '</td>'
 + '<td style="' + P + BLP + '">' + couplefu + '</td>'
 + '<td style="' + P + 'border-left:2px solid #e67e22;font-family:monospace;font-size:0.8rem;color:#e67e22;">' + escapeHtml(r.in_law_family_id || '—') + '</td>'
-+ '<td style="' + P + 'font-size:0.8rem;">' + _inLawRoleLabel(r.in_law_role) + '</td>'
-+ '<td data-cell="status" style="' + P + 'font-size:0.8rem;">' + escapeHtml(r.status || '') + '</td>'
++ '<td data-cell="status" style="display:none;">' + escapeHtml(r.status || '') + '</td>'
 + '<td data-cell="note" style="' + P + 'color:var(--admin-text-muted);font-size:0.8rem;">' + escapeHtml(r.note || '') + '</td>'
 + '<td data-cell="actions" style="' + P + 'text-align:center;white-space:nowrap;">'
 + '<button class="btn btn-sm btn-secondary m-edit-btn" data-id="' + r.id + '" style="margin-right:4px;">Sửa</button>'

@@ -14,6 +14,8 @@ GET / -> main.index
 GET /activities -> activities.activities_page
 GET /activities/<int:activity_id> -> activities.activity_detail_page
 GET /admin/activities -> admin_activities_page
+GET /admin/announcements -> admin_announcements_page
+GET /admin/api/announcements -> admin_announcements_get
 GET /admin/api/backup/download/<filename> -> download_backup_admin
 GET /admin/api/csv-data/<sheet_name> -> get_csv_data
 GET /admin/api/db-info -> admin_api_db_info
@@ -76,6 +78,7 @@ GET /members/template/Template_updatetbqc.xlsx -> members_portal.download_templa
 GET /privacy -> main.privacy_page
 GET /privacy-policy -> main.privacy_page
 GET /robots.txt -> serve_robots
+GET /sitemap.xml -> serve_sitemap
 GET /static/<path:filename> -> static
 GET /static/images/<path:filename> -> gallery.serve_image_static
 GET|POST /admin/login -> admin_login
@@ -85,6 +88,7 @@ GET|POST /api/external-posts/refresh -> refresh_external_posts
 GET|POST /api/fix/p-1-1-parents -> persons.fix_p1_1_parents
 GET|POST /api/grave-search -> gallery.search_grave
 GET|POST /members/logout -> members_portal.members_logout
+POST /admin/api/announcements -> admin_announcements_save
 POST /admin/api/backup -> create_backup
 POST /admin/api/csv-data/<sheet_name> -> add_csv_row
 POST /admin/api/family-units -> create_family_unit

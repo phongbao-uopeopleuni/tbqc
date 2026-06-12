@@ -133,7 +133,6 @@ Biến quan trọng khác:
 - `ALBUM_PASSWORD`
 - `GRAVE_IMAGE_DELETE_PASSWORD`
 - `GEOAPIFY_API_KEY`
-- `FB_PAGE_ID`, `FB_ACCESS_TOKEN`
 - `COOKIE_DOMAIN`
 - `CORS_ALLOWED_ORIGINS`
 - `RAILWAY_VOLUME_MOUNT_PATH`
@@ -185,6 +184,14 @@ npm run lint
 npm run format:check
 ```
 
+Minify asset homepage (BẮT BUỘC sau khi sửa `static/js/index.js`, `static/js/common.js`, hoặc `static/css/index.css`):
+
+```bash
+npm run build:assets
+```
+
+Lệnh này sinh lại `index.min.js`, `common.min.js`, `index.min.css` — homepage tham chiếu các file `.min` này. File `.min` phải commit vào git vì Railway không chạy npm build. Kiểm tra nhanh: `python scripts/verify_min_assets.py`.
+
 ---
 
 ## 7. Deploy production
@@ -206,6 +213,7 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120
 - Xác minh `.env` hoặc Railway dashboard đã có đủ biến môi trường.
 - Chạy `pytest`.
 - Nếu sửa `static/js/**`, chạy `npm run lint`.
+- Nếu sửa `index.js`/`common.js`/`index.css`, chạy `npm run build:assets` và commit file `.min` sinh ra.
 - Kiểm tra `GET /api/health` trả 200.
 - Smoke test: trang chủ, `/members`, `/genealogy`, `/admin/login`.
 
@@ -240,7 +248,7 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120
 ### Quarterly
 
 - Rotate `ADMIN_PASSWORD`, `BACKUP_PASSWORD`, `MEMBERS_PASSWORD`.
-- Kiểm tra lại API key Geoapify/Facebook nếu dùng.
+- Kiểm tra lại API key Geoapify nếu dùng.
 - Chạy script kiểm tra secret:
 
 ```bash
@@ -362,6 +370,7 @@ Chi tiết chính sách bảo mật: `docs/security/security.md`.
 - Lịch sử thay đổi: cập nhật `docs/releases/changelog.md` trước mỗi lần push lên `master`.
 - Incident, hotfix, rollback, secret rotation: cập nhật `docs/operations/incident-log.md`.
 - Tiến độ refactor: cập nhật `docs/refactor/history/changelog-refactor.md` sau mỗi phase.
+- Khi thay đổi runtime truth, external integration, hoặc risk map cho maintainer/AI: cập nhật thêm `docs/operations/system-context.md`, `docs/ai/memory/ai-project-memory.md`, và nếu có contract outbound/inbound thì cập nhật `docs/refactor/foundations/external-integration.md`.
 - Không tạo thêm file Markdown mới ngoài taxonomy hiện có nếu chưa thật sự cần.
 - Nếu thay đổi lớn về nghiệp vụ hoặc vận hành, thêm mục mới trực tiếp vào tài liệu này.
 

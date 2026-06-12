@@ -6,7 +6,7 @@
 
 ## Lý do
 
-Không có code Python/JS nào đọc hoặc ghi bảng này. App dùng `FB_PAGE_ID` + `FB_ACCESS_TOKEN` từ env var thay thế. Verified: grep toàn bộ `*.py *.js *.html` — 0 reference.
+Không có code Python/JS nào đọc hoặc ghi bảng này. Đây là phần còn sót lại của tích hợp Facebook API cũ và project hiện không còn sử dụng Facebook API. Verified: grep toàn bộ `*.py *.js *.html` — 0 reference.
 
 ## Forward migration
 

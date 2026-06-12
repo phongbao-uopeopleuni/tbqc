@@ -2,7 +2,7 @@
 
 Purpose: Canonical maintainer and handoff context for this system.  
 Audience: maintainers, operators, reviewers, and AI agents doing real maintenance work.  
-Last reviewed: 2026-05-27  
+Last reviewed: 2026-06-11
 Canonical: yes
 
 This document explains how the system is shaped, where the important boundaries are, what is risky to change, and what to verify before and after maintenance work.
@@ -182,6 +182,18 @@ If production routing or cookies behave differently from local, inspect `config.
 - `scripts/run_backup_restore_drill.py`
 - `scripts/migrate.py`
 
+Current runtime-facing integrations to remember:
+
+- Geoapify key bootstrap via `/api/geoapify-key`
+- RSS fetch from `https://nguyenphuoctoc.info/rss/hoat-dong-hoi-dong-npt-vn/`
+- genealogy sync read from `https://www.phongtuybienquancong.info/api/members`
+- Google Maps embed in `templates/index.html`
+
+Clarification:
+
+- Facebook links still exist in public content/contact pages.
+- Facebook API is not part of the current runtime/config contract.
+
 ---
 
 ## 6. Database Change Protocol
@@ -359,3 +371,4 @@ Update this file when:
 - a new high-risk area appears
 - a significant feature boundary moves
 - test/verification expectations change
+- external integration inventory changes

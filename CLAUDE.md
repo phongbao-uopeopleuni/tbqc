@@ -18,6 +18,13 @@ Hướng dẫn hành vi khi code trong repo **tbqc** (Flask, Jinja, static JS/CS
 - CI: `.github/workflows/lint-js.yml` chạy khi PR/push đụng `static/js/**` hoặc config. ESLint strict; Prettier informational (`continue-on-error: true`).
 - Khi thêm global mới (biến/hàm dùng chéo file hoặc từ inline `<script>` trong template), khai báo vào `globals` trong `eslint.config.js` để `no-undef` không báo false positive.
 
+### Minified assets homepage (BẮT BUỘC rebuild)
+
+- `templates/index.html` tham chiếu `index.min.js` / `common.min.js` / `index.min.css` — KHÔNG phải file nguồn.
+- Sau khi sửa `static/js/index.js`, `static/js/common.js`, hoặc `static/css/index.css`: chạy `npm run build:assets` và commit cả file `.min` sinh ra (Railway không chạy npm build).
+- Verify nhanh: `python scripts/verify_min_assets.py`.
+- Lưu ý: `index.js` chỉ load trên homepage và đã được dọn dead code (2026-06-12) — không thêm code cho trang khác vào file này.
+
 ---
 
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.

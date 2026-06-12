@@ -38,6 +38,7 @@ static/images/_thumbs/
 static/images/album_*/
 static/images/graves/
 static/images/personal/
+static/images/Gemini_Generated_Image_*.png
 
 # Environment & Config files with sensitive data
 .env
@@ -93,6 +94,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Lighthouse raw JSON reports (ket qua da ghi vao docs/qa/)
+lighthouse-*.json
+lh-*.json
+desktop-mobile-*.json
 
 # Admin creation scripts (contain sensitive credentials)
 create_*_admin.py

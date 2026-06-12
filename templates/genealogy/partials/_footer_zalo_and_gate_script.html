@@ -1,5 +1,7 @@
   <!-- Floating Zalo Button -->
-  <a href="https://zalo.me/g/ajmmkc064" target="_blank" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  {% if public_zalo_url %}
+    <a href="{{ public_zalo_url }}" target="_blank" rel="noopener noreferrer" class="floating-zalo-button" title="Tham gia nhóm Zalo Phòng Tuy Biên Quận Công">Z</a>
+  {% endif %}
   
   <!-- Passphrase Gate Script - Xác thực qua API, passphrase chỉ lưu trên server (env) -->
   <script>

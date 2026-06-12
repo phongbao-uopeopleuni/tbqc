@@ -7,7 +7,7 @@ continuation can reconstruct progress quickly without re-auditing the whole repo
 
 Use this file together with:
 
-1. [Refactor plan June 3rd.md](../../Refactor%20plan%20June%203rd.md)
+1. [refactor-plan-june-3rd.md](../refactor-plan-june-3rd.md)
 2. [VERIFICATION_REPORT.md](../VERIFICATION_REPORT.md)
 3. [phase-0-phase-1-recheck-2026-06-04.md](../phase-1/phase-0-phase-1-recheck-2026-06-04.md)
 4. [phase-1-spouse-migration-2026-06-05.md](../phase-1/phase-1-spouse-migration-2026-06-05.md)
@@ -196,7 +196,7 @@ These are still intentionally deferred and should not be reopened casually:
 
 When work resumes, read in this order:
 
-1. `docs/Refactor plan June 3rd.md` section 11.4 onward and the execution snapshot
+1. `docs/refactor/refactor-plan-june-3rd.md` section 11.4 onward and the execution snapshot
 2. this closeout note
 3. the latest phase-specific doc for the phase you want to continue from
 4. only then inspect runtime files
