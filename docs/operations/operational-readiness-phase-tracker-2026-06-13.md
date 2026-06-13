@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24, schema-truth ✅ #25, A3 in progress)  
+Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24, schema-truth ✅ #25, A3 ✅ #26, A4 in progress)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -40,7 +40,7 @@ Current active phase:
 
 Current active PR:
 
-- `PR-A3 — Health And Diagnostics Baseline` (branch `ops/pr-a3-health-diagnostics`, docs-only)
+- `PR-A4 — DB Hot-Path And Contract Audit` (branch `ops/pr-a4-db-hotpath-audit`)
 
 Current initiative state:
 
@@ -50,13 +50,14 @@ Current initiative state:
 - Production smoke script exists (7/7 passed 2026-06-13).
 - Production schema reality verified and recorded (7+1 queries, #25).
 - Env preflight implemented (PR-A1 #24, WARN-only default).
-- Health endpoint contract fully audited and documented (PR-A3 in progress).
+- Health endpoint contract fully audited and documented (PR-A3 #26).
+- DB hot-path inventory audited; connection probe leak fixed (PR-A4 in progress).
 
 ## 4. Phase Summary
 
 | Phase | Goal | Current status | Owner note |
 | --- | --- | --- | --- |
-| Phase A | operational stability baseline | `In progress` | A0 ✅ + A1 ✅ + schema-truth ✅ merged; A3 docs in progress; A4/A5/A2 not started |
+| Phase A | operational stability baseline | `In progress` | A0 ✅ + A1 ✅ + schema-truth ✅ + A3 ✅ merged; A4 code+docs in progress; A5/A2 not started |
 | Phase B | standardization | `Not started` | blocked on meaningful completion of Phase A |
 | Phase C | deployment productization | `Not started` | do not start before Phase A is stable and Phase B removes core ambiguity |
 | Phase D | approved membership commercial flow | `Not started` | intentionally deferred until operational baseline is trustworthy |
@@ -155,17 +156,41 @@ Verification evidence:
 
 Status:
 
-- `Not started`
+- `In progress` (branch `ops/pr-a4-db-hotpath-audit`)
 
 Prerequisites:
 
-- A0 accepted
+- A0 accepted ✅
 
-Must audit before starting:
+Audit findings (completed before coding):
 
-- all `information_schema` / `SHOW COLUMNS` hot paths
-- `/api/members` consumers
-- true N+1 vs bulk-load paths
+- **Critical hot-path:** `auth.py::get_user_by_id()` (Flask-Login user_loader) runs 2 `SHOW COLUMNS FROM users` on EVERY authenticated request. On prod, both return None (columns absent). Root cause = B2 migration not run yet. Fix deferred to B2 (see §15.2 release-gate).
+- **Medium hot-path:** `audit_log.py::log_activity()` runs `SHOW TABLES LIKE 'activity_logs'` on every admin audit write. Admin-only path; deferred.
+- **Low hot-path:** `admin/logs_api_routes.py` runs 3 introspection queries per admin logs request. Admin-only; deferred.
+- **gallery_service.py + person_service.py:** multiple `SHOW COLUMNS` / `information_schema` calls per CRUD operation. Deferred to B3.
+- **Connection probe leak (from A3):** `services/infra_api_routes.py` did not close diagnostic probe connection. **Fixed in A4.**
+- **N+1 analysis:** `/api/members` is bulk-load (not N+1). Real N+1 write loop is `bulk_update_members_sll` (admin-only, acceptable at current scale). Documented in §15.3.
+
+Code change (surgical, one file):
+
+- `services/infra_api_routes.py`: assign probe to variable and call `.close()` on success. 2-line change.
+
+New tests (2):
+
+- `tests/test_health_and_cache_security.py::test_health_probe_closed_when_pool_returns_none_and_direct_succeeds` — verifies `.close()` called
+- `tests/test_health_and_cache_security.py::test_health_probe_captures_error_when_pool_and_direct_both_fail` — verifies `connection_error` captured correctly
+
+Verification evidence:
+
+- `python -m pytest tests/test_health_and_cache_security.py -v` → 8/8 passed (incl. 2 new tests)
+- Full suite: 469 passed, 3 skipped pending (run before commit)
+
+Deliverables:
+
+- `docs/operations/release-gate.md §15`: hot-path inventory (§15.1 table, §15.2 critical finding, §15.3 N+1 classification, §15.4 deferred items)
+- `docs/operations/release-gate.md §14.11`: updated to reflect fix applied
+- `services/infra_api_routes.py`: probe leak fixed
+- `tests/test_health_and_cache_security.py`: 2 new regression tests
 
 ### 5.5 PR-A5 — Schema-Truth Reconciliation Slice
 
@@ -271,7 +296,7 @@ Recommended order from here:
 1. ✅ Merge `PR-A0` (#23) — done
 2. ✅ Merge `PR-A1` (#24) — done
 3. ✅ Merge `ops/schema-truth-prod-verify` (#25) — done
-4. 🔵 Review and merge `PR-A3` (branch `ops/pr-a3-health-diagnostics`) — **current**
-5. Then `PR-A4` (DB hot-path audit: connection probe leak + hot-path inventory)
+4. ✅ Merge `PR-A3` (#26) — done
+5. 🔵 Review and merge `PR-A4` (branch `ops/pr-a4-db-hotpath-audit`) — **current**
 6. Then `PR-A5` (schema-truth reconciliation: SP source export, dead-table removal from bootstrap)
 7. Then `PR-A2` (backup/rollback drill)

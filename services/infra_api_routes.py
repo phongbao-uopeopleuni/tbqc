@@ -85,7 +85,8 @@ def register_health_route(app, blueprints_error=None):
             else:
                 health_status['database'] = 'connection_failed'
                 try:
-                    mysql.connector.connect(**cfg)
+                    probe = mysql.connector.connect(**cfg)
+                    probe.close()  # diagnostic only — must close to avoid leak
                 except Exception as e:
                     health_status['connection_error'] = str(e)
             if current_blueprints_error:
