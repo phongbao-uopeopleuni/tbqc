@@ -40,21 +40,21 @@ Current active phase:
 
 Current active PR:
 
-- `PR-A0 — Baseline Inventory And Release Gate`
+- `PR-A1 — Environment Preflight` (PR-A0 merged to master as #23, commit `f786577`)
 
 Current initiative state:
 
 - Baseline planning exists.
 - Execution plan exists.
-- Release gate baseline exists.
-- Production smoke script exists.
-- Broader implementation has not moved beyond Phase A.
+- Release gate baseline exists + merged.
+- Production smoke script exists + merged.
+- PR-A0 completed; PR-A1 (env preflight) in progress.
 
 ## 4. Phase Summary
 
 | Phase | Goal | Current status | Owner note |
 | --- | --- | --- | --- |
-| Phase A | operational stability baseline | `In progress` | started; A0 implemented and verified, remaining A1/A3/A4/A5/A2 not started |
+| Phase A | operational stability baseline | `In progress` | A0 completed (#23); A1 in progress; A3/A4/A5/A2 not started |
 | Phase B | standardization | `Not started` | blocked on meaningful completion of Phase A |
 | Phase C | deployment productization | `Not started` | do not start before Phase A is stable and Phase B removes core ambiguity |
 | Phase D | approved membership commercial flow | `Not started` | intentionally deferred until operational baseline is trustworthy |
@@ -65,7 +65,7 @@ Current initiative state:
 
 Status:
 
-- `Ready for review`
+- `Completed` (merged as PR #23 into master, commit `f786577`, 2026-06-13)
 
 Deliverables expected:
 
@@ -113,17 +113,38 @@ Next action:
 
 Status:
 
-- `Not started`
+- `In progress` (branch `ops/pr-a1-env-preflight`)
 
 Prerequisites:
 
-- A0 merged or accepted as baseline truth
+- A0 merged or accepted as baseline truth — DONE (#23)
+- D1 signed by Codex — DONE (feature-flag `PREFLIGHT_ENFORCE` default WARN)
 
-Must audit before starting:
+Audit findings (pre-implementation, satisfied):
 
-- exact required env list by deploy mode
-- which vars are hard-fail vs warn-only
-- startup-path blast radius on Railway
+- required-prod env: `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME/SECRET_KEY` (hard-fail in ENFORCE)
+- dangerous-in-prod: `ALLOW_UNAUTHENTICATED_DATA_FIXES`, `FLASK_DEBUG` (hard-fail in ENFORCE)
+- warn-only: recommended (`MEMBERS_FIXED_ACCOUNTS`, `GEOAPIFY_API_KEY`), discouraged flags, no-Redis multi-worker note
+- migrator vars (`DB_MIGRATOR_*`) NOT required at app boot (migrate.py only)
+- blast radius: ENFORCE only acts when `is_production_env()` → dev/test never blocked
+
+Deliverables:
+
+- `preflight.py` (core checks, reuses `config.is_production_env()`)
+- `app.py` startup hook after `load_env()` (WARN default; raise only ENFORCE+production)
+- `scripts/preflight_env.py` (operator command, read-only)
+- docs: `.env.example`, runbook deploy checklist
+
+Verification evidence:
+
+- `python scripts/preflight_env.py` (local) → exit 0, no issues
+- `... --production --enforce` with missing `SECRET_KEY` → exit 1 (FAILED)
+- `... --production` (WARN) → exit 0 despite error (WARN never blocks)
+- `python -m pytest -x -q -m "not db_integration"` → `467 passed, 3 skipped` (baseline held; import-time hook safe)
+
+Next action:
+
+- review + merge PR-A1; bật `PREFLIGHT_ENFORCE=1` sau một chu kỳ WARN sạch (không cùng deploy window với A5)
 
 ### 5.3 PR-A3 — Health And Diagnostics Baseline
 
@@ -244,7 +265,7 @@ Do not mark a step `Completed` unless all are true:
 Current pending checks:
 
 1. Production `family_unit_id` confirmation still needs owner-side DB access.
-2. Claude senior-eng decisions in the execution plan still need final Codex sign-off cleanup if the team wants a fully cleaned consensus document.
+2. Execution plan §5A: D1 signed by Codex (✅ Consensus). D2–D9 still pending sign-off (needed before B3/A5/C2/A2/CI respectively, not before A1).
 
 Current known blockers for later phases:
 

@@ -18,6 +18,19 @@ mimetypes.add_type('image/webp', '.webp')
 # Load .env first so DB_*, SECRET_KEY, etc. are available before db_config and the rest of the app
 load_env()
 
+# PR-A1: environment preflight. WARN-only mặc định; đặt PREFLIGHT_ENFORCE=1 để hard-fail
+# tại boot khi production thiếu env bắt buộc / bật env nguy hiểm. ENFORCE chỉ tác động trên
+# production (is_production_env), nên dev/test không bao giờ bị chặn.
+try:
+    from preflight import run_preflight
+    run_preflight()
+except RuntimeError:
+    # ENFORCE mode: re-raise để worker fail-loudly trước khi phục vụ traffic.
+    raise
+except Exception as _pf_e:
+    # WARN mode: preflight không bao giờ được tự làm vỡ boot vì lỗi của chính nó.
+    print('WARNING: preflight check skipped due to error:', _pf_e)
+
 # Dat config DB tu .env vao db_config de moi request dung dung (tranh process con khong co env)
 _h = os.environ.get('DB_HOST') or os.environ.get('MYSQLHOST')
 if _h:
