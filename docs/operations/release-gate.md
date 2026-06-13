@@ -117,33 +117,39 @@ Important limitations:
 
 Production currently relies on DB/runtime truth that is not fully reproduced by tracked bootstrap + tracked migration artifacts.
 
-Known gaps:
+Changes made in PR-A5 (2026-06-13):
 
-- runtime still calls stored procedures:
-  - `sp_get_ancestors`
-  - `sp_get_descendants`
-- those procedures do not exist in any tracked SQL file currently under `folder_sql/`
-- `folder_sql/` is gitignored by default and only two SQL files are currently tracked
+- `USE railway;` hardcoded line removed from `reset_schema_tbqc.sql` — replaced with operator instructions to set DB context before running. This makes the file safe for customer deployments (C2).
+- `in_law_relationships` and `personal_details` dead tables removed from `reset_schema_tbqc.sql` — confirmed absent from production in §6.1.
+- `users.role` bootstrap comment added — notes that B2 will widen enum + add missing columns.
 
-Tracked SQL reality:
+Remaining known gaps after A5:
+
+- Stored procedures (`sp_get_ancestors`, `sp_get_descendants`) are correct on production (verified §6.1) but source is not tracked in the repo.
+- Use `scripts/export_sp_source.py` (read-only) to export source from a connected DB, then commit the output into `folder_sql/` with `git add -f` + run `scripts/verify_no_secret_files_tracked.py`.
+- `folder_sql/` is gitignored by default; only two files are currently force-tracked.
+
+Tracked SQL reality (post-A5):
 
 - `git ls-files folder_sql` currently returns:
   - `folder_sql/migrate_add_family_units.sql`
-  - `folder_sql/reset_schema_tbqc.sql`
+  - `folder_sql/reset_schema_tbqc.sql` (dead tables removed, USE removed)
 
 ## 5. Concrete Verified Divergences
 
 These are the minimum verified divergences that must be treated as real release truth today. Production values now verified directly — see §6.1 (production `users` matches the bootstrap shape; `migrate.py` ALTERs were not applied to prod).
 
-| Area | Bootstrap truth | Migrate truth | Why it matters |
-| --- | --- | --- | --- |
-| `users.role` enum | `('admin','user')` | `('admin','editor','user')` | `auth.py` uses `editor_required`; a fresh bootstrap cannot represent `editor` correctly |
-| `users.permissions` | missing | created in `migrate.py` table definition | runtime auth/admin behavior may expect it |
-| `users.password_changed_at` | missing | added by `migrate.py` ALTER | session invalidation logic depends on it |
-| `users.consent_at` / `users.consent_version` | missing | added by `migrate.py` ALTER | compliance/audit-related user state differs |
-| `family_units` | created | not created | production only has it if bootstrap or manual SQL path was used |
-| stored procedures | missing | missing | runtime still depends on them |
-| DB name targeting | `USE railway;` hardcoded | uses runtime `DB_NAME` env | customer bootstrap cannot safely reuse bootstrap SQL as-is |
+| Area | Bootstrap truth | Migrate truth | Production state | A5 action |
+| --- | --- | --- | --- | --- |
+| `users.role` enum | `('admin','user')` | `('admin','editor','user')` | `('admin','user')` — matches bootstrap | Commented in SQL; B2 will widen |
+| `users.permissions` | missing | created in `migrate.py` | absent | Commented in SQL; B2 adds it |
+| `users.password_changed_at` | missing | added by ALTER | absent | Commented in SQL; B2 adds it |
+| `users.consent_at` / `users.consent_version` | missing | added by ALTER | absent | Commented in SQL; B2 adds it |
+| `family_units` | created | not created | ✅ exists (manual SQL applied) | No change needed |
+| `in_law_relationships` | was in bootstrap | not created | ✅ absent from prod | ✅ Removed from bootstrap in A5 |
+| `personal_details` | was in bootstrap | not created | ✅ absent from prod | ✅ Removed from bootstrap in A5 |
+| stored procedures | missing | missing | ✅ exist (manually created) | Export helper added (`scripts/export_sp_source.py`) |
+| DB name targeting | `USE railway;` hardcoded | uses runtime `DB_NAME` env | `railway` schema | ✅ Removed `USE` statement in A5; operator must set context |
 
 ## 6. Production Verification Status
 
