@@ -215,6 +215,13 @@ Baseline release gate:
 ### Checklist deploy
 
 - Xác minh `.env` hoặc Railway dashboard đã có đủ biến môi trường.
+- Chạy preflight env (read-only, không khởi động app):
+
+```bash
+python scripts/preflight_env.py --production
+```
+
+  WARN là chấp nhận được; ERROR phải xử lý trước khi deploy. Đặt `PREFLIGHT_ENFORCE=1` để app tự hard-fail boot trên production khi thiếu env bắt buộc (xem `.env.example`). Lưu ý stagger rule: không bật `PREFLIGHT_ENFORCE` chung deploy window với thay đổi schema (PR-A5).
 - Chạy `pytest`.
 - Nếu sửa `static/js/**`, chạy `npm run lint`.
 - Nếu sửa `index.js`/`common.js`/`index.css`, chạy `npm run build:assets` và commit file `.min` sinh ra.
