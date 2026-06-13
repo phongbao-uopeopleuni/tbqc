@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-13  
+Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -40,21 +40,22 @@ Current active phase:
 
 Current active PR:
 
-- `PR-A0 — Baseline Inventory And Release Gate`
+- `PR-A1 — Environment Preflight` (merged #24, next: schema-truth recording then A3)
 
 Current initiative state:
 
 - Baseline planning exists.
-- Execution plan exists.
-- Release gate baseline exists.
-- Production smoke script exists.
-- Broader implementation has not moved beyond Phase A.
+- Execution plan exists (D1 signed by Codex).
+- Release gate baseline exists (PR-A0 #23).
+- Production smoke script exists (7/7 passed 2026-06-13).
+- Production schema reality verified and recorded (7+1 queries 2026-06-13).
+- Env preflight implemented (PR-A1 #24, WARN-only default).
 
 ## 4. Phase Summary
 
 | Phase | Goal | Current status | Owner note |
 | --- | --- | --- | --- |
-| Phase A | operational stability baseline | `In progress` | started; A0 implemented and verified, remaining A1/A3/A4/A5/A2 not started |
+| Phase A | operational stability baseline | `In progress` | A0 ✅ #23 + A1 ✅ #24 merged; schema-truth recording pending merge; remaining A3/A4/A5/A2 not started |
 | Phase B | standardization | `Not started` | blocked on meaningful completion of Phase A |
 | Phase C | deployment productization | `Not started` | do not start before Phase A is stable and Phase B removes core ambiguity |
 | Phase D | approved membership commercial flow | `Not started` | intentionally deferred until operational baseline is trustworthy |
@@ -65,65 +66,61 @@ Current initiative state:
 
 Status:
 
-- `Ready for review`
+- `Completed`
 
-Deliverables expected:
+Merge evidence:
+
+- PR #23, commit `f7865770`, merged to master 2026-06-13
+
+Deliverables delivered:
 
 - `docs/operations/release-gate.md`
-- production smoke script
+- `scripts/smoke_prod.py`
 - links from runbook and main plan
-- schema-truth statement
-- smoke checklist with content-type assertions
-- `/api/members` consumer map
-
-Current evidence:
-
-- Added `D:\tbqc\docs\operations\release-gate.md`
-- Added `D:\tbqc\scripts\smoke_prod.py`
-- Linked release gate from:
-  - `D:\tbqc\docs\operations\runbook.md`
-  - `D:\tbqc\docs\operations\operational-readiness-commercialization-plan-2026-06-13.md`
+- schema-truth statement (§4–5, divergences table)
+- smoke checklist with content-type assertions (§7)
+- `/api/members` consumer map (§8)
 
 Verification evidence:
 
-- `python scripts/verify_no_secret_files_tracked.py`
-  - result: `OK`
-- `python scripts/verify_min_assets.py`
-  - result: `HOMEPAGE VERIFY: ALL OK`
-- `python -m pytest -x -q -m "not db_integration"`
-  - result: `467 passed, 3 skipped, 77 deselected`
-- `python scripts/smoke_prod.py`
-  - result: all baseline routes passed on production
+- `python scripts/verify_no_secret_files_tracked.py` → `OK`
+- `python scripts/verify_min_assets.py` → `HOMEPAGE VERIFY: ALL OK`
+- `python -m pytest -x -q -m "not db_integration"` → `467 passed, 3 skipped`
+- `python scripts/smoke_prod.py` → 7/7 routes passed (status + content-type)
 
-Known limitation:
+Post-merge verification (2026-06-13):
 
-- production DB check for `SHOW COLUMNS FROM persons LIKE 'family_unit_id'` is still pending owner-side access
-
-Review gate before marking complete:
-
-- confirm docs match tracked code
-- confirm no runtime code was changed
-- confirm PR description includes intended change / must-not-change / tests / smoke / documented-only DB truth
-
-Next action:
-
-- review and merge `PR-A0`
+- `persons.family_unit_id` confirmed present on production (`varchar(50)`, nullable, MUL)
+- A0 pending item closed; full schema reality recorded in `release-gate.md §6.1`
 
 ### 5.2 PR-A1 — Environment Preflight
 
 Status:
 
-- `Not started`
+- `Completed`
 
-Prerequisites:
+Merge evidence:
 
-- A0 merged or accepted as baseline truth
+- PR #24, commit `13a8644a`, merged to master 2026-06-13
 
-Must audit before starting:
+Deliverables delivered:
 
-- exact required env list by deploy mode
-- which vars are hard-fail vs warn-only
-- startup-path blast radius on Railway
+- `preflight.py` — checks required/dangerous/recommended vars; returns `(ok, errors, warnings)`
+- `app.py` hook — after `load_env()`, WARN-only default; re-raises only on ENFORCE mode
+- `scripts/preflight_env.py` — operator CLI (`--production`, `--enforce` flags)
+- `.env.example` — `PREFLIGHT_ENFORCE` block
+- `docs/operations/runbook.md` — preflight CLI step + stagger rule
+
+Design decisions (D1 ✅ Codex signed):
+
+- `PREFLIGHT_ENFORCE` default = WARN; hard-fail opt-in via env var (no redeploy-to-revert needed)
+- reuses `config.is_production_env()` — does not redefine production detection
+- `DB_MIGRATOR_*` vars NOT in required list
+
+Verification evidence:
+
+- `python -m pytest -x -q -m "not db_integration"` → `467 passed, 3 skipped`
+- CLI 3-mode test: LOCAL OK, PROD-missing-vars OK, ENFORCE+prod hard-fail OK
 
 ### 5.3 PR-A3 — Health And Diagnostics Baseline
 
@@ -243,20 +240,22 @@ Do not mark a step `Completed` unless all are true:
 
 Current pending checks:
 
-1. Production `family_unit_id` confirmation still needs owner-side DB access.
-2. Claude senior-eng decisions in the execution plan still need final Codex sign-off cleanup if the team wants a fully cleaned consensus document.
+1. `ops/schema-truth-prod-verify` branch chờ merge (docs-only: `release-gate.md §6.1` + plan B2/D1 blocker note).
+2. D2–D9 (execution plan §5A) chờ Codex ký — không block A3/A4/A5, cần cho B3/A5/C2/A2/CI.
 
 Current known blockers for later phases:
 
-1. schema-truth divergence is still unresolved beyond A0 documentation
-2. deploy bootstrap truth is still not safe enough for customer deployment packaging
-3. `/api/members` response shape remains externally consumed and must stay frozen
+1. `migrate.py` ALTERs chưa apply lên prod → PR-B2 cần chạy gated migration (users table) trước Phase D.
+2. Stored-procedure source chưa tracked trong repo → A5 cần export SP source + `git add -f`.
+3. Deploy bootstrap truth chưa an toàn cho customer deployment packaging → A5/C2 chưa bắt đầu.
+4. `/api/members` response shape remains externally consumed and must stay frozen.
 
 ## 12. Next Recommended Moves
 
 Recommended order from here:
 
-1. Review and merge `PR-A0`
-2. Update this tracker to mark `PR-A0` as `Completed`
-3. Open `PR-A1`
-4. Run the audit checklist before changing any startup behavior
+1. ✅ Merge `PR-A0` (#23) — done
+2. ✅ Merge `PR-A1` (#24) — done
+3. Merge `ops/schema-truth-prod-verify` (docs-only, no conflict) — **next immediate action**
+4. Proceed to `PR-A3` (health/diagnostics, docs-only per D5)
+5. Then `PR-A4` (DB hot-path audit), `PR-A5` (schema-truth reconciliation slice), `PR-A2` (backup/rollback drill)
