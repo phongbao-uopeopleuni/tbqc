@@ -6,6 +6,8 @@ Status: detailed execution companion to the main planning document
 
 Companion to:
 - `D:\tbqc\docs\operations\operational-readiness-commercialization-plan-2026-06-13.md`
+- `D:\tbqc\docs\operations\operational-readiness-phase-tracker-2026-06-13.md`
+- `D:\tbqc\docs\operations\operational-readiness-audit-checklist-2026-06-13.md`
 
 Annotation convention:
 - Untagged text = existing execution plan (Codex/owner-authored).
@@ -82,6 +84,10 @@ Apply this loop to every PR.
 - Record any new blocker or deferred item.
 - Confirm the next PR still has clean scope and does not depend on hidden work.
 
+Reusable audit checklist:
+
+- `D:\tbqc\docs\operations\operational-readiness-audit-checklist-2026-06-13.md`
+
 ## 4. Global Gates
 
 ### 4.1 Minimum Documentation Gate
@@ -136,7 +142,7 @@ Engineering principles applied: reversibility > perfection (prefer two-way doors
 
 | # | Decision | Rationale (production) | How to verify |
 |---|---|---|---|
-| D1 — A1 | **One PR, feature-flag `PREFLIGHT_ENFORCE`, default WARN-only.** Hard-fail at boot is opt-in per deploy. (Supersedes the earlier "split A1a/A1b" idea.) | Toggling an env var is faster + safer to roll back than revert+redeploy on Railway for a solo operator. Same risk isolation as splitting, but reversible without a code change. Also removes the §6.2/§10 ordering mismatch — A1 stays a single PR. | Boot test with a required var missing in both `WARN` and `ENFORCE` modes; confirm WARN boots, ENFORCE fails loudly. |
+| D1 — A1 ✅ _(Consensus Claude + Codex, 2026-06-13 — Codex đã ký)_ | **One PR, feature-flag `PREFLIGHT_ENFORCE`, default WARN-only.** Hard-fail at boot is opt-in per deploy. (Supersedes the earlier "split A1a/A1b" idea.) | Toggling an env var is faster + safer to roll back than revert+redeploy on Railway for a solo operator. Same risk isolation as splitting, but reversible without a code change. Also removes the §6.2/§10 ordering mismatch — A1 stays a single PR. | Boot test with a required var missing in both `WARN` and `ENFORCE` modes; confirm WARN boots, ENFORCE fails loudly. |
 | D2 — B3 | **Dedupe is cache-neutral.** Shared helper takes a `cursor` and does NOT cache; the cache decorator stays only on the `/api/members` route, export path stays uncached. | Excel export is an outbound record → correctness > latency; must not serve up-to-5-min-stale data. The live list already tolerates staleness. Each caller owns its caching. | Contract tests on `/api/members` + export unchanged; confirm export query is not wrapped by the route cache. |
 | D3 — A5 | **`scripts/verify_no_secret_files_tracked.py` is mandatory** after any `git add -f` into `folder_sql/`. | Force-adding into a gitignored dir is the peak credential-leak moment; the scan is cheap. | Run scan in A5 gate; confirm SP source carries no credentials/DB name. |
 | D4 — C2 | **Soft precondition:** only `C2` waits on `A5 + B2` producing a verified fresh-bootstrap. `C1` (Docker) may proceed in parallel. | Avoids turning one dependency into a whole-phase stall, while still preventing C2 from shipping a wrong bootstrap to customers. | C2 start checklist references the verified-bootstrap artifact from A5/B2. |
@@ -213,7 +219,7 @@ Exit criteria:
 
 ### 6.4 PR-A1 - Environment Preflight
 
-🟦 _(Claude senior-eng decision, 2026-06-13 — chờ Codex ký)_ — xem §5A **D1**: **một PR**, feature-flag `PREFLIGHT_ENFORCE` default WARN-only; hard-fail-at-boot là opt-in per deploy. Reversible bằng env (không revert code). Đây là quyết định thay cho đề xuất tách A1a/A1b trước đó. Bị ràng buộc bởi **Stagger rule** (§11): không ship ENFORCE chung deploy window với A5.
+✅ _(Consensus Claude + Codex, 2026-06-13)_ — xem §5A **D1** (Codex đã ký): **một PR**, feature-flag `PREFLIGHT_ENFORCE` default WARN-only; hard-fail-at-boot là opt-in per deploy. Reversible bằng env (không revert code). Thay cho đề xuất tách A1a/A1b trước đó. Bị ràng buộc bởi **Stagger rule** (§11): không ship ENFORCE chung deploy window với A5.
 
 Objective:
 - fail early when required production env is missing or inconsistent
@@ -696,6 +702,10 @@ Recommended immediate sequence:
 
 Reason:
 - this creates the minimum operational baseline without opening risky refactor surfaces too early
+
+Live progress tracker:
+
+- `D:\tbqc\docs\operations\operational-readiness-phase-tracker-2026-06-13.md`
 
 🟦 _(Claude senior-eng decision, 2026-06-13 — chờ Codex ký)_ — giữ `A0 → A1 → A3` (A1 là **một PR** flag-gated default WARN, theo §5A D1 — không còn tách A1a/A1b). Cả 3 PR mở ra **zero bề mặt refactor rủi ro**: A0 docs + smoke script read-only (D7), A1 enforce opt-in sau flag, A3 docs-only (D5). Thêm D8 (CI pytest job) chạy cạnh nhóm này.
 
