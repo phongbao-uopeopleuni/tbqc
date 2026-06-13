@@ -458,6 +458,8 @@ Claude should avoid writing implementation code until the first PR scope is appr
 Detailed execution companion:
 - `D:\tbqc\docs\operations\operational-readiness-execution-plan-2026-06-13.md`
 - `D:\tbqc\docs\operations\release-gate.md`
+- `D:\tbqc\docs\operations\operational-readiness-phase-tracker-2026-06-13.md`
+- `D:\tbqc\docs\operations\operational-readiness-audit-checklist-2026-06-13.md`
 
 ✅ _(Consensus Claude + Codex, 2026-06-13)_ — first PR is `PR-A0`, docs-only / zero code; its key new artifact is the schema-truth statement.
 
@@ -526,3 +528,32 @@ This initiative is successful when:
 - The members workflow supports approved access.
 - A new private deployment can be created using a documented customer deployment kit.
 - Commercial work does not require reopening broad architecture questions each time.
+
+## 14. Success Criteria — Outcomes
+
+_(Claude, 2026-06-13)_ — what the owner concretely gets when this plan is done. Outcome-framed, not task-framed; it does not add end-user features.
+
+**Operational outcomes (owner-facing):**
+
+- The system can be **rebuilt from the repo**, not only from the owner's laptop — stored procedures are tracked and bootstrap matches production reality.
+- Deploy, smoke, rollback, backup, and restore are **checklist-driven and verified**, not memory-driven.
+- A missing/inconsistent production env **fails loudly before traffic**, instead of surfacing as a runtime surprise.
+- "What is production truth today?" is answerable **from docs alone**.
+
+**Productization outcomes (per new customer):**
+
+- A new family/clan customer can be onboarded as a **repeatable private deployment** (one customer = one deployment), with documented data import and a customer-facing export/exit path.
+- Multiple customer deployments are **tracked in one operator registry** (URL, version, backup status, renewal), not in the owner's head.
+- Support cost per new customer drops because onboarding is a **process, not an ad hoc SQL session**.
+
+**Commercial outcomes (first wave):**
+
+- Membership becomes a **DB-backed approved-access lifecycle** (pending → approved → active → suspended) with immediate suspend and an audit trail — no longer mainly env/session-based.
+- Setup fee + manual maintenance/renewal can be **operated by one person** without opening public self-serve signup.
+
+**Explicit boundaries (what this plan does NOT deliver):**
+
+- No multi-tenant SaaS — each customer stays an isolated deployment (deliberate, for data-sensitive PII).
+- No public self-serve signup and no Stripe/Paddle automation in the first wave; billing stays manual.
+- No aggressive DB performance rewrite — only the highest-risk hot paths are measured and cleaned.
+- **No change to existing end-user features**, including the current genealogy tree behavior.
