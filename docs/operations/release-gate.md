@@ -133,7 +133,7 @@ Tracked SQL reality:
 
 ## 5. Concrete Verified Divergences
 
-These are the minimum verified divergences that must be treated as real release truth today.
+These are the minimum verified divergences that must be treated as real release truth today. Production values now verified directly — see §6.1 (production `users` matches the bootstrap shape; `migrate.py` ALTERs were not applied to prod).
 
 | Area | Bootstrap truth | Migrate truth | Why it matters |
 | --- | --- | --- | --- |
@@ -147,25 +147,36 @@ These are the minimum verified divergences that must be treated as real release 
 
 ## 6. Production Verification Status
 
-### 6.1 `family_unit_id` on production
+### 6.1 Production schema reality — verified 2026-06-13
 
-Status:
+Verified directly on the production database (schema `railway`) via read-only `SHOW` / `information_schema` queries:
 
-- Not verified by Codex in this PR because direct production DB access was not available in the current environment.
+| Check | Production result | Status |
+| --- | --- | --- |
+| `persons.family_unit_id` | exists — `varchar(50)`, nullable, index `MUL` | ✅ present (A0 pending closed) |
+| `users.role` enum | `enum('admin','user')` — **missing `editor`** | ⚠️ matches bootstrap, not `migrate.py` |
+| `users.permissions` | **absent** | ⚠️ `migrate.py` column never applied |
+| `users.password_changed_at` | **absent** | ⚠️ session-invalidation dormant (see note) |
+| `users.consent_at` / `users.consent_version` | **absent** | ⚠️ NĐ13 consent tracking dormant |
+| `family_units` table | exists | ✅ present |
+| `in_law_relationships` table | absent | ✅ dead table confirmed gone |
+| `personal_details` table | absent | ✅ dead table confirmed gone |
+| `sp_get_ancestors` / `sp_get_descendants` | exist as `PROCEDURE` | ✅ present |
+| SP `person_id` parameter type | `varchar(50)` (both) | ✅ signature correct (old INT issue resolved) |
 
-Owner follow-up command:
+Key interpretation:
 
-```powershell
-mysql -h "$env:DB_HOST" -P "$env:DB_PORT" -u "$env:DB_USER" "-p$($env:DB_PASSWORD)" "$env:DB_NAME" -e "SHOW COLUMNS FROM persons LIKE 'family_unit_id';"
-```
+- **`scripts/migrate.py` incremental ALTERs were never fully applied to production.** Production `users` matches the bootstrap shape (2-value role enum; no `permissions` / `password_changed_at` / `consent_*`). Production was assembled from bootstrap + manual `migrate_add_family_units.sql` + manually-created stored procedures, not from the `migrate.py` upgrade path.
+- **Two security/compliance features are dormant on production because their columns are absent:**
+  - Session invalidation on password change (`auth.py` load_user check) never triggers — `get_user_by_id` finds no `password_changed_at` column via its `SHOW COLUMNS` guard, so the value is always `None`.
+  - Consent tracking (NĐ13) degrades through the `SHOW COLUMNS` guard in `members_portal.py`.
+  - Not an active breach: the features exist in code but stay inert until the columns are added. The runtime `SHOW COLUMNS` guards are exactly what keep production from erroring — confirming the "runtime introspection compensates for schema divergence" finding.
+- **Stored procedures are correct on production** (exist, `varchar(50)` signature). A5 only needs to export the SP source into the repo, not modify the procedures.
 
-Expected result:
+Follow-up actions recorded:
 
-- one row proving `persons.family_unit_id` exists on production
-
-If the command returns no row:
-
-- current stats/diagnostics paths that reference `family_unit_id` are relying on silent degradation behavior instead of matching schema truth
+- **A5 (Phase A):** export tracked stored-procedure source into the repo; remove dead tables from bootstrap. Low risk — bootstrap `users` 2-value enum already matches production.
+- **B2 / D1 (later, deliberate):** a gated production migration to add `password_changed_at`, `consent_at`, `consent_version`, `permissions` and widen `users.role` to include `editor`. This touches the auth table → must run via the migrator user with a backup + rehearsed rollback, in its own deploy window. Blocker for Phase D (D1 reuses `password_changed_at` for suspend). See plan §6 PR-B2 / PR-D1.
 
 ## 7. Smoke Checklist
 
