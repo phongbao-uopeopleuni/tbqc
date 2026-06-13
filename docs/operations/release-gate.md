@@ -416,8 +416,8 @@ No external system reads `/api/health` response JSON data in a structured way. A
 
 ### 14.11 Known Limitations (Feed Into A4)
 
-**Connection probe leak (non-critical, not fixed in A3):**
-When `get_db_connection()` returns None, the endpoint calls `mysql.connector.connect(**cfg)` directly — bypassing the pool — to capture the error string. If this direct connect succeeds (edge case: pool exhausted but direct TCP works), the connection is opened but never explicitly closed. Garbage collection handles it eventually. This is a minor resource concern, not a credential leak. Recorded for A4 hot-path audit.
+**Connection probe leak — fixed in PR-A4:**
+When `get_db_connection()` returns None, the endpoint calls `mysql.connector.connect(**cfg)` directly to capture the error string. If this direct connect succeeds (edge case: pool exhausted but direct TCP works), the connection is now closed immediately (`probe.close()`). Fix in `services/infra_api_routes.py`; regression-tested in `tests/test_health_and_cache_security.py` (2 new tests).
 
 **`connection_error` and `db_config` are not in public mode:** `_public_health_payload()` at `services/infra_api_routes.py:24` explicitly includes only `server`, `database`, `blueprints_registered`, `stats`. Confirmed no credential leakage in production without detail key.
 
@@ -430,3 +430,68 @@ When `get_db_connection()` returns None, the endpoint calls `mysql.connector.con
 - HTTP status is `200` even when `database` is in error state. Do not change to 5xx without updating smoke checklist and all test assertions.
 - `HEALTH_DETAIL_SECRET` + `X-Health-Detail-Key` gating is a security control. Do not bypass or weaken without an explicit security review.
 - Security headers are snapshot-tested; any change must update `tests/fixtures/bootstrap/bootstrap_snapshot.json`.
+
+## 15. DB Hot-Path Audit (PR-A4)
+
+This section records the inventory of `SHOW COLUMNS` / `SHOW TABLES` / `information_schema` introspection calls found in the codebase. These calls query MySQL metadata on every request and are the primary DB overhead that is not covered by query-level caching.
+
+Audited in PR-A4 (2026-06-13). No hot-path introspection was changed in A4 except the connection probe leak (§14.11).
+
+### 15.1 Introspection Hot-Path Inventory
+
+| File | Location | Query | Frequency | Status |
+| --- | --- | --- | --- | --- |
+| `auth.py` | `get_user_by_id()` | `SHOW COLUMNS FROM users LIKE 'permissions'` | **Every authenticated request** (Flask-Login user_loader) | ⚠️ Deferred — see §15.2 |
+| `auth.py` | `get_user_by_id()` | `SHOW COLUMNS FROM users LIKE 'password_changed_at'` | **Every authenticated request** | ⚠️ Deferred — see §15.2 |
+| `auth.py` | `get_user_by_username()` | Same 2 SHOW COLUMNS | Login requests only | ⚠️ Deferred — see §15.2 |
+| `audit_log.py` | `log_activity()` | `SHOW TABLES LIKE 'activity_logs'` | Every admin audit write | Deferred — admin path, low user impact |
+| `admin/logs_api_routes.py` | `api_admin_activity_logs()` | `SHOW TABLES LIKE 'activity_logs'` + `SHOW COLUMNS … 'log_id'` + `SHOW COLUMNS … 'created_at'` | Every admin logs request | Deferred — admin-only route |
+| `services/gallery_service.py` | Grave image upload/delete/search | `SHOW COLUMNS FROM persons LIKE 'grave_image_url'` | Per grave image operation | Deferred — admin/low frequency |
+| `services/gallery_helpers.py` | Album creation | `SHOW COLUMNS FROM albums LIKE 'is_public'` + `SHOW COLUMNS FROM album_images LIKE 'thumbnail_*'` | Per album/image create | Deferred — admin path |
+| `services/person_service.py` | `get_person()`, `create_person()`, `update_person()` | Multiple `information_schema.COLUMNS` queries for optional columns | Per person CRUD operation | Deferred — see B3 query normalization |
+| `admin/users_routes.py` | User edit/update/create | Multiple `SHOW COLUMNS FROM users LIKE '…'` | Per admin user operation | Deferred — see §15.2 + B2 |
+| `admin/api_routes.py` | Update user API | `SHOW COLUMNS FROM users LIKE 'password_changed_at'` | Per admin user update | Deferred — see §15.2 + B2 |
+| `services/infra_api_routes.py` | `/api/health` probe | `mysql.connector.connect()` | Only when pool fails | ✅ Fixed in A4 (probe closed) |
+
+### 15.2 Critical Finding — `auth.py` SHOW COLUMNS Per Request
+
+**Highest-impact introspection path.** `get_user_by_id()` is called by Flask-Login's `@login_manager.user_loader` on every request made by an authenticated user. It runs 2 `SHOW COLUMNS` queries before the actual user SELECT:
+
+1. `SHOW COLUMNS FROM users LIKE 'permissions'`
+2. `SHOW COLUMNS FROM users LIKE 'password_changed_at'`
+
+On production today, both always return None (columns absent — confirmed §6.1). This means every authenticated page load wastes 2 unnecessary introspection round-trips to MySQL.
+
+**Why it exists:** the `SHOW COLUMNS` guards were added so the app works safely before `migrate.py` ALTERs are applied. The guard pattern is correct for its purpose.
+
+**Root cause of the overhead:** `migrate.py` ALTERs were never applied to production (see §6.1). Until they are, every authenticated request runs these guards unnecessarily.
+
+**Deferral rationale:** fixing this requires either:
+1. Running PR-B2 (add the columns to production), after which both guards always return a row and the runtime cost becomes negligible, or
+2. Caching the column-existence result at startup (one query, not per-request).
+
+Option 1 is the cleaner fix and aligns with the existing B2 plan. Option 2 is a micro-optimization that can follow if B2 cannot be scheduled soon.
+
+**Impact scope:** only affects authenticated users (admin, members login). Public routes bypass `user_loader`.
+
+### 15.3 N+1 and Bulk-Load Classification
+
+| Route / operation | Pattern | Classification | Notes |
+| --- | --- | --- | --- |
+| `GET /api/members` | Single query returning all members | Bulk-load ✅ | Not N+1; safe for current scale |
+| `GET /api/persons` | Single paginated query | Bulk-load ✅ | |
+| `GET /api/family-tree` | SP call + post-processing | SP-backed ✅ | Uses `sp_get_ancestors` / `sp_get_descendants` |
+| `POST /admin/bulk-update-sll` | Loads all members then updates each | Per-row UPDATE loop | Real N+1 on write path — admin-only, acceptable at current scale |
+| Person CRUD (write) | `information_schema.COLUMNS` once per write + data query | Introspection + single DML | Not N+1 on data; introspection overhead per §15.1 |
+| Auth user load | 2 `SHOW COLUMNS` + 1 `SELECT users` | Introspection + single query | See §15.2 — highest frequency |
+
+### 15.4 Deferred Items (Feed Into B2/B3)
+
+These were identified in A4 audit but are out of scope for A4 (which is audit + one targeted fix):
+
+| Item | Owner PR | Blocker |
+| --- | --- | --- |
+| Remove `SHOW COLUMNS` guards in `auth.py` after columns exist | B2 (post-migration cleanup) | B2 migration must run first |
+| Cache `SHOW COLUMNS` results for `audit_log.py` and `logs_api_routes.py` | B3 (query normalization) | Low priority until scale increases |
+| Remove `information_schema` introspection from `person_service.py` after schema stabilizes | B3 | A5 schema reconciliation first |
+| Remove dead optional-column guards in `admin/users_routes.py` after B2 | B2 | B2 migration must run first |

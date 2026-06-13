@@ -3,6 +3,7 @@
 Kiểm tra /api/health (ẩn chi tiết DB trên production) và bảo vệ clear-cache/refresh (token tùy chọn).
 """
 import pytest
+from unittest.mock import MagicMock
 
 
 def _json(resp):
@@ -48,6 +49,39 @@ def test_health_full_on_production_with_detail_header(client, monkeypatch):
     j = _json(r)
     assert j is not None
     assert "db_config" in j
+
+
+def test_health_probe_closed_when_pool_returns_none_and_direct_succeeds(client, monkeypatch):
+    """Connection probe must be .close()d even when direct connect unexpectedly succeeds.
+
+    Edge case: pool exhausted but direct TCP succeeds — previously leaked the connection.
+    """
+    mock_probe = MagicMock()
+    monkeypatch.setattr("services.infra_api_routes.get_db_connection", lambda: None)
+    monkeypatch.setattr("mysql.connector.connect", lambda **kw: mock_probe)
+
+    r = client.get("/api/health")
+    assert r.status_code == 200
+    j = _json(r)
+    assert j["database"] == "connection_failed"
+    assert "connection_error" not in j  # no error — direct connect succeeded
+    mock_probe.close.assert_called_once()
+
+
+def test_health_probe_captures_error_when_pool_and_direct_both_fail(client, monkeypatch):
+    """When pool returns None and direct connect also fails, connection_error is in full response."""
+    def _fail(**kw):
+        raise Exception("ECONNREFUSED 3306")
+
+    monkeypatch.setattr("services.infra_api_routes.get_db_connection", lambda: None)
+    monkeypatch.setattr("mysql.connector.connect", _fail)
+
+    r = client.get("/api/health")
+    assert r.status_code == 200  # always 200 even on DB failure
+    j = _json(r)
+    assert j["database"] == "connection_failed"
+    assert "connection_error" in j
+    assert "ECONNREFUSED" in j["connection_error"]
 
 
 def test_clear_cache_open_without_secret(client, monkeypatch):
