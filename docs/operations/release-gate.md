@@ -274,3 +274,159 @@ PR-A0 does not:
 - repair schema divergences
 - refactor `/api/members`
 - change runtime app behavior
+
+## 14. Health Endpoint Contract (PR-A3)
+
+This section is the authoritative contract statement for `/api/health`. It was audited and recorded in PR-A3 (docs-only). No runtime code was changed.
+
+### 14.1 Route Basics
+
+| Item | Value |
+| --- | --- |
+| Route | `GET /api/health` |
+| Content-type | `application/json` |
+| Normal HTTP status | `200` |
+| Error HTTP status | `500` (server-level exception only) |
+| Registered in | `services/infra_api_routes.py` via `register_health_route(app, ...)` |
+| Registration site in `app.py` | after all blueprints and admin routes |
+
+Important: HTTP status is `200` even when `database` reports an error state. Callers must read the `database` field to determine DB health, not rely solely on HTTP status.
+
+### 14.2 Two-Tier Response Gating
+
+The endpoint has two response modes controlled by runtime environment and an optional secret header.
+
+| Condition | Mode |
+| --- | --- |
+| Non-production (dev, test, CI) | Full detail |
+| Production, `HEALTH_DETAIL_SECRET` not set | Public (filtered) |
+| Production, `HEALTH_DETAIL_SECRET` set, correct `X-Health-Detail-Key` header | Full detail |
+| Production, `HEALTH_DETAIL_SECRET` set, wrong or missing header | Public (filtered) |
+
+Production detection: `config.is_production_env()` — same function used by preflight; not redefined here.
+
+Detail key comparison: `secrets.compare_digest` (timing-safe, no early-exit on mismatch).
+
+If `HEALTH_DETAIL_SECRET` is absent from env, the full detail key mechanism is disabled — the endpoint always returns public mode in production regardless of any header sent.
+
+### 14.3 Public Response Shape
+
+Returned in production when the detail key is not authorized.
+
+```json
+{
+  "server": "ok",
+  "database": "<see §14.5>",
+  "blueprints_registered": true,
+  "stats": {
+    "persons_count": 0,
+    "relationships_count": 0
+  }
+}
+```
+
+Fields `db_config`, `connection_error`, and `blueprints_error` are deliberately absent in this mode.
+
+### 14.4 Full Response Shape
+
+Returned in non-production or with authorized detail key.
+
+```json
+{
+  "server": "ok",
+  "database": "<see §14.5>",
+  "blueprints_registered": true,
+  "db_config": {
+    "host": "<host>",
+    "database": "<db name>",
+    "user": "<runtime DB user>",
+    "port": "<port>",
+    "password_set": "Yes"
+  },
+  "stats": {
+    "persons_count": 0,
+    "relationships_count": 0
+  }
+}
+```
+
+Optional fields — only present when abnormal:
+
+- `"connection_error": "<error string>"` — present when `get_db_connection()` returns None and a direct fallback connect attempt also fails.
+- `"blueprints_error": "<traceback>"` — present when blueprint registration raised an exception at boot.
+
+### 14.5 `database` Field Values
+
+| Value | Meaning |
+| --- | --- |
+| `"connected"` | DB connection succeeded; `SELECT 1` returned a row |
+| `"connection_failed"` | `get_db_connection()` returned None (pool could not produce a connection) |
+| `"error: <msg>"` | Connection succeeded but a follow-up query failed; public mode reduces this to `"error"` |
+| `"error"` | Public-mode reduction of `"error: ..."`, or a top-level unhandled exception |
+| `"unknown"` | Initial value only; should never appear in a normal response |
+
+Note: `"connection_failed"` is visible in the public response. This is by design — operators need to distinguish "DB down" from "DB query error" without a detail key.
+
+### 14.6 `blueprints_registered` Field
+
+Boolean. `true` means all blueprints registered at boot without exception. `false` means at least one blueprint threw during registration. In full mode, `blueprints_error` contains the captured traceback. The check is a closure (`lambda: BLUEPRINTS_ERROR`) so it always reflects the boot-time state.
+
+### 14.7 `stats` Fields
+
+Both counters come from live DB queries inside the same connection as the `SELECT 1` liveness check. If the stats queries fail (e.g. table missing), the counts default to `0` and a warning is logged — the `database` field is NOT changed to error.
+
+| Field | Source query |
+| --- | --- |
+| `persons_count` | `SELECT COUNT(*) FROM persons` |
+| `relationships_count` | `SELECT COUNT(*) FROM relationships` |
+
+### 14.8 Security Headers on `/api/health`
+
+These headers are present on the response and snapshot-tested in `tests/fixtures/bootstrap/bootstrap_snapshot.json` (`health_headers` key). They must not be changed without updating the fixture.
+
+| Header | Value |
+| --- | --- |
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `SAMEORIGIN` |
+| `Content-Security-Policy` | `frame-ancestors 'self'` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=(), interest-cohort=()` |
+
+`Strict-Transport-Security` is absent in the test environment; Railway adds HSTS at the proxy level.
+
+### 14.9 Test Coverage Summary
+
+| Test file | Scope |
+| --- | --- |
+| `tests/test_health_and_cache_security.py` | 3 cases: non-production (full detail), production (public, no key), production (full, with key) |
+| `tests/test_api_routes.py::TestPublicPagesAndHealth::test_api_health` | Basic 200 + JSON parseable + `server` field |
+| `tests/test_p0_contract.py::test_api_health_contract` | Full shape fixture (`tests/fixtures/contract/api_health.json`) — requires db_integration |
+| `tests/test_bootstrap_snapshot.py::test_health_headers_snapshot` | Security headers asserted against fixture |
+
+### 14.10 Consumer Map
+
+| Consumer | Type | Notes |
+| --- | --- | --- |
+| `scripts/smoke_prod.py` | Operator script | Asserts HTTP 200 + `application/json` content-type after every deploy |
+| `services/genealogy_read_service.py` | Error hint only | Points users to `/api/health` in error messages; does not consume the response shape |
+| `static/js/genealogy-member-stats.js` | Error hint only | Renders a link to `/api/health` in the error UI; does not consume the response shape |
+| `app.py::run_smoke_tests()` | Internal startup check | Asserts HTTP 200 only |
+
+No external system reads `/api/health` response JSON data in a structured way. All references outside the test suite are either operator tooling or user-facing error hints.
+
+### 14.11 Known Limitations (Feed Into A4)
+
+**Connection probe leak (non-critical, not fixed in A3):**
+When `get_db_connection()` returns None, the endpoint calls `mysql.connector.connect(**cfg)` directly — bypassing the pool — to capture the error string. If this direct connect succeeds (edge case: pool exhausted but direct TCP works), the connection is opened but never explicitly closed. Garbage collection handles it eventually. This is a minor resource concern, not a credential leak. Recorded for A4 hot-path audit.
+
+**`connection_error` and `db_config` are not in public mode:** `_public_health_payload()` at `services/infra_api_routes.py:24` explicitly includes only `server`, `database`, `blueprints_registered`, `stats`. Confirmed no credential leakage in production without detail key.
+
+### 14.12 Invariants — Do Not Change Casually
+
+- Public response must always include `server`, `database`, `blueprints_registered`, `stats`.
+- `db_config` must never appear in the public response.
+- `connection_error` must never appear in the public response.
+- `stats` keys `persons_count` and `relationships_count` must not be renamed or removed.
+- HTTP status is `200` even when `database` is in error state. Do not change to 5xx without updating smoke checklist and all test assertions.
+- `HEALTH_DETAIL_SECRET` + `X-Health-Detail-Key` gating is a security control. Do not bypass or weaken without an explicit security review.
+- Security headers are snapshot-tested; any change must update `tests/fixtures/bootstrap/bootstrap_snapshot.json`.

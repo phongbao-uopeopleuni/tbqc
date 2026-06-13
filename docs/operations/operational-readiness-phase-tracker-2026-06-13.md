@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24)  
+Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24, schema-truth ✅ #25, A3 in progress)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -40,7 +40,7 @@ Current active phase:
 
 Current active PR:
 
-- `PR-A1 — Environment Preflight` (merged #24, next: schema-truth recording then A3)
+- `PR-A3 — Health And Diagnostics Baseline` (branch `ops/pr-a3-health-diagnostics`, docs-only)
 
 Current initiative state:
 
@@ -48,14 +48,15 @@ Current initiative state:
 - Execution plan exists (D1 signed by Codex).
 - Release gate baseline exists (PR-A0 #23).
 - Production smoke script exists (7/7 passed 2026-06-13).
-- Production schema reality verified and recorded (7+1 queries 2026-06-13).
+- Production schema reality verified and recorded (7+1 queries, #25).
 - Env preflight implemented (PR-A1 #24, WARN-only default).
+- Health endpoint contract fully audited and documented (PR-A3 in progress).
 
 ## 4. Phase Summary
 
 | Phase | Goal | Current status | Owner note |
 | --- | --- | --- | --- |
-| Phase A | operational stability baseline | `In progress` | A0 ✅ #23 + A1 ✅ #24 merged; schema-truth recording pending merge; remaining A3/A4/A5/A2 not started |
+| Phase A | operational stability baseline | `In progress` | A0 ✅ + A1 ✅ + schema-truth ✅ merged; A3 docs in progress; A4/A5/A2 not started |
 | Phase B | standardization | `Not started` | blocked on meaningful completion of Phase A |
 | Phase C | deployment productization | `Not started` | do not start before Phase A is stable and Phase B removes core ambiguity |
 | Phase D | approved membership commercial flow | `Not started` | intentionally deferred until operational baseline is trustworthy |
@@ -126,16 +127,29 @@ Verification evidence:
 
 Status:
 
-- `Not started`
+- `In progress` (branch `ops/pr-a3-health-diagnostics`)
 
 Prerequisites:
 
-- A0 accepted
+- A0 accepted ✅
 
-Must audit before starting:
+Audit findings (completed before writing docs):
 
-- whether `/api/health` still leaks anything not already covered by tests
-- whether this can remain docs-only
+- `/api/health` has two response modes: public (production, no detail key) and full (non-production or with `X-Health-Detail-Key`). Public mode explicitly excludes `db_config` and `connection_error` — no credential leak.
+- Gating uses `config.is_production_env()` (same as preflight) and `secrets.compare_digest` — timing-safe.
+- `database` field can be `"connected"` / `"connection_failed"` / `"error: ..."` / `"error"` — public mode reduces `"error: ..."` to `"error"` only.
+- HTTP 200 even when DB is in error state — smoke script must assert content-type, not only status.
+- Security headers snapshot-tested in `tests/fixtures/bootstrap/bootstrap_snapshot.json`.
+- Connection probe leak identified (non-critical): fallback `mysql.connector.connect(**cfg)` on pool failure may open a connection that is never closed. Recorded for A4 audit; not fixed in A3 (docs-only scope).
+- **No bugs found that require code changes in A3.** Known limitation logged in `release-gate.md §14.11`.
+
+Deliverables:
+
+- `docs/operations/release-gate.md §14` — full health endpoint contract (14 subsections: route, gating, public shape, full shape, `database` values, `blueprints_registered`, `stats`, security headers, test coverage, consumer map, known limitations, invariants).
+
+Verification evidence:
+
+- `python -m pytest -x -q -m "not db_integration"` → run before commit to confirm no regressions
 
 ### 5.4 PR-A4 — DB Hot Path And Contract Audit
 
@@ -256,6 +270,8 @@ Recommended order from here:
 
 1. ✅ Merge `PR-A0` (#23) — done
 2. ✅ Merge `PR-A1` (#24) — done
-3. Merge `ops/schema-truth-prod-verify` (docs-only, no conflict) — **next immediate action**
-4. Proceed to `PR-A3` (health/diagnostics, docs-only per D5)
-5. Then `PR-A4` (DB hot-path audit), `PR-A5` (schema-truth reconciliation slice), `PR-A2` (backup/rollback drill)
+3. ✅ Merge `ops/schema-truth-prod-verify` (#25) — done
+4. 🔵 Review and merge `PR-A3` (branch `ops/pr-a3-health-diagnostics`) — **current**
+5. Then `PR-A4` (DB hot-path audit: connection probe leak + hot-path inventory)
+6. Then `PR-A5` (schema-truth reconciliation: SP source export, dead-table removal from bootstrap)
+7. Then `PR-A2` (backup/rollback drill)
