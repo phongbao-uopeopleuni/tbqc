@@ -107,6 +107,14 @@ Log patterns co the binh thuong:
 
 ## 4. Backup va restore
 
+Xem huong dan day du: `docs/operations/backup-restore-drill.md`
+
+Kiem tra tien quyet truoc khi drill:
+
+```bash
+python scripts/verify_restore_preconditions.py
+```
+
 Tao backup:
 
 ```bash

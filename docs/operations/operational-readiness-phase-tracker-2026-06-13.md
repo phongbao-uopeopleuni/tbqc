@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24, schema-truth ✅ #25, A3 ✅ #26, A4 ✅ #27, A5 in progress)  
+Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24, schema-truth ✅ #25, A3 ✅ #26, A4 ✅ #27, A5 ✅ #28, A2 in progress)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -40,7 +40,7 @@ Current active phase:
 
 Current active PR:
 
-- `PR-A5 — Schema-Truth Reconciliation Slice` (branch `ops/pr-a5-schema-truth-reconciliation`)
+- `PR-A2 — Backup Restore Verification` (branch `ops/pr-a2-backup-rollback-drill`)
 
 Current initiative state:
 
@@ -52,13 +52,14 @@ Current initiative state:
 - Env preflight implemented (PR-A1 #24, WARN-only default).
 - Health endpoint contract fully audited and documented (PR-A3 #26).
 - DB hot-path inventory audited; connection probe leak fixed (PR-A4 #27).
-- Bootstrap SQL cleaned (dead tables removed, USE removed); SP export helper added (PR-A5 in progress).
+- Bootstrap SQL cleaned (dead tables removed, USE removed); SP export helper added (PR-A5 #28 ✅).
+- Backup/restore pre-flight script and drill guide created; backup toolchain audited (PR-A2 in progress).
 
 ## 4. Phase Summary
 
 | Phase | Goal | Current status | Owner note |
 | --- | --- | --- | --- |
-| Phase A | operational stability baseline | `In progress` | A0–A4 ✅ merged; A5 bootstrap cleanup in progress; A2 not started |
+| Phase A | operational stability baseline | `In progress` | A0–A5 ✅ merged (#23–#28); A2 backup drill in progress |
 | Phase B | standardization | `Not started` | blocked on meaningful completion of Phase A |
 | Phase C | deployment productization | `Not started` | do not start before Phase A is stable and Phase B removes core ambiguity |
 | Phase D | approved membership commercial flow | `Not started` | intentionally deferred until operational baseline is trustworthy |
@@ -197,7 +198,11 @@ Deliverables:
 
 Status:
 
-- `In progress` (branch `ops/pr-a5-schema-truth-reconciliation`)
+- `Completed`
+
+Merge evidence:
+
+- PR #28, commit `62a2de6`, merged to master 2026-06-13
 
 Prerequisites:
 
@@ -240,17 +245,30 @@ against production (with `DB_*` env vars), reviews output for secrets, then comm
 
 Status:
 
-- `Not started`
+- `In progress` (branch `ops/pr-a2-backup-rollback-drill`)
 
 Prerequisites:
 
-- A5 should have addressed the minimum schema-truth blocker
+- A5 accepted ✅
 
-Must audit before starting:
+Audit findings (completed before writing deliverables):
 
-- durable backup location
-- restore drill preconditions
-- deploy rollback expectations
+- `backup_database.py` uses `mysqldump --routines --triggers --events` — stored procedures (`sp_get_ancestors`, `sp_get_descendants`) are included in backup when `mysqldump` is available. Python fallback does NOT include SPs.
+- `config.py::RAILWAY_VOLUME_MOUNT_PATH` — Railway container filesystem resets on redeploy. Without a mounted volume, all backups are lost. `BACKUP_DIR` env var must point to the mounted volume path.
+- `scripts/backup_database.py` writes to `BACKUP_DIR` (default `backups/`). Admin UI backup button uses same path.
+- `maintenance.md §4` and `release-gate.md §6` — existing docs had no structured pre-flight check or drill guide. Gap: no restore drill has ever been performed (evidence log empty).
+- `docs/operations/maintenance.md §6` — rollback procedure exists but uses runtime `DB_USER`; DB rollback should use `DB_MIGRATOR_USER` per 2-user DB model.
+
+Deliverables:
+
+- `scripts/verify_restore_preconditions.py` — 7-check read-only pre-flight script. Checks: DB connection, `backup_database.py` importable, `mysqldump` available, `mysql` CLI available, Railway volume mount, recent backup (< 7 days), provided `--backup-file` SQL header.
+- `docs/operations/backup-restore-drill.md` — structured drill guide: purpose, pre-flight, backup drill, restore drill (non-prod only), deploy rollback drill, evidence log, constraints/risks, storage decision record.
+- `docs/operations/maintenance.md §4` — updated to reference drill guide and pre-flight script.
+- `docs/operations/operational-readiness-phase-tracker-2026-06-13.md` — this section.
+
+Verification evidence:
+
+- `python -m pytest -x -q -m "not db_integration"` → 469 passed, 3 skipped pending (run before final commit)
 
 ## 6. Phase B Tracker
 
@@ -325,6 +343,6 @@ Recommended order from here:
 3. ✅ Merge `ops/schema-truth-prod-verify` (#25) — done
 4. ✅ Merge `PR-A3` (#26) — done
 5. ✅ Merge `PR-A4` (#27) — done
-6. 🔵 Review and merge `PR-A5` (branch `ops/pr-a5-schema-truth-reconciliation`) — **current**
-6. Then `PR-A5` (schema-truth reconciliation: SP source export, dead-table removal from bootstrap)
-7. Then `PR-A2` (backup/rollback drill)
+6. ✅ Merge `PR-A5` (#28) — done
+7. 🔵 Review and merge `PR-A2` (branch `ops/pr-a2-backup-rollback-drill`) — **current**
+8. Then `PR-B2` (gated migration: users table; own deploy window, backup + rollback drill first)
