@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24, schema-truth ✅ #25, A3 ✅ #26, A4 in progress)  
+Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24, schema-truth ✅ #25, A3 ✅ #26, A4 ✅ #27, A5 in progress)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -40,7 +40,7 @@ Current active phase:
 
 Current active PR:
 
-- `PR-A4 — DB Hot-Path And Contract Audit` (branch `ops/pr-a4-db-hotpath-audit`)
+- `PR-A5 — Schema-Truth Reconciliation Slice` (branch `ops/pr-a5-schema-truth-reconciliation`)
 
 Current initiative state:
 
@@ -51,13 +51,14 @@ Current initiative state:
 - Production schema reality verified and recorded (7+1 queries, #25).
 - Env preflight implemented (PR-A1 #24, WARN-only default).
 - Health endpoint contract fully audited and documented (PR-A3 #26).
-- DB hot-path inventory audited; connection probe leak fixed (PR-A4 in progress).
+- DB hot-path inventory audited; connection probe leak fixed (PR-A4 #27).
+- Bootstrap SQL cleaned (dead tables removed, USE removed); SP export helper added (PR-A5 in progress).
 
 ## 4. Phase Summary
 
 | Phase | Goal | Current status | Owner note |
 | --- | --- | --- | --- |
-| Phase A | operational stability baseline | `In progress` | A0 ✅ + A1 ✅ + schema-truth ✅ + A3 ✅ merged; A4 code+docs in progress; A5/A2 not started |
+| Phase A | operational stability baseline | `In progress` | A0–A4 ✅ merged; A5 bootstrap cleanup in progress; A2 not started |
 | Phase B | standardization | `Not started` | blocked on meaningful completion of Phase A |
 | Phase C | deployment productization | `Not started` | do not start before Phase A is stable and Phase B removes core ambiguity |
 | Phase D | approved membership commercial flow | `Not started` | intentionally deferred until operational baseline is trustworthy |
@@ -196,18 +197,44 @@ Deliverables:
 
 Status:
 
-- `Not started`
+- `In progress` (branch `ops/pr-a5-schema-truth-reconciliation`)
 
 Prerequisites:
 
-- A0 accepted
-- A4 inventory useful but not strictly required
+- A0 accepted ✅
+- A4 inventory completed ✅
 
-Must audit before starting:
+Audit findings (completed before coding):
 
-- stored-procedure source tracking
-- secret-scan requirement for force-added SQL
-- bootstrap vs migrate divergence list
+- `USE railway;` in `reset_schema_tbqc.sql` — hardcoded DB name prevents customer reuse. **Removed in A5.**
+- `in_law_relationships` and `personal_details` — in bootstrap but absent from production (confirmed §6.1). **Removed from bootstrap in A5.**
+- `users` bootstrap shape — 2-value role enum (`admin/user`) actually matches production; no change needed; added comment pointing to B2.
+- Stored procedures (`sp_get_ancestors`, `sp_get_descendants`) — exist on prod (correct, verified) but source not tracked. Cannot commit source without running `SHOW CREATE PROCEDURE`. **Export helper added as `scripts/export_sp_source.py`.**
+- Secret scan: `verify_no_secret_files_tracked.py` → OK (no sensitive filenames tracked).
+
+Code/SQL changes:
+
+- `folder_sql/reset_schema_tbqc.sql`: `USE railway;` removed; `in_law_relationships` + `personal_details` tables removed; B2 comment added to `users` block.
+- `scripts/export_sp_source.py`: new read-only helper to export SP source from connected DB.
+
+Docs changes:
+
+- `release-gate.md §4.3`: updated — lists A5 changes and remaining SP gap.
+- `release-gate.md §5`: divergences table updated with production state + A5 action column.
+- `phase-tracker.md`: this section.
+
+Verification evidence:
+
+- `python scripts/verify_no_secret_files_tracked.py` → OK
+- `python -m pytest tests/test_bootstrap_snapshot.py tests/test_health_and_cache_security.py tests/test_api_routes.py -v` → 43 passed, 2 skipped
+- Full suite: 469 passed, 3 skipped pending (run before final commit)
+
+SP source tracking — remaining step (owner action):
+After A5 merge, operator runs:
+```
+python scripts/export_sp_source.py
+```
+against production (with `DB_*` env vars), reviews output for secrets, then commits into `folder_sql/sp_get_ancestors.sql` and `folder_sql/sp_get_descendants.sql` using `git add -f` + `python scripts/verify_no_secret_files_tracked.py`.
 
 ### 5.6 PR-A2 — Backup Restore Verification
 
@@ -297,6 +324,7 @@ Recommended order from here:
 2. ✅ Merge `PR-A1` (#24) — done
 3. ✅ Merge `ops/schema-truth-prod-verify` (#25) — done
 4. ✅ Merge `PR-A3` (#26) — done
-5. 🔵 Review and merge `PR-A4` (branch `ops/pr-a4-db-hotpath-audit`) — **current**
+5. ✅ Merge `PR-A4` (#27) — done
+6. 🔵 Review and merge `PR-A5` (branch `ops/pr-a5-schema-truth-reconciliation`) — **current**
 6. Then `PR-A5` (schema-truth reconciliation: SP source export, dead-table removal from bootstrap)
 7. Then `PR-A2` (backup/rollback drill)

@@ -2,8 +2,12 @@
 -- SCHEMA CHUẨN HÓA CHO TBQC - DỰA TRÊN 3 CSV CHÍNH THỨC
 -- person.csv, father_mother.csv, spouse_sibling_children.csv
 -- =====================================================
-
-USE railway;
+-- QUAN TRỌNG: File này là fresh-bootstrap template, KHÔNG phải in-place upgrade.
+-- Chạy trong đúng DB context trước khi execute:
+--   USE <ten_database_cua_ban>;
+-- Tên schema mặc định trên Railway là "railway". Không hardcode ở đây
+-- để file này có thể dùng được cho customer deployment (C2).
+-- =====================================================
 
 -- =====================================================
 -- BẢNG 1: PERSONS (Người) - Bảng chính
@@ -205,36 +209,10 @@ CREATE TABLE IF NOT EXISTS locations (
     INDEX idx_location_type (location_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Bảng in_law_relationships (quan hệ thông gia)
-CREATE TABLE IF NOT EXISTS in_law_relationships (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    person_id VARCHAR(50),
-    in_law_person_id VARCHAR(50),
-    relationship_type VARCHAR(100),
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (person_id) REFERENCES persons(person_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (in_law_person_id) REFERENCES persons(person_id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Bảng personal_details (thông tin chi tiết)
-CREATE TABLE IF NOT EXISTS personal_details (
-    detail_id INT PRIMARY KEY AUTO_INCREMENT,
-    person_id VARCHAR(50) NOT NULL UNIQUE,
-    contact_info TEXT,
-    social_media TEXT,
-    occupation VARCHAR(255),
-    education TEXT,
-    events TEXT,
-    titles TEXT,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (person_id) REFERENCES persons(person_id) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 -- Bảng users (tài khoản)
+-- Ghi chú: Đây là bootstrap shape (role 2-value: admin/user).
+-- migrate.py sẽ mở rộng role thành 3-value (admin/editor/user) + thêm các cột
+-- password_changed_at, consent_at, consent_version, permissions trong PR-B2.
 CREATE TABLE IF NOT EXISTS users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(100) NOT NULL UNIQUE,
