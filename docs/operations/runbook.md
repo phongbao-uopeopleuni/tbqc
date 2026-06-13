@@ -208,6 +208,10 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120
 
 `render.yaml` là Render fallback — đã được align với `Procfile` (xem `docs/refactor/foundations/bootstrap-truth.md`).
 
+Baseline release gate:
+
+- `docs/operations/release-gate.md`
+
 ### Checklist deploy
 
 - Xác minh `.env` hoặc Railway dashboard đã có đủ biến môi trường.
@@ -216,6 +220,11 @@ web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120
 - Nếu sửa `index.js`/`common.js`/`index.css`, chạy `npm run build:assets` và commit file `.min` sinh ra.
 - Kiểm tra `GET /api/health` trả 200.
 - Smoke test: trang chủ, `/members`, `/genealogy`, `/admin/login`.
+- Với baseline read-only smoke script, chạy:
+
+```bash
+python scripts/smoke_prod.py
+```
 
 ### Rủi ro đã biết
 

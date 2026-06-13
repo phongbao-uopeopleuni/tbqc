@@ -457,6 +457,7 @@ Claude should avoid writing implementation code until the first PR scope is appr
 
 Detailed execution companion:
 - `D:\tbqc\docs\operations\operational-readiness-execution-plan-2026-06-13.md`
+- `D:\tbqc\docs\operations\release-gate.md`
 
 ✅ _(Consensus Claude + Codex, 2026-06-13)_ — first PR is `PR-A0`, docs-only / zero code; its key new artifact is the schema-truth statement.
 
