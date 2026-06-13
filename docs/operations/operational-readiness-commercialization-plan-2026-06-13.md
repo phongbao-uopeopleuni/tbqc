@@ -220,6 +220,7 @@ Recommended PRs:
    - Create a checklist for schema-affecting changes.
    - Ensure bootstrap and deployed migration paths are both considered.
    - Decide which tracked artifact is canonical for fresh bootstrap, and which is canonical for in-place upgrades.
+   - **BLOCKER (verified 2026-06-13, see release-gate §6.1):** production `users` never received `migrate.py`'s ALTERs — it is missing `password_changed_at`, `consent_at`, `consent_version`, `permissions`, and `role` enum lacks `editor`. A gated production migration must add these (backup + rehearsed rollback, migrator user, own deploy window, NOT same window as A5). This re-activates the dormant session-invalidation and NĐ13 consent features. _(Claude, 2026-06-13)_
 
 3. `PR-B3: Query Normalization For Members And Persons` ✅ _(Consensus Claude + Codex, 2026-06-13: dedupe first + map consumers before any response-shape change; `/api/members` has an external consumer.)_
    - First deduplicate shared logic between `/api/members` and `fetch_members_list()`.
@@ -304,6 +305,7 @@ Recommended PRs:
      - suspended
    - Reuse existing session invalidation and audit mechanisms where possible.
    - Do not remove existing gates until migration and fallback are defined.
+   - **PRECONDITION (verified 2026-06-13):** `users.password_changed_at` does NOT exist on production yet (release-gate §6.1) — the session-invalidation this PR relies on for suspend is currently dormant. The B2 production migration adding that column must land before D1 suspend can take effect. _(Claude, 2026-06-13)_
 
 2. `PR-D2: Request Access And Admin Approval`
    - Add request-access flow.
