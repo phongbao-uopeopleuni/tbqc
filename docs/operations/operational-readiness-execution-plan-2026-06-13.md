@@ -375,99 +375,98 @@ Make core behavior predictable without widening into large redesigns.
 
 ### 7.2 Recommended PR Order
 
-1. `PR-B1`
-2. `PR-B2`
-3. `PR-B5`
-4. `PR-B3`
-5. `PR-B4`
+_(Re-scoped 2026-06-14: B1+B4+B5 batched into PR-B-policy to reduce deploy count. Was 5 PRs → now 4.)_
+
+1. `PR-B-policy` _(batched: B1+B4+B5 — config, cache/rate-limit, legacy policy)_
+2. `PR-B2` _(own deploy window — gated production migration)_
+3. `PR-B3a` _(zero-behavior-change dedupe)_
+4. `PR-B3b` _(schema introspection reduction — behavior change)_
 
 Reason for this order:
-- `B1` is relatively isolated
-- `B2` defines schema discipline before more DB-affecting cleanup
-- `B5` sets policy before touching legacy-sensitive paths
-- `B3` is the highest runtime-regression risk and should start after audits/policies are in place
-- `B4` depends on better understanding of runtime hot paths
+- `B-policy` is low-risk docs+config, no DB, establishes externalization + policy baseline before B2
+- `B2` defines schema discipline AND runs the gated production migration — must be isolated (own deploy window, backup first)
+- `B3a` before `B3b` — lock the contract first, then change behavior
+- `B3b` last — highest regression risk in Phase B
 
-### 7.3 PR-B1 - Config And Branding Externalization
+### 7.3 PR-B-policy — Config, Cache/Rate-Limit, And Legacy Compatibility Policy
+
+_(Batches former PR-B1 + PR-B4 + PR-B5. All are docs/config with no DB change and no production behavior change. One deploy.)_
 
 Objective:
-- move customer-specific metadata out of core logic
+- externalize customer-specific config/branding
+- document cache/rate-limit thresholds operators need to understand
+- document legacy field/fallback boundaries to prevent accidental cleanup
 
 Likely touch areas:
 - `config.py`
 - public templates
-- public metadata helpers
+- `extensions.py` (docs comments only)
+- config docs, runbook
 
 Steps:
-1. inventory which values are true branding/config
-2. separate them from customer-owned content
-3. externalize config-backed values
-4. update default examples and docs
+1. inventory which values are true branding/config (was B1)
+2. externalize config-backed values from templates (was B1)
+3. document current cache/rate-limit defaults and Redis-required threshold (was B4)
+4. inventory live legacy fields and fallbacks; mark keep/verify-then-remove/unknown (was B5)
+5. tie legacy items to owning future phase or PR (was B5)
+6. update default examples and docs
 
 Audit gate:
-- public route smoke
-- no customer-content migration in this PR
+- public route smoke (no shape change)
+- docs + config consistency review
+- no code cleanup of legacy fields in this PR
 
 Exit criteria:
 - changing org metadata does not require logic edits
+- operators know when single-instance defaults are acceptable
+- future legacy cleanup has explicit permission boundaries
 
-### 7.4 PR-B2 - Migration Discipline
+### 7.4 PR-B2 — Migration Discipline And Gated Production Migration
+
+_(Own deploy window. Backup + rollback drill before running. Migrator user only — `DB_MIGRATOR_USER/DB_MIGRATOR_PASSWORD`.)_
 
 Objective:
 - make schema change process predictable
+- apply the minimum pending production migration (users table columns and role enum widening)
 
 Likely touch areas:
 - `scripts/migrate.py`
-- tracked SQL artifacts
+- tracked SQL artifacts in `folder_sql/`
 - schema docs/checklists
 
+Production migration scope (pending since refactor):
+- `users.password_changed_at` — session invalidation
+- `users.consent_at`, `users.consent_version` — consent flow
+- `users.permissions` — fine-grained access
+- `users.role` ENUM: widen from `('admin','user')` to `('admin','editor','user')`
+
 Steps:
-1. define canonical truth for:
-   - fresh bootstrap
-   - in-place upgrade
+1. define canonical truth for fresh bootstrap and in-place upgrade
 2. document how new SQL artifacts must be tracked
-3. add schema-change checklist
-4. update runbook/docs for schema-affecting PRs
+3. add schema-change checklist to runbook
+4. apply production migration in own deploy window (backup first, smoke after)
 
 Audit gate:
+- pre-migration: `python scripts/verify_restore_preconditions.py` + backup created
+- migration: run via `DB_MIGRATOR_USER`
+- post-migration: `python scripts/smoke_prod.py` + `python -m pytest -x -q -m "not db_integration"`
 - no hidden SQL artifact left untracked
-- docs and scripts agree on process
 
 Exit criteria:
-- future DB work has one explicit process instead of tribal knowledge
+- future DB work has one explicit process
+- prod users table matches bootstrap shape + remaining B2 columns
 
-### 7.5 PR-B5 - Legacy Compatibility Policy
+### 7.5 PR-B3a — Query Normalization: Contract Lock And Dedupe
 
-Objective:
-- stop accidental cleanup of fields still carrying behavior
-
-Likely touch areas:
-- docs only
-- fallback map references
-
-Steps:
-1. inventory live legacy fields and fallbacks
-2. mark each as:
-   - keep for now
-   - verify then remove later
-   - unknown, do not touch
-3. tie each item to owning future phase or PR
-
-Audit gate:
-- no code cleanup in this PR
-
-Exit criteria:
-- future cleanup work has explicit permission boundaries
-
-### 7.6 PR-B3 - Query Normalization For Members And Persons
-
-🟦 _(Claude senior-eng decision, 2026-06-13 — chờ Codex ký)_ — PR rủi-ro-regression cao nhất toàn plan. Xem §5A **D2**:
-- **Tách B3a + B3b**: `B3a` = lock contract + dedupe route/service, **zero behavior change**. `B3b` = giảm schema introspection (chạm hành vi).
-- **Dedupe cache-neutral**: shared helper nhận `cursor`, **không** cache; decorator cache giữ ở route, đường export giữ uncached. Excel export không được trả dữ liệu stale tới 5 phút.
-- **Freeze response shape là do-not-touch** (không chỉ audit gate): 3 consumer nội bộ có test (`test_admin_members_api_contract.py`, `test_members_export_contract.py`, `test_bulk_update_contract.py`); genealogy sync ngoài (`https://.../api/members`, `system-context.md`) **không có test** → shape phải tuyệt đối không đổi.
+🟦 _(Claude senior-eng decision, 2026-06-13 — chờ Codex ký)_ — xem §5A **D2**.
 
 Objective:
-- reduce duplicated logic and hot-path ambiguity without breaking contracts
+- lock the `/api/members` response contract with tests, deduplicate route/service logic with zero behavior change
+
+Rules:
+- **Zero behavior change**: no response shape diff, no timing change for external consumer
+- **Dedupe cache-neutral**: shared helper takes a `cursor`, does NOT cache; cache decorator stays on route only; export path stays uncached
+- **Response shape is do-not-touch**: `test_admin_members_api_contract.py`, `test_members_export_contract.py`, `test_bulk_update_contract.py` must all pass; external genealogy sync shape must not change
 
 Likely touch areas:
 - `blueprints/members_portal.py`
@@ -475,51 +474,49 @@ Likely touch areas:
 - related tests
 
 Steps:
-1. lock current response contract with tests if missing
-2. deduplicate route/service logic first
-3. keep response shape unchanged
-4. reduce repeated schema introspection where safe
-5. treat any remaining true N+1 separately from dedupe
+1. lock current response contract with characterization tests if missing
+2. deduplicate route/service logic (move to shared helper)
+3. verify contract tests pass unchanged
 
 Audit gate:
-- focused `/api/members` contract tests
-- export path check
+- focused `/api/members` + export contract tests
 - no consumer-visible shape change
 
 Exit criteria:
-- one clearer source of truth for members list behavior
+- one clear source of truth for members list logic, no response-shape change
 
-### 7.7 PR-B4 - Runtime Cache And Rate-Limit Policy
+### 7.6 PR-B3b — Query Normalization: Schema Introspection Reduction
+
+_(Depends on B3a. Highest regression risk in Phase B — do not start before B3a is merged and stable.)_
 
 Objective:
-- document when current single-instance assumptions stop being acceptable
+- reduce repeated `SHOW COLUMNS` / `information_schema` calls from hot paths
 
-Likely touch areas:
-- `extensions.py`
-- config docs
-- runbook
+Scope (from A4 hot-path inventory, §15 release-gate):
+- `auth.py::get_user_by_id()` SHOW COLUMNS guards — remove after B2 adds columns to prod
+- Other hot paths as ranked in §15.4 deferred items
 
 Steps:
-1. document current cache/rate-limit behavior
-2. define single-worker acceptable mode
-3. define Redis-required threshold for managed service rollout
-4. record what must happen before worker-count changes
+1. verify B2 migration is live on prod (columns exist)
+2. remove SHOW COLUMNS guards in auth.py user_loader
+3. confirm no N+1 introduced; run full suite
 
 Audit gate:
-- docs + config consistency review
-- no scaling change unless explicitly scoped
+- `python -m pytest -x -q -m "not db_integration"` — full suite
+- manual smoke on login + session flow
 
 Exit criteria:
-- operators know when current defaults are acceptable and when they are not
+- SHOW COLUMNS no longer called per-request in auth hot path
 
-### 7.8 Phase B Exit Audit
+### 7.7 Phase B Exit Audit
 
 Phase B is complete only if:
-- branding/config can vary without code edits
-- schema process is explicit
+- branding/config can vary without logic edits
+- cache/rate-limit policy is documented
 - legacy cleanup boundaries are documented
+- schema change process is explicit and migration is applied
 - members/person query refactor no longer relies on duplicated logic
-- cache/rate-limit expectations are explicit
+- SHOW COLUMNS guards removed from auth hot path
 
 ## 8. Phase C - Deployment Productization
 
@@ -529,15 +526,16 @@ Package the current product so repeated private deployments become practical.
 
 ### 8.2 Recommended PR Order
 
-1. `PR-C1`
-2. `PR-C2`
-3. `PR-C3`
-4. `PR-C4`
+_(Re-scoped 2026-06-14: C2+C3+C4 batched into PR-C-kit to reduce deploy count. Was 4 PRs → now 2.)_
+
+1. `PR-C1` _(Docker — has new code/Dockerfile)_
+2. `PR-C-kit` _(batched: C2+C3+C4 — deployment kit, onboarding, operator registry — all docs/templates/checklists)_
 
 Precondition:
 - Docker role must already be decided clearly enough to avoid competing standards
+- `PR-C-kit` has soft precondition on `A5 + B2` (verified fresh-bootstrap) per §5A D4; `PR-C1` may run in parallel
 
-### 8.3 PR-C1 - Docker And Local Customer Demo
+### 8.3 PR-C1 — Docker And Local Customer Demo
 
 Objective:
 - create a repeatable local/staging run path if approved
@@ -553,53 +551,38 @@ Audit gate:
 - local boot verification
 - no production-runtime truth rewrite unless explicitly approved
 
-### 8.4 PR-C2 - Customer Deployment Kit
+### 8.4 PR-C-kit — Deployment Kit, Data Onboarding, And Operator Registry
 
-🟦 _(Claude senior-eng decision, 2026-06-13 — chờ Codex ký)_ — xem §5A **D4**: **soft precondition** — chỉ `C2` chờ `A5 + B2` cho ra fresh-bootstrap đã verify (đúng schema, gồm SP, bỏ dead tables, parametrize `USE railway;` theo DB khách); `C1` (Docker) chạy song song được. Tránh để một dependency làm nghẽn cả Phase C.
+🟦 _(Claude senior-eng decision, 2026-06-13 — chờ Codex ký)_ — xem §5A **D4**: **soft precondition** — `PR-C-kit` chờ `A5 + B2` cho ra fresh-bootstrap đã verify; `C1` chạy song song được.
+
+_(Batches former C2+C3+C4. All are docs, checklists, and templates. No app code change. One deploy.)_
 
 Objective:
-- create one repeatable checklist for new customer deployment
+- create one repeatable checklist for new customer deployment (was C2)
+- document data onboarding as a controlled process (was C3)
+- let one operator track multiple deployments without memory dependency (was C4)
 
 Steps:
-1. define required customer config inputs
-2. define domain/storage/admin-seed/backup checklist
-3. define first smoke sequence after customer deployment
-4. create operator handoff template
+1. define required customer config inputs (C2)
+2. define domain/storage/admin-seed/backup checklist (C2)
+3. define first smoke sequence after customer deployment (C2)
+4. create operator handoff template (C2)
+5. define import format and validation requirements (C3)
+6. require backup before import; define rollback expectation (C3)
+7. define customer export/exit format baseline (C3)
+8. define minimum customer registry fields (C4)
+9. choose simple storage: docs template / sheet / Notion equivalent (C4)
 
 Audit gate:
 - docs walkthrough using a fresh imaginary customer
-
-### 8.5 PR-C3 - Data Onboarding Workflow
-
-Objective:
-- turn onboarding data work into a controlled process
-
-Steps:
-1. define import format and validation requirements
-2. require backup before import
-3. define rollback expectation
-4. define customer export/exit format baseline
-
-Audit gate:
-- one dry-run onboarding checklist review
-
-### 8.6 PR-C4 - Operator Registry
-
-Objective:
-- let one operator track multiple deployments without memory dependency
-
-Steps:
-1. define the minimum customer registry fields
-2. choose simple storage first:
-   - docs template
-   - sheet
-   - Notion/Airtable equivalent
-3. define update responsibility after each deployment/change
-
-Audit gate:
 - operator simulation review
 
-### 8.7 Phase C Exit Audit
+Exit criteria:
+- a new customer deployment follows one checklist
+- onboarding/export are documented processes
+- operator tracking exists outside memory
+
+### 8.5 Phase C Exit Audit
 
 Phase C is complete only if:
 - a new customer deployment follows one checklist
@@ -614,12 +597,13 @@ Replace internal-style gate behavior with a controlled customer-facing approved-
 
 ### 9.2 Recommended PR Order
 
-1. `PR-D1`
-2. `PR-D2`
-3. `PR-D3`
-4. `PR-D4`
+_(Re-scoped 2026-06-14: D3+D4 batched into PR-D-lifecycle to reduce deploy count. Was 4 PRs → now 3.)_
 
-### 9.3 PR-D1 - Membership Account Model
+1. `PR-D1` _(schema + auth code, high risk — own deploy window)_
+2. `PR-D2` _(new feature: request/approval flow)_
+3. `PR-D-lifecycle` _(batched: D3+D4 — invite/reset flow + billing ops docs, same account lifecycle domain)_
+
+### 9.3 PR-D1 — Membership Account Model
 
 Objective:
 - extend `users` into the first-wave approved-membership model
@@ -642,7 +626,7 @@ Audit gate:
 Exit criteria:
 - account status changes can actually affect access promptly
 
-### 9.4 PR-D2 - Request Access And Admin Approval
+### 9.4 PR-D2 — Request Access And Admin Approval
 
 Objective:
 - create a controlled request/approval path
@@ -657,39 +641,37 @@ Audit gate:
 - approval flow contract tests
 - audit emission verification if available
 
-### 9.5 PR-D3 - Password Reset And Invite Flow
+### 9.5 PR-D-lifecycle — Invite/Reset Flow And Billing Ops
+
+_(Batches former D3+D4. D3 = invite/reset code; D4 = billing docs. Same account lifecycle domain; D4 is docs-only and does not warrant a separate deploy.)_
 
 Objective:
-- provide manageable account lifecycle operations without premature email automation
+- provide manageable account lifecycle operations without premature email automation (was D3)
+- connect access management to real operator commercial workflow (was D4)
 
 Steps:
-1. define invite/reset flow
-2. separate manual operator path from automated future path
-3. document security constraints and expiry expectations
+1. define invite/reset flow; separate manual operator path from automated future path (D3)
+2. document security constraints and expiry expectations (D3)
+3. define minimum billing/renewal fields or external tracking rules (D4)
+4. define contract status to access-status relationship (D4)
+5. document what stays outside the app in wave one (D4)
 
 Audit gate:
 - auth/reset contract tests
 - no SMTP coupling unless separately approved
-
-### 9.6 PR-D4 - Manual Billing And Renewal Operations
-
-Objective:
-- connect access management to real operator commercial workflow
-
-Steps:
-1. define minimum billing/renewal fields or external tracking rules
-2. define contract status to access-status relationship
-3. document what stays outside the app in wave one
-
-Audit gate:
 - docs and operator workflow review
 
-### 9.7 Phase D Exit Audit
+Exit criteria:
+- invite/reset is a rehearsed operator action
+- manual commercial operations are documented enough to run with one customer
+
+### 9.6 Phase D Exit Audit
 
 Phase D is complete only if:
 - membership is DB-backed
 - approval/suspension is auditable
 - access changes do not rely mainly on session expiry
+- invite/reset is a documented and tested operator action
 - manual commercial operations are documented enough to run with one customer
 
 ## 10. First Three PRs To Start Now

@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-13 (A0 ✅ #23, A1 ✅ #24, schema-truth ✅ #25, A3 ✅ #26, A4 ✅ #27, A5 ✅ #28, A2 in progress)  
+Last updated: 2026-06-14 (Phase A ✅ all done #23–#29; Phase B–D re-scoped: 13 → 9 PRs)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -272,31 +272,33 @@ Verification evidence:
 
 ## 6. Phase B Tracker
 
+_(Re-scoped 2026-06-14: B1+B4+B5 batched into PR-B-policy. 5 → 4 PRs. See execution plan §7.2.)_
+
 | PR | Scope | Status | Start condition |
 | --- | --- | --- | --- |
-| `PR-B1` | config and branding externalization | `Not started` | start after Phase A baseline is accepted |
-| `PR-B2` | migration discipline | `Not started` | start after A5 clarifies minimum schema truth |
-| `PR-B5` | legacy compatibility policy | `Not started` | can start after A0/A5 truth is documented |
-| `PR-B3` | query normalization for members/persons | `Not started` | do not start before A4 consumer/hot-path audit |
-| `PR-B4` | cache and rate-limit policy | `Not started` | do not start before hot-path understanding is documented |
+| `PR-B-policy` | config externalization + cache/rate-limit policy + legacy compatibility (was B1+B4+B5) | `Not started` | Phase A ✅ done |
+| `PR-B2` | migration discipline + gated prod migration (own deploy window) | `Not started` | Phase A ✅ done; backup drill #29 done |
+| `PR-B3a` | query normalization: contract lock + dedupe (zero behavior change) | `Not started` | A4 hot-path audit complete ✅ |
+| `PR-B3b` | query normalization: schema introspection reduction (behavior change) | `Not started` | B3a merged; B2 migration live on prod |
 
 ## 7. Phase C Tracker
 
+_(Re-scoped 2026-06-14: C2+C3+C4 batched into PR-C-kit. 4 → 2 PRs. See execution plan §8.2.)_
+
 | PR | Scope | Status | Start condition |
 | --- | --- | --- | --- |
-| `PR-C1` | Docker and local customer demo | `Not started` | Docker role must be explicitly decided |
-| `PR-C2` | customer deployment kit | `Not started` | wait for verified fresh-bootstrap truth from A5/B2 |
-| `PR-C3` | data onboarding workflow | `Not started` | start after deployment kit direction is stable |
-| `PR-C4` | operator registry | `Not started` | can start late in Phase C as docs/process work |
+| `PR-C1` | Docker and local customer demo | `Not started` | Docker role must be explicitly decided; can run parallel to C-kit |
+| `PR-C-kit` | deployment kit + data onboarding + operator registry (was C2+C3+C4) | `Not started` | A5 + B2 verified fresh-bootstrap (soft precondition per D4) |
 
 ## 8. Phase D Tracker
 
+_(Re-scoped 2026-06-14: D3+D4 batched into PR-D-lifecycle. 4 → 3 PRs. See execution plan §9.2.)_
+
 | PR | Scope | Status | Start condition |
 | --- | --- | --- | --- |
-| `PR-D1` | users-based membership lifecycle | `Not started` | start only after Phase A and B are stable |
-| `PR-D2` | request access and approval flow | `Not started` | after D1 account state exists |
-| `PR-D3` | invite and reset flow | `Not started` | after D1/D2 lifecycle is defined |
-| `PR-D4` | manual billing and renewal ops | `Not started` | after access-state workflow is trustworthy |
+| `PR-D1` | membership account model (schema + auth, high risk, own deploy window) | `Not started` | Phase A + B stable |
+| `PR-D2` | request access and admin approval flow | `Not started` | D1 account state exists |
+| `PR-D-lifecycle` | invite/reset flow + billing ops docs (was D3+D4) | `Not started` | D1/D2 lifecycle defined |
 
 ## 9. Mandatory Audit Rule Before Each PR
 
@@ -344,5 +346,9 @@ Recommended order from here:
 4. ✅ Merge `PR-A3` (#26) — done
 5. ✅ Merge `PR-A4` (#27) — done
 6. ✅ Merge `PR-A5` (#28) — done
-7. 🔵 Review and merge `PR-A2` (branch `ops/pr-a2-backup-rollback-drill`) — **current**
-8. Then `PR-B2` (gated migration: users table; own deploy window, backup + rollback drill first)
+7. ✅ Merge `PR-A2` (#29) — done. **Phase A complete.**
+8. Next: `PR-B-policy` (config externalization + cache/rate-limit + legacy docs, 1 deploy)
+9. Then `PR-B2` (gated migration: users table; own deploy window, backup + rollback drill first)
+10. Then `PR-B3a` → `PR-B3b` (query normalization)
+11. Then Phase C: `PR-C1` + `PR-C-kit`
+12. Then Phase D: `PR-D1` → `PR-D2` → `PR-D-lifecycle`
