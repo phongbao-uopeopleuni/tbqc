@@ -22,51 +22,53 @@ def _migrate_source():
 class TestMigrateAlterStatements:
     """Regression guard: ensure all expected ALTER statements exist in migrate.py."""
 
-    def test_password_changed_at_alter_present(self):
+    def test_helper_function_present(self):
+        # Must use _add_column_if_missing helper; ALTER statements must not use
+        # "ADD COLUMN IF NOT EXISTS" (MySQL 5.7 incompatible — only in 8.0.3+)
+        src = _migrate_source()
+        assert "_add_column_if_missing" in src
+        # Check SQL strings specifically — docstring may mention the phrase as a warning
+        import ast
+        tree = ast.parse(src)
+        sql_strings = [
+            node.value for node in ast.walk(tree)
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+            and "ALTER TABLE" in node.value.upper()
+        ]
+        for sql in sql_strings:
+            assert "IF NOT EXISTS" not in sql.upper(), (
+                f"Found 'ADD COLUMN IF NOT EXISTS' in an ALTER SQL string — MySQL 5.7 incompatible:\n{sql}"
+            )
+
+    def test_password_changed_at_migration_present(self):
         src = _migrate_source()
         assert "password_changed_at" in src
-        assert "ADD COLUMN IF NOT EXISTS" in src
 
-    def test_consent_at_alter_present(self):
+    def test_consent_at_migration_present(self):
         src = _migrate_source()
         assert "consent_at" in src
 
-    def test_consent_version_alter_present(self):
+    def test_consent_version_migration_present(self):
         src = _migrate_source()
         assert "consent_version" in src
 
-    def test_permissions_alter_present(self):
+    def test_permissions_migration_present(self):
         src = _migrate_source()
-        # permissions must be an explicit ALTER (not only in CREATE TABLE)
-        lines = src.splitlines()
-        alter_block = False
-        found_permissions_alter = False
-        for line in lines:
-            stripped = line.strip()
-            if stripped.upper().startswith("ALTER TABLE"):
-                alter_block = True
-            if alter_block and "permissions" in stripped and "ADD COLUMN" in stripped:
-                found_permissions_alter = True
-                break
-            if stripped.endswith(";") or stripped == "\"\"\"":
-                alter_block = False
-        assert found_permissions_alter, (
-            "migrate.py must have an explicit ALTER TABLE users ADD COLUMN permissions "
-            "(not only in CREATE TABLE — existing prod DBs need the ALTER)"
-        )
+        # permissions must appear in run_migrations context (not only CREATE TABLE)
+        assert '"users", "permissions"' in src or "'users', 'permissions'" in src
 
     def test_role_enum_widening_present(self):
         src = _migrate_source()
         assert "MODIFY COLUMN role ENUM" in src or "MODIFY COLUMN role enum" in src.lower()
         assert "editor" in src
 
-    def test_is_public_alter_present(self):
+    def test_is_public_migration_present(self):
         src = _migrate_source()
         assert "is_public" in src
 
-    def test_version_alter_present(self):
+    def test_version_migration_present(self):
         src = _migrate_source()
-        assert "ADD COLUMN IF NOT EXISTS version" in src
+        assert '"persons", "version"' in src or "'persons', 'version'" in src
 
     def test_migrator_user_guard_present(self):
         src = _migrate_source()
