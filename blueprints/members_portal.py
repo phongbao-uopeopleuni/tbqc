@@ -8,7 +8,7 @@ import re
 from datetime import date, datetime
 from io import BytesIO
 from pathlib import Path
-from flask import Blueprint, redirect, render_template, request, jsonify, session, send_file
+from flask import Blueprint, current_app, redirect, render_template, request, jsonify, session, send_file
 
 from audit_log import log_activity
 from extensions import rate_limit
@@ -915,7 +915,7 @@ def members_my_data():
             'note': (
                 'Đây là toàn bộ dữ liệu cá nhân liên kết với tài khoản của bạn. '
                 'Để yêu cầu chỉnh sửa hoặc xóa, liên hệ qua '
-                'https://www.facebook.com/PhongTuyBienQuanCong'
+                + (current_app.config.get('PUBLIC_FACEBOOK_URL') or 'https://www.facebook.com/PhongTuyBienQuanCong')
             ),
         })
     except Exception as exc:
@@ -955,6 +955,7 @@ def members_request_deletion():
         'message': (
             'Yêu cầu xóa dữ liệu của bạn đã được ghi nhận. '
             'Quản trị viên sẽ liên hệ và xử lý trong vòng 30 ngày. '
-            'Để theo dõi, liên hệ qua https://www.facebook.com/PhongTuyBienQuanCong'
+            'Để theo dõi, liên hệ qua '
+                + (current_app.config.get('PUBLIC_FACEBOOK_URL') or 'https://www.facebook.com/PhongTuyBienQuanCong')
         ),
     })

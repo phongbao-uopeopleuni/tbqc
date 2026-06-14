@@ -1,7 +1,7 @@
 # TBQC Release Gate
 
-Last updated: 2026-06-13  
-Scope: PR-A0 baseline release gate and schema-truth statement  
+Last updated: 2026-06-14 (PR-B-policy: §16 cache/rate-limit policy, §17 legacy field policy, §18 branding config)  
+Scope: PR-A0 baseline + PR-B-policy standardization  
 Status: operator-facing baseline, docs-only
 
 ## 1. Purpose
@@ -501,3 +501,145 @@ These were identified in A4 audit but are out of scope for A4 (which is audit + 
 | Cache `SHOW COLUMNS` results for `audit_log.py` and `logs_api_routes.py` | B3 (query normalization) | Low priority until scale increases |
 | Remove `information_schema` introspection from `person_service.py` after schema stabilizes | B3 | A5 schema reconciliation first |
 | Remove dead optional-column guards in `admin/users_routes.py` after B2 | B2 | B2 migration must run first |
+
+## 16. Cache And Rate-Limit Policy (PR-B4)
+
+### 16.1 Current Cache Configuration
+
+| Setting | Value | Source |
+| --- | --- | --- |
+| Cache type | `SimpleCache` (in-memory, single process) | `extensions.py::init_extensions` |
+| Default timeout | 300s (5 min) | `CACHE_DEFAULT_TIMEOUT=300` hardcoded |
+| Item threshold | 50 keys max | `CACHE_THRESHOLD=50` hardcoded |
+| Active cache keys | `api_members_data` (members list) | `blueprints/members_portal.py` |
+
+**Single-process constraint:** `SimpleCache` does not share state across Gunicorn workers. With the current `Procfile` (1 worker), this is not an issue. If worker count increases, cache becomes per-worker and members list may serve inconsistent responses across requests.
+
+### 16.2 Current Rate-Limit Configuration
+
+| Setting | Default | Env override |
+| --- | --- | --- |
+| Per minute | 120 requests/IP | `RATE_LIMIT_PER_MINUTE` |
+| Per hour | 2000 requests/IP | `RATE_LIMIT_PER_HOUR` |
+| Per day | 20000 requests/IP | `RATE_LIMIT_PER_DAY` |
+| Storage backend | `memory://` (single process) | `RATELIMIT_STORAGE_URI` or `REDIS_URL` |
+
+**Single-process constraint:** `memory://` storage means rate-limit counters are per-worker. With 1 worker (current), each IP effectively gets the full limit. With 2 workers, each IP gets 2× the limit. This is acceptable at current scale.
+
+### 16.3 Redis Threshold
+
+Redis becomes required when:
+
+1. Gunicorn worker count > 1 (either via `--workers` flag or `WEB_CONCURRENCY` env)
+2. Multiple Railway replicas / horizontal scaling
+
+If either condition is met, set:
+
+```
+RATELIMIT_STORAGE_URI=redis://localhost:6379/0
+# or
+REDIS_URL=redis://...
+```
+
+and install the `redis` Python package.
+
+Cache must also be upgraded from `SimpleCache` to `RedisCache` by changing `CACHE_TYPE` in `extensions.py::init_extensions`.
+
+### 16.4 Current Acceptable Single-Instance Mode
+
+The current configuration (1 Gunicorn worker, `memory://`) is acceptable while:
+
+- Monthly active sessions are under ~100 concurrent users
+- No horizontal scaling is active
+- Railway is the only production deployment
+
+Document this threshold before adding a second customer deployment, since shared infra would require Redis.
+
+### 16.5 Invariants (Do Not Change Without Policy Review)
+
+- `CACHE_THRESHOLD=50` — prevents unbounded RAM growth; do not raise without understanding key growth
+- `PERMANENT_SESSION_LIFETIME=24h` — security baseline; changes require security review
+- Cache key `api_members_data` — consumers depend on this key; changes must be coordinated with `blueprints/members_portal.py`
+
+---
+
+## 17. Legacy Field And Fallback Policy (PR-B5)
+
+This section defines which legacy fields and fallbacks are intentional and must not be removed, and which are scheduled for removal in a future PR.
+
+### 17.1 Keep Indefinitely (Do-Not-Remove)
+
+| Field / Fallback | Location | Why |
+| --- | --- | --- |
+| `persons.father_mother_id` | DB schema, `reset_schema_tbqc.sql` | Legacy family group ID; still used as fallback to `family_unit_id`. See §11 (Do-Not-Change List). |
+| `father_mother_id` INDEX on persons | DB | Backs lookups via legacy ID |
+| `in_law_family_id`, `in_law_role` on marriages | DB, `reset_schema_tbqc.sql` | Used for in-law lookup queries; not dead code |
+| `GENEALOGY_SYNC_SOURCE_URL` env default | `services/genealogy_sync.py` | Default preserved for backward compat; new deployments override via env |
+
+### 17.2 Remove After B2 Migration (Deferred To B2/B3b)
+
+| Field / Guard | Location | Condition for removal |
+| --- | --- | --- |
+| `SHOW COLUMNS FROM users WHERE Field='password_changed_at'` | `auth.py::get_user_by_id()` | Remove after B2 adds `password_changed_at` to prod users table |
+| `SHOW COLUMNS FROM users WHERE Field='permissions'` | `auth.py::get_user_by_id()` | Remove after B2 adds `permissions` column |
+| Optional-column guards in `admin/users_routes.py` | `admin/users_routes.py` | Remove after B2 migration verified on prod |
+| `SHOW TABLES LIKE 'activity_logs'` | `audit_log.py::log_activity()` | Low-priority; can cache result instead. Deferred to B3. |
+
+### 17.3 Confirmed Absent From Production (Removed In A5)
+
+These tables were in `reset_schema_tbqc.sql` but confirmed absent from production before A5 removed them:
+
+| Table | Status | Action taken |
+| --- | --- | --- |
+| `in_law_relationships` | Absent from prod (verified §6.1) | Removed from bootstrap in A5 |
+| `personal_details` | Absent from prod (verified §6.1) | Removed from bootstrap in A5 |
+
+### 17.4 Unknown — Do Not Touch
+
+| Item | Risk |
+| --- | --- |
+| `members.html` `sll_status` column rendering | Referenced in export + bulk update; treat as live until B3a contract lock |
+| `relationships.relation_type` ENUM values | `'in_law'` and `'child_in_law'` values exist in schema; do not remove without checking DB data |
+
+---
+
+## 18. Branding And Config Externalization (PR-B-policy / B1)
+
+### 18.1 Env Vars That Must Be Set For A Customer Deployment
+
+| Env var | Default (if not set) | Purpose |
+| --- | --- | --- |
+| `PUBLIC_SITE_URL` | `https://www.phongtuybienquancong.info` | Canonical URL; CORS origins; sitemap; User-Agent |
+| `PUBLIC_ORGANIZATION_NAME` | `Phòng Tuy Biên Quận Công` | Displayed in templates via `{{ public_organization_name }}` |
+| `PUBLIC_FACEBOOK_URL` | `https://www.facebook.com/PhongTuyBienQuanCong` | Contact links in templates and API responses |
+| `PUBLIC_ZALO_URL` | `https://zalo.me/g/ajmmkc064` | Floating Zalo button in templates |
+| `PUBLIC_PHONE_NUMBER` | `0775753003` | Contact phone |
+| `PUBLIC_PHONE_DISPLAY` | same as `PUBLIC_PHONE_NUMBER` | Display-formatted phone |
+| `GENEALOGY_SYNC_SOURCE_URL` | `https://www.phongtuybienquancong.info/api/members` | Source URL for genealogy sync (only relevant if sync is used) |
+
+### 18.2 CORS Origins
+
+`CORS_ALLOWED_ORIGINS` is no longer needed for basic customer deployment. Setting `PUBLIC_SITE_URL` automatically derives both `www` and non-`www` variants:
+
+- `PUBLIC_SITE_URL=https://www.customer.example.com` → CORS includes `https://www.customer.example.com` + `https://customer.example.com`
+- Additional origins still possible via `CORS_ALLOWED_ORIGINS=https://partner.example.com`
+
+### 18.3 Hardcoded Content In Templates
+
+The following template content is customer-specific content (not config), and must be edited directly for a new customer deployment:
+
+| Template | Hardcoded content |
+| --- | --- |
+| `templates/index.html` | Hero text, organization history, family description |
+| `templates/contact.html` | Contact form introduction, names of specific people |
+| `templates/documents.html` | Document titles and dates |
+| `templates/privacy.html` | Organization legal name, contact details |
+| `templates/partials/_site_schema.html` | Structured data schema name |
+
+These templates use `{{ public_organization_name }}`, `{{ public_facebook_url }}` etc. for configurable values, but descriptive content (history, names of ancestors, document inventory) is rendered literally and must be replaced for a customer deployment.
+
+### 18.4 Test Coverage
+
+13 tests in `tests/test_config_externalization.py`:
+- `TestCorsOrigins` (6): verifies www/non-www derivation, custom origins, trailing slash, empty default
+- `TestPublicConfigVarsSetOnApp` (7): verifies config values set on `flask_app` from env

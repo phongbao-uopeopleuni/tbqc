@@ -23,12 +23,13 @@ def sync_genealogy_from_members():
     Returns:
         JSON với thông tin sync: số lượng records, status, message
     """
-    logger.info('🔄 API /api/genealogy/sync được gọi - Sync từ database chuẩn (www.phongtuybienquancong.info)')
+    logger.info('🔄 API /api/genealogy/sync được gọi - Sync từ database chuẩn')
     connection = None
     cursor = None
     try:
         import requests
-        standard_db_url = 'https://www.phongtuybienquancong.info/api/members'
+        _default_sync_url = 'https://www.phongtuybienquancong.info/api/members'
+        standard_db_url = os.environ.get('GENEALOGY_SYNC_SOURCE_URL', _default_sync_url).strip()
         logger.info(f'📡 Fetching data from: {standard_db_url}')
 
         # TLS verification: mặc định BẬT (verify=True) — chặn MitM/DNS poisoning
