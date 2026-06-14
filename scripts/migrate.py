@@ -12,6 +12,24 @@ if not MIGRATOR_USER or not MIGRATOR_PASSWORD:
         "Xem .env.example để biết cách cấu hình 2-user model."
     )
 
+
+def _add_column_if_missing(cursor, table, column, col_def):
+    """
+    Tương thích MySQL 5.7+: ADD COLUMN IF NOT EXISTS không hỗ trợ trên 5.7,
+    nên kiểm tra information_schema trước rồi mới ALTER.
+    """
+    cursor.execute(
+        "SELECT COUNT(*) FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s",
+        (table, column),
+    )
+    if cursor.fetchone()[0] == 0:
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
+        print(f"  Added: {table}.{column}")
+    else:
+        print(f"  Skip (exists): {table}.{column}")
+
+
 def ensure_users_table(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -63,55 +81,44 @@ def run_migrations():
         database=os.environ.get('DB_NAME')
     )
     cursor = conn.cursor()
-    
-    # Import và chạy từng ensure_*_table
+
     import sys
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    
+
     from services.activities_service import ensure_activities_table
     from services.gallery_helpers import ensure_albums_table, ensure_album_images_table
     from services.page_views import _ensure_page_views_table
-    
-    # Chạy các bảng định nghĩa tại migrate.py
+
     ensure_users_table(cursor)
     ensure_activity_logs_table(cursor)
-    
-    # Chạy các hàm imported
     ensure_activities_table(cursor)
     ensure_albums_table(cursor)
     ensure_album_images_table(cursor)
-    
-    # Table sử dụng conn
     _ensure_page_views_table(conn)
-    
-    # Fix 3.1 — Thêm is_public column vào albums (C4)
-    cursor.execute("""
-        ALTER TABLE albums
-        ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE
-    """)
-    
-    # Fix 4.1 — Thêm password_changed_at vào users
-    cursor.execute("""
-        ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS password_changed_at TIMESTAMP NULL DEFAULT NULL
-    """)
-    
-    # Fix 4.2 — Optimistic Locking trên persons
-    cursor.execute("""
-        ALTER TABLE persons
-        ADD COLUMN IF NOT EXISTS version INT NOT NULL DEFAULT 1
-    """)
+
+    # Fix 3.1 — albums.is_public
+    _add_column_if_missing(cursor, "albums", "is_public", "BOOLEAN NOT NULL DEFAULT TRUE")
+
+    # Fix 4.1 — users.password_changed_at (session invalidation)
+    _add_column_if_missing(cursor, "users", "password_changed_at", "TIMESTAMP NULL DEFAULT NULL")
+
+    # Fix 4.2 — persons.version (optimistic lock)
+    _add_column_if_missing(cursor, "persons", "version", "INT NOT NULL DEFAULT 1")
     cursor.execute("UPDATE persons SET version = 1 WHERE version IS NULL")
 
-    # Fix 7.2 — Consent tracking (NĐ13/2023)
+    # Fix 7.2 — users.consent_at / consent_version (NĐ13/2023)
+    _add_column_if_missing(cursor, "users", "consent_at", "TIMESTAMP NULL DEFAULT NULL")
+    _add_column_if_missing(cursor, "users", "consent_version", "VARCHAR(20) NULL DEFAULT NULL")
+
+    # B2 — users.permissions (in CREATE TABLE but absent on prod bootstrapped before this column)
+    _add_column_if_missing(cursor, "users", "permissions", "JSON")
+
+    # B2 — Widen role enum to include 'editor'; MODIFY COLUMN is idempotent on MySQL 5.7+
     cursor.execute("""
         ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS consent_at TIMESTAMP NULL DEFAULT NULL
+        MODIFY COLUMN role ENUM('admin', 'editor', 'user') NOT NULL DEFAULT 'user'
     """)
-    cursor.execute("""
-        ALTER TABLE users
-        ADD COLUMN IF NOT EXISTS consent_version VARCHAR(20) NULL DEFAULT NULL
-    """)
+    print("  Modified: users.role enum (admin/editor/user)")
 
     conn.commit()
     cursor.close()
