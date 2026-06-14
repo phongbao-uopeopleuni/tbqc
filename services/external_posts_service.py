@@ -50,7 +50,7 @@ def _fetch_npt_council_rss(limit: int = 15):
     Lấy danh sách bài từ RSS NukeViet. Phản hồi có thể có cảnh báo PHP trước <?xml — cần cắt bỏ.
     """
     headers = {
-        'User-Agent': 'PhongTuyBienQuanCong/1.0 (+https://www.phongtuybienquancong.info)',
+        'User-Agent': 'TBQC/1.0 (+%s)' % os.environ.get('PUBLIC_SITE_URL', 'https://www.phongtuybienquancong.info').strip().rstrip('/'),
         'Accept': 'application/rss+xml, application/xml, text/xml, */*',
         # Một số máy chủ IIS gắn Content-Encoding: gzip không khớp nội dung — tắt nén để tránh lỗi giải mã
         'Accept-Encoding': 'identity',

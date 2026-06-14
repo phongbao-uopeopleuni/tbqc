@@ -217,12 +217,16 @@ class Config:
         )
         app.config["REMEMBER_COOKIE_DOMAIN"] = cookie_domain
 
-        # CORS origins giữ nguyên như trong app.py
+        # CORS origins: derive từ PUBLIC_SITE_URL (www + non-www).
+        # CORS_ALLOWED_ORIGINS env var vẫn được dùng để thêm origins phụ.
         if is_production:
-            allowed_origins = [
-                "https://phongtuybienquancong.info",
-                "https://www.phongtuybienquancong.info",
-            ]
+            site_url = os.environ.get("PUBLIC_SITE_URL", "https://www.phongtuybienquancong.info").strip().rstrip("/")
+            if "://www." in site_url:
+                no_www = site_url.replace("://www.", "://", 1)
+                allowed_origins = [no_www, site_url]
+            else:
+                www_url = site_url.replace("://", "://www.", 1)
+                allowed_origins = [site_url, www_url]
             custom_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "")
             if custom_origins:
                 allowed_origins.extend(

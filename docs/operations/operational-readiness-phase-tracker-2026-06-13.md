@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-14 (Phase A ✅ all done #23–#29; Phase B–D re-scoped: 13 → 9 PRs)  
+Last updated: 2026-06-14 (Phase A ✅ all done #23–#29; Phase B–D re-scoped: 13 → 9 PRs; B-policy In progress)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -36,31 +36,26 @@ Use only these statuses:
 
 Current active phase:
 
-- `Phase A — Operational Stability Baseline`
+- `Phase B — Standardization`
 
 Current active PR:
 
-- `PR-A2 — Backup Restore Verification` (branch `ops/pr-a2-backup-rollback-drill`)
+- `PR-B-policy` (branch `ops/pr-rescope-phase-b-c-d`)
 
 Current initiative state:
 
-- Baseline planning exists.
-- Execution plan exists (D1 signed by Codex).
-- Release gate baseline exists (PR-A0 #23).
-- Production smoke script exists (7/7 passed 2026-06-13).
-- Production schema reality verified and recorded (7+1 queries, #25).
-- Env preflight implemented (PR-A1 #24, WARN-only default).
-- Health endpoint contract fully audited and documented (PR-A3 #26).
-- DB hot-path inventory audited; connection probe leak fixed (PR-A4 #27).
-- Bootstrap SQL cleaned (dead tables removed, USE removed); SP export helper added (PR-A5 #28 ✅).
-- Backup/restore pre-flight script and drill guide created; backup toolchain audited (PR-A2 in progress).
+- Phase A complete: #23–#29 all merged.
+- Config externalization: CORS now derives from `PUBLIC_SITE_URL`; `PUBLIC_*` vars documented in `.env.example`.
+- Cache/rate-limit policy documented (§16 release-gate).
+- Legacy field policy documented (§17 release-gate).
+- 13 new tests in `tests/test_config_externalization.py`.
 
 ## 4. Phase Summary
 
 | Phase | Goal | Current status | Owner note |
 | --- | --- | --- | --- |
-| Phase A | operational stability baseline | `In progress` | A0–A5 ✅ merged (#23–#28); A2 backup drill in progress |
-| Phase B | standardization | `Not started` | blocked on meaningful completion of Phase A |
+| Phase A | operational stability baseline | `Completed` | A0–A5 + A2 ✅ all merged (#23–#29) |
+| Phase B | standardization | `In progress` | PR-B-policy in progress (branch ops/pr-b-policy) |
 | Phase C | deployment productization | `Not started` | do not start before Phase A is stable and Phase B removes core ambiguity |
 | Phase D | approved membership commercial flow | `Not started` | intentionally deferred until operational baseline is trustworthy |
 
@@ -245,7 +240,11 @@ against production (with `DB_*` env vars), reviews output for secrets, then comm
 
 Status:
 
-- `In progress` (branch `ops/pr-a2-backup-rollback-drill`)
+- `Completed`
+
+Merge evidence:
+
+- PR #29, commit `92a71fd`, merged to master 2026-06-13
 
 Prerequisites:
 
@@ -276,10 +275,55 @@ _(Re-scoped 2026-06-14: B1+B4+B5 batched into PR-B-policy. 5 → 4 PRs. See exec
 
 | PR | Scope | Status | Start condition |
 | --- | --- | --- | --- |
-| `PR-B-policy` | config externalization + cache/rate-limit policy + legacy compatibility (was B1+B4+B5) | `Not started` | Phase A ✅ done |
+| `PR-B-policy` | config externalization + cache/rate-limit policy + legacy compatibility (was B1+B4+B5) | `In progress` | Phase A ✅ done |
 | `PR-B2` | migration discipline + gated prod migration (own deploy window) | `Not started` | Phase A ✅ done; backup drill #29 done |
 | `PR-B3a` | query normalization: contract lock + dedupe (zero behavior change) | `Not started` | A4 hot-path audit complete ✅ |
 | `PR-B3b` | query normalization: schema introspection reduction (behavior change) | `Not started` | B3a merged; B2 migration live on prod |
+
+### 6.1 PR-B-policy — Config, Cache/Rate-Limit, And Legacy Compatibility
+
+Status:
+
+- `In progress` (branch `ops/pr-b-policy`)
+
+Prerequisites:
+
+- Phase A ✅ complete (#23–#29)
+
+Audit findings (completed before coding):
+
+- **`config.py` CORS bug**: production `CORS_ALLOWED_ORIGINS` hardcoded `phongtuybienquancong.info`. Customer deployments setting only `PUBLIC_SITE_URL` would get TBQC's domain in their CORS list. **Fixed**: CORS now derives `www` + non-`www` variants from `PUBLIC_SITE_URL` env var.
+- **`PUBLIC_*` vars undocumented**: `.env.example` had no `PUBLIC_SITE_URL`, `PUBLIC_ORGANIZATION_NAME`, etc. Operators deploying for a new customer would not know these exist. **Fixed**: added `Branding / Customer Metadata` block to `.env.example`.
+- **Hardcoded Facebook URL in API responses**: `blueprints/members_portal.py` lines 918, 958 had `facebook.com/PhongTuyBienQuanCong` hardcoded in JSON responses. **Fixed**: now reads from `current_app.config['PUBLIC_FACEBOOK_URL']`.
+- **Hardcoded User-Agent in RSS fetch**: `services/external_posts_service.py` had `PhongTuyBienQuanCong/1.0 (+https://www.phongtuybienquancong.info)`. **Fixed**: now uses `PUBLIC_SITE_URL` env var.
+- **Hardcoded sync URL**: `services/genealogy_sync.py` hardcoded the TBQC members API URL. **Fixed**: now reads `GENEALOGY_SYNC_SOURCE_URL` env var (default preserved for backward compat).
+- **Cache/rate-limit policy (B4)**: already env-backed; only documentation was missing. See `release-gate.md §16`.
+- **Legacy field policy (B5)**: inventoried `father_mother_id` (keep forever), SHOW COLUMNS guards (remove after B2), dead tables (removed in A5). See `release-gate.md §17`.
+
+Code changes:
+
+- `config.py`: CORS origin derivation from `PUBLIC_SITE_URL` (replaces hardcoded list)
+- `blueprints/members_portal.py`: `current_app` import added; Facebook URL from config (2 places)
+- `services/external_posts_service.py`: User-Agent from `PUBLIC_SITE_URL` env var
+- `services/genealogy_sync.py`: sync source URL from `GENEALOGY_SYNC_SOURCE_URL` env var
+- `.env.example`: `PUBLIC_*` + `GENEALOGY_SYNC_SOURCE_URL` block added
+
+Docs changes:
+
+- `release-gate.md §16`: cache/rate-limit policy (B4)
+- `release-gate.md §17`: legacy field and fallback policy (B5)
+- `release-gate.md §18`: branding config externalization (B1)
+- Phase tracker: this section
+
+New tests (13):
+
+- `tests/test_config_externalization.py::TestCorsOrigins` (6): CORS derivation logic
+- `tests/test_config_externalization.py::TestPublicConfigVarsSetOnApp` (7): config values set from env
+
+Verification evidence:
+
+- `python -m pytest -x -q tests/test_config_externalization.py` → 13 passed
+- `python -m pytest -x -q -m "not db_integration"` → 482 passed, 3 skipped
 
 ## 7. Phase C Tracker
 
@@ -326,29 +370,22 @@ Do not mark a step `Completed` unless all are true:
 
 Current pending checks:
 
-1. `ops/schema-truth-prod-verify` branch chờ merge (docs-only: `release-gate.md §6.1` + plan B2/D1 blocker note).
-2. D2–D9 (execution plan §5A) chờ Codex ký — không block A3/A4/A5, cần cho B3/A5/C2/A2/CI.
+1. D2–D9 (execution plan §5A) chờ Codex ký — D2/B3 unblocked after B-policy merge.
 
 Current known blockers for later phases:
 
 1. `migrate.py` ALTERs chưa apply lên prod → PR-B2 cần chạy gated migration (users table) trước Phase D.
-2. Stored-procedure source chưa tracked trong repo → A5 cần export SP source + `git add -f`.
-3. Deploy bootstrap truth chưa an toàn cho customer deployment packaging → A5/C2 chưa bắt đầu.
-4. `/api/members` response shape remains externally consumed and must stay frozen.
+2. Stored-procedure source chưa tracked trong repo → operator cần chạy `export_sp_source.py` vs prod + `git add -f`.
+3. Deploy bootstrap truth chưa an toàn cho customer deployment packaging → C-kit chờ B2.
+4. `/api/members` response shape externally consumed — must stay frozen until B3a contract lock.
 
 ## 12. Next Recommended Moves
 
 Recommended order from here:
 
-1. ✅ Merge `PR-A0` (#23) — done
-2. ✅ Merge `PR-A1` (#24) — done
-3. ✅ Merge `ops/schema-truth-prod-verify` (#25) — done
-4. ✅ Merge `PR-A3` (#26) — done
-5. ✅ Merge `PR-A4` (#27) — done
-6. ✅ Merge `PR-A5` (#28) — done
-7. ✅ Merge `PR-A2` (#29) — done. **Phase A complete.**
-8. Next: `PR-B-policy` (config externalization + cache/rate-limit + legacy docs, 1 deploy)
-9. Then `PR-B2` (gated migration: users table; own deploy window, backup + rollback drill first)
+1–7. ✅ Phase A (#23–#29) — done
+8. 🔵 Review and merge `PR-B-policy` (branch `ops/pr-b-policy`) — **current**
+9. Then `PR-B2` (gated migration: users table; own deploy window, backup first)
 10. Then `PR-B3a` → `PR-B3b` (query normalization)
 11. Then Phase C: `PR-C1` + `PR-C-kit`
 12. Then Phase D: `PR-D1` → `PR-D2` → `PR-D-lifecycle`
