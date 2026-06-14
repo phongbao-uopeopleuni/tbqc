@@ -502,7 +502,7 @@ These were identified in A4 audit but are out of scope for A4 (which is audit + 
 | Remove `information_schema` introspection from `person_service.py` after schema stabilizes | B3 | A5 schema reconciliation first |
 | Remove dead optional-column guards in `admin/users_routes.py` after B2 | B3a | B2 migration must run first on prod |
 
-## 16. Migration Discipline (PR-B2)
+## 19. Migration Discipline (PR-B2)
 
 ### 16.1 Migration Script
 
@@ -550,7 +550,7 @@ Summary: every new schema change must be added to `migrate.py`, be idempotent, u
 
 Once `python scripts/migrate.py` runs on production:
 
-- All columns in §16.3 will be present on production.
+- All columns in §19.3 will be present on production.
 - `scripts/check_migration_state.py` will report all ✓.
 - `auth.py` `SHOW COLUMNS` guards can be removed in B3a (no longer needed).
 - Session invalidation and NĐ13 consent tracking become active.

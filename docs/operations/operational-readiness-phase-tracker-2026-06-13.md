@@ -305,7 +305,7 @@ Docs changes:
 - `docs/operations/schema-change-checklist.md`: new schema-change process doc
 - `docs/operations/runbook.md §15`: gated migration procedure
 - `docs/operations/release-gate.md §5`: divergences table updated (B2 actions noted)
-- `docs/operations/release-gate.md §16`: migration discipline contract (§16.1–16.5)
+- `docs/operations/release-gate.md §19`: migration discipline contract (§19.1–19.5)
 - Phase tracker: this section
 
 New tests (18):
