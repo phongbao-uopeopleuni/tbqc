@@ -113,6 +113,21 @@ def run_migrations():
         ADD COLUMN IF NOT EXISTS consent_version VARCHAR(20) NULL DEFAULT NULL
     """)
 
+    # B2 — Add permissions column (exists in CREATE TABLE but absent on prod: table was
+    # bootstrapped before this column was introduced, so ALTER is required for in-place upgrade)
+    cursor.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS permissions JSON
+    """)
+
+    # B2 — Widen role enum to include 'editor' value
+    # Safe: existing 'admin' / 'user' values remain valid; MODIFY is idempotent when
+    # the target shape is already present.
+    cursor.execute("""
+        ALTER TABLE users
+        MODIFY COLUMN role ENUM('admin', 'editor', 'user') NOT NULL DEFAULT 'user'
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()

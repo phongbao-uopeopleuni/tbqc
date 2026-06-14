@@ -392,7 +392,34 @@ Chi tiết chính sách bảo mật: `docs/security/security.md`.
 
 ---
 
-## 15. File đặc biệt còn giữ lại
+## 15. Gated Migration — Quy trình chạy migrate.py trên production
+
+Xem checklist đầy đủ: `docs/operations/schema-change-checklist.md`.
+
+### Khi nào cần chạy
+
+Khi một PR thêm ALTER mới vào `scripts/migrate.py`. App có thể boot và chạy mà không cần migration (nhờ `SHOW COLUMNS` guards), nhưng tính năng liên quan sẽ bị dormant cho đến khi migrate.
+
+### Bước tối thiểu
+
+1. **Backup trước:** `docs/operations/backup-restore-drill.md` §3.
+2. **Kiểm tra trạng thái:** `python scripts/check_migration_state.py` — xác nhận columns nào còn thiếu.
+3. **Chạy migration** (cần `DB_MIGRATOR_USER` + `DB_MIGRATOR_PASSWORD`):
+   ```bash
+   python scripts/migrate.py
+   ```
+4. **Xác nhận sau:** `python scripts/check_migration_state.py` → tất cả ✓.
+5. **Smoke:** `python scripts/smoke_prod.py`.
+
+### Stagger rule
+
+Không chạy migration cùng deploy window với PR khác ảnh hưởng boot/auth. Nếu Railway redeploy trong khi migrate đang chạy: migration dùng `DB_MIGRATOR_USER` riêng, không bị ảnh hưởng bởi app restart.
+
+### Rollback nhanh
+
+App code không bị ảnh hưởng nếu migration chỉ thêm columns (guards `SHOW COLUMNS` vẫn hoạt động với old code). Nếu cần revert app: Railway → Deployments → Rollback to previous.
+
+## 16. File đặc biệt còn giữ lại
 
 - `CLAUDE.md` — hướng dẫn cho AI/editor khi làm việc với repo. Không phải tài liệu vận hành hệ thống.
 - `docs/archive/pre-refactor/pre-refactor-2026-05-20.md` — kế hoạch refactor toàn diện, phải đọc trước khi bắt đầu bất kỳ Phase nào.

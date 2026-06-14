@@ -141,10 +141,10 @@ These are the minimum verified divergences that must be treated as real release 
 
 | Area | Bootstrap truth | Migrate truth | Production state | A5 action |
 | --- | --- | --- | --- | --- |
-| `users.role` enum | `('admin','user')` | `('admin','editor','user')` | `('admin','user')` — matches bootstrap | Commented in SQL; B2 will widen |
-| `users.permissions` | missing | created in `migrate.py` | absent | Commented in SQL; B2 adds it |
-| `users.password_changed_at` | missing | added by ALTER | absent | Commented in SQL; B2 adds it |
-| `users.consent_at` / `users.consent_version` | missing | added by ALTER | absent | Commented in SQL; B2 adds it |
+| `users.role` enum | `('admin','user')` | `('admin','editor','user')` | `('admin','user')` — matches bootstrap | ✅ B2: MODIFY COLUMN added to migrate.py |
+| `users.permissions` | missing | created in `migrate.py` | absent | ✅ B2: ADD COLUMN added to migrate.py |
+| `users.password_changed_at` | missing | added by ALTER | absent | B2 migration must run on prod to apply |
+| `users.consent_at` / `users.consent_version` | missing | added by ALTER | absent | B2 migration must run on prod to apply |
 | `family_units` | created | not created | ✅ exists (manual SQL applied) | No change needed |
 | `in_law_relationships` | was in bootstrap | not created | ✅ absent from prod | ✅ Removed from bootstrap in A5 |
 | `personal_details` | was in bootstrap | not created | ✅ absent from prod | ✅ Removed from bootstrap in A5 |
@@ -497,7 +497,62 @@ These were identified in A4 audit but are out of scope for A4 (which is audit + 
 
 | Item | Owner PR | Blocker |
 | --- | --- | --- |
-| Remove `SHOW COLUMNS` guards in `auth.py` after columns exist | B2 (post-migration cleanup) | B2 migration must run first |
+| Remove `SHOW COLUMNS` guards in `auth.py` after columns exist | B3a (post-migration cleanup) | B2 migration must run first on prod |
 | Cache `SHOW COLUMNS` results for `audit_log.py` and `logs_api_routes.py` | B3 (query normalization) | Low priority until scale increases |
 | Remove `information_schema` introspection from `person_service.py` after schema stabilizes | B3 | A5 schema reconciliation first |
-| Remove dead optional-column guards in `admin/users_routes.py` after B2 | B2 | B2 migration must run first |
+| Remove dead optional-column guards in `admin/users_routes.py` after B2 | B3a | B2 migration must run first on prod |
+
+## 16. Migration Discipline (PR-B2)
+
+### 16.1 Migration Script
+
+Canonical script: `scripts/migrate.py`
+
+- Run with `DB_MIGRATOR_USER` (not runtime `DB_USER`).
+- All ALTERs use `ADD COLUMN IF NOT EXISTS` — idempotent; safe to re-run.
+- `MODIFY COLUMN role ENUM(...)` — idempotent when target enum shape already matches.
+
+### 16.2 Pre-Migration Check
+
+Before running migrate.py on production, run:
+
+```bash
+python scripts/check_migration_state.py
+```
+
+This read-only script checks which columns are present/absent and whether `users.role` includes `'editor'`. Exit 0 regardless; use `--strict` to exit 1 if anything is missing.
+
+### 16.3 Columns Added by B2
+
+Changes added to `migrate.py` in PR-B2 (not yet applied to production until migration runs):
+
+| Table | Column / Change | Effect after migration |
+| --- | --- | --- |
+| `users` | `ADD COLUMN permissions JSON` | Per-user permission overrides become writable |
+| `users` | `MODIFY COLUMN role ENUM('admin','editor','user')` | `editor` role becomes assignable |
+
+Columns already in migrate.py (added in earlier fixes, also not yet on prod):
+
+| Table | Column | Effect |
+| --- | --- | --- |
+| `users` | `password_changed_at` | Session invalidation on password change becomes active |
+| `users` | `consent_at` / `consent_version` | NĐ13 consent tracking becomes active |
+| `albums` | `is_public` | Album visibility flag active |
+| `persons` | `version` | Optimistic lock counter active |
+
+### 16.4 Schema-Change Process
+
+See full checklist: `docs/operations/schema-change-checklist.md`
+
+Summary: every new schema change must be added to `migrate.py`, be idempotent, update `reset_schema_tbqc.sql` to match, and add the new column to `scripts/check_migration_state.py::REQUIRED_COLUMNS`.
+
+### 16.5 Post-Migration State (after B2 migration runs on prod)
+
+Once `python scripts/migrate.py` runs on production:
+
+- All columns in §16.3 will be present on production.
+- `scripts/check_migration_state.py` will report all ✓.
+- `auth.py` `SHOW COLUMNS` guards can be removed in B3a (no longer needed).
+- Session invalidation and NĐ13 consent tracking become active.
+- Update §6.1 production verification table to reflect new state.
+

@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-14 (Phase A ✅ all done #23–#29; Phase B–D re-scoped: 13 → 9 PRs)  
+Last updated: 2026-06-14 (Phase A ✅ #23–#29; PR-B-policy ✅; PR-B2 In progress)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -36,31 +36,26 @@ Use only these statuses:
 
 Current active phase:
 
-- `Phase A — Operational Stability Baseline`
+- `Phase B — Standardization`
 
 Current active PR:
 
-- `PR-A2 — Backup Restore Verification` (branch `ops/pr-a2-backup-rollback-drill`)
+- `PR-B2 — Migration Discipline + Gated Prod Migration` (branch `ops/pr-b2-migration-discipline`)
 
 Current initiative state:
 
-- Baseline planning exists.
-- Execution plan exists (D1 signed by Codex).
-- Release gate baseline exists (PR-A0 #23).
-- Production smoke script exists (7/7 passed 2026-06-13).
-- Production schema reality verified and recorded (7+1 queries, #25).
-- Env preflight implemented (PR-A1 #24, WARN-only default).
-- Health endpoint contract fully audited and documented (PR-A3 #26).
-- DB hot-path inventory audited; connection probe leak fixed (PR-A4 #27).
-- Bootstrap SQL cleaned (dead tables removed, USE removed); SP export helper added (PR-A5 #28 ✅).
-- Backup/restore pre-flight script and drill guide created; backup toolchain audited (PR-A2 in progress).
+- Phase A complete: #23–#29 all merged.
+- Phase B–D re-scoped 2026-06-14: 13 → 9 PRs remaining.
+- PR-B-policy ✅: CORS + PUBLIC_* externalization; cache/rate-limit + legacy field policy docs; 13 new tests.
+- PR-B2 In progress: 2 missing ALTERs added to migrate.py (permissions, role enum widening); pre-check script; schema-change checklist; 18 new tests.
+- migrate.py is now complete — all pending ALTERs are present. Operator must run migration on prod (own deploy window, backup first).
 
 ## 4. Phase Summary
 
 | Phase | Goal | Current status | Owner note |
 | --- | --- | --- | --- |
-| Phase A | operational stability baseline | `In progress` | A0–A5 ✅ merged (#23–#28); A2 backup drill in progress |
-| Phase B | standardization | `Not started` | blocked on meaningful completion of Phase A |
+| Phase A | operational stability baseline | `Completed` | A0–A5 + A2 ✅ all merged (#23–#29) |
+| Phase B | standardization | `In progress` | PR-B-policy ✅; PR-B2 in progress (branch ops/pr-b2-migration-discipline) |
 | Phase C | deployment productization | `Not started` | do not start before Phase A is stable and Phase B removes core ambiguity |
 | Phase D | approved membership commercial flow | `Not started` | intentionally deferred until operational baseline is trustworthy |
 
@@ -276,10 +271,60 @@ _(Re-scoped 2026-06-14: B1+B4+B5 batched into PR-B-policy. 5 → 4 PRs. See exec
 
 | PR | Scope | Status | Start condition |
 | --- | --- | --- | --- |
-| `PR-B-policy` | config externalization + cache/rate-limit policy + legacy compatibility (was B1+B4+B5) | `Not started` | Phase A ✅ done |
-| `PR-B2` | migration discipline + gated prod migration (own deploy window) | `Not started` | Phase A ✅ done; backup drill #29 done |
-| `PR-B3a` | query normalization: contract lock + dedupe (zero behavior change) | `Not started` | A4 hot-path audit complete ✅ |
+| `PR-B-policy` | config externalization + cache/rate-limit policy + legacy compatibility (was B1+B4+B5) | `Completed` | Phase A ✅ done — merged #31 |
+| `PR-B2` | migration discipline + gated prod migration (own deploy window) | `In progress` | Phase A ✅ done; backup drill #29 done |
+| `PR-B3a` | query normalization: contract lock + dedupe (zero behavior change) | `Not started` | A4 hot-path audit complete ✅; B2 migration live on prod |
 | `PR-B3b` | query normalization: schema introspection reduction (behavior change) | `Not started` | B3a merged; B2 migration live on prod |
+
+### 6.2 PR-B2 — Migration Discipline + Gated Prod Migration
+
+Status:
+
+- `In progress` (branch `ops/pr-b2-migration-discipline`)
+
+Prerequisites:
+
+- Phase A ✅ complete (#23–#29)
+- Backup/restore drill documented (#29 ✅)
+
+Audit findings (completed before coding):
+
+- **`users.permissions` absent from prod**: column exists in `ensure_users_table()` CREATE TABLE but no explicit ALTER was present — tables bootstrapped before this column was introduced lack it. **Fixed**: `ADD COLUMN IF NOT EXISTS permissions JSON` added to `run_migrations()`.
+- **`users.role` enum missing `editor`**: bootstrap and prod both have `('admin','user')` only. `migrate.py` CREATE TABLE has all 3 values but no MODIFY ALTER for existing DBs. **Fixed**: `MODIFY COLUMN role ENUM('admin','editor','user')` added to `run_migrations()`.
+- **Pre-migration check absent**: no tool existed to verify which columns are present before running migrate.py. **Fixed**: `scripts/check_migration_state.py` — read-only, covers all 6 required columns + role enum.
+- **Schema-change process undocumented**: no checklist for how to add future migrations safely. **Fixed**: `docs/operations/schema-change-checklist.md` created.
+- **Runbook missing gated migration procedure**: no operator instructions for running migrate.py on prod. **Fixed**: runbook §15 added.
+
+Code changes:
+
+- `scripts/migrate.py`: 2 new ALTERs (`permissions`, `role` MODIFY) in `run_migrations()`
+- `scripts/check_migration_state.py`: new read-only pre-check script
+
+Docs changes:
+
+- `docs/operations/schema-change-checklist.md`: new schema-change process doc
+- `docs/operations/runbook.md §15`: gated migration procedure
+- `docs/operations/release-gate.md §5`: divergences table updated (B2 actions noted)
+- `docs/operations/release-gate.md §16`: migration discipline contract (§16.1–16.5)
+- Phase tracker: this section
+
+New tests (18):
+
+- `tests/test_migration.py::TestMigrateAlterStatements` (9): migrate.py completeness guards
+- `tests/test_migration.py::TestCheckMigrationStateLogic` (9): check script logic with fake cursor
+
+Verification evidence:
+
+- `python -m pytest tests/test_migration.py -v` → 18 passed
+- `python -m pytest -x -q -m "not db_integration"` → (run before commit)
+
+**Operator action required after merge:**
+
+1. Backup: `docs/operations/backup-restore-drill.md §3`
+2. Pre-check: `python scripts/check_migration_state.py`
+3. Migrate: `python scripts/migrate.py` (with `DB_MIGRATOR_USER` + `DB_MIGRATOR_PASSWORD`)
+4. Verify: `python scripts/check_migration_state.py` → all ✓
+5. Smoke: `python scripts/smoke_prod.py`
 
 ## 7. Phase C Tracker
 
@@ -326,29 +371,23 @@ Do not mark a step `Completed` unless all are true:
 
 Current pending checks:
 
-1. `ops/schema-truth-prod-verify` branch chờ merge (docs-only: `release-gate.md §6.1` + plan B2/D1 blocker note).
-2. D2–D9 (execution plan §5A) chờ Codex ký — không block A3/A4/A5, cần cho B3/A5/C2/A2/CI.
+1. D2–D9 (execution plan §5A) chờ Codex ký — D2/B3 unblocked after B-policy merge.
 
 Current known blockers for later phases:
 
-1. `migrate.py` ALTERs chưa apply lên prod → PR-B2 cần chạy gated migration (users table) trước Phase D.
-2. Stored-procedure source chưa tracked trong repo → A5 cần export SP source + `git add -f`.
-3. Deploy bootstrap truth chưa an toàn cho customer deployment packaging → A5/C2 chưa bắt đầu.
-4. `/api/members` response shape remains externally consumed and must stay frozen.
+1. `migrate.py` ALTERs chưa apply lên prod → operator phải chạy `python scripts/migrate.py` (own deploy window, backup first) sau khi B2 merges.
+2. Stored-procedure source chưa tracked trong repo → operator cần chạy `export_sp_source.py` vs prod + `git add -f`.
+3. Deploy bootstrap truth chưa an toàn cho customer deployment packaging → C-kit chờ B2 migration verified.
+4. `/api/members` response shape externally consumed — must stay frozen until B3a contract lock.
 
 ## 12. Next Recommended Moves
 
 Recommended order from here:
 
-1. ✅ Merge `PR-A0` (#23) — done
-2. ✅ Merge `PR-A1` (#24) — done
-3. ✅ Merge `ops/schema-truth-prod-verify` (#25) — done
-4. ✅ Merge `PR-A3` (#26) — done
-5. ✅ Merge `PR-A4` (#27) — done
-6. ✅ Merge `PR-A5` (#28) — done
-7. ✅ Merge `PR-A2` (#29) — done. **Phase A complete.**
-8. Next: `PR-B-policy` (config externalization + cache/rate-limit + legacy docs, 1 deploy)
-9. Then `PR-B2` (gated migration: users table; own deploy window, backup + rollback drill first)
-10. Then `PR-B3a` → `PR-B3b` (query normalization)
+1–7. ✅ Phase A (#23–#29) — done
+8. ✅ Merge `PR-B-policy` (#31) — done (CORS + PUBLIC_* + cache/legacy policy docs)
+9. 🔵 Review and merge `PR-B2` (branch `ops/pr-b2-migration-discipline`) — **current**
+   → After merge: operator runs backup + `python scripts/migrate.py` in own deploy window
+10. Then `PR-B3a` → `PR-B3b` (query normalization — start only after B2 migration live on prod)
 11. Then Phase C: `PR-C1` + `PR-C-kit`
 12. Then Phase D: `PR-D1` → `PR-D2` → `PR-D-lifecycle`
