@@ -143,8 +143,8 @@ These are the minimum verified divergences that must be treated as real release 
 | --- | --- | --- | --- | --- |
 | `users.role` enum | `('admin','user')` | `('admin','editor','user')` | `('admin','user')` — matches bootstrap | ✅ B2: MODIFY COLUMN added to migrate.py |
 | `users.permissions` | missing | created in `migrate.py` | absent | ✅ B2: ADD COLUMN added to migrate.py |
-| `users.password_changed_at` | missing | added by ALTER | absent | B2 migration must run on prod to apply |
-| `users.consent_at` / `users.consent_version` | missing | added by ALTER | absent | B2 migration must run on prod to apply |
+| `users.password_changed_at` | missing | added by ALTER | ✅ present (B2 migration 2026-06-14) | ✅ Session invalidation active |
+| `users.consent_at` / `users.consent_version` | missing | added by ALTER | ✅ present (B2 migration 2026-06-14) | ✅ NĐ13 consent tracking active |
 | `family_units` | created | not created | ✅ exists (manual SQL applied) | No change needed |
 | `in_law_relationships` | was in bootstrap | not created | ✅ absent from prod | ✅ Removed from bootstrap in A5 |
 | `personal_details` | was in bootstrap | not created | ✅ absent from prod | ✅ Removed from bootstrap in A5 |
@@ -153,36 +153,38 @@ These are the minimum verified divergences that must be treated as real release 
 
 ## 6. Production Verification Status
 
-### 6.1 Production schema reality — verified 2026-06-13
+### 6.1 Production schema reality — updated 2026-06-14 (post B2 migration)
 
-Verified directly on the production database (schema `railway`) via read-only `SHOW` / `information_schema` queries:
+Initial verification 2026-06-13; B2 migration run 2026-06-14. Verified directly on the production database (schema `railway`) via read-only `SHOW` / `information_schema` queries:
 
 | Check | Production result | Status |
 | --- | --- | --- |
 | `persons.family_unit_id` | exists — `varchar(50)`, nullable, index `MUL` | ✅ present (A0 pending closed) |
-| `users.role` enum | `enum('admin','user')` — **missing `editor`** | ⚠️ matches bootstrap, not `migrate.py` |
-| `users.permissions` | **absent** | ⚠️ `migrate.py` column never applied |
-| `users.password_changed_at` | **absent** | ⚠️ session-invalidation dormant (see note) |
-| `users.consent_at` / `users.consent_version` | **absent** | ⚠️ NĐ13 consent tracking dormant |
+| `users.role` enum | `enum('admin','user')` — **still missing `editor`** | ⚠️ MODIFY COLUMN step not yet run (see note) |
+| `users.permissions` | **present** | ✅ added by B2 migration 2026-06-14 |
+| `users.password_changed_at` | **present** | ✅ added by B2 migration 2026-06-14; session invalidation now active |
+| `users.consent_at` / `users.consent_version` | **present** | ✅ added by B2 migration 2026-06-14; NĐ13 consent tracking now active |
+| `albums.is_public` | present | ✅ already present before B2 |
+| `persons.version` | **present** | ✅ added by B2 migration 2026-06-14; optimistic lock active |
 | `family_units` table | exists | ✅ present |
 | `in_law_relationships` table | absent | ✅ dead table confirmed gone |
 | `personal_details` table | absent | ✅ dead table confirmed gone |
 | `sp_get_ancestors` / `sp_get_descendants` | exist as `PROCEDURE` | ✅ present |
 | SP `person_id` parameter type | `varchar(50)` (both) | ✅ signature correct (old INT issue resolved) |
 
-Key interpretation:
+Key interpretation (post-migration):
 
-- **`scripts/migrate.py` incremental ALTERs were never fully applied to production.** Production `users` matches the bootstrap shape (2-value role enum; no `permissions` / `password_changed_at` / `consent_*`). Production was assembled from bootstrap + manual `migrate_add_family_units.sql` + manually-created stored procedures, not from the `migrate.py` upgrade path.
-- **Two security/compliance features are dormant on production because their columns are absent:**
-  - Session invalidation on password change (`auth.py` load_user check) never triggers — `get_user_by_id` finds no `password_changed_at` column via its `SHOW COLUMNS` guard, so the value is always `None`.
-  - Consent tracking (NĐ13) degrades through the `SHOW COLUMNS` guard in `members_portal.py`.
-  - Not an active breach: the features exist in code but stay inert until the columns are added. The runtime `SHOW COLUMNS` guards are exactly what keep production from erroring — confirming the "runtime introspection compensates for schema divergence" finding.
+- **B2 migration ran 2026-06-14** via migrator user with backup (`backups/tbqc_backup_20260614_065338.sql`, 3.19 MB). 5 columns added successfully; `albums.is_public` was already present.
+- **`users.role` enum widening still pending**: the `MODIFY COLUMN role ENUM('admin','editor','user')` step was not included in the wrapper script used for the migration. Must be run separately: `railway run python scripts/migrate.py` (after PR-B2 deploys) — `_add_column_if_missing` will skip existing columns and only apply the MODIFY. Needed before Phase D assigns `editor` role.
+- **Session invalidation and NĐ13 consent tracking are now active** — `password_changed_at`, `consent_at`, `consent_version` all present on prod.
+- **`auth.py` SHOW COLUMNS guards** for `permissions` and `password_changed_at` will now always return a row — overhead exists but columns are found. Guards can be removed in B3a.
 - **Stored procedures are correct on production** (exist, `varchar(50)` signature). A5 only needs to export the SP source into the repo, not modify the procedures.
 
 Follow-up actions recorded:
 
-- **A5 (Phase A):** export tracked stored-procedure source into the repo; remove dead tables from bootstrap. Low risk — bootstrap `users` 2-value enum already matches production.
-- **B2 / D1 (later, deliberate):** a gated production migration to add `password_changed_at`, `consent_at`, `consent_version`, `permissions` and widen `users.role` to include `editor`. This touches the auth table → must run via the migrator user with a backup + rehearsed rollback, in its own deploy window. Blocker for Phase D (D1 reuses `password_changed_at` for suspend). See plan §6 PR-B2 / PR-D1.
+- **Role enum widening (B2 remaining):** run `railway run python scripts/migrate.py` after PR-B2 deploys on Railway — idempotent, will skip 6 columns and apply MODIFY COLUMN.
+- **B3a:** remove `SHOW COLUMNS` guards in `auth.py` (B2 columns now present on prod). Prerequisite met.
+- **D1 / D2:** `password_changed_at` is now on prod — D1 session-invalidation is unblocked.
 
 ## 7. Smoke Checklist
 
@@ -509,7 +511,7 @@ These were identified in A4 audit but are out of scope for A4 (which is audit + 
 Canonical script: `scripts/migrate.py`
 
 - Run with `DB_MIGRATOR_USER` (not runtime `DB_USER`).
-- All ALTERs use `ADD COLUMN IF NOT EXISTS` — idempotent; safe to re-run.
+- All ALTERs use `_add_column_if_missing()` helper (MySQL 5.7+ compatible) — idempotent; safe to re-run.
 - `MODIFY COLUMN role ENUM(...)` — idempotent when target enum shape already matches.
 
 ### 16.2 Pre-Migration Check

@@ -1,6 +1,6 @@
 # TBQC Operational Readiness Phase Tracker
 
-Last updated: 2026-06-14 (Phase A ✅ #23–#29; PR-B-policy ✅; PR-B2 In progress)  
+Last updated: 2026-06-14 (Phase A ✅ #23–#29; PR-B-policy ✅; PR-B2 migration 5/6 done — role enum pending)  
 Audience: owner, maintainer, Codex, Claude  
 Status: live progress tracker for the operational-readiness initiative
 
@@ -47,8 +47,9 @@ Current initiative state:
 - Phase A complete: #23–#29 all merged.
 - Phase B–D re-scoped 2026-06-14: 13 → 9 PRs remaining.
 - PR-B-policy ✅: CORS + PUBLIC_* externalization; cache/rate-limit + legacy field policy docs; 13 new tests.
-- PR-B2 In progress: 2 missing ALTERs added to migrate.py (permissions, role enum widening); pre-check script; schema-change checklist; 18 new tests.
-- migrate.py is now complete — all pending ALTERs are present. Operator must run migration on prod (own deploy window, backup first).
+- PR-B2 In progress: 2 missing ALTERs added to migrate.py (permissions, role enum widening); pre-check script; schema-change checklist; 19 tests (incl. MySQL 5.7 compat fix).
+- B2 migration ran 2026-06-14: backup ✅, 5/6 columns added ✅ (password_changed_at, consent_at, consent_version, permissions, persons.version). albums.is_public already present.
+- Role enum widening (`editor`) NOT yet applied — MODIFY COLUMN was not in wrapper script used on prod. Pending: `railway run python scripts/migrate.py` after PR-B2 deploys.
 
 ## 4. Phase Summary
 
@@ -315,16 +316,25 @@ New tests (18):
 
 Verification evidence:
 
-- `python -m pytest tests/test_migration.py -v` → 18 passed
+- `python -m pytest tests/test_migration.py -v` → 19 passed (incl. AST-based MySQL 5.7 compat check)
 - `python -m pytest -x -q -m "not db_integration"` → (run before commit)
 
-**Operator action required after merge:**
+**Operator action completed 2026-06-14:**
 
-1. Backup: `docs/operations/backup-restore-drill.md §3`
-2. Pre-check: `python scripts/check_migration_state.py`
-3. Migrate: `python scripts/migrate.py` (with `DB_MIGRATOR_USER` + `DB_MIGRATOR_PASSWORD`)
-4. Verify: `python scripts/check_migration_state.py` → all ✓
-5. Smoke: `python scripts/smoke_prod.py`
+1. ✅ Backup: `backups/tbqc_backup_20260614_065338.sql` (3.19 MB, persistent volume `/data/images`)
+2. ✅ Pre-check: 5 columns MISSING, `albums.is_public` OK, `role enum` missing `editor`
+3. ✅ Migration ran: 5 columns added (`password_changed_at`, `consent_at`, `consent_version`, `permissions`, `persons.version`)
+4. ✅ Verify post-migration: 6/6 columns OK (role enum check not re-run)
+5. ⚠️ Role enum: still `enum('admin','user')` — `MODIFY COLUMN` not yet applied
+
+**Remaining action (after PR-B2 deploys on Railway):**
+
+```
+railway run python scripts/migrate.py
+```
+
+Will skip 6 existing columns and apply: `MODIFY COLUMN role ENUM('admin','editor','user')`.
+After that: PR-B2 fully complete → B3a (SHOW COLUMNS removal in auth.py) unblocked.
 
 ## 7. Phase C Tracker
 
@@ -375,7 +385,7 @@ Current pending checks:
 
 Current known blockers for later phases:
 
-1. `migrate.py` ALTERs chưa apply lên prod → operator phải chạy `python scripts/migrate.py` (own deploy window, backup first) sau khi B2 merges.
+1. `users.role` enum chưa có `editor` — `MODIFY COLUMN` chưa chạy. Chạy `railway run python scripts/migrate.py` sau khi PR-B2 deploy.
 2. Stored-procedure source chưa tracked trong repo → operator cần chạy `export_sp_source.py` vs prod + `git add -f`.
 3. Deploy bootstrap truth chưa an toàn cho customer deployment packaging → C-kit chờ B2 migration verified.
 4. `/api/members` response shape externally consumed — must stay frozen until B3a contract lock.
@@ -386,8 +396,8 @@ Recommended order from here:
 
 1–7. ✅ Phase A (#23–#29) — done
 8. ✅ Merge `PR-B-policy` (#31) — done (CORS + PUBLIC_* + cache/legacy policy docs)
-9. 🔵 Review and merge `PR-B2` (branch `ops/pr-b2-migration-discipline`) — **current**
-   → After merge: operator runs backup + `python scripts/migrate.py` in own deploy window
-10. Then `PR-B3a` → `PR-B3b` (query normalization — start only after B2 migration live on prod)
+9. 🔵 Merge `PR-B2` (branch `ops/pr-b2-migration-discipline`) — **current** (MySQL 5.7 fix pushed, 19 tests pass)
+   → After Railway deploy: `railway run python scripts/migrate.py` → widens `role enum` → B2 complete
+10. Then `PR-B3a` → `PR-B3b` (query normalization — unblocked after role enum applied)
 11. Then Phase C: `PR-C1` + `PR-C-kit`
 12. Then Phase D: `PR-D1` → `PR-D2` → `PR-D-lifecycle`
